@@ -1,9 +1,76 @@
 #include "pe/pe_generator.h"
 
-std::shared_ptr<pe_section_entry>& pe_generator::create_section(const char* section_name)
+std::vector<char>& pe_generator::build_dos_header()
 {
-	std::shared_ptr<pe_section_entry> entry = std::make_shared<pe_section_entry>();
-	sections.push_back(entry);
+    constexpr auto dos_header_size = sizeof IMAGE_DOS_HEADER;
 
-	return entry;
+    IMAGE_DOS_HEADER dos_header;
+    ZeroMemory(&dos_header, dos_header_size);
+    dos_header.e_magic = 'MZ';
+    dos_header.e_lfanew = 0x40;
+
+    std::vector<char> dos_header_data(dos_header_size);
+    memcpy_s(dos_header_data.data(), dos_header_size, &dos_header, dos_header_size);
+
+    return dos_header_data;
+}
+
+std::vector<char>& pe_generator::build_coff_header()
+{
+    constexpr auto coff_header_size = sizeof IMAGE_FILE_HEADER;
+
+    IMAGE_FILE_HEADER coff_header;
+    ZeroMemory(&coff_header, coff_header_size);
+    coff_header.Machine = IMAGE_FILE_MACHINE_AMD64;
+    coff_header.NumberOfSections = 3; // TODO
+    coff_header.TimeDateStamp = 0; // 1970-01-01 00:00:00
+    coff_header.SizeOfOptionalHeader = 0; // TODO
+    coff_header.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
+
+    std::vector<char> coff_header_data(coff_header_size);
+    memcpy_s(coff_header_data.data(), coff_header_size, &coff_header, coff_header_size);
+
+    return coff_header_data;
+}
+
+std::vector<char>& pe_generator::build_optional_header()
+{
+    constexpr auto optional_header_size = sizeof IMAGE_OPTIONAL_HEADER;
+
+    IMAGE_OPTIONAL_HEADER optional_header;
+    ZeroMemory(&optional_header, optional_header_size);
+    optional_header.Magic = IMAGE_NT_OPTIONAL_HDR_MAGIC;
+    optional_header.MajorLinkerVersion = 0xE;
+    optional_header.MinorLinkerVersion = 0x1C;
+    optional_header.SizeOfCode = 0; // TODO
+    optional_header.SizeOfInitializedData = 0; // TODO
+    optional_header.AddressOfEntryPoint = 0; // TODO
+    optional_header.BaseOfCode = 1000;
+
+    optional_header.ImageBase = default_image_base;
+    optional_header.SectionAlignment = default_section_alignment;
+    optional_header.FileAlignment = default_file_alignment;
+    optional_header.MajorOperatingSystemVersion = 5; 
+    optional_header.MinorOperatingSystemVersion = 3;
+    optional_header.MajorImageVersion = 0;
+    optional_header.MinorImageVersion = 0;
+    optional_header.MajorSubsystemVersion = 5;
+    optional_header.MinorSubsystemVersion = 3;
+    optional_header.Win32VersionValue = 0;
+    optional_header.SizeOfImage = 0; // TODO
+    optional_header.CheckSum = 0; // TODO
+    optional_header.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI;
+    optional_header.DllCharacteristics = IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY |
+        IMAGE_DLLCHARACTERISTICS_NX_COMPAT | IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE;
+    optional_header.SizeOfStackReserve = 0; // TODO get from original PE
+    optional_header.SizeOfStackCommit = 0; // TODO get from original PE
+    optional_header.SizeOfHeapReserve = 0; // TODO get from original PE
+    optional_header.SizeOfHeapCommit = 0; // TODO get from original PE
+    optional_header.LoaderFlags = 0;
+    optional_header.NumberOfRvaAndSizes = 10;
+}
+
+std::vector<char>& pe_generator::build_section_table()
+{
+    // TODO: insert return statement here
 }
