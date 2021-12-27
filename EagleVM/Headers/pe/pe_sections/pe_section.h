@@ -4,5 +4,8 @@
 class pe_section
 {
 public:
-	std::vector<char>* section_data;
+	virtual std::vector<char>& generate_section() = 0;
+
+private:
+	std::vector<char> section_data;
 };

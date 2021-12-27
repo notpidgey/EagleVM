@@ -2,27 +2,20 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <Windows.h>
 
-#include "pe/pe_sections/pe_section.h"
+#include "pe/pe_sections/pe_code_section.h"
+#include "pe/pe_sections/pe_handler_section.h"
 
-class pe_code_section : public pe_section
-{
-	pe_code_section(std::vector<char> setion_data);
-};
+constexpr auto default_image_base = 140000000;
+constexpr auto default_section_alignment = 1000;
+constexpr auto default_file_alignment = 200;
 
-class pe_handler_section : public pe_section
-{
-
-};
-
-typedef std::pair<std::string, std::vector<char>> pe_section_entry;
 class pe_generator
 {
 public:
-	std::shared_ptr<pe_section_entry>& create_section(const char* section_name);
-	void append_data_to_section(std::vector<char>& data);
-
-private:
-	//vector of <section name, section data>
-	std::vector<std::shared_ptr<pe_section_entry>> sections;
+	std::vector<char>& build_dos_header();
+	std::vector<char>& build_coff_header();
+	std::vector<char>& build_optional_header();
+	std::vector<char>& build_section_table();
 };
