@@ -11,6 +11,7 @@ public:
 
 	explicit pe_parser(const char* path);
 	bool read_file(const char* path);
+	int get_file_size();
 
 	PIMAGE_DOS_HEADER get_dos_header();
 	PIMAGE_NT_HEADERS get_nt_header();

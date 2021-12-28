@@ -1,43 +1,34 @@
 #include "pe/pe_generator.h"
 
-std::vector<char>& pe_generator::build_dos_header()
+PIMAGE_DOS_HEADER pe_generator::build_dos_header()
 {
     constexpr auto dos_header_size = sizeof IMAGE_DOS_HEADER;
 
-    IMAGE_DOS_HEADER dos_header;
     ZeroMemory(&dos_header, dos_header_size);
     dos_header.e_magic = 'MZ';
     dos_header.e_lfanew = 0x40;
 
-    std::vector<char> dos_header_data(dos_header_size);
-    memcpy_s(dos_header_data.data(), dos_header_size, &dos_header, dos_header_size);
-
-    return dos_header_data;
+    return &dos_header;
 }
 
-std::vector<char>& pe_generator::build_coff_header()
+PIMAGE_FILE_HEADER pe_generator::build_coff_header()
 {
     constexpr auto coff_header_size = sizeof IMAGE_FILE_HEADER;
 
-    IMAGE_FILE_HEADER coff_header;
     ZeroMemory(&coff_header, coff_header_size);
     coff_header.Machine = IMAGE_FILE_MACHINE_AMD64;
     coff_header.NumberOfSections = 3; // TODO
     coff_header.TimeDateStamp = 0; // 1970-01-01 00:00:00
     coff_header.SizeOfOptionalHeader = 0; // TODO
-    coff_header.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
+    coff_header.Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE | IMAGE_FILE_LARGE_ADDRESS_AWARE;
 
-    std::vector<char> coff_header_data(coff_header_size);
-    memcpy_s(coff_header_data.data(), coff_header_size, &coff_header, coff_header_size);
-
-    return coff_header_data;
+    return &coff_header;
 }
 
-std::vector<char>& pe_generator::build_optional_header()
+PIMAGE_OPTIONAL_HEADER pe_generator::build_optional_header(uint64_t stack_reserve, uint64_t stack_commit, uint64_t heap_reserve, uint64_t heap_commit)
 {
     constexpr auto optional_header_size = sizeof IMAGE_OPTIONAL_HEADER;
 
-    IMAGE_OPTIONAL_HEADER optional_header;
     ZeroMemory(&optional_header, optional_header_size);
     optional_header.Magic = IMAGE_NT_OPTIONAL_HDR_MAGIC;
     optional_header.MajorLinkerVersion = 0xE;
@@ -62,15 +53,19 @@ std::vector<char>& pe_generator::build_optional_header()
     optional_header.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI;
     optional_header.DllCharacteristics = IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY |
         IMAGE_DLLCHARACTERISTICS_NX_COMPAT | IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE;
-    optional_header.SizeOfStackReserve = 0; // TODO get from original PE
-    optional_header.SizeOfStackCommit = 0; // TODO get from original PE
-    optional_header.SizeOfHeapReserve = 0; // TODO get from original PE
-    optional_header.SizeOfHeapCommit = 0; // TODO get from original PE
+    optional_header.SizeOfStackReserve = stack_reserve;
+    optional_header.SizeOfStackCommit = stack_commit;
+    optional_header.SizeOfHeapReserve = heap_reserve;
+    optional_header.SizeOfHeapCommit = heap_commit;
     optional_header.LoaderFlags = 0;
     optional_header.NumberOfRvaAndSizes = 10;
+
+    return &optional_header;
 }
 
 std::vector<char>& pe_generator::build_section_table()
 {
-    // TODO: insert return statement here
+    std::vector<char> test;
+
+    return test;
 }

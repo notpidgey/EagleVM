@@ -104,12 +104,16 @@
     <ClCompile Include="EagleVM.cpp" />
     <ClCompile Include="Source\pe\pe_generator.cpp" />
     <ClCompile Include="Source\pe\pe_parser.cpp" />
+    <ClCompile Include="Source\pe\pe_sections\pe_code_section.cpp" />
+    <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp" />
     <ClCompile Include="Source\util\zydis_helper.cpp" />
     <ClCompile Include="Source\virtual_machine\handle_generator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\pe\pe_generator.h" />
     <ClInclude Include="Headers\pe\pe_parser.h" />
+    <ClInclude Include="Headers\pe\pe_sections\pe_code_section.h" />
+    <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_section.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
     <ClInclude Include="Headers\virtual_machine\handle_generator.h" />

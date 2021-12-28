@@ -25,6 +25,11 @@ bool pe_parser::read_file(const char* path)
     return false;
 }
 
+int pe_parser::get_file_size()
+{
+    return unprotected_pe_.size();
+}
+
 PIMAGE_DOS_HEADER pe_parser::get_dos_header()
 {
     return reinterpret_cast<PIMAGE_DOS_HEADER>(unprotected_pe_.data());
@@ -75,14 +80,11 @@ std::vector<std::pair<std::string, std::string>> pe_parser::get_dll_imports()
     const PIMAGE_SECTION_HEADER import_section = get_import_section();
 
     const auto raw_offset = unprotected_pe_.data() + import_section->PointerToRawData;
-
-    std::cout << "[>] Retreiving Imports" << std::endl;
     for (PIMAGE_IMPORT_DESCRIPTOR import_descriptor = reinterpret_cast<PIMAGE_IMPORT_DESCRIPTOR>(
              raw_offset + (image_nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress - import_section->VirtualAddress)
          ); import_descriptor->Name != 0; import_descriptor++)
     {
         const char* import_library = raw_offset + (import_descriptor->Name - import_section->VirtualAddress);
-        std::cout << "\t[>] " << import_library << std::endl;
 
         auto thunk = import_descriptor->OriginalFirstThunk == 0 ? import_descriptor->FirstThunk : import_descriptor->OriginalFirstThunk;
         for (PIMAGE_THUNK_DATA thunk_data = reinterpret_cast<PIMAGE_THUNK_DATA>(raw_offset + (thunk - import_section->VirtualAddress)); thunk_data->u1.AddressOfData != 0; thunk_data++)
@@ -90,12 +92,10 @@ std::vector<std::pair<std::string, std::string>> pe_parser::get_dll_imports()
             const char* import_name = raw_offset + (thunk_data->u1.AddressOfData - import_section->VirtualAddress + 2);
             if (thunk_data->u1.AddressOfData < 0x80000000)
             {
-                std::cout << "\t\t[+] " << import_name << std::endl;
                 image_imports.push_back({ import_library, import_name });
             }
         }
     }
 
-    std::cout << std::endl;
     return image_imports;
 }
