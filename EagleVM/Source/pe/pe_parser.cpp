@@ -42,7 +42,7 @@ PIMAGE_NT_HEADERS pe_parser::get_nt_header()
     return reinterpret_cast<PIMAGE_NT_HEADERS>((char*)dos_header + dos_header->e_lfanew);
 }
 
-std::vector<PIMAGE_SECTION_HEADER>& pe_parser::get_sections()
+std::vector<PIMAGE_SECTION_HEADER> pe_parser::get_sections()
 {
     PIMAGE_NT_HEADERS nt_headers = get_nt_header();
     PIMAGE_SECTION_HEADER section_header = IMAGE_FIRST_SECTION(nt_headers);

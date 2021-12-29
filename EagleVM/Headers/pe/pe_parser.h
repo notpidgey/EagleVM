@@ -16,7 +16,7 @@ public:
 	PIMAGE_DOS_HEADER get_dos_header();
 	PIMAGE_NT_HEADERS get_nt_header();
 	
-	std::vector<PIMAGE_SECTION_HEADER>& get_sections();
+	std::vector<PIMAGE_SECTION_HEADER> get_sections();
 	PIMAGE_SECTION_HEADER get_import_section();
 
 	std::vector<std::pair<std::string, std::string>> get_dll_imports();
