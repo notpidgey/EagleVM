@@ -51,6 +51,8 @@
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Headers;$(SolutionDir)deps\zydis\include;$(SolutionDir)deps\zydis\dependencies\zycore\include;$(SolutionDir)deps\zydis\msvc</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
+    <OutDir>..\out\Build\$(ProjectName)</OutDir>
+    <IntDir>..\out\Intermediate\$(ProjectName)</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
