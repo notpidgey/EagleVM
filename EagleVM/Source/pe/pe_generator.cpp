@@ -65,16 +65,7 @@ PIMAGE_OPTIONAL_HEADER pe_generator::build_optional_header(
 	return &optional_header;
 }
 
-std::vector<IMAGE_SECTION_HEADER>* pe_generator::build_section_table(std::vector<PIMAGE_SECTION_HEADER> sections)
+void pe_generator::add_section(PIMAGE_SECTION_HEADER section_header)
 {
-	section_headers.clear();
-
-	std::for_each(sections.begin(), sections.end(),
-		[this](PIMAGE_SECTION_HEADER section)
-		{
-			section_headers.push_back(*section);
-		});
-
-
-	return &section_headers;
+	section_headers.push_back(*section_header);
 }
