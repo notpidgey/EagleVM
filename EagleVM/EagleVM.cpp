@@ -6,7 +6,7 @@
 
 int main(int argc, char* argv[])
 {
-	pe_parser parser = pe_parser("D:\\VM\\ovtest.exe");
+	pe_parser parser = pe_parser("D:\\VM\\EagleVMSandbox.exe");
 	std::printf("[+] loaded ovtest.exe -> %i bytes\n", parser.get_file_size());
 
 	int i = 1;
@@ -14,25 +14,28 @@ int main(int argc, char* argv[])
 	auto sections = parser.get_sections();
 	std::printf("[>] parsed %i sections\n", parser.get_sections().size());
 	std::printf("%3s %-10s %-10s %-10s\n", "", "name", "va", "size");
-	std::for_each(sections.begin(), sections.end(), 
-		[&i](PIMAGE_SECTION_HEADER image_section)
+	std::ranges::for_each(sections, 
+		[&i](const PIMAGE_SECTION_HEADER image_section)
 		{
 			std::printf("%3i %-10s %-10d %-10d\n", i, image_section->Name, image_section->VirtualAddress, image_section->SizeOfRawData);
 			i++;
 		});
 
 	i = 1;
-	auto imports = parser.get_dll_imports();
-	std::printf("\n[>] %i imports\n", imports.size());
+	std::printf("\n[>] image imports\n");
 	std::printf("%3s %-20s %-s\n", "", "source", "import");
-	std::for_each(imports.begin(), imports.end(), 
-		[&i](std::pair<std::string, std::string>& dll_import)
+	parser.enum_imports(
+		[&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, int, char* data_base) 
 		{
-			std::printf("%3i %-20s %-s\n", i, dll_import.first.c_str(), dll_import.second.c_str());
+			const char* import_section_raw = data_base + import_section->PointerToRawData;
+			const char* import_library = const_cast<char*>(import_section_raw + (import_descriptor->Name - import_section->VirtualAddress));
+			const char* import_name = const_cast<char*>(import_section_raw + (thunk_data->u1.AddressOfData - import_section->VirtualAddress + 2));
+
+			std::printf("%3i %-20s %-s\n", i, import_library, import_name);
 			i++;
 		});
 
-	std::printf("\n[>] porting original pe properties to new executable\n");
+	std::printf("\n[+] porting original pe properties to new executable...\n");
 
 	auto nt_header = parser.get_nt_header();
 	std::printf("[>] image base -> %I64d bytes\n", nt_header->OptionalHeader.ImageBase);
@@ -57,12 +60,16 @@ int main(int argc, char* argv[])
 	);
 
 	//Add already exisiting sections.
-	std::for_each(sections.begin(), sections.end(), 
-		[&generator](PIMAGE_SECTION_HEADER section_header)
+	std::ranges::for_each(sections, 
+		[&generator](const PIMAGE_SECTION_HEADER section_header)
 		{
 			generator.add_section(section_header);
 		});
 
+	std::printf("\n[+] searching for uses of vm macros...\n");
+	parser.find_iat_calls();
+
+	std::printf("\n");
 
 	vm_handle_generator::create_vm_enter();
 	vm_handle_generator::create_vm_exit();
