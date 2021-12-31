@@ -22,7 +22,7 @@ public:
 	bool read_file(const char* path);
 	int get_file_size();
 
-	std::vector<std::pair<pe_import, void*>>* find_iat_calls();
+	std::vector<std::pair<uint32_t, uint32_t>> find_iat_calls();
 
 	PIMAGE_DOS_HEADER get_dos_header();
 	PIMAGE_NT_HEADERS get_nt_header();
