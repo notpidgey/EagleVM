@@ -110,6 +110,14 @@ PIMAGE_NT_HEADERS pe_parser::get_nt_header()
     return reinterpret_cast<PIMAGE_NT_HEADERS>(reinterpret_cast<char*>(dos_header) + dos_header->e_lfanew);
 }
 
+PIMAGE_SECTION_HEADER pe_parser::get_import_section()
+{
+    const PIMAGE_NT_HEADERS nt_headers = get_nt_header();
+    const DWORD import_directory_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+
+    return get_section_rva(import_directory_rva);
+}
+
 std::vector<PIMAGE_SECTION_HEADER> pe_parser::get_sections()
 {
     PIMAGE_NT_HEADERS nt_headers = get_nt_header();
@@ -152,22 +160,6 @@ PIMAGE_SECTION_HEADER pe_parser::get_section_offset(const uint32_t offset)
     for (const auto& section_header : image_sections)
     {
         if (section_header->PointerToRawData <= offset && offset < section_header->PointerToRawData + section_header->SizeOfRawData)
-        {
-            return section_header;
-        }
-    }
-
-    return nullptr;
-}
-
-PIMAGE_SECTION_HEADER pe_parser::get_import_section()
-{
-    const PIMAGE_NT_HEADERS nt_headers = get_nt_header();
-    const DWORD import_directory_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
-
-    for (const auto& section_header : image_sections)
-    {
-        if (import_directory_rva >= section_header->VirtualAddress && import_directory_rva < section_header->VirtualAddress + section_header->Misc.VirtualSize)
         {
             return section_header;
         }
