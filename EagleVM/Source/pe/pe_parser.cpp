@@ -91,10 +91,9 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 
         });
 
-    int i = 1;
     std::vector<std::pair<uint32_t, stub_import>> offsets_to_vm_macros;
     std::ranges::for_each(offsets_import_calls,
-        [this, &iat_begin, &iat_end, &stub_dll_imports, &offsets_to_vm_macros, &i](const uint32_t instruction_offset) {
+        [this, &iat_begin, &iat_end, &stub_dll_imports, &offsets_to_vm_macros](const uint32_t instruction_offset) {
             const auto data_segment = *reinterpret_cast<uint32_t*>(unprotected_pe_.data() + instruction_offset + 2);
             const auto data_rva = offset_to_rva(instruction_offset) + 6 + data_segment;
 
@@ -103,7 +102,6 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 if(stub_dll_imports.contains(data_rva))
                 {
                     offsets_to_vm_macros.push_back({ instruction_offset, stub_dll_imports[data_rva] });
-                    i++;
                 }
             }
         });
