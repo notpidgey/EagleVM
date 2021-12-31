@@ -67,7 +67,29 @@ int main(int argc, char* argv[])
 		});
 
 	std::printf("\n[+] searching for uses of vm macros...\n");
-	parser.find_iat_calls();
+
+	i = 1;
+	auto vm_iat_calls = parser.find_iat_calls();
+	std::printf("%3s %-10s %-10s\n", "", "rva", "vm");
+	std::ranges::for_each(vm_iat_calls.begin(), vm_iat_calls.end(), 
+		[&i, &parser](const auto call)
+		{
+			auto [file_offset, stub_import] = call;
+			switch (stub_import)
+			{
+			case stub_import::vm_begin:
+				std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
+				break;
+			case stub_import::vm_end:
+				std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_end");
+				break;
+			case stub_import::unknown:
+				std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
+				break;
+			}
+
+			i++;
+		});
 
 	std::printf("\n");
 

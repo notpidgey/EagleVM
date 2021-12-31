@@ -30,7 +30,7 @@ int pe_parser::get_file_size()
     return unprotected_pe_.size();
 }
 
-std::vector<std::pair<uint32_t, uint32_t>> pe_parser::find_iat_calls()
+std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
 {
     image_imports.clear();
 
@@ -46,7 +46,7 @@ std::vector<std::pair<uint32_t, uint32_t>> pe_parser::find_iat_calls()
     std::vector<uint32_t> offsets_import_calls;
 
     //call qword ptr ds:[<&?someFunction@@YAXXZ>]
-    //scan .text section FF15 4BYTEADDRESS 
+    //scan .text section FF 15 ?? ?? ?? ??
     for (uint32_t i = text_section->PointerToRawData; i <= text_section->PointerToRawData + text_section->SizeOfRawData; i++)
     {
         //searching for ff 15 (call qword ptr)
@@ -62,22 +62,37 @@ std::vector<std::pair<uint32_t, uint32_t>> pe_parser::find_iat_calls()
         }
     }
 
-    std::unordered_map<uint32_t, std::string> stub_dll_imports;
+    std::unordered_map<uint32_t, stub_import> stub_dll_imports;
     enum_imports(
-        [&stub_dll_imports, this](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, int index, char* data_base)
+        [&stub_dll_imports, this](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, 
+            int index, char* data_base)
         {
             const char* import_section_raw = data_base + import_section->PointerToRawData;
             const char* import_library = const_cast<char*>(import_section_raw + (import_descriptor->Name - import_section->VirtualAddress));
-            const char* import_name = const_cast<char*>(import_section_raw + (thunk_data->u1.AddressOfData - import_section->VirtualAddress + 2));
 
             if (std::strcmp(import_library, "EagleVMStub.dll") == 0)
-                stub_dll_imports[import_descriptor->FirstThunk + (index * 8)] = std::string(import_name);
+            {
+                stub_import import_type;
+                switch (index) 
+                {
+                case 0:
+                    import_type = stub_import::vm_begin;
+                    break;
+                case 1:
+                    import_type = stub_import::vm_end;
+                    break;
+                default:
+                    import_type = stub_import::unknown;
+                }
+
+                //call rva , import type
+                stub_dll_imports[import_descriptor->FirstThunk + (index * 8)] = import_type;
+            }
+                
         });
 
-    std::vector<std::pair<uint32_t, uint32_t>> offsets_to_vm_macros;
-
     int i = 1;
-    std::printf("%3s %-10s %-10s\n", "", "va", "vm");
+    std::vector<std::pair<uint32_t, stub_import>> offsets_to_vm_macros;
     std::ranges::for_each(offsets_import_calls,
         [this, &iat_begin, &iat_end, &stub_dll_imports, &offsets_to_vm_macros, &i](const uint32_t instruction_offset) {
             const auto data_segment = *reinterpret_cast<uint32_t*>(unprotected_pe_.data() + instruction_offset + 2);
@@ -87,9 +102,7 @@ std::vector<std::pair<uint32_t, uint32_t>> pe_parser::find_iat_calls()
             {
                 if(stub_dll_imports.contains(data_rva))
                 {
-                    std::printf("%3i %-10lx %-10s\n", i, offset_to_rva(instruction_offset), stub_dll_imports[data_rva].c_str());
-                    offsets_to_vm_macros.push_back({ instruction_offset, data_rva });
-
+                    offsets_to_vm_macros.push_back({ instruction_offset, stub_dll_imports[data_rva] });
                     i++;
                 }
             }
@@ -116,6 +129,13 @@ PIMAGE_SECTION_HEADER pe_parser::get_import_section()
     const DWORD import_directory_rva = nt_headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
 
     return get_section_rva(import_directory_rva);
+}
+
+IMAGE_DATA_DIRECTORY pe_parser::get_directory(short directory)
+{
+    const PIMAGE_NT_HEADERS nt_headers = get_nt_header();
+
+    return nt_headers->OptionalHeader.DataDirectory[directory];
 }
 
 std::vector<PIMAGE_SECTION_HEADER> pe_parser::get_sections()
@@ -166,13 +186,6 @@ PIMAGE_SECTION_HEADER pe_parser::get_section_offset(const uint32_t offset)
     }
 
     return nullptr;
-}
-
-IMAGE_DATA_DIRECTORY pe_parser::get_directory(short directory)
-{
-    const PIMAGE_NT_HEADERS nt_headers = get_nt_header();
-
-    return nt_headers->OptionalHeader.DataDirectory[directory];
 }
 
 void pe_parser::enum_imports(const std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int index, char*)> import_proc)
