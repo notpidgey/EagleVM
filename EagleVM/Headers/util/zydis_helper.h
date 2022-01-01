@@ -11,6 +11,8 @@ typedef ZydisEncoderOperand_::ZydisEncoderOperandMem_ ZydisMem;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ ZydisPtr;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ ZydisReg;
 
+#define ZREG(x) {(ZydisRegister)x, 0}
+
 namespace zydis_helper
 {
 	template <typename T> 
@@ -23,12 +25,10 @@ namespace zydis_helper
 	}
 
 	std::vector<uint8_t> encode_request(ZydisEncoderRequest& request);
-	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic, int operand_count);
-	
-	std::vector<uint8_t> encode_instruction_0(ZydisMnemonic mnemonic);
+	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic);
 
-	std::vector<uint8_t> encode_instruction_1(ZydisMnemonic mnemonic, ZydisImm imm);
-	std::vector<uint8_t> encode_instruction_1(ZydisMnemonic mnemonic, ZydisMem mem);
-	std::vector<uint8_t> encode_instruction_1(ZydisMnemonic mnemonic, ZydisPtr ptr);
-	std::vector<uint8_t> encode_instruction_1(ZydisMnemonic mnemonic, ZydisReg reg);
+	ZydisEncoderRequest& add_imm(ZydisEncoderRequest& req, ZydisImm imm);
+	ZydisEncoderRequest& add_mem(ZydisEncoderRequest& req, ZydisMem mem);
+	ZydisEncoderRequest& add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr);
+	ZydisEncoderRequest& add_reg(ZydisEncoderRequest& req, ZydisReg reg);
 }

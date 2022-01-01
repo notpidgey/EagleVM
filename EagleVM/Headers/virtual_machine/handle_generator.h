@@ -8,14 +8,10 @@
 
 #include "util/zydis_helper.h"
 
-struct handle_info
-{
-	size_t handle_size;
-	std::vector<std::vector<uint8_t>> handle_data;
-};
+typedef std::vector<ZydisEncoderRequest> handle_instructions;
 
 namespace vm_handle_generator
 {
-	handle_info create_vm_enter();
-	handle_info create_vm_exit();
+	handle_instructions create_vm_enter();
+	handle_instructions create_vm_exit();
 }
