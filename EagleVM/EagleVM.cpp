@@ -2,7 +2,6 @@
 
 #include "pe/pe_parser.h"
 #include "pe/pe_generator.h"
-#include "virtual_machine/handle_generator.h"
 #include "virtual_machine/vm_generator.h"
 
 int main(int argc, char* argv[])
@@ -121,9 +120,6 @@ int main(int argc, char* argv[])
 
 	vm_generator vm_generator;
 	vm_generator.create_vreg_map();
-
-	vm_handle_generator::create_vm_enter();
-	vm_handle_generator::create_vm_exit();
 
 	//to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
 	PIMAGE_SECTION_HEADER last_section = sections.back();

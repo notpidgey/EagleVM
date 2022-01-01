@@ -11,55 +11,56 @@ std::vector<uint8_t> zydis_helper::encode_request(ZydisEncoderRequest& request)
     return instruction;
 }
 
-ZydisEncoderRequest zydis_helper::create_encode_request(const ZydisMnemonic mnemonic, const int operand_count)
+ZydisEncoderRequest zydis_helper::create_encode_request(const ZydisMnemonic mnemonic)
 {
     ZydisEncoderRequest req;
     ZYAN_MEMSET(&req, 0, sizeof(req));
     req.mnemonic = mnemonic;
-    req.operand_count = operand_count;
+    req.operand_count = 0;
 
     return req;
 }
 
-std::vector<uint8_t> zydis_helper::encode_instruction_0(ZydisMnemonic mnemonic)
+ZydisEncoderRequest& zydis_helper::add_imm(ZydisEncoderRequest& req, ZydisImm imm)
 {
-    ZydisEncoderRequest req = create_encode_request(mnemonic, 0);
+    auto op_index = req.operand_count;
 
-    return encode_request(req);
+    req.operands[op_index].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
+    req.operands[op_index].imm = imm;
+    req.operand_count++;
+
+    return req;
 }
 
-std::vector<uint8_t> zydis_helper::encode_instruction_1(const ZydisMnemonic mnemonic, ZydisImm imm)
+ZydisEncoderRequest& zydis_helper::add_mem(ZydisEncoderRequest& req, ZydisMem mem)
 {
-    ZydisEncoderRequest req = create_encode_request(mnemonic, 1);
-    req.operands[0].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
-    req.operands[0].imm = imm;
+    auto op_index = req.operand_count;
 
-    return encode_request(req);
+    req.operands[op_index].type = ZYDIS_OPERAND_TYPE_MEMORY;
+    req.operands[op_index].mem = mem;
+    req.operand_count++;
+
+    return req;
 }
 
-std::vector<uint8_t> zydis_helper::encode_instruction_1(const ZydisMnemonic mnemonic, ZydisMem mem)
+ZydisEncoderRequest& zydis_helper::add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr)
 {
-    ZydisEncoderRequest req = create_encode_request(mnemonic, 1);
-    req.operands[0].type = ZYDIS_OPERAND_TYPE_MEMORY;
-    req.operands[0].mem = mem;
+    auto op_index = req.operand_count;
+    
+    req.operands[op_index].type = ZYDIS_OPERAND_TYPE_POINTER;
+    req.operands[op_index].ptr = ptr;
+    req.operand_count++;
 
-    return encode_request(req);
+    return req;
 }
 
-std::vector<uint8_t> zydis_helper::encode_instruction_1(const ZydisMnemonic mnemonic, ZydisPtr ptr)
+ZydisEncoderRequest& zydis_helper::add_reg(ZydisEncoderRequest& req, ZydisReg reg)
 {
-    ZydisEncoderRequest req = create_encode_request(mnemonic, 1);
-    req.operands[0].type = ZYDIS_OPERAND_TYPE_POINTER;
-    req.operands[0].ptr = ptr;
+    auto op_index = req.operand_count;
+    
+    req.operands[op_index].type = ZYDIS_OPERAND_TYPE_REGISTER;
+    req.operands[op_index].reg = reg;
+    req.operand_count++;
 
-    return encode_request(req);
-}
-
-std::vector<uint8_t> zydis_helper::encode_instruction_1(const ZydisMnemonic mnemonic, ZydisReg reg)
-{
-    ZydisEncoderRequest req = create_encode_request(mnemonic, 1);
-    req.operands[0].type = ZYDIS_OPERAND_TYPE_REGISTER;
-    req.operands[0].reg = reg;
-
-    return encode_request(req);
+    return req;
 }
