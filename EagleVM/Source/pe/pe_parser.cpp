@@ -76,10 +76,10 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 switch (index) 
                 {
                 case 0:
-                    import_type = stub_import::vm_begin;
+                    import_type = stub_import::vm_end;
                     break;
                 case 1:
-                    import_type = stub_import::vm_end;
+                    import_type = stub_import::vm_begin;
                     break;
                 default:
                     import_type = stub_import::unknown;
@@ -98,12 +98,8 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
             const auto data_rva = offset_to_rva(instruction_offset) + 6 + data_segment;
 
             if (const auto ds_offset = rva_to_offset(data_rva); iat_begin <= ds_offset && ds_offset < iat_end)
-            {
                 if(stub_dll_imports.contains(data_rva))
-                {
                     offsets_to_vm_macros.push_back({ instruction_offset, stub_dll_imports[data_rva] });
-                }
-            }
         });
 
     return offsets_to_vm_macros;
