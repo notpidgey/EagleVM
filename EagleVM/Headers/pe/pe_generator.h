@@ -8,6 +8,8 @@
 #include "pe/pe_sections/pe_code_section.h"
 #include "pe/pe_sections/pe_handler_section.h"
 
+#define P2ALIGNUP(x, align) (-(-((LONG64)x) & -((LONG64)align)))
+
 class pe_generator
 {
 public:
@@ -15,6 +17,7 @@ public:
 	PIMAGE_FILE_HEADER build_coff_header();
 	PIMAGE_OPTIONAL_HEADER build_optional_header(uint64_t image_base, int section_alignment, int file_alignment, uint64_t sr, uint64_t sc, uint64_t hr, uint64_t hc);
 	void add_section(PIMAGE_SECTION_HEADER section_header);
+	void add_section(IMAGE_SECTION_HEADER section_header);
 
 private:
 	IMAGE_SECTION_HEADER vm_handler_section;
