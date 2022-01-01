@@ -36,6 +36,9 @@
     <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\virtual_machine\vm_generator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\virtual_machine\handle_generator.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\vm_generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

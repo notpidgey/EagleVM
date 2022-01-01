@@ -3,6 +3,7 @@
 #include "pe/pe_parser.h"
 #include "pe/pe_generator.h"
 #include "virtual_machine/handle_generator.h"
+#include "virtual_machine/vm_generator.h"
 
 int main(int argc, char* argv[])
 {
@@ -13,7 +14,7 @@ int main(int argc, char* argv[])
 
 	std::vector<PIMAGE_SECTION_HEADER> sections = parser.get_sections();
 	
-	std::printf("[>] parsed %i sections\n", parser.get_sections().size());
+	std::printf("[>] image sections\n");
 	std::printf("%3s %-10s %-10s %-10s\n", "", "name", "va", "size");
 	std::ranges::for_each(sections.begin(), sections.end(),
 		[&i](const PIMAGE_SECTION_HEADER image_section)
@@ -95,6 +96,11 @@ int main(int argc, char* argv[])
 
 	std::printf("\n");
 
+	//vm macros should be in "begin, end, begin, end" order
+	//this is not an entirely reliable way to check because it could mean function A has vm_begin and function B will have vm_end
+	//meaning it will virtualize in between the two functions, which should never happen.
+	//blame the user
+
 	bool success = true;
 	stub_import previous_call = stub_import::vm_end;
 	std::ranges::for_each(vm_iat_calls.begin(), vm_iat_calls.end(), 
@@ -108,14 +114,13 @@ int main(int argc, char* argv[])
 			previous_call = call.second;
 		});
 
-	//vm macros should be in "begin, end, begin, end" order
-	//this is not an entirely reliable way to check because it could mean function A has vm_begin and function B will have vm_end
-	//meaning it will virtualize in between the two functions, which should never happen.
-	//blame the user
 	if(success)
 		std::printf("[+] successfully verified macro usage\n");
 	else
 		std::printf("[+] failed to verify macro usage\n");
+
+	vm_generator vm_generator;
+	vm_generator.create_vreg_map();
 
 	vm_handle_generator::create_vm_enter();
 	vm_handle_generator::create_vm_exit();

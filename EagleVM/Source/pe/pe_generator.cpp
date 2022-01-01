@@ -69,3 +69,8 @@ void pe_generator::add_section(PIMAGE_SECTION_HEADER section_header)
 {
 	section_headers.push_back(*section_header);
 }
+
+void pe_generator::add_section(IMAGE_SECTION_HEADER section_header)
+{
+	section_headers.push_back(section_header);
+}
