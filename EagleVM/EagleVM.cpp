@@ -120,5 +120,18 @@ int main(int argc, char* argv[])
 	vm_handle_generator::create_vm_enter();
 	vm_handle_generator::create_vm_exit();
 
+	//to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
+	PIMAGE_SECTION_HEADER last_section = sections.back();
+
+	IMAGE_SECTION_HEADER vm_section{};
+	vm_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData; //place right behind last section
+	vm_section.SizeOfRawData = 0; //TBD
+	vm_section.VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment); //0x25266 - > 0x26000
+	vm_section.Misc.VirtualSize = 0; //TBD
+	vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+	vm_section.PointerToRelocations = 0;
+	vm_section.NumberOfRelocations = 0;
+	vm_section.NumberOfLinenumbers = 0;
+
 	return 0;
 }
