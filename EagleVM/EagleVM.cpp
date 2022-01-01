@@ -11,10 +11,11 @@ int main(int argc, char* argv[])
 
 	int i = 1;
 
-	auto sections = parser.get_sections();
+	std::vector<PIMAGE_SECTION_HEADER> sections = parser.get_sections();
+	
 	std::printf("[>] parsed %i sections\n", parser.get_sections().size());
 	std::printf("%3s %-10s %-10s %-10s\n", "", "name", "va", "size");
-	std::ranges::for_each(sections, 
+	std::ranges::for_each(sections.begin(), sections.end(),
 		[&i](const PIMAGE_SECTION_HEADER image_section)
 		{
 			std::printf("%3i %-10s %-10d %-10d\n", i, image_section->Name, image_section->VirtualAddress, image_section->SizeOfRawData);
@@ -22,6 +23,7 @@ int main(int argc, char* argv[])
 		});
 
 	i = 1;
+	
 	std::printf("\n[>] image imports\n");
 	std::printf("%3s %-20s %-s\n", "", "source", "import");
 	parser.enum_imports(
@@ -69,7 +71,7 @@ int main(int argc, char* argv[])
 	std::printf("\n[+] searching for uses of vm macros...\n");
 
 	i = 1;
-	auto vm_iat_calls = parser.find_iat_calls();
+	std::vector<std::pair<uint32_t, stub_import>> vm_iat_calls = parser.find_iat_calls();
 	std::printf("%3s %-10s %-10s\n", "", "rva", "vm");
 	std::ranges::for_each(vm_iat_calls.begin(), vm_iat_calls.end(), 
 		[&i, &parser](const auto call)
@@ -92,6 +94,28 @@ int main(int argc, char* argv[])
 		});
 
 	std::printf("\n");
+
+	bool success = true;
+	stub_import previous_call = stub_import::vm_end;
+	std::ranges::for_each(vm_iat_calls.begin(), vm_iat_calls.end(), 
+		[&previous_call, &success](const auto call) {
+			if (call.second == previous_call)
+			{
+				success = false;
+				return false;
+			}
+
+			previous_call = call.second;
+		});
+
+	//vm macros should be in "begin, end, begin, end" order
+	//this is not an entirely reliable way to check because it could mean function A has vm_begin and function B will have vm_end
+	//meaning it will virtualize in between the two functions, which should never happen.
+	//blame the user
+	if(success)
+		std::printf("[+] successfully verified macro usage\n");
+	else
+		std::printf("[+] failed to verify macro usage\n");
 
 	vm_handle_generator::create_vm_enter();
 	vm_handle_generator::create_vm_exit();
