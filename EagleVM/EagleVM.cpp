@@ -119,7 +119,8 @@ int main(int argc, char* argv[])
 		std::printf("[+] failed to verify macro usage\n");
 
 	vm_generator vm_generator;
-	vm_generator.create_vreg_map();
+	vm_generator.init_vreg_map();
+	vm_generator.init_ran_consts();
 	vm_generator.create_vm_enter();
 
 	//to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
