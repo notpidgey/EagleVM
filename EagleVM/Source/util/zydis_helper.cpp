@@ -56,3 +56,20 @@ void zydis_helper::add_reg(ZydisEncoderRequest& req, ZydisReg reg)
     req.operands[op_index].reg = reg;
     req.operand_count++;
 }
+
+std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>& queue)
+{
+    std::vector<uint8_t> data;
+    for (int i = 0; i < queue.size(); i++)
+    {
+        std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
+        ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
+
+        ZydisEncoderEncodeInstruction(&queue[i], instruction_data.data(), &encoded_length);
+        instruction_data.resize(encoded_length);
+
+        data.insert(data.end(), instruction_data.begin(), instruction_data.end());
+    }
+
+    return data;
+}
