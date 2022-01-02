@@ -12,9 +12,12 @@ typedef ZydisEncoderOperand_::ZydisEncoderOperandMem_ ZydisMem;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ ZydisPtr;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ ZydisReg;
 
-#define ZREG(x)		{ (ZydisRegister)x, 0 }
-#define ZIMMU(x)	{ .u = (ZyanU64)x }
-#define ZIMMI(x)	{ .s = (ZyanI64)x }
+#define ZREG(x)			{ (ZydisRegister)x, 0 }
+
+#define ZIMMU(x)		{ .u = x }
+#define ZIMMI(x)		{ .s = x }
+
+#define ZMEMBD(x, y, z)	{ (ZydisRegister)x, (ZydisRegister)0,0, (ZyanI64)y, z }
 
 namespace zydis_helper
 {

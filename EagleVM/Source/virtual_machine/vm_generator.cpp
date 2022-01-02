@@ -1,6 +1,6 @@
 #include "virtual_machine/vm_generator.h"
 
-void vm_generator::create_vreg_map()
+void vm_generator::init_vreg_map()
 {
 	//vreg_mapping is a table which contains definitions for real -> virtual registers
 	//to create vm obfsucation, the registers need to be swapped on vm entry as follows
@@ -19,25 +19,52 @@ void vm_generator::create_vreg_map()
 		vreg_mapping_[i] = random_registers[i - ZYDIS_REGISTER_RAX];
 }
 
+void vm_generator::init_ran_consts()
+{
+	//encryption
+	//rol r15, key1
+	//sub r15, key2
+	//ror r15, key3
+
+	//decryption
+	//rol r15, key3
+	//add r15, key2
+	//ror r15, key1
+
+	//this should be dynamic and more random.
+	//in the future, each mnemonic should have a std::function definition and an opposite
+	//this will allow for larger and more complex jmp dec/enc routines
+
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist(1, UINT8_MAX);
+
+	for (int i = 0; i < 3; i++)
+		func_address_keys.values[i] = dist(rng);
+}
+
 void vm_generator::create_vm_enter()
 {
 	//vm enter routine:
 	ZydisEncoderRequest encoder;
-	
-	//
+
 	// 1. push everything to stack
-	//
 	handle_instructions vm_enter = vm_handle_generator::create_vm_enter();
+	
+	// 2. decrypt function jump address & jump
+	std::vector encode_requests
+	{
+		zydis_helper::create_encode_request<ZydisReg, ZydisMem>(ZYDIS_MNEMONIC_MOV, ZREG(ZYDIS_REGISTER_R15), ZMEMBD(ZYDIS_REGISTER_RSP, -144, 8)),	//mov r15, [rsp-144]
 
-	//
-	// 2. decode function jump
-	//
+		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_ROL, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[2])),	//rol r15, key3
+		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_SUB, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[1])),	//add r15, key2
+		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_ROR, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[0])),	//ror r15, key1
 
-	//
-	// 3. jump
-	//
-	encoder = zydis_helper::create_encode_request<ZydisReg, ZydisReg>(ZYDIS_MNEMONIC_MOV, ZREG(ZYDIS_REGISTER_R15), ZREG(ZYDIS_REGISTER_R14));
+		zydis_helper::create_encode_request<ZydisReg>(ZYDIS_MNEMONIC_JMP, ZREG(ZYDIS_REGISTER_R15)) //jmp r15
+	};
 
-	encoder = zydis_helper::create_encode_request(ZYDIS_MNEMONIC_JMP);
-	zydis_helper::add_reg(encoder, ZREG(ZYDIS_REGISTER_R15));
+	auto data = zydis_helper::encode_queue(encode_requests);
+
+	for (int i = 0; i < data.size(); ++i)
+		std::cout << std::hex << (int)data[i] << " ";
 }
