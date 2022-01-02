@@ -27,8 +27,33 @@ namespace zydis_helper
 	std::vector<uint8_t> encode_request(ZydisEncoderRequest& request);
 	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic);
 
-	ZydisEncoderRequest& add_imm(ZydisEncoderRequest& req, ZydisImm imm);
-	ZydisEncoderRequest& add_mem(ZydisEncoderRequest& req, ZydisMem mem);
-	ZydisEncoderRequest& add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr);
-	ZydisEncoderRequest& add_reg(ZydisEncoderRequest& req, ZydisReg reg);
+	void add_imm(ZydisEncoderRequest& req, ZydisImm imm);
+	void add_mem(ZydisEncoderRequest& req, ZydisMem mem);
+	void add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr);
+	void add_reg(ZydisEncoderRequest& req, ZydisReg reg);
+
+	template<typename T>
+	void add_operand(ZydisEncoderRequest& encoder, T* operand)
+	{
+		if (std::is_same<T, ZydisImm>::value)
+			add_imm(encoder, *(ZydisImm*)operand);
+		else if (std::is_same<T, ZydisMem>::value)
+			add_mem(encoder, *(ZydisMem*)operand);
+		else if (std::is_same<T, ZydisPtr>::value)
+			add_ptr(encoder, *(ZydisPtr*)operand);
+		else if (std::is_same<T, ZydisReg>::value)
+			add_reg(encoder, *(ZydisReg*)operand);
+	}
+
+	template<typename T, typename G>
+	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic, T operand1, G operand2)
+	{
+		auto encoder = zydis_helper::create_encode_request(mnemonic);
+
+		//I feel terrible for having to write this, but it had to be done
+		add_operand<T>(encoder, &operand1);
+		add_operand<G>(encoder, &operand2);
+
+		return encoder;
+	}
 }
