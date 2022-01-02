@@ -120,6 +120,7 @@ int main(int argc, char* argv[])
 
 	vm_generator vm_generator;
 	vm_generator.create_vreg_map();
+	vm_generator.create_vm_enter();
 
 	//to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
 	PIMAGE_SECTION_HEADER last_section = sections.back();
