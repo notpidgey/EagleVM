@@ -21,7 +21,7 @@ ZydisEncoderRequest zydis_helper::create_encode_request(const ZydisMnemonic mnem
     return req;
 }
 
-void zydis_helper::add_imm(ZydisEncoderRequest& req, ZydisImm imm)
+void zydis_helper::add_op(ZydisEncoderRequest& req, ZydisImm imm)
 {
     auto op_index = req.operand_count;
 
@@ -30,7 +30,7 @@ void zydis_helper::add_imm(ZydisEncoderRequest& req, ZydisImm imm)
     req.operand_count++;
 }
 
-void zydis_helper::add_mem(ZydisEncoderRequest& req, ZydisMem mem)
+void zydis_helper::add_op(ZydisEncoderRequest& req, ZydisMem mem)
 {
     auto op_index = req.operand_count;
 
@@ -39,7 +39,7 @@ void zydis_helper::add_mem(ZydisEncoderRequest& req, ZydisMem mem)
     req.operand_count++;
 }
 
-void zydis_helper::add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr)
+void zydis_helper::add_op(ZydisEncoderRequest& req, ZydisPtr ptr)
 {
     auto op_index = req.operand_count;
     
@@ -48,7 +48,7 @@ void zydis_helper::add_ptr(ZydisEncoderRequest& req, ZydisPtr ptr)
     req.operand_count++;
 }
 
-void zydis_helper::add_reg(ZydisEncoderRequest& req, ZydisReg reg)
+void zydis_helper::add_op(ZydisEncoderRequest& req, ZydisReg reg)
 {
     auto op_index = req.operand_count;
     

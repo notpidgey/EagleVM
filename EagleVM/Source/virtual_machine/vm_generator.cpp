@@ -54,13 +54,13 @@ void vm_generator::create_vm_enter()
 	// 2. decrypt function jump address & jump
 	std::vector encode_requests
 	{
-		zydis_helper::create_encode_request<ZydisReg, ZydisMem>(ZYDIS_MNEMONIC_MOV, ZREG(ZYDIS_REGISTER_R15), ZMEMBD(ZYDIS_REGISTER_RSP, -144, 8)),	//mov r15, [rsp-144]
+		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, ZydisReg, ZydisMem>(ZREG(ZYDIS_REGISTER_R15), ZMEMBD(ZYDIS_REGISTER_RSP, -144, 8)),	//mov r15, [rsp-144]
 
-		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_ROL, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[2])),	//rol r15, key3
-		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_SUB, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[1])),	//add r15, key2
-		zydis_helper::create_encode_request<ZydisReg, ZydisImm>(ZYDIS_MNEMONIC_ROR, ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[0])),	//ror r15, key1
+		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROL, ZydisReg, ZydisImm>(ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[2])),	//rol r15, key3
+		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, ZydisReg, ZydisImm>(ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[1])),	//add r15, key2
+		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROR, ZydisReg, ZydisImm>(ZREG(ZYDIS_REGISTER_R15), ZIMMU(func_address_keys.values[0])),	//ror r15, key1
 
-		zydis_helper::create_encode_request<ZydisReg>(ZYDIS_MNEMONIC_JMP, ZREG(ZYDIS_REGISTER_R15)) //jmp r15
+		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, ZydisReg>(ZREG(ZYDIS_REGISTER_R15)) //jmp r15
 	};
 
 	auto data = zydis_helper::encode_queue(encode_requests);

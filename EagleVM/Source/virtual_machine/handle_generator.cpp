@@ -8,8 +8,7 @@ handle_instructions vm_handle_generator::create_vm_enter()
     //push r0-r15 to stack
     for (int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
     {
-        req = zydis_helper::create_encode_request(ZYDIS_MNEMONIC_PUSH);
-        zydis_helper::add_reg(req, ZREG(i));
+        req = zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSH, ZydisReg>(ZREG(i));
 
         vm_enter_operations.push_back(req);
     }
@@ -40,8 +39,7 @@ handle_instructions vm_handle_generator::create_vm_exit()
     //pop r0-r15 to stack
     for (int i = ZYDIS_REGISTER_R15; i >= ZYDIS_REGISTER_RAX; i--)
     {
-        req = zydis_helper::create_encode_request(ZYDIS_MNEMONIC_POP);
-        zydis_helper::add_reg(req, ZREG(i));
+        req = zydis_helper::create_encode_request<ZYDIS_MNEMONIC_POP, ZydisReg>(ZREG(i));
 
         vm_exit_operations.push_back(req);
     }
