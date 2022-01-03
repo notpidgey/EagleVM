@@ -3,6 +3,8 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <intrin.h>
+
 #include <zydis/Zydis.h>
 
 #include "virtual_machine/handle_generator.h"
@@ -13,9 +15,14 @@ public:
 	void init_vreg_map();
 	void init_ran_consts();
 
-	void create_vm_enter();
+	std::vector<uint8_t> create_vm_enter_jump(uint32_t va_protected);
+
+	std::vector<uint8_t> create_vm_enter();
 
 private:
+	uint32_t vm_enter_va = 0x1;
+	uint32_t vm_exit_va = 0x1;
+
 	std::vector<char> section_data_;
 	std::map<short, short> vreg_mapping_;
 
