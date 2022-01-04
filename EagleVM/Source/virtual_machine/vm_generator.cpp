@@ -1,5 +1,10 @@
 #include "virtual_machine/vm_generator.h"
 
+vm_generator::vm_generator()
+{
+	zydis_helper::setup_decoder();
+}
+
 void vm_generator::init_vreg_map()
 {
 	//vreg_mapping is a table which contains definitions for real -> virtual registers
