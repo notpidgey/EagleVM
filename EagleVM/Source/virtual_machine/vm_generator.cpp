@@ -71,13 +71,11 @@ std::vector<uint8_t> vm_generator::create_vm_enter_jump(uint32_t va_protected)
 std::vector<uint8_t> vm_generator::create_vm_enter()
 {
 	//vm enter routine:
-	ZydisEncoderRequest encoder;
-
 	// 1. push everything to stack
-	handle_instructions vm_enter = vm_handle_generator::create_vm_enter();
+	const std::vector vm_enter = vm_handle_generator::create_vm_enter();
 	
 	// 2. decrypt function jump address & jump
-	std::vector encode_requests
+	const std::vector encode_requests
 	{
 		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, ZydisReg, ZydisMem>(ZREG(ZYDIS_REGISTER_R15), ZMEMBD(ZYDIS_REGISTER_RSP, -144, 8)),	//mov r15, [rsp-144]
 
@@ -87,7 +85,7 @@ std::vector<uint8_t> vm_generator::create_vm_enter()
 
 		zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, ZydisReg>(ZREG(ZYDIS_REGISTER_R15))													//jmp r15
 	};
-	std::vector<uint8_t> data = zydis_helper::encode_queue(encode_requests);
 
-	return data;
+	auto vm_enter_queue = zydis_helper::combine_vec(vm_enter, encode_requests);
+	return zydis_helper::encode_queue(vm_enter_queue);
 }
