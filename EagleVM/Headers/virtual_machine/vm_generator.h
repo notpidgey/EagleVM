@@ -16,7 +16,6 @@ public:
 	void init_ran_consts();
 
 	std::vector<uint8_t> create_vm_enter_jump(uint32_t va_protected);
-
 	std::vector<uint8_t> create_vm_enter();
 
 private:
