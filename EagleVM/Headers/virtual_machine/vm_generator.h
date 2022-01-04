@@ -12,6 +12,8 @@
 class vm_generator
 {
 public:
+	vm_generator();
+
 	void init_vreg_map();
 	void init_ran_consts();
 

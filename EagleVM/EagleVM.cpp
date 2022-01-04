@@ -133,6 +133,16 @@ int main(int argc, char* argv[])
 	vm_generator vm_generator;
 	vm_generator.init_vreg_map();
 	vm_generator.init_ran_consts();
+	
+	for (int i = 0; i < vm_iat_calls.size();)
+	{
+		auto protect_section = parser.offset_to_ptr(vm_iat_calls[i].first, vm_iat_calls[i + 1].first);
+		zydis_helper::get_instructions(protect_section.instruction_protect_begin, 
+			(size_t)protect_section.instruction_protect_end - (size_t)protect_section.instruction_protect_begin);
+
+		i += 2;
+	}
+	
 	vm_generator.create_vm_enter();
 	vm_generator.create_vm_enter_jump(0x00000000005547ED);
 

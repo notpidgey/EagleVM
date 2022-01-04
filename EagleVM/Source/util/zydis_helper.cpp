@@ -73,3 +73,29 @@ std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>
 
     return data;
 }
+
+void zydis_helper::setup_decoder()
+{
+    ZydisDecoderInit(&zyids_decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+}
+
+std::vector<ZydisDecode> zydis_helper::get_instructions(void* data, size_t size)
+{
+    std::vector<ZydisDecode> decode_data;
+
+    ZyanUSize offset = 0;
+    ZydisDecodedInstruction instruction;
+    ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
+    
+    while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &instruction, operands,
+        ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY)))
+    {
+        ZydisDecode decoded = { instruction, 0 };
+        std::memcpy(&decoded.operands[0], operands, sizeof operands);
+
+        decode_data.push_back(decoded);
+        offset += instruction.length;
+    }
+
+    return decode_data;
+}

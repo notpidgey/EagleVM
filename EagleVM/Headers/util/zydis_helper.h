@@ -12,12 +12,20 @@ typedef ZydisEncoderOperand_::ZydisEncoderOperandMem_ ZydisMem;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ ZydisPtr;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ ZydisReg;
 
+struct ZydisDecode
+{
+	ZydisDecodedInstruction instruction;
+	ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
+};
+
 #define ZREG(x)			{ (ZydisRegister)x, 0 }
 
 #define ZIMMU(x)		{ .u = x }
 #define ZIMMI(x)		{ .s = x }
 
 #define ZMEMBD(x, y, z)	{ (ZydisRegister)x, (ZydisRegister)0,0, (ZyanI64)y, z }
+
+inline ZydisDecoder zyids_decoder;
 
 namespace zydis_helper
 {
@@ -30,6 +38,7 @@ namespace zydis_helper
 		return operand;
 	}
 
+	/// Zydis Encoder Helpers
 	std::vector<uint8_t> encode_request(ZydisEncoderRequest& request);
 	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic);
 
@@ -58,4 +67,9 @@ namespace zydis_helper
 
 		return result;
 	}
+
+	//Zydis Decoder Helpers
+	void setup_decoder();
+	
+	std::vector<ZydisDecode> get_instructions(void* data, size_t size);
 }
