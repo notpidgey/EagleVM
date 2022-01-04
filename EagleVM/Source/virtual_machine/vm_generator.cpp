@@ -43,6 +43,20 @@ void vm_generator::init_ran_consts()
 		func_address_keys.values[i] = dist(rng);
 }
 
+std::vector<uint8_t> vm_generator::create_padding(size_t bytes)
+{
+	std::vector<uint8_t> padding(bytes);
+
+	std::random_device dev;
+	std::mt19937 rng(dev());
+	std::uniform_int_distribution<std::mt19937::result_type> dist(0, UINT8_MAX);
+
+	for (int i = 0; i < bytes; i++)
+		padding.push_back(dist(rng));
+
+	return padding;
+}
+
 std::vector<uint8_t> vm_generator::create_vm_enter_jump(uint32_t va_protected)
 {
 	//Encryption
