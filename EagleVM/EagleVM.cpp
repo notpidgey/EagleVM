@@ -4,8 +4,15 @@
 #include "pe/pe_generator.h"
 #include "virtual_machine/vm_generator.h"
 
+void do_stuff()
+{
+
+}
+
 int main(int argc, char* argv[])
 {
+	std::function yes = &do_stuff;
+
 	pe_parser parser = pe_parser("D:\\VM\\EagleVMSandbox.exe");
 	std::printf("[+] loaded ovtest.exe -> %i bytes\n", parser.get_file_size());
 
@@ -113,10 +120,15 @@ int main(int argc, char* argv[])
 			previous_call = call.second;
 		});
 
-	if(success)
-		std::printf("[+] successfully verified macro usage\n");
-	else
+	if (!success)
+	{
 		std::printf("[+] failed to verify macro usage\n");
+		exit(-1);
+	}
+	else
+	{
+		std::printf("[+] successfully verified macro usage\n");
+	}
 
 	vm_generator vm_generator;
 	vm_generator.init_vreg_map();
