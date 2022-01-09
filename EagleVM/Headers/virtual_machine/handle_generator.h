@@ -12,6 +12,6 @@ typedef std::vector<ZydisEncoderRequest> handle_instructions;
 
 namespace vm_handle_generator
 {
-	handle_instructions create_vm_enter();
-	handle_instructions create_vm_exit();
+	handle_instructions create_vm_enter(std::vector<short>& push_order);
+	handle_instructions create_vm_exit(std::vector<short>& push_order);
 }
