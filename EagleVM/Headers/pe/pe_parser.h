@@ -21,6 +21,11 @@ struct pe_protected_section
 	
 	void* instruction_protect_begin;
 	void* instruction_protect_end;
+
+	size_t get_instruction_size()
+	{
+		return (size_t)instruction_protect_end - (size_t)instruction_protect_begin;
+	}
 };
 
 enum class stub_import

@@ -27,7 +27,7 @@ private:
 	uint32_t vm_exit_va = 0x1;
 
 	std::vector<char> section_data_;
-	std::map<short, short> vreg_mapping_;
+	std::vector<short> reg_order_;
 
 	union jmp_enc_constants
 	{

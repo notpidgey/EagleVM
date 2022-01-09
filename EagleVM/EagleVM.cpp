@@ -136,11 +136,10 @@ int main(int argc, char* argv[])
 	
 	for (int i = 0; i < vm_iat_calls.size();)
 	{
-		auto protect_section = parser.offset_to_ptr(vm_iat_calls[i].first, vm_iat_calls[i + 1].first);
-		zydis_helper::get_instructions(protect_section.instruction_protect_begin, 
-			(size_t)protect_section.instruction_protect_end - (size_t)protect_section.instruction_protect_begin);
+		pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[i].first, vm_iat_calls[i + 1].first);
+		std::vector<ZydisDecode> instructions = zydis_helper::get_instructions(protect_section.instruction_protect_begin, protect_section.get_instruction_size());
 
-		i += 2;
+		i += 2; // i1 = vm_begin, i2 = vm_end
 	}
 	
 	vm_generator.create_vm_enter();
