@@ -12,7 +12,7 @@ bool pe_parser::read_file(const char* path)
     memcpy_s(&file_name, MAX_FILEPATH, path, MAX_FILEPATH);
 
     DWORD bytes_read = NULL;
-    const HANDLE file = CreateFileA(file_name, GENERIC_ALL, FILE_SHARE_READ, nullptr,
+    const HANDLE file = CreateFileA(file_name, GENERIC_READ, FILE_SHARE_READ, nullptr,
         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
     if (file == INVALID_HANDLE_VALUE)

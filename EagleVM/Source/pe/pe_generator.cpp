@@ -26,8 +26,8 @@ PIMAGE_FILE_HEADER pe_generator::build_coff_header()
 }
 
 PIMAGE_OPTIONAL_HEADER pe_generator::build_optional_header(
-	uint64_t image_base, int section_alignment, int file_alignment, 
-	uint64_t stack_reserve, uint64_t stack_commit, uint64_t heap_reserve, uint64_t heap_commit
+	const uint64_t image_base, const int section_alignment, const int file_alignment,
+	const uint64_t sr, uint64_t sc, const uint64_t hr, const uint64_t hc
 )
 {
 	constexpr auto OPTIONAL_HEADER_SIZE = sizeof IMAGE_OPTIONAL_HEADER;
@@ -55,22 +55,22 @@ PIMAGE_OPTIONAL_HEADER pe_generator::build_optional_header(
 	optional_header.Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI;
 	optional_header.DllCharacteristics = IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE | IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY |
 		IMAGE_DLLCHARACTERISTICS_NX_COMPAT | IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE;
-	optional_header.SizeOfStackReserve = stack_reserve;
-	optional_header.SizeOfStackCommit = stack_commit;
-	optional_header.SizeOfHeapReserve = heap_reserve;
-	optional_header.SizeOfHeapCommit = heap_commit;
+	optional_header.SizeOfStackReserve = sr;
+	optional_header.SizeOfStackCommit = sc;
+	optional_header.SizeOfHeapReserve = hr;
+	optional_header.SizeOfHeapCommit = hc;
 	optional_header.LoaderFlags = 0;
 	optional_header.NumberOfRvaAndSizes = 10;
 
 	return &optional_header;
 }
 
-void pe_generator::add_section(PIMAGE_SECTION_HEADER section_header)
+void pe_generator::add_section(const PIMAGE_SECTION_HEADER section_header)
 {
 	section_headers.push_back(*section_header);
 }
 
-void pe_generator::add_section(IMAGE_SECTION_HEADER section_header)
+void pe_generator::add_section(const IMAGE_SECTION_HEADER section_header)
 {
 	section_headers.push_back(section_header);
 }

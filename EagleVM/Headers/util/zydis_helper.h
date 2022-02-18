@@ -7,50 +7,44 @@
 #include <iostream>
 #include <algorithm>
 
-typedef ZydisEncoderOperand_::ZydisEncoderOperandImm_ ZydisImm;
-typedef ZydisEncoderOperand_::ZydisEncoderOperandMem_ ZydisMem;
-typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ ZydisPtr;
-typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ ZydisReg;
+#include "util/zydis_defs.h"
 
-struct ZydisDecode
+struct zydis_decode
 {
 	ZydisDecodedInstruction instruction;
 	ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
 };
 
-#define ZREG(x)			{ (ZydisRegister)x, 0 }
-
-#define ZIMMU(x)		{ .u = x }
-#define ZIMMI(x)		{ .s = x }
-
-#define ZMEMBD(x, y, z)	{ (ZydisRegister)x, (ZydisRegister)0,0, (ZyanI64)y, z }
+enum register_size
+{
+	unsupported,
+	bit64 = 8,
+	bit32 = 4,
+	bit16 = 2,
+	bit8 = 1
+};
 
 inline ZydisDecoder zyids_decoder;
 
 namespace zydis_helper
 {
-	template <typename T> 
-	T create_new_operand()
-	{
-		T operand;
-		ZYAN_MEMSET(&operand, 0, sizeof(operand));
-
-		return operand;
-	}
+	void setup_decoder();
+	zydis_register get_bit_version(zydis_register zy_register, register_size requested_size);
+	register_size get_reg_size(zydis_register zy_register);
 
 	/// Zydis Encoder Helpers
-	std::vector<uint8_t> encode_request(ZydisEncoderRequest& request);
-	ZydisEncoderRequest create_encode_request(ZydisMnemonic mnemonic);
+	std::vector<uint8_t> encode_request(zydis_encoder_request& request);
+	zydis_encoder_request create_encode_request(zyids_mnemonic mnemonic);
 
-	void add_op(ZydisEncoderRequest& req, ZydisImm imm);
-	void add_op(ZydisEncoderRequest& req, ZydisMem mem);
-	void add_op(ZydisEncoderRequest& req, ZydisPtr ptr);
-	void add_op(ZydisEncoderRequest& req, ZydisReg reg);
+	void add_op(zydis_encoder_request& req, zydis_eimm imm);
+	void add_op(zydis_encoder_request& req, zydis_emem mem);
+	void add_op(zydis_encoder_request& req, zydis_eptr ptr);
+	void add_op(zydis_encoder_request& req, zydis_ereg reg);
 
-	std::vector<uint8_t> encode_queue(std::vector<ZydisEncoderRequest>& queue);
+	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
 
-	template<ZydisMnemonic TMnemonic, typename... TArgs>
-	ZydisEncoderRequest create_encode_request(TArgs&&... args)
+	template<zyids_mnemonic TMnemonic, typename... TArgs>
+	zydis_encoder_request create_encode_request(TArgs&&... args)
 	{
 		auto encoder = zydis_helper::create_encode_request(TMnemonic);
 		(add_op(encoder, std::forward<TArgs>(args)), ...);
@@ -67,9 +61,6 @@ namespace zydis_helper
 
 		return result;
 	}
-
-	//Zydis Decoder Helpers
-	void setup_decoder();
 	
-	std::vector<ZydisDecode> get_instructions(void* data, size_t size);
+	std::vector<zydis_decode> get_instructions(void* data, size_t size);
 }
