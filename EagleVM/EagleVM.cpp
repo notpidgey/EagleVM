@@ -148,8 +148,8 @@ int main(int argc, char* argv[])
     std::vector<zydis_encoder_request> reqs;
     for(int i = 2; i <= 8; i*=2)
     {
-        reqs = zydis_helper::combine_vec(reqs, vm_generator.hg_.create_vm_pop((register_size)i));
-        //reqs = zydis_helper::combine_vec(reqs, vm_generator.hg_.create_vm_push((register_size)i));
+        //reqs = zydis_helper::combine_vec(reqs, vm_generator.hg_.create_vm_pop((register_size)i));
+        reqs = zydis_helper::combine_vec(reqs, vm_generator.hg_.create_vm_add((register_size)i));
     }
 
     auto enc = zydis_helper::encode_queue(reqs);
