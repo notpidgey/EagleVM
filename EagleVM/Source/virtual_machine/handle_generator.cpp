@@ -75,24 +75,21 @@ handle_instructions vm_handle_generator::create_vm_push(register_size reg_size)
     {
         vm_push = {
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size),
-                        ZREG(VTEMP))
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP))
         };
     }
     else if (reg_size == register_size::bit32)
     {
         vm_push = {
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size),
-                        ZREG(TO32(VTEMP)))
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP)))
         };
     }
     else if (reg_size == register_size::bit16)
     {
         vm_push = {
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size),
-                        ZREG(TO16(VTEMP)))
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP)))
         };
     }
 
@@ -109,24 +106,21 @@ handle_instructions vm_handle_generator::create_vm_pop(register_size reg_size)
     if (reg_size == register_size::bit64)
     {
         vm_pop = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP),
-                        ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 0, size)),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
     }
     else if (reg_size == register_size::bit32)
     {
         vm_pop = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)), ZMEMBD(VSP, 0, size)),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
     }
     else if (reg_size == register_size::bit16)
     {
         vm_pop = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)), ZMEMBD(VSP, 0, size)),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
     }
@@ -172,10 +166,8 @@ handle_instructions vm_handle_generator::create_vm_add(register_size reg_size)
         //pushfq                ; keep track of rflags
         //add VSP, 8            ; pop the top value off of the stack
         vm_add = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(VTEMP)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(VTEMP)),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
@@ -187,10 +179,8 @@ handle_instructions vm_handle_generator::create_vm_add(register_size reg_size)
         //pushfq
         //add VSP, 4
         vm_add = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(TO32(VTEMP))),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(TO32(VTEMP))),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
@@ -202,10 +192,8 @@ handle_instructions vm_handle_generator::create_vm_add(register_size reg_size)
         //pushfq
         //add VSP, 2
         vm_add = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(TO16(VTEMP))),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(TO16(VTEMP))),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
@@ -226,10 +214,8 @@ handle_instructions vm_handle_generator::create_vm_sub(register_size reg_size)
         //pushfq                ; keep track of rflags
         //add VSP, 8            ; pop the top value off of the stack
         vm_sub = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(VTEMP)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(VTEMP)),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
@@ -241,10 +227,8 @@ handle_instructions vm_handle_generator::create_vm_sub(register_size reg_size)
         //pushfq
         //add VSP, 4
         vm_sub = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(TO32(VTEMP))),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(TO32(VTEMP))),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
@@ -256,10 +240,8 @@ handle_instructions vm_handle_generator::create_vm_sub(register_size reg_size)
         //pushfq
         //add VSP, 2
         vm_sub = {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)),
-                        ZMEMBD(VSP, 0, size)),
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size),
-                        ZREG(TO16(VTEMP))),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)), ZMEMBD(VSP, 0, size)),
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, size, size), ZREG(TO16(VTEMP))),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSHFQ>(),
                 zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size))
         };
