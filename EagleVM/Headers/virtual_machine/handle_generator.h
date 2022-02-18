@@ -28,10 +28,17 @@ public:
     //increments VSP by 8
     handle_instructions create_vm_pop(register_size reg_size = register_size::bit64);
 
-    handle_instructions create_vm_inc();
-    handle_instructions create_vm_dec();
-    handle_instructions create_vm_add();
-    handle_instructions create_vm_mov();
+    //increments value stored at the top of the stack by 1
+    handle_instructions create_vm_inc(register_size reg_size = register_size::bit64);
+
+    //decrements value stored at the top of the stack by 1
+    handle_instructions create_vm_dec(register_size reg_size = register_size::bit64);
+
+    //add value stored at the top of the VSTACK to value in VTMP
+    handle_instructions create_vm_add(register_size reg_size = register_size::bit64);
+
+    //subtract value stored at the top of VSTACK from value in VTMP
+    handle_instructions create_vm_sub(register_size reg_size = register_size::bit64);
 
 private:
     vm_register_manager* rm_ = nullptr;
