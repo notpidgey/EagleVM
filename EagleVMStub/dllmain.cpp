@@ -12,8 +12,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     case DLL_THREAD_ATTACH:
     case DLL_THREAD_DETACH:
     case DLL_PROCESS_DETACH:
-        MessageBoxA(0, "Application running in unprotected mode.", "EagleVM", 0);
-        exit(-1);
         break;
     }
     return TRUE;
