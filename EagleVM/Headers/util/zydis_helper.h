@@ -15,7 +15,7 @@ struct zydis_decode
 	ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
 };
 
-enum register_size
+enum reg_size
 {
 	unsupported,
 	bit64 = 8,
@@ -25,12 +25,14 @@ enum register_size
 };
 
 inline ZydisDecoder zyids_decoder;
+typedef std::vector<zydis_encoder_request> handle_instructions;
 
 namespace zydis_helper
 {
 	void setup_decoder();
-	zydis_register get_bit_version(zydis_register zy_register, register_size requested_size);
-	register_size get_reg_size(zydis_register zy_register);
+	zydis_register get_bit_version(zydis_register zy_register, reg_size requested_size);
+	reg_size get_reg_size(zydis_register zy_register);
+    char reg_size_to_string(reg_size reg_size);
 
 	/// Zydis Encoder Helpers
 	std::vector<uint8_t> encode_request(zydis_encoder_request& request);
@@ -50,16 +52,6 @@ namespace zydis_helper
 		(add_op(encoder, std::forward<TArgs>(args)), ...);
 
 		return encoder;
-	}
-
-	template <typename T, std::same_as<T>... Rest>
-	inline std::vector<T> combine_vec(const std::vector<T>& first, const std::vector<Rest>&... rest) {
-		std::vector<T> result;
-		result.reserve((first.size() + ... + rest.size()));
-		result.insert(result.end(), first.begin(), first.end());
-		(..., result.insert(result.end(), rest.begin(), rest.end()));
-
-		return result;
 	}
 	
 	std::vector<zydis_decode> get_instructions(void* data, size_t size);

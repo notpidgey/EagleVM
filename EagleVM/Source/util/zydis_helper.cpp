@@ -5,7 +5,7 @@ void zydis_helper::setup_decoder()
     ZydisDecoderInit(&zyids_decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
 }
 
-zydis_register zydis_helper::get_bit_version(zydis_register zy_register, register_size requested_size)
+zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_size requested_size)
 {
     auto index = 0;
     switch (zydis_helper::get_reg_size(zy_register))
@@ -43,7 +43,7 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, registe
     return zy_register;
 }
 
-register_size zydis_helper::get_reg_size(const zydis_register zy_register)
+reg_size zydis_helper::get_reg_size(const zydis_register zy_register)
 {
     if (zy_register >= ZYDIS_REGISTER_AL && zy_register <= ZYDIS_REGISTER_R15B)
         return bit8;
@@ -58,6 +58,26 @@ register_size zydis_helper::get_reg_size(const zydis_register zy_register)
         return bit64;
 
     return unsupported;
+}
+
+char zydis_helper::reg_size_to_string(reg_size reg_size)
+{
+    switch (reg_size)
+    {
+        case bit64:
+            return 'Q';
+        case bit32:
+            return 'D';
+            break;
+        case bit16:
+            return 'W';
+            break;
+        case bit8:
+            return 'B';
+            break;
+        default:
+            return '?';
+    }
 }
 
 std::vector<uint8_t> zydis_helper::encode_request(ZydisEncoderRequest& request)
@@ -143,8 +163,8 @@ std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size
     ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
 
     while (ZYAN_SUCCESS(
-            ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &instruction, operands,
-                    ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY)))
+        ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &instruction, operands,
+            ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY)))
     {
         zydis_decode decoded = {instruction, 0};
         std::memcpy(&decoded.operands[0], operands, sizeof operands);

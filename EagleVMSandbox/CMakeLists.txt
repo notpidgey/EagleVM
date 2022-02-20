@@ -7,6 +7,7 @@ file(
 
 add_executable(EagleVMSandbox ${EagleVMSandbox_SRC})
 
+target_link_options(EagleVMSandbox PRIVATE /O0)
 target_link_libraries(EagleVMSandbox PRIVATE EagleVMStub)
 target_compile_features(EagleVMSandbox PRIVATE cxx_std_23)
 
