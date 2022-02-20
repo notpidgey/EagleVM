@@ -28,12 +28,12 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
 
     uint32_t current_section_offset = 0;
     std::printf("%3s %-17s %-10s\n", "", "handler", "instructions");
-    for(auto& [k, v] : hg_.vm_handlers)
+    for (auto&[k, v] : hg_.vm_handlers)
     {
-        for(int i = 0; i < 4; i++)
+        for (int i = 0; i < 4; i++)
         {
             reg_size supported_size = v.supported_handler_va[i];
-            if(supported_size == reg_size::unsupported)
+            if (supported_size == reg_size::unsupported)
                 break;
 
             auto instructions = v.creation_binder(supported_size);
@@ -70,7 +70,7 @@ std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydi
 
     std::vector<zydis_encoder_request> virtualized_instruction;
     encode_status enc_status = encode_status::success;
-    for (int i = 0; i < decoded_instruction.operands->element_count; i++)
+    for (int i = decoded_instruction.operands->element_count - 1; i >= 0; i--)
     {
         encode_data encode;
         switch (const zydis_decoded_operand operand = decoded_instruction.operands[i]; operand.type)
@@ -95,7 +95,7 @@ std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydi
         if (enc_status != encode_status::success)
             break;
 
-        util::combine_vec(virtualized_instruction, encode.first);
+        virtualized_instruction += encode.first;
     }
 
     return virtualized_instruction;
@@ -118,12 +118,17 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
 encode_data vm_generator::encode_register_operand(const zydis_dreg op_reg)
 {
     const auto[displacement, size] = rm_.get_stack_displacement(op_reg.value);
-    const std::vector decrypt_routine
+    const vm_handler_entry& va_of_push_func = hg_.vm_handlers[2];
+    const auto func_address = hg_.get_va_index(va_of_push_func, zydis_helper::get_reg_size(op_reg.value));
+
+    //this routine will load the register value on top of the stack
+    const std::vector load_register
         {
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_PUSH, zydis_emem>(ZMEMBD(VREGS, displacement, size)), //push [REG]
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(displacement)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_CALL, zydis_eimm>(ZIMMU(func_address)),
         };
 
-    return {};
+    return {load_register, encode_status::success};
 }
 
 encode_data vm_generator::encode_memory_operand(zydis_dmem op_mem)

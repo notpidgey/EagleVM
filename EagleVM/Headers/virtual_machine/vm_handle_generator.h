@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <array>
 #include <map>
+#include <ranges>
 
 #include "virtual_machine/models/vm_handler_entry.h"
 #include "virtual_machine/vm_register_manager.h"
@@ -24,10 +25,12 @@ public:
     std::map<int, vm_handler_entry> vm_handlers;
 
     vm_handle_generator();
-    explicit vm_handle_generator(vm_register_manager* push_order);
+    explicit vm_handle_generator(vm_register_manager* push_order, reg_size size);
 
     void setup_vm_mapping();
     void setup_enc_constants();
+
+    uint32_t get_va_index(const vm_handler_entry& handler, reg_size size);
 
     ///////////////////
     /// VM SPECIFIC ///
@@ -44,6 +47,9 @@ public:
 
     //pops current value at the top of the stack into VTMP
     handle_instructions create_vm_pop(reg_size reg_size = reg_size::bit64);
+
+    //loads a register value located in VREGS onto the stack
+    handle_instructions create_vm_load(reg_size reg_size = reg_size::bit64);
 
     //jumps from vm_enter into vm function context
     handle_instructions create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected);

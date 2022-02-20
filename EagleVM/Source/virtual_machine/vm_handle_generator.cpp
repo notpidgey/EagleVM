@@ -23,6 +23,7 @@ void vm_handle_generator::setup_vm_mapping()
         {
             {0,                   {HNDL_BIND(create_vm_enter), reg_size::bit64}}, // VM_ENTER
             {1,                   {HNDL_BIND(create_vm_exit),  reg_size::bit64}}, // VM_EXIT
+            {2,                   {HNDL_BIND(create_vm_load),  reg_size::bit64, reg_size::bit32, reg_size::bit16}}, //VM_LOAD_REG
             {ZYDIS_MNEMONIC_PUSH, {HNDL_BIND(create_vm_push),  reg_size::bit64, reg_size::bit32, reg_size::bit16}},
             {ZYDIS_MNEMONIC_POP,  {HNDL_BIND(create_vm_pop),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
             {ZYDIS_MNEMONIC_INC,  {HNDL_BIND(create_vm_inc),   reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}},
@@ -51,6 +52,27 @@ void vm_handle_generator::setup_enc_constants()
     for (unsigned char& value : keys_.values)
         value = math_util::create_pran<uint8_t>(1, UINT8_MAX);
 }
+
+uint32_t vm_handle_generator::get_va_index(const vm_handler_entry& handler, reg_size size)
+{
+    if(std::ranges::find(handler.supported_handler_va, size) == std::end(handler.supported_handler_va))
+        return -1;
+
+    switch (size)
+    {
+        case bit64:
+            return handler.handler_va[0];
+        case bit32:
+            return handler.handler_va[1];
+        case bit16:
+            return handler.handler_va[2];
+        case bit8:
+            return handler.handler_va[3];
+        default:
+            return -1;
+    }
+}
+
 
 handle_instructions vm_handle_generator::create_vm_enter(reg_size)
 {
@@ -120,6 +142,47 @@ handle_instructions vm_handle_generator::create_vm_exit(reg_size)
     std::printf("%3c %-17s %-10zi\n", 'Q', __func__, vm_exit_operations.size());
     return vm_exit_operations;
 }
+
+handle_instructions vm_handle_generator::create_vm_load(reg_size reg_size)
+{
+    uint64_t size = reg_size;
+    handle_instructions handle_instructions;
+
+    if (reg_size == reg_size::bit64)
+    {
+        //mov VTEMP, [VREGS+VTEMP]      ; get address of register
+        //mov VTEMP, qword ptr [VTEMP]  ; get register value
+        //sub VSP, size                 ; increase VSP
+        //mov [VSP], VTEMP              ; push value to stack
+        handle_instructions = {
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBI(VREGS, VTEMP, 1, 8)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VREGS, 0, reg_size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP))
+        };
+    }
+    else if (reg_size == reg_size::bit32)
+    {
+        handle_instructions = {
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBI(VREGS, VTEMP, 1, 8)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO32(VTEMP)), ZMEMBD(VREGS, 0, reg_size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP)))
+        };
+    }
+    else if (reg_size == reg_size::bit16)
+    {
+        handle_instructions = {
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBI(VREGS, VTEMP, 1, 8)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(TO16(VTEMP)), ZMEMBD(VREGS, 0, reg_size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(size)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP)))
+        };
+    }
+
+    return handle_instructions;
+}
+
 
 handle_instructions vm_handle_generator::create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected)
 {

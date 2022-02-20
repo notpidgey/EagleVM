@@ -14,17 +14,17 @@ std::pair<uint32_t, uint16_t> vm_register_manager::get_stack_displacement(zydis_
     //determine 64bit version of register
     auto reg_size = zydis_helper::get_reg_size(reg);
 
-    int current_index = 0;
-    std::ranges::for_each(reg_stack_order_, [this, &current_index](zydis_register reg)
+    int found_index = 0;
+    for (int i = 0; i < reg_stack_order_.size(); i++)
+    {
+        if (reg == reg_stack_order_[i])
         {
-            if (reg == reg_stack_order_[current_index])
-                return false;
+            found_index = i;
+            break;
+        }
+    }
 
-            current_index++;
-            return true;
-        });
-
-    return {(current_index * 8) + (8 - reg_size), reg_size};
+    return {(found_index * 8) + (8 - reg_size), reg_size};
 }
 
 void vm_register_manager::set_reg_mapping(const short index, const zydis_register reg)
