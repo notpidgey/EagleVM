@@ -38,7 +38,8 @@ typedef ZydisDecodedOperand zydis_decoded_operand;
 #define SR_R14 ZYDIS_REGISTER_R14
 #define SR_R15 ZYDIS_REGISTER_R15
 
-#define ZREG(x)			{ (ZydisRegister)x, 0 }
-#define ZIMMU(x)		{ .u = x }
-#define ZIMMI(x)		{ .s = x }
-#define ZMEMBD(x, y, z)	{ (ZydisRegister)x, (ZydisRegister)0,0, (ZyanI64)y, (ZyanU16)z }
+#define ZREG(x)			    { (ZydisRegister)x, 0 }
+#define ZIMMU(x)		    { .u = x }
+#define ZIMMI(x)		    { .s = x }
+#define ZMEMBD(x, y, z)	    { (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
+#define ZMEMBI(x, y, z, a)	{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
