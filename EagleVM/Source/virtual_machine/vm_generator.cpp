@@ -49,7 +49,7 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
 std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
 {
     //virtualizer does not support more than 2 operands OR all mnemonics
-    if (decoded_instruction.operands->element_count > 2 ||
+    if (decoded_instruction.instruction.operand_count > 2 ||
         !hg_.vm_handlers.contains(decoded_instruction.instruction.mnemonic))
     {
         INSTRUCTION_NOT_SUPPORTED:
@@ -57,7 +57,7 @@ std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydi
     }
 
     std::vector<zydis_encoder_request> virtualized_instruction;
-    for (int i = 0; i < decoded_instruction.operands->element_count; i++)
+    for (int i = 0; i < decoded_instruction.instruction.operand_count; i++)
     {
         encode_data encode;
         switch (const zydis_decoded_operand operand = decoded_instruction.operands[i]; operand.type)
@@ -65,16 +65,16 @@ std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydi
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
             case ZYDIS_OPERAND_TYPE_REGISTER:
-                encode = encode_operand(operand.reg);
+                encode = encode_operand(decoded_instruction, operand.reg);
                 break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
-                encode = encode_operand(operand.mem);
+                encode = encode_operand(decoded_instruction, operand.mem);
                 break;
             case ZYDIS_OPERAND_TYPE_POINTER:
-                encode = encode_operand(operand.ptr);
+                encode = encode_operand(decoded_instruction, operand.ptr);
                 break;
             case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                encode = encode_operand(operand.imm);
+                encode = encode_operand(decoded_instruction, operand.imm);
                 break;
         }
 
@@ -112,7 +112,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
         {
             //mov VTEMP, -8
             //call VM_LOAD_REG
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(displacement)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
             zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address)),
         };
 
@@ -141,18 +141,10 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const vm_handler_entry& va_of_push_func = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
 
     std::vector<zydis_encoder_request> translated_imm;
-    uint32_t func_address_mem;
-    reg_size reg_size;
 
-    if (instruction.operands->element_count == 1)
-        reg_size = reg_size::bit64;
-    else if(instruction.operands[0].type != ZYDIS_OPERAND_TYPE_MEMORY)
-        return {{}, encode_status::unsupported};
-    else
-        reg_size = zydis_helper::get_reg_size(instruction.operands[0].mem.base);
-
-    func_address_mem = hg_.get_va_index(va_of_push_func, reg_size);
-    switch (reg_size)
+    const auto r_size = reg_size(instruction.operands[0].size);
+    const auto func_address_mem = hg_.get_va_index(va_of_push_func, r_size);
+    switch (r_size)
     {
         case bit64:
             translated_imm =

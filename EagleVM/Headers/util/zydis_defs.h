@@ -45,6 +45,6 @@ struct zydis_decode
 
 #define ZREG(x)			    { (ZydisRegister)x, 0 }
 #define ZIMMU(x)		    { .u = x }
-#define ZIMMI(x)		    { .s = x }
+#define ZIMMS(x)		    { .s = x }
 #define ZMEMBD(x, y, z)	    { (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
 #define ZMEMBI(x, y, z, a)	{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
