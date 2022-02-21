@@ -2,9 +2,7 @@
 #include <Zydis/Zydis.h>
 #include <Zycore/LibC.h>
 
-//don't know how else to name this, because the other thing is also called zydis_ereg
 typedef ZydisRegister zydis_register;
-
 typedef ZydisMnemonic zyids_mnemonic;
 
 typedef ZydisDecodedOperand_::ZydisDecodedOperandImm_ zydis_dimm;
@@ -18,8 +16,15 @@ typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ zydis_eptr;
 typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ zydis_ereg;
 
 typedef ZydisEncoderRequest zydis_encoder_request;
-
 typedef ZydisDecodedOperand zydis_decoded_operand;
+
+typedef std::vector<zydis_encoder_request> handle_instructions;
+
+struct zydis_decode
+{
+    ZydisDecodedInstruction instruction;
+    ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
+};
 
 #define SR_RAX ZYDIS_REGISTER_RAX
 #define SR_RCX ZYDIS_REGISTER_RCX

@@ -9,11 +9,9 @@
 
 #include "util/zydis_defs.h"
 
-struct zydis_decode
-{
-	ZydisDecodedInstruction instruction;
-	ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
-};
+#define TO8(x) zydis_helper::get_bit_version(x, reg_size::bit8)
+#define TO16(x) zydis_helper::get_bit_version(x, reg_size::bit16)
+#define TO32(x) zydis_helper::get_bit_version(x, reg_size::bit32)
 
 enum reg_size
 {
@@ -25,7 +23,6 @@ enum reg_size
 };
 
 inline ZydisDecoder zyids_decoder;
-typedef std::vector<zydis_encoder_request> handle_instructions;
 
 namespace zydis_helper
 {

@@ -159,18 +159,14 @@ std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size
     std::vector<zydis_decode> decode_data;
 
     ZyanUSize offset = 0;
-    ZydisDecodedInstruction instruction;
-    ZydisDecodedOperand operands[ZYDIS_MAX_OPERAND_COUNT_VISIBLE];
+    zydis_decode decoded_instruction{};
 
     while (ZYAN_SUCCESS(
-        ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &instruction, operands,
+        ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &decoded_instruction.instruction, decoded_instruction.operands,
             ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY)))
     {
-        zydis_decode decoded = {instruction, 0};
-        std::memcpy(&decoded.operands[0], operands, sizeof operands);
-
-        decode_data.push_back(decoded);
-        offset += instruction.length;
+        decode_data.push_back(decoded_instruction);
+        offset += decoded_instruction.instruction.length;
     }
 
     return decode_data;
