@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
                 {
                     std::printf
                         (
-                            "%3i %-10s %-10d %-10d\n", i, image_section->Name,
+                            "%3i %-10s %-10lu %-10lu\n", i, image_section->Name,
                             image_section->VirtualAddress, image_section->SizeOfRawData);
                     i++;
                 });
@@ -34,7 +34,7 @@ int main(int argc, char* argv[])
     parser.enum_imports
         (
             [&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data,
-                const PIMAGE_SECTION_HEADER import_section, int, char* data_base)
+                const PIMAGE_SECTION_HEADER import_section, int, const char* data_base)
                 {
                     const char* import_section_raw = data_base + import_section->PointerToRawData;
                     const char* import_library = const_cast<char*>(import_section_raw + (import_descriptor->Name -
@@ -50,8 +50,8 @@ int main(int argc, char* argv[])
 
     auto nt_header = parser.get_nt_header();
     std::printf("[>] image base -> %I64d bytes\n", nt_header->OptionalHeader.ImageBase);
-    std::printf("[>] section alignment -> %i bytes\n", nt_header->OptionalHeader.SectionAlignment);
-    std::printf("[>] file alignment -> %i bytes\n", nt_header->OptionalHeader.FileAlignment);
+    std::printf("[>] section alignment -> %lu bytes\n", nt_header->OptionalHeader.SectionAlignment);
+    std::printf("[>] file alignment -> %lu bytes\n", nt_header->OptionalHeader.FileAlignment);
     std::printf("[>] stack reserve -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfStackReserve);
     std::printf("[>] stack commit -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfStackCommit);
     std::printf("[>] heap reserve -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfHeapReserve);

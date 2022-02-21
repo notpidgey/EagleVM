@@ -6,10 +6,6 @@
 #define VTEMP       rm_->reg_map[I_VTEMP]
 #define PUSHORDER   rm_->reg_stack_order_
 
-#define TO8(x) zydis_helper::get_bit_version(x, reg_size::bit8)
-#define TO16(x) zydis_helper::get_bit_version(x, reg_size::bit16)
-#define TO32(x) zydis_helper::get_bit_version(x, reg_size::bit32)
-
 vm_handle_generator::vm_handle_generator() = default;
 
 vm_handle_generator::vm_handle_generator(vm_register_manager* push_order)
@@ -151,7 +147,7 @@ handle_instructions vm_handle_generator::create_vm_load(reg_size reg_size)
     if (reg_size == reg_size::bit64)
     {
         //mov VTEMP, [VREGS+VTEMP]      ; get address of register
-        //mov VTEMP, qword ptr [VTEMP]  ; get register value
+        //mov qword ptr VTEMP, [VTEMP]  ; get register value
         //sub VSP, size                 ; increase VSP
         //mov [VSP], VTEMP              ; push value to stack
         handle_instructions = {

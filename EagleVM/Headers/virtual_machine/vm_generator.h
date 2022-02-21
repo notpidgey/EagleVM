@@ -35,7 +35,7 @@ public:
     void generate_vm_handlers(uint32_t va_of_section);
 
     std::vector<zydis_encoder_request> translate_to_virtual(const zydis_decode& decoded_instruction);
-    std::vector<uint8_t> create_padding(size_t bytes);
+    static std::vector<uint8_t> create_padding(size_t bytes);
 
 private:
     vm_register_manager rm_;
@@ -45,8 +45,8 @@ private:
 
     std::vector<uint8_t> section_data_;
 
-    encode_data encode_register_operand(zydis_dreg op_reg);
-    encode_data encode_memory_operand(zydis_dmem op_mem);
-    encode_data encode_pointer_operand(zydis_dptr op_ptr);
-    encode_data encode_immediate_operand(zydis_dimm op_imm);
+    encode_data encode_operand(const zydis_decode& instruction, zydis_dreg op_reg);
+    encode_data encode_operand(const zydis_decode& instruction, zydis_dmem op_mem);
+    encode_data encode_operand(const zydis_decode& instruction, zydis_dptr op_ptr);
+    encode_data encode_operand(const zydis_decode& instruction, zydis_dimm op_imm);
 };
