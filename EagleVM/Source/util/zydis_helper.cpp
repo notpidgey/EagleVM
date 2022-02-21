@@ -45,19 +45,9 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
 
 reg_size zydis_helper::get_reg_size(const zydis_register zy_register)
 {
-    if (zy_register >= ZYDIS_REGISTER_AL && zy_register <= ZYDIS_REGISTER_R15B)
-        return bit8;
+    uint16_t bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
 
-    if (zy_register >= ZYDIS_REGISTER_AX && zy_register <= ZYDIS_REGISTER_R15W)
-        return bit16;
-
-    if (zy_register >= ZYDIS_REGISTER_EAX && zy_register <= ZYDIS_REGISTER_R15D)
-        return bit32;
-
-    if (zy_register >= ZYDIS_REGISTER_RAX && zy_register <= ZYDIS_REGISTER_R15)
-        return bit64;
-
-    return unsupported;
+    return reg_size(bit_size / 8);
 }
 
 char zydis_helper::reg_size_to_string(reg_size reg_size)
