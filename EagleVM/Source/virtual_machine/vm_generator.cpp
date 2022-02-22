@@ -186,40 +186,12 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
 
     const auto r_size = reg_size(instruction.operands[0].size);
     const auto func_address_mem = hg_.get_va_index(va_of_push_func, r_size);
-    switch (r_size)
-    {
-        case bit64:
-            translated_imm =
-                {
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(imm.u)),
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
-                };
-            break;
-        case bit32:
-            translated_imm =
-                {
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(TO32(VTEMP)), ZIMMU(imm.u)),
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
-                };
-            break;
-        case bit16:
-            translated_imm =
-                {
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(TO16(VTEMP)), ZIMMU(imm.u)),
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
-                };
-            break;
-        case bit8:
-            translated_imm =
-                {
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(TO8(VTEMP)), ZIMMU(imm.u)),
-                    zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
-                };
-            break;
-        default:
-            return {{}, encode_status::unsupported};
-    }
-
+    const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
+    translated_imm =
+        {
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
+        };
 
     return {translated_imm, encode_status::success};
 }
