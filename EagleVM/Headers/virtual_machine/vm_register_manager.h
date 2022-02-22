@@ -21,7 +21,7 @@ public:
     };
 
     void init_reg_order();
-    std::pair<uint32_t, uint16_t> get_stack_displacement(zydis_register reg);
+    std::pair<uint32_t, reg_size> get_stack_displacement(zydis_register reg);
     void set_reg_mapping(short index, zydis_register reg);
     bool contains_reg_mapping(short mapping, zydis_register reg);
 };
