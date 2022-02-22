@@ -104,7 +104,7 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dreg op_reg)
 {
     const auto[displacement, size] = rm_.get_stack_displacement(op_reg.value);
-    const vm_handler_entry& va_of_push_func = hg_.vm_handlers[2];
+    const vm_handler_entry& va_of_push_func = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
     const auto func_address = hg_.get_va_index(va_of_push_func, zydis_helper::get_reg_size(op_reg.value));
 
     //this routine will load the register value to the top of the VSTACK
@@ -121,10 +121,52 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
 
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dmem op_mem)
 {
-    std::vector translated_mem
+    //most definitely riddled with bugs
+    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
+        return {{}, encode_status::unsupported};
+
+    std::vector<zydis_encoder_request> translated_mem;
+    const vm_handler_entry& lreg_handler = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
+    const vm_handler_entry& push_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
+    const vm_handler_entry& mul_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_MUL];
+    const vm_handler_entry& add_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_ADD];
+
+    //[base + index * scale + disp]
+
+    //1. begin with loading the base register
+    //mov VTEMP, imm
+    //jmp VM_PUSH_REG
+    const auto[displacement, size] = rm_.get_stack_displacement(op_mem.base);
+    const auto func_address = hg_.get_va_index(lreg_handler, size);
+    translated_mem =
         {
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(8))
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(func_address)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address))
         };
+
+    if(op_mem.scale != 0)
+    {
+        //2. load the index register and multiply by scale
+        //mov VTEMP, imm    ; load reg displacement into VTEMP
+        //jmp VM_PUSH_REG   ; load INDEX to the top of the VSTACK
+        //mov VTEMP, imm    ; load imm value into VTEMP
+        //jmp VM_PUSH       ; load SCALE to the top of the VSTACK
+        //jmp VM_MUL        ; multiply INDEX & SCALE
+        translated_mem +=
+            {
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(8))
+            };
+    }
+
+    if(op_mem.disp.has_displacement)
+    {
+        //3. load the displacement and add
+        translated_mem +=
+            {
+                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(8))
+            };
+    }
+
 
     return {translated_mem, encode_status::success};
 }

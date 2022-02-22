@@ -22,6 +22,8 @@ void vm_handle_generator::setup_vm_mapping()
             {2,                   {HNDL_BIND(create_vm_load),  reg_size::bit64, reg_size::bit32, reg_size::bit16}}, //VM_LOAD_REG
             {ZYDIS_MNEMONIC_PUSH, {HNDL_BIND(create_vm_push),  reg_size::bit64, reg_size::bit32, reg_size::bit16}},
             {ZYDIS_MNEMONIC_POP,  {HNDL_BIND(create_vm_pop),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
+
+            {ZYDIS_MNEMONIC_MOV,  {HNDL_BIND(create_vm_mov),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
             {ZYDIS_MNEMONIC_INC,  {HNDL_BIND(create_vm_inc),   reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}},
             {ZYDIS_MNEMONIC_DEC,  {HNDL_BIND(create_vm_dec),   reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}},
             {ZYDIS_MNEMONIC_ADD,  {HNDL_BIND(create_vm_add),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
@@ -51,7 +53,7 @@ void vm_handle_generator::setup_enc_constants()
 
 uint32_t vm_handle_generator::get_va_index(const vm_handler_entry& handler, reg_size size)
 {
-    if(std::ranges::find(handler.supported_handler_va, size) == std::end(handler.supported_handler_va))
+    if (std::ranges::find(handler.supported_handler_va, size) == std::end(handler.supported_handler_va))
         return -1;
 
     switch (size)
@@ -272,6 +274,11 @@ handle_instructions vm_handle_generator::create_vm_pop(reg_size reg_size)
 
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, handle_instructions.size());
     return handle_instructions;
+}
+
+handle_instructions vm_handle_generator::create_vm_mov(reg_size reg_size)
+{
+    return handle_instructions();
 }
 
 handle_instructions vm_handle_generator::create_vm_inc(reg_size reg_size)
