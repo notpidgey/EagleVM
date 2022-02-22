@@ -92,21 +92,28 @@ handle_instructions vm_handle_generator::create_vm_enter(reg_size)
 
     //jump decryption routine
     {
-        //mov r15, rsp
-        //mov r15, [rsp-144]
-        //rol r15, key3
-        //add r15, key2
-        //ror r15, key1
-        //jmp r15
+        //mov VSP, rsp              ; set VSP to current stack pointer
+
+        //mov VREGS, rsp
+        //add VREGS, 136            ; gets VREGS which is 17 pushes behind
+
+        //mov VTEMP, [rsp-144]      ; the first item to be pushed on the stack was a constant value
+        //rol VTEMP, key3
+        //add VTEMP, key2
+        //ror VTEMP, key1
+        //jmp VTEMP                 ; jump to vm routine for code section
 
         handle_instructions decryption_routine = {
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(SR_R15), ZREG(SR_RSP)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(SR_RSP)),
 
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(SR_R15), ZMEMBD(SR_RSP, -144, 8)),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROL, zydis_ereg, zydis_eimm>(ZREG(SR_R15), ZIMMU(keys_.values[2])),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(SR_R15), ZIMMU(keys_.values[1])),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROR, zydis_ereg, zydis_eimm>(ZREG(SR_R15), ZIMMU(keys_.values[0])),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(SR_R15))
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(SR_RSP)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VREGS), ZIMMU(136)),
+
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(SR_RSP, +144, 8)),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROL, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[2])),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[1])),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_ROR, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[0])),
+            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VTEMP))
         };
 
         vm_enter_operations += decryption_routine;
