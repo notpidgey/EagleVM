@@ -9,10 +9,10 @@ void vm_register_manager::init_reg_order()
     std::ranges::shuffle(reg_stack_order_, rng);
 }
 
-std::pair<uint32_t, uint16_t> vm_register_manager::get_stack_displacement(zydis_register reg)
+std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(zydis_register reg)
 {
     //determine 64bit version of register
-    auto reg_size = zydis_helper::get_reg_size(reg);
+    reg_size reg_size = zydis_helper::get_reg_size(reg);
 
     int found_index = 0;
     for (int i = 0; i < reg_stack_order_.size(); i++)
