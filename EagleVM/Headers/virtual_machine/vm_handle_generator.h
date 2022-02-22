@@ -59,6 +59,9 @@ public:
     ///////////////////////
 
     //increments value stored at the top of the stack by 1
+    handle_instructions create_vm_mov(reg_size reg_size = reg_size::bit64);
+
+    //increments value stored at the top of the stack by 1
     handle_instructions create_vm_inc(reg_size reg_size = reg_size::bit64);
 
     //decrements value stored at the top of the stack by 1
