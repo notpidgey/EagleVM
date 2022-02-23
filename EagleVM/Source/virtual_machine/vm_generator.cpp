@@ -6,6 +6,9 @@
 #define VTEMP       rm_.reg_map[I_VTEMP]
 #define PUSHORDER   rm_.reg_stack_order_
 
+#define CREATE_FUNC_JMP(x) zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)), \
+zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(x)),
+
 vm_generator::vm_generator()
 {
     zydis_helper::setup_decoder();
@@ -101,6 +104,14 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
     return padding;
 }
 
+zydis_instructions vm_generator::create_func_jump(uint32_t address)
+{
+    return {
+        zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)),
+        zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(address)),
+    };
+}
+
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dreg op_reg)
 {
     const auto[displacement, size] = rm_.get_stack_displacement(op_reg.value);
@@ -112,8 +123,8 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
         {
             //mov VTEMP, -8
             //call VM_LOAD_REG
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address)),
         };
 
     return {load_register, encode_status::success};
@@ -122,51 +133,81 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dmem op_mem)
 {
     //most definitely riddled with bugs
-    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
+    if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return {{}, encode_status::unsupported};
 
     std::vector<zydis_encoder_request> translated_mem;
+
+    const auto[base_displacement, base_size] = rm_.get_stack_displacement(op_mem.base);
+    const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, base_size);
+
     const vm_handler_entry& lreg_handler = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
+    const auto lreg_address = hg_.get_va_index(lreg_handler, base_size);
+
     const vm_handler_entry& push_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
+    const auto push_address = hg_.get_va_index(push_handler, base_size);
+
     const vm_handler_entry& mul_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_MUL];
+    const auto mul_address = hg_.get_va_index(mul_handler, base_size);
+
     const vm_handler_entry& add_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_ADD];
+    const auto add_address = hg_.get_va_index(add_handler, base_size);
+
+    const vm_handler_entry& pop_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_POP];
+    const auto pop_address = hg_.get_va_index(pop_handler, base_size);
 
     //[base + index * scale + disp]
 
     //1. begin with loading the base register
     //mov VTEMP, imm
-    //jmp VM_PUSH_REG
-    const auto[displacement, size] = rm_.get_stack_displacement(op_mem.base);
-    const auto func_address = hg_.get_va_index(lreg_handler, size);
+    //jmp VM_LOAD_REG
     translated_mem =
         {
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(func_address)),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address))
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(lreg_address)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(lreg_address))
         };
 
-    if(op_mem.scale != 0)
+    if (op_mem.scale != 0)
     {
         //2. load the index register and multiply by scale
-        //mov VTEMP, imm    ; load reg displacement into VTEMP
-        //jmp VM_PUSH_REG   ; load INDEX to the top of the VSTACK
-        //mov VTEMP, imm    ; load imm value into VTEMP
-        //jmp VM_PUSH       ; load SCALE to the top of the VSTACK
-        //jmp VM_MUL        ; multiply INDEX & SCALE
+        //mov VTEMP, imm    ;
+        //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
+        //mov VTEMP, imm    ;
+        //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
+        //jmp VM_MUL        ; multiply INDEX * SCALE
+        //jmp VM_ADD
+        const auto[index_displacement, index_size] = rm_.get_stack_displacement(op_mem.index);
         translated_mem +=
             {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(8))
+                zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(index_displacement)),
+                zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(lreg_address)),
+                zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(op_mem.scale)),
+                CREATE_FUNC_JMP(push_address)
+                CREATE_FUNC_JMP(mul_address)
+                CREATE_FUNC_JMP(add_address)
             };
     }
 
-    if(op_mem.disp.has_displacement)
+    if (op_mem.disp.has_displacement)
     {
         //3. load the displacement and add
+        //mov VTEMP, imm
+        //jmp VM_ADD
         translated_mem +=
             {
-                zydis_helper::create_encode_request<ZYDIS_MNEMONIC_SUB, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMU(8))
+                zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VSP), ZIMMS(op_mem.disp.value)),
+                CREATE_FUNC_JMP(add_address)
             };
     }
 
+    //at the end of this, the address inside [] is fully evaluated, now it needs to be transferred to register VTEMP
+    //to get whatever is inside that address we just dereference it, now its in VTEMP
+    translated_mem +=
+        {
+            CREATE_FUNC_JMP(pop_address)
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(desired_temp_reg), ZMEMBD(desired_temp_reg, 0, base_size)),
+            CREATE_FUNC_JMP(push_address)
+        };
 
     return {translated_mem, encode_status::success};
 }
@@ -189,8 +230,8 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     translated_imm =
         {
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
-            zydis_helper::create_encode_request<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
         };
 
     return {translated_imm, encode_status::success};

@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <Zydis/Zydis.h>
 #include <Zycore/LibC.h>
@@ -43,13 +43,13 @@ namespace zydis_helper
 	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
 
 	template<zyids_mnemonic TMnemonic, typename... TArgs>
-	zydis_encoder_request create_encode_request(TArgs&&... args)
+	zydis_encoder_request encode(TArgs&&... args)
 	{
 		auto encoder = zydis_helper::create_encode_request(TMnemonic);
 		(add_op(encoder, std::forward<TArgs>(args)), ...);
 
 		return encoder;
 	}
-	
+
 	std::vector<zydis_decode> get_instructions(void* data, size_t size);
 }

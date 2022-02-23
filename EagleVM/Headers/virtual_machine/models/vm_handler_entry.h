@@ -5,7 +5,6 @@
 
 #include "util/zydis_helper.h"
 
-
 //may a kind soul please pr this and help me with finding a better way of doing this : )
 struct vm_handler_entry
 {
