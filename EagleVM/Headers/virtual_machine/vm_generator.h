@@ -45,6 +45,7 @@ private:
 
     std::vector<uint8_t> section_data_;
 
+    inline zydis_instructions create_func_jump(uint32_t address);
     encode_data encode_operand(const zydis_decode& instruction, zydis_dreg op_reg);
     encode_data encode_operand(const zydis_decode& instruction, zydis_dmem op_mem);
     encode_data encode_operand(const zydis_decode& instruction, zydis_dptr op_ptr);

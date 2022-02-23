@@ -51,6 +51,9 @@ public:
     //loads a register value located in VREGS onto the stack
     handle_instructions create_vm_load(reg_size reg_size = reg_size::bit64);
 
+    //stores a register value located in VREGS from VTEMP
+    handle_instructions create_vm_store(reg_size reg_size = reg_size::bit64);
+
     //jumps from vm_enter into vm function context
     handle_instructions create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected);
 
@@ -58,8 +61,11 @@ public:
     /// GENERAL PURPOSE ///
     ///////////////////////
 
-    //increments value stored at the top of the stack by 1
-    handle_instructions create_vm_mov(reg_size reg_size = reg_size::bit64);
+    //multiplies top two values stored on the stack
+    handle_instructions create_vm_mul(reg_size reg_size = reg_size::bit64);
+
+    //divides top two values stored on the stack
+    handle_instructions create_vm_div(reg_size reg_size = reg_size::bit64);
 
     //increments value stored at the top of the stack by 1
     handle_instructions create_vm_inc(reg_size reg_size = reg_size::bit64);
