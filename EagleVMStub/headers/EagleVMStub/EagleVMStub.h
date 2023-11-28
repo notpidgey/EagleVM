@@ -1,3 +1,6 @@
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #ifdef EAGLEVMSTUB_EXPORTS
 #define EAGLEVMSTUB_API __declspec(dllexport)
 #else

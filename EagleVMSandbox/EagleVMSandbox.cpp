@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     int num;
 
     printf("whats da magic number: ");
-    scanf("%i", &num);
+    scanf_s("%i", &num);
 
     fnEagleVMBegin();
 
