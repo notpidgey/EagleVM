@@ -91,7 +91,6 @@ handle_instructions vm_handle_generator::create_vm_enter(reg_size)
     //pushfq
     {
         req = zydis_helper::create_encode_request(ZYDIS_MNEMONIC_PUSHFQ);
-
         vm_enter_operations.push_back(req);
     }
 
