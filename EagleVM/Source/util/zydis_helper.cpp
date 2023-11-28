@@ -91,6 +91,14 @@ ZydisEncoderRequest zydis_helper::create_encode_request(const ZydisMnemonic mnem
     return req;
 }
 
+zydis_encoder_request zydis_helper::decode_to_encode(const zydis_decode& decode)
+{
+    zydis_encoder_request encode_request;
+    ZydisEncoderDecodedInstructionToEncoderRequest(&decode.instruction, decode.operands, decode.instruction.operand_count, &encode_request);
+
+    return encode_request;
+}
+
 void zydis_helper::add_op(ZydisEncoderRequest& req, zydis_eimm imm)
 {
     auto op_index = req.operand_count;
@@ -144,6 +152,29 @@ std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>
     return data;
 }
 
+std::vector<std::string> zydis_helper::print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address)
+{
+    std::vector<std::string> data; 
+    for (auto& instruction : queue)
+    {
+        std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
+        ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
+
+        ZydisEncoderEncodeInstruction(&instruction, instruction_data.data(), &encoded_length);
+        instruction_data.resize(encoded_length);
+        
+        std::stringstream format;
+        format << ZydisMnemonicGetString(instruction.mnemonic) << " ";
+        
+        for (uint8_t byte : instruction_data)
+            format << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+
+        data.push_back(format.str());
+    }
+
+    return data;
+}
+
 std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size)
 {
     std::vector<zydis_decode> decode_data;
@@ -151,9 +182,7 @@ std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size
     ZyanUSize offset = 0;
     zydis_decode decoded_instruction{};
 
-    while (ZYAN_SUCCESS(
-        ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &decoded_instruction.instruction, decoded_instruction.operands,
-            ZYDIS_MAX_OPERAND_COUNT_VISIBLE, ZYDIS_DFLAG_VISIBLE_OPERANDS_ONLY)))
+    while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &decoded_instruction.instruction, decoded_instruction.operands)))
     {
         decode_data.push_back(decoded_instruction);
         offset += decoded_instruction.instruction.length;
