@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
     std::printf("[>] generating vm handlers...\n");
     vm_generator.generate_vm_handlers(0x00000000005547ED);
 
-    std::printf("[>] generating virtualized code...\n\n");
+    std::printf("\n[>] generating virtualized code...\n\n");
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[c].first, vm_iat_calls[c + 1].first);
@@ -172,17 +172,15 @@ int main(int argc, char* argv[])
                 {
                     auto [status, instructions] = vm_generator.translate_to_virtual(instruction);
 
-                    std::string prefix;
-                    if (!status)
-                        // means that virtualization is not supported for this function
-                        prefix = "[-]";
-                    else
-                        // virtualization supported!
-                        prefix = "[+]";
+                    if (status)
+                        std::printf("\n[+] virtual instruction\n");
 
                     auto messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
                     for(auto& message : messages)
-                        std::printf("%s %s\n", prefix.c_str(), message.c_str());
+                        std::printf("[>] %s\n", message.c_str());
+
+                    if(status)
+                        std::printf("[+] virtual instruction\n\n");
                 });
     }
 
