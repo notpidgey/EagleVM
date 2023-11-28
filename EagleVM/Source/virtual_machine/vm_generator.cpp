@@ -49,14 +49,14 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
     }
 }
 
-std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
+std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
 {
     //virtualizer does not support more than 2 operands OR all mnemonics
     if (decoded_instruction.instruction.operand_count > 2 ||
         !hg_.vm_handlers.contains(decoded_instruction.instruction.mnemonic))
     {
         INSTRUCTION_NOT_SUPPORTED:
-        return {};
+        return { false, { zydis_helper::decode_to_encode(decoded_instruction) } };
     }
 
     std::vector<zydis_encoder_request> virtualized_instruction;
@@ -87,7 +87,7 @@ std::vector<zydis_encoder_request> vm_generator::translate_to_virtual(const zydi
         virtualized_instruction += encode.first;
     }
 
-    return virtualized_instruction;
+    return { true, virtualized_instruction };
 }
 
 std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)

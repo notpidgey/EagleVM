@@ -109,10 +109,11 @@
     <ClCompile Include="Source\pe\pe_sections\pe_code_section.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp" />
     <ClCompile Include="Source\util\math.cpp" />
+    <ClCompile Include="Source\util\util.cpp" />
     <ClCompile Include="Source\util\zydis_helper.cpp" />
-    <ClCompile Include="Source\virtual_machine\handle_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_handler_manager.cpp" />
+    <ClCompile Include="Source\virtual_machine\vm_handle_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_register_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -122,12 +123,13 @@
     <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_section.h" />
     <ClInclude Include="Headers\util\math.h" />
+    <ClInclude Include="Headers\util\util.h" />
     <ClInclude Include="Headers\util\zydis_defs.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
-    <ClInclude Include="Headers\virtual_machine\handle_generator.h" />
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h" />
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />
     <ClInclude Include="Headers\virtual_machine\vm_handler_manager.h" />
+    <ClInclude Include="Headers\virtual_machine\vm_handle_generator.h" />
     <ClInclude Include="Headers\virtual_machine\vm_register_manager.h" />
   </ItemGroup>
   <ItemGroup>

@@ -6,6 +6,8 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 
 #include "util/zydis_defs.h"
 
@@ -35,12 +37,15 @@ namespace zydis_helper
 	std::vector<uint8_t> encode_request(zydis_encoder_request& request);
 	zydis_encoder_request create_encode_request(zyids_mnemonic mnemonic);
 
+	zydis_encoder_request decode_to_encode(const zydis_decode& decode);
+
 	void add_op(zydis_encoder_request& req, zydis_eimm imm);
 	void add_op(zydis_encoder_request& req, zydis_emem mem);
 	void add_op(zydis_encoder_request& req, zydis_eptr ptr);
 	void add_op(zydis_encoder_request& req, zydis_ereg reg);
 
 	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
+	std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);
 
 	template<zyids_mnemonic TMnemonic, typename... TArgs>
 	zydis_encoder_request encode(TArgs&&... args)

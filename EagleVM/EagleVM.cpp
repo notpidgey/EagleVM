@@ -74,11 +74,11 @@ int main(int argc, char* argv[])
     //Add already existing sections.
     std::ranges::for_each
         (
-            sections,
-            [&generator](const PIMAGE_SECTION_HEADER section_header)
+            sections, [&generator](const PIMAGE_SECTION_HEADER section_header)
                 {
                     generator.add_section(section_header);
-                });
+                }
+        );
 
     std::printf("\n[>] searching for uses of vm macros...\n");
 
@@ -151,6 +151,7 @@ int main(int argc, char* argv[])
     std::printf("[>] generating vm handlers...\n");
     vm_generator.generate_vm_handlers(0x00000000005547ED);
 
+    std::printf("[>] generating virtualized code...\n\n");
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[c].first, vm_iat_calls[c + 1].first);
@@ -159,12 +160,29 @@ int main(int argc, char* argv[])
                 protect_section.instruction_protect_begin, protect_section.get_instruction_size()
             );
 
+        std::printf("[+] function %i/%i\n", c, c + 1);
+        std::printf("[>] instruction begin %u\n", parser.offset_to_rva(vm_iat_calls[c].first));
+        std::printf("[>] instruction end %u\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
+        std::printf("[>] instruction size %i\n", protect_section.get_instruction_size());
+
+
+        std::printf("[+] generated instructions\n\n");
         std::ranges::for_each(instructions,
-            [&vm_generator](const zydis_decode instruction)
+            [&vm_generator, &parser, &vm_iat_calls, c](const zydis_decode instruction)
                 {
-                    //test just for now
-                    std::vector<ZydisEncoderRequest> virtualized_instructions = vm_generator.
-                        translate_to_virtual(instruction);
+                    auto [status, instructions] = vm_generator.translate_to_virtual(instruction);
+
+                    std::string prefix;
+                    if (!status)
+                        // means that virtualization is not supported for this function
+                        prefix = "[-]";
+                    else
+                        // virtualization supported!
+                        prefix = "[+]";
+
+                    auto messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
+                    for(auto& message : messages)
+                        std::printf("%s %s\n", prefix.c_str(), message.c_str());
                 });
     }
 
