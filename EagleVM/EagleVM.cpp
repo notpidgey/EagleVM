@@ -160,28 +160,71 @@ int main(int argc, char* argv[])
                 protect_section.instruction_protect_begin, protect_section.get_instruction_size()
             );
 
-        std::printf("[+] function %i/%i\n", c, c + 1);
+        std::printf("[+] function %i-%i\n", c, c + 1);
         std::printf("[>] instruction begin %u\n", parser.offset_to_rva(vm_iat_calls[c].first));
         std::printf("[>] instruction end %u\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
         std::printf("[>] instruction size %i\n", protect_section.get_instruction_size());
 
 
         std::printf("[+] generated instructions\n\n");
-        std::ranges::for_each(instructions,
-            [&vm_generator, &parser, &vm_iat_calls, c](const zydis_decode instruction)
-                {
-                    auto [status, instructions] = vm_generator.translate_to_virtual(instruction);
 
-                    if (status)
-                        std::printf("\n[+] virtual instruction\n");
+        std::vector<zydis_encoder_request> section_instructions;
+
+        bool currently_in_vm = false;
+        std::ranges::for_each(instructions,
+            [&](const zydis_decode instruction)
+                {
+                    auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
+                    if (successfully_virtualized)
+                    {                        
+                        // check if we are already inside of virtual machine to prevent multiple enters
+                        if (!currently_in_vm)
+                        {
+                            std::printf("\n[+] vmenter\n");
+
+                            // call into the virtual machine
+                            // auto enter_instructions = vm_generator.call_vm_enter()
+                            // section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
+
+                            currently_in_vm = true;
+                        }
+                    }
+                    else
+                    {
+                        // exit virtual machine if this is a non-virtual instruction
+                        if (currently_in_vm)
+                        {
+                            // instruction is not supported by the virtual machine so we exit
+                            std::printf("\n[-] vmexit\n");
+
+                            // call out of the virtual machine
+                            // auto exit_instructions = vm_generator.call_vm_exit()
+                            // section_instructions.insert(section_instructions.end(), exit_instructions.begin(), exit_instructions.end());
+
+                            currently_in_vm = false;
+                        }
+                    }
 
                     auto messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
                     for(auto& message : messages)
                         std::printf("[>] %s\n", message.c_str());
 
-                    if(status)
-                        std::printf("[+] virtual instruction\n\n");
+                    // append all instructions to the section ( virtual or not )
+                    section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());
                 });
+
+        // TODO: generate function return to original execution
+
+        // result for each section should appear something like this:
+        // [>] ftst                             example ( or any unsupported instruction )
+        // [>] mov [rsp - 8], vmenter_const     prepare generated constant to be decrypted so that the vm can be entered
+        // [>] jmp vmenter
+        //
+        //  virtual machine code
+        //
+        // [>] jmp vmend                        exit virtual machine due to unsupported instruction
+        // [>] ftst                             example ( or any unsupported instruction )
+        //
     }
 
     //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe

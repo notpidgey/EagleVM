@@ -49,35 +49,34 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
     }
 }
 
-std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
+std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_virtual(const zydis_decode& decoded)
 {
     //virtualizer does not support more than 2 operands OR all mnemonics
-    if (decoded_instruction.instruction.operand_count > 2 ||
-        !hg_.vm_handlers.contains(decoded_instruction.instruction.mnemonic))
+    if (decoded.instruction.operand_count > 2 || !hg_.vm_handlers.contains(decoded.instruction.mnemonic))
     {
         INSTRUCTION_NOT_SUPPORTED:
-        return { false, { zydis_helper::decode_to_encode(decoded_instruction) } };
+        return { false, { zydis_helper::decode_to_encode(decoded) } };
     }
 
     std::vector<zydis_encoder_request> virtualized_instruction;
-    for (int i = 0; i < decoded_instruction.instruction.operand_count; i++)
+    for (int i = 0; i < decoded.instruction.operand_count; i++)
     {
         encode_data encode;
-        switch (const zydis_decoded_operand operand = decoded_instruction.operands[i]; operand.type)
+        switch (const zydis_decoded_operand operand = decoded.operands[i]; operand.type)
         {
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
             case ZYDIS_OPERAND_TYPE_REGISTER:
-                encode = encode_operand(decoded_instruction, operand.reg);
+                encode = encode_operand(decoded, operand.reg);
                 break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
-                encode = encode_operand(decoded_instruction, operand.mem);
+                encode = encode_operand(decoded, operand.mem);
                 break;
             case ZYDIS_OPERAND_TYPE_POINTER:
-                encode = encode_operand(decoded_instruction, operand.ptr);
+                encode = encode_operand(decoded, operand.ptr);
                 break;
             case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                encode = encode_operand(decoded_instruction, operand.imm);
+                encode = encode_operand(decoded, operand.imm);
                 break;
         }
 
