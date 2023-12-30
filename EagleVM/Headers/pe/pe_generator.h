@@ -18,10 +18,6 @@ class pe_generator
 public:
 	void load_existing(std::vector<char>& existing);
 	
-	PIMAGE_DOS_HEADER build_dos_header();
-	PIMAGE_FILE_HEADER build_coff_header();
-	PIMAGE_OPTIONAL_HEADER build_optional_header(uint64_t image_base, int section_alignment, int file_alignment, uint64_t sr, uint64_t sc, uint64_t hr, uint64_t hc);
-	
 	void add_section(PIMAGE_SECTION_HEADER section_header);
 	void add_section(IMAGE_SECTION_HEADER section_header);
 
