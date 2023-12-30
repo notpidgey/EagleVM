@@ -34,12 +34,12 @@ int main(int argc, char* argv[])
     parser.enum_imports
         (
             [&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data,
-                const PIMAGE_SECTION_HEADER import_section, int, const char* data_base)
+                const PIMAGE_SECTION_HEADER import_section, int, const uint8_t* data_base)
                 {
-                    const char* import_section_raw = data_base + import_section->PointerToRawData;
-                    const char* import_library = const_cast<char*>(import_section_raw + (import_descriptor->Name -
+                    const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
+                    const uint8_t* import_library = const_cast<uint8_t*>(import_section_raw + (import_descriptor->Name -
                                                                                          import_section->VirtualAddress));
-                    const char* import_name = const_cast<char*>(import_section_raw + (thunk_data->u1.AddressOfData -
+                    const uint8_t* import_name = const_cast<uint8_t*>(import_section_raw + (thunk_data->u1.AddressOfData -
                                                                                       import_section->VirtualAddress + 2));
 
                     std::printf("%3i %-20s %-s\n", i, import_library, import_name);

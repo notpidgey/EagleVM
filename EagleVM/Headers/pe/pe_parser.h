@@ -61,7 +61,7 @@ public:
 	PIMAGE_SECTION_HEADER get_section_rva(const uint32_t rva);
 	PIMAGE_SECTION_HEADER get_section_offset(const uint32_t offset);
 
-	void enum_imports(std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int, char*)> import_proc);
+	void enum_imports(std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int, uint8_t*)> import_proc);
 
 	pe_protected_section offset_to_ptr(uint32_t offset_begin, uint32_t offset_end);
 
@@ -69,5 +69,5 @@ public:
 	uint32_t rva_to_offset(uint32_t rva);
 
 private:
-	std::vector<char> unprotected_pe_;
+	std::vector<uint8_t> unprotected_pe_;
 };
