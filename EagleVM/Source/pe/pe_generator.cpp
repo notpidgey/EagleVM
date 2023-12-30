@@ -170,11 +170,7 @@ void pe_generator::save_file(const std::string& save_path)
 				return;
 			}
 
-			for (int i = 0; i < missing_bytes; i++)
-			{
-				protected_binary.put(0);
-			}
-			
+			protected_binary.seekp(missing_bytes, std::ios::cur);
 			total_written += missing_bytes;
 		}
 
