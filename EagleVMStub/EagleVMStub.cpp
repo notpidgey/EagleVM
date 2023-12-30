@@ -4,9 +4,11 @@
 EAGLEVMSTUB_API void __stdcall fnEagleVMBegin(void)
 {
     MessageBoxA(0, "Application running in unprotected mode.", "EagleVM", 0);
+    exit(-1);
 }
 
 EAGLEVMSTUB_API void __stdcall fnEagleVMEnd(void)
 {
     MessageBoxA(0, "Application running in unprotected mode.", "EagleVM", 0);
+    exit(-1);
 }

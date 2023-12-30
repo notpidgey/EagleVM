@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
 {
     int num;
 
-    printf("whats da magic number: ");
+    printf("whats the magic number: ");
     scanf_s("%i", &num);
 
     fnEagleVMBegin();
@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
     test_num ^= 2;
     test_num -= 40;
     test_num += 1;
+    
     if(num == test_num) // 384
     {
         int i = 5;
