@@ -45,32 +45,25 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
     bool found = false;
     std::vector<uint32_t> offsets_import_calls;
 
-    //call qword ptr ds:[<&?someFunction@@YAXXZ>]
-    //scan .text section FF 15 ?? ?? ?? ??
+    // Iterate over the .text section with a step of 2 (since FF 15 is two bytes)
     for (uint32_t i = text_section->PointerToRawData; i <= text_section->PointerToRawData + text_section->SizeOfRawData; i++)
     {
-        //searching for ff 15 (call qword ptr)
-        if (found)
+        // Check for FF 15
+        if (unprotected_pe_[i] == 0xFF && unprotected_pe_[i + 1] == 0x15)
         {
-            if (unprotected_pe_[i] == 0x15) //15
-                offsets_import_calls.push_back(--i);
-            found = false;
-        }
-        else if (unprotected_pe_[i] == -1) //FF
-        {
-            found = true;
+            offsets_import_calls.push_back(i);
         }
     }
 
     std::unordered_map<uint32_t, stub_import> stub_dll_imports;
     enum_imports(
         [&stub_dll_imports, this](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, 
-            int index, char* data_base)
+            int index, uint8_t* data_base)
         {
-            const char* import_section_raw = data_base + import_section->PointerToRawData;
-            const char* import_library = const_cast<char*>(import_section_raw + (import_descriptor->Name - import_section->VirtualAddress));
+            const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
+            const uint8_t* import_library = const_cast<uint8_t*>(import_section_raw + (import_descriptor->Name - import_section->VirtualAddress));
 
-            if (std::strcmp(import_library, "EagleVMStub.dll") == 0)
+            if (std::strcmp((char*)import_library, "EagleVMStub.dll") == 0)
             {
                 stub_import import_type;
                 switch (index) 
@@ -198,7 +191,7 @@ PIMAGE_SECTION_HEADER pe_parser::get_section_offset(const uint32_t offset)
     return nullptr;
 }
 
-void pe_parser::enum_imports(const std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int index, char*)> import_proc)
+void pe_parser::enum_imports(const std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int index, uint8_t*)> import_proc)
 {
     const PIMAGE_NT_HEADERS image_nt_headers = get_nt_header();
     const PIMAGE_SECTION_HEADER import_section = get_import_section();
