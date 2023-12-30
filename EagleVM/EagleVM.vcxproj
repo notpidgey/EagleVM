@@ -127,6 +127,7 @@
     <ClInclude Include="Headers\util\zydis_defs.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h" />
+    <ClInclude Include="Headers\virtual_machine\models\vm_handler_entry.h" />
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />
     <ClInclude Include="Headers\virtual_machine\vm_handler_manager.h" />
     <ClInclude Include="Headers\virtual_machine\vm_handle_generator.h" />

@@ -34,6 +34,9 @@ public:
     void init_ran_consts();
     void generate_vm_handlers(uint32_t va_of_section);
 
+    std::vector<zydis_encoder_request> call_vm_enter();
+    std::vector<zydis_encoder_request> call_vm_exit();
+
     std::pair<bool, std::vector<zydis_encoder_request>> translate_to_virtual(const zydis_decode& decoded_instruction);
     static std::vector<uint8_t> create_padding(size_t bytes);
 
