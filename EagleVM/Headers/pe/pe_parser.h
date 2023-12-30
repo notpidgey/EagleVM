@@ -41,16 +41,17 @@ public:
 	std::vector<PIMAGE_SECTION_HEADER> image_sections;
 	std::vector<std::pair<pe_import, void*>> image_imports;
 
-	std::vector<char> unprotected_pe_;
-
-
 	explicit pe_parser(const char* path);
+	
 	bool read_file(const char* path);
 	int get_file_size();
 
 	std::vector<std::pair<uint32_t, stub_import>> find_iat_calls();
 
+	uint8_t* get_base();
+
 	PIMAGE_DOS_HEADER get_dos_header();
+	std::vector<uint8_t> get_dos_stub();
 	PIMAGE_NT_HEADERS get_nt_header();
 	PIMAGE_SECTION_HEADER get_import_section();
 	IMAGE_DATA_DIRECTORY get_directory(short directory);
@@ -66,5 +67,7 @@ public:
 
 	uint32_t offset_to_rva(uint32_t offset);
 	uint32_t rva_to_offset(uint32_t rva);
+
 private:
+	std::vector<char> unprotected_pe_;
 };

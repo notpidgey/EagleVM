@@ -105,9 +105,25 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
     return offsets_to_vm_macros;
 }
 
+uint8_t* pe_parser::get_base()
+{
+    return (uint8_t*)unprotected_pe_.data();
+}
+
 PIMAGE_DOS_HEADER pe_parser::get_dos_header()
 {
     return reinterpret_cast<PIMAGE_DOS_HEADER>(unprotected_pe_.data());
+}
+
+std::vector<uint8_t> pe_parser::get_dos_stub()
+{
+    uint8_t* start = (uint8_t*)get_dos_header() + sizeof IMAGE_DOS_HEADER;
+    uint8_t* end = (uint8_t*)get_nt_header();
+
+    std::vector<uint8_t> dos_stub(end - start);
+    std::copy(static_cast<uint8_t*>(start), static_cast<uint8_t*>(end), dos_stub.begin());
+
+    return dos_stub;
 }
 
 PIMAGE_NT_HEADERS pe_parser::get_nt_header()
