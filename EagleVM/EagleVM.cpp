@@ -9,12 +9,6 @@ int main(int argc, char* argv[])
     pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
     std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
 
-    pe_generator gen;
-    gen.load_existing(parser.unprotected_pe_);
-    gen.save_file("box.exe");
-
-    return 1;
-
     int i = 1;
 
     std::vector<PIMAGE_SECTION_HEADER> sections = parser.get_sections();
@@ -62,29 +56,6 @@ int main(int argc, char* argv[])
     std::printf("[>] stack commit -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfStackCommit);
     std::printf("[>] heap reserve -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfHeapReserve);
     std::printf("[>] heap commit -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfHeapCommit);
-
-    pe_generator generator;
-    PIMAGE_DOS_HEADER dos_header = generator.build_dos_header();
-    PIMAGE_FILE_HEADER file_header = generator.build_coff_header();
-    PIMAGE_OPTIONAL_HEADER optional_header = generator.build_optional_header
-        (
-            nt_header->OptionalHeader.ImageBase,
-            nt_header->OptionalHeader.SectionAlignment,
-            nt_header->OptionalHeader.FileAlignment,
-            nt_header->OptionalHeader.SizeOfStackReserve * 2,
-            nt_header->OptionalHeader.SizeOfStackReserve * 2, //commit size of reserve
-            nt_header->OptionalHeader.SizeOfHeapReserve,
-            nt_header->OptionalHeader.SizeOfHeapCommit
-        );
-
-    //Add already existing sections.
-    std::ranges::for_each
-        (
-            sections, [&generator](const PIMAGE_SECTION_HEADER section_header)
-                {
-                    generator.add_section(section_header);
-                }
-        );
 
     std::printf("\n[>] searching for uses of vm macros...\n");
 
@@ -234,20 +205,19 @@ int main(int argc, char* argv[])
     }
 
     //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
-    PIMAGE_SECTION_HEADER last_section = sections.back();
+    pe_generator generator(&parser);
+    generator.load_existing();
+    generator.save_file("box.exe");
 
-    IMAGE_SECTION_HEADER vm_section{};
-    vm_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    vm_section.SizeOfRawData = 0;
-    vm_section.VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    vm_section.Misc.VirtualSize = 0;
-    vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    vm_section.PointerToRelocations = 0;
-    vm_section.NumberOfRelocations = 0;
-    vm_section.NumberOfLinenumbers = 0;
-
-    pe_generator image_generator;
-
+    // IMAGE_SECTION_HEADER vm_section{};
+    // vm_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
+    // vm_section.SizeOfRawData = 0;
+    // vm_section.VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    // vm_section.Misc.VirtualSize = 0;
+    // vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    // vm_section.PointerToRelocations = 0;
+    // vm_section.NumberOfRelocations = 0;
+    // vm_section.NumberOfLinenumbers = 0;
 
     return 0;
 }

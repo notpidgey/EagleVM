@@ -1,13 +1,13 @@
 #include "pe/pe_generator.h"
 
-void pe_generator::load_existing(std::vector<char>& existing)
+void pe_generator::load_existing()
 {
 	//
 	// dos header
 	///
 	
 	// copy dos header
-	PIMAGE_DOS_HEADER existing_dos_header = (PIMAGE_DOS_HEADER)existing.data();
+	PIMAGE_DOS_HEADER existing_dos_header = parser->get_dos_header();
 	memcpy(&dos_header, existing_dos_header, sizeof IMAGE_DOS_HEADER);
 
 	//
@@ -15,7 +15,8 @@ void pe_generator::load_existing(std::vector<char>& existing)
 	//
 	
 	// copy dos stub
-	memcpy(&dos_stub, existing.data() + sizeof IMAGE_DOS_HEADER, sizeof dos_stub);
+	std::vector<uint8_t> existing_dos_stub = parser->get_dos_stub();
+	memcpy(&dos_stub, existing_dos_stub.data() + sizeof IMAGE_DOS_HEADER, existing_dos_stub.size());
 
 	// remove rich header
 	// memset(&dos_stub + 0x80, 0, sizeof dos_stub - 0x80);
@@ -25,18 +26,17 @@ void pe_generator::load_existing(std::vector<char>& existing)
 	//
 
 	// copy nt header
-	PIMAGE_NT_HEADERS existing_nt_header = (PIMAGE_NT_HEADERS)(existing.data() + existing_dos_header->e_lfanew);
-	memcpy(&nt_header, existing_nt_header, sizeof IMAGE_NT_HEADERS);
+	PIMAGE_NT_HEADERS existing_nt_header = parser->get_nt_header();
+	memcpy(&nt_headers, existing_nt_header, sizeof IMAGE_NT_HEADERS);
 
 	// signature
 
 	// file header
-	auto file = &nt_header.FileHeader;
+	IMAGE_FILE_HEADER* file = &nt_headers.FileHeader;
 	file->TimeDateStamp = 0;
 
-
 	// optional header
-	auto optional = &nt_header.OptionalHeader;
+	IMAGE_OPTIONAL_HEADER* optional = &nt_headers.OptionalHeader;
 	optional->MajorImageVersion = UINT16_MAX;
 	optional->MinorImageVersion = UINT16_MAX;
 	optional->SizeOfStackCommit += 20 * 8;
@@ -46,14 +46,13 @@ void pe_generator::load_existing(std::vector<char>& existing)
 	//
 
 	// copy section headers
-	PIMAGE_SECTION_HEADER current_section = IMAGE_FIRST_SECTION(existing_nt_header);
-	for (int i = 0; i < file->NumberOfSections; i++)
+	std::vector<PIMAGE_SECTION_HEADER> existing_sections = parser->get_sections();
+	for (PIMAGE_SECTION_HEADER section : existing_sections)
 	{
-		std::vector<char> current_section_raw(current_section->SizeOfRawData, 0);
-		memcpy(current_section_raw.data(), existing.data() + current_section->PointerToRawData, current_section->SizeOfRawData);
+		std::vector<char> current_section_raw(section->SizeOfRawData, 0);
+		memcpy(current_section_raw.data(), parser->get_base() + section->PointerToRawData, section->SizeOfRawData);
 
-		sections.push_back({ *current_section, current_section_raw });
-		current_section++;
+		sections.push_back({ *section, current_section_raw });
 	}
 }
 
@@ -70,9 +69,9 @@ void pe_generator::add_section(const IMAGE_SECTION_HEADER section_header)
 void pe_generator::save_file(const std::string& save_path)
 {
 	std::ofstream protected_binary(save_path, std::ios::binary);
-	protected_binary.write((char*)&dos_header, sizeof dos_header);
+	protected_binary.write((char*)&dos_header, sizeof IMAGE_DOS_HEADER);
 	protected_binary.write((char*)&dos_stub, sizeof dos_stub);
-	protected_binary.write((char*)&nt_header, sizeof nt_header);
+	protected_binary.write((char*)&nt_headers, sizeof IMAGE_NT_HEADERS);
 
 	uint16_t total_sections_size = 0;
 	for (auto& [section, _] : sections)
@@ -89,7 +88,7 @@ void pe_generator::save_file(const std::string& save_path)
 			return a_section.PointerToRawData < b_section.PointerToRawData;
 		});
 
-	uint32_t total_written = sizeof dos_header + sizeof dos_stub + sizeof nt_header + total_sections_size;
+	uint32_t total_written = sizeof dos_header + sizeof dos_stub + sizeof nt_headers + total_sections_size;
 	for (auto& [section, section_raw] : sections)
 	{
 		if (total_written != section.PointerToRawData)

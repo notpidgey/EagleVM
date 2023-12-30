@@ -8,15 +8,23 @@
 
 #include <Windows.h>
 
+#include "pe/pe_parser.h"
 #include "pe/pe_sections/pe_code_section.h"
 #include "pe/pe_sections/pe_handler_section.h"
-
-#define P2ALIGNUP(x, align) (-(-((LONG64)x) & -((LONG64)align)))
 
 class pe_generator
 {
 public:
-	void load_existing(std::vector<char>& existing);
+	explicit pe_generator(pe_parser* pe_parser)
+	{
+		parser = pe_parser;
+		dos_header = {};
+		dos_stub = {};
+		nt_headers = {};
+		sections = {};
+	}
+
+	void load_existing();
 	
 	void add_section(PIMAGE_SECTION_HEADER section_header);
 	void add_section(IMAGE_SECTION_HEADER section_header);
@@ -24,12 +32,12 @@ public:
 	void save_file(const std::string& save_path);
 
 private:
+	pe_parser* parser;
+
 	IMAGE_DOS_HEADER dos_header;
 	std::array<char, 0xC0> dos_stub;
-	IMAGE_NT_HEADERS nt_header;
+	IMAGE_NT_HEADERS nt_headers;
 	std::vector<std::pair<IMAGE_SECTION_HEADER, std::vector<char>>> sections;
-
-	std::vector<std::pair<IMAGE_IMPORT_DESCRIPTOR, std::vector<IMAGE_THUNK_DATA>>> imports;
 
 	IMAGE_SECTION_HEADER* get_section_rva(const uint32_t rva);
 	IMAGE_SECTION_HEADER* get_section_offset(const uint32_t offset);
