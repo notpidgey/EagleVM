@@ -49,6 +49,16 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
     }
 }
 
+std::vector<zydis_encoder_request> vm_generator::call_vm_enter()
+{
+    return {};
+}
+
+std::vector<zydis_encoder_request> vm_generator::call_vm_exit()
+{
+    return {};
+}
+
 std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_virtual(const zydis_decode& decoded)
 {
     //virtualizer does not support more than 2 operands OR all mnemonics

@@ -41,6 +41,9 @@ public:
 	std::vector<PIMAGE_SECTION_HEADER> image_sections;
 	std::vector<std::pair<pe_import, void*>> image_imports;
 
+	std::vector<char> unprotected_pe_;
+
+
 	explicit pe_parser(const char* path);
 	bool read_file(const char* path);
 	int get_file_size();
@@ -64,5 +67,4 @@ public:
 	uint32_t offset_to_rva(uint32_t offset);
 	uint32_t rva_to_offset(uint32_t rva);
 private:
-	std::vector<char> unprotected_pe_;
 };

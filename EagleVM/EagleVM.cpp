@@ -6,8 +6,14 @@
 
 int main(int argc, char* argv[])
 {
-    pe_parser parser = pe_parser("D:\\VM\\EagleVMSandbox.exe");
+    pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
     std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
+
+    pe_generator gen;
+    gen.load_existing(parser.unprotected_pe_);
+    gen.save_file("box.exe");
+
+    return 1;
 
     int i = 1;
 
@@ -183,7 +189,7 @@ int main(int argc, char* argv[])
                             std::printf("\n[+] vmenter\n");
 
                             // call into the virtual machine
-                            // auto enter_instructions = vm_generator.call_vm_enter()
+                            std::vector<zydis_encoder_request> enter_instructions = vm_generator.call_vm_enter();
                             // section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
 
                             currently_in_vm = true;
@@ -198,7 +204,7 @@ int main(int argc, char* argv[])
                             std::printf("\n[-] vmexit\n");
 
                             // call out of the virtual machine
-                            // auto exit_instructions = vm_generator.call_vm_exit()
+                            // std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit()
                             // section_instructions.insert(section_instructions.end(), exit_instructions.begin(), exit_instructions.end());
 
                             currently_in_vm = false;
@@ -239,6 +245,9 @@ int main(int argc, char* argv[])
     vm_section.PointerToRelocations = 0;
     vm_section.NumberOfRelocations = 0;
     vm_section.NumberOfLinenumbers = 0;
+
+    pe_generator image_generator;
+
 
     return 0;
 }
