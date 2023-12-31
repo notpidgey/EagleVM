@@ -49,7 +49,7 @@ void pe_generator::load_parser()
 	std::vector<PIMAGE_SECTION_HEADER> existing_sections = parser->get_sections();
 	for (PIMAGE_SECTION_HEADER section : existing_sections)
 	{
-		std::vector<char> current_section_raw(section->SizeOfRawData, 0);
+		std::vector<uint8_t> current_section_raw(section->SizeOfRawData, 0);
 		memcpy(current_section_raw.data(), parser->get_base() + section->PointerToRawData, section->SizeOfRawData);
 
 		sections.push_back({ *section, current_section_raw });
@@ -62,6 +62,7 @@ generator_section_t& pe_generator::add_section(const char* name)
 	strcpy((char*)&(std::get<0>(new_section).Name), name);
 	
 	sections.push_back(new_section);
+	nt_headers.FileHeader.NumberOfSections++;
 
 	return sections.back();
 }
@@ -88,6 +89,22 @@ generator_section_t& pe_generator::get_last_section()
 
 void pe_generator::save_file(const std::string& save_path)
 {
+	// account for binaries potentially placing sections in a different order virtually
+	uint16_t binary_virtual_size = 0;
+	std::sort(sections.begin(), sections.end(), [](auto& a, auto& b)
+		{
+			auto a_section = std::get<0>(a);
+			auto b_section = std::get<0>(b);
+
+			return a_section.VirtualAddress < b_section.VirtualAddress;
+		});
+
+	auto final_virtual_section = std::get<0>(sections.back());
+	binary_virtual_size = final_virtual_section.VirtualAddress + final_virtual_section.Misc.VirtualSize;
+
+	// update nt headers
+	nt_headers.OptionalHeader.SizeOfImage = binary_virtual_size;
+
 	std::ofstream protected_binary(save_path, std::ios::binary);
 	protected_binary.write((char*)&dos_header, sizeof IMAGE_DOS_HEADER);
 	protected_binary.write((char*)&dos_stub, sizeof dos_stub);
@@ -124,7 +141,7 @@ void pe_generator::save_file(const std::string& save_path)
 			total_written += missing_bytes;
 		}
 
-		protected_binary.write(section_raw.data(), section_raw.size());
+		protected_binary.write((char*)section_raw.data(), section_raw.size());
 		total_written += section_raw.size();
 	}
 }

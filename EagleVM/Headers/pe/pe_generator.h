@@ -14,7 +14,7 @@
 
 #define P2ALIGNUP(x, align) (-(-((LONG64)x) & -((LONG64)align)))
 
-typedef std::pair<IMAGE_SECTION_HEADER, std::vector<char>> generator_section_t;
+typedef std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>> generator_section_t;
 
 class pe_generator
 {
