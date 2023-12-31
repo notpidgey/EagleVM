@@ -62,13 +62,13 @@ uint32_t vm_handle_generator::get_va_index(const vm_handler_entry& handler, reg_
     switch (size)
     {
         case bit64:
-            return handler.handler_va[0];
+            return *handler.handler_va[0];
         case bit32:
-            return handler.handler_va[1];
+            return *handler.handler_va[1];
         case bit16:
-            return handler.handler_va[2];
+            return *handler.handler_va[2];
         case bit8:
-            return handler.handler_va[3];
+            return *handler.handler_va[3];
         default:
             return -1;
     }

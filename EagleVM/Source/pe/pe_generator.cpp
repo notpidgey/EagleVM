@@ -56,9 +56,14 @@ void pe_generator::load_parser()
 	}
 }
 
-IMAGE_SECTION_HEADER* pe_generator::add_section()
+generator_section_t& pe_generator::add_section(const char* name)
 {
-	return nullptr;
+	generator_section_t new_section = {};
+	strcpy((char*)&(std::get<0>(new_section).Name), name);
+	
+	sections.push_back(new_section);
+
+	return new_section;
 }
 
 void pe_generator::add_section(const PIMAGE_SECTION_HEADER section_header)

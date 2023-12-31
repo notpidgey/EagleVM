@@ -122,19 +122,19 @@ int main(int argc, char* argv[])
     pe_generator generator(&parser);
     generator.load_parser();
 
-    PIMAGE_SECTION_HEADER last_section = &std::get<0>(generator.get_last_section());
+    IMAGE_SECTION_HEADER& last_section = std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
-    PIMAGE_SECTION_HEADER vm_section = generator.add_section();
-    vm_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    vm_section->SizeOfRawData = 0;
-    vm_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    vm_section->Misc.VirtualSize = 0;
-    vm_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    vm_section->PointerToRelocations = 0;
-    vm_section->NumberOfRelocations = 0;
-    vm_section->NumberOfLinenumbers = 0;
+    auto& [vm_section, _] = generator.add_section(".vmdata");
+    vm_section.PointerToRawData = P2ALIGNUP(last_section.PointerToRawData + last_section.SizeOfRawData, nt_header->OptionalHeader.FileAlignment);
+    vm_section.SizeOfRawData = 0;
+    vm_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    vm_section.Misc.VirtualSize = 0;
+    vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    vm_section.PointerToRelocations = 0;
+    vm_section.NumberOfRelocations = 0;
+    vm_section.NumberOfLinenumbers = 0;
 
     last_section = vm_section;
 
@@ -145,8 +145,11 @@ int main(int argc, char* argv[])
     vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers at %04X...\n", vm_section->VirtualAddress);
-    vm_generator.generate_vm_handlers(false);
+    std::printf("[>] generating vm handlers at %04X...\n", vm_section.VirtualAddress);
+    
+    auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
+    vm_section.SizeOfRawData = raw_vm_size;
+    vm_section.Misc.VirtualSize = P2ALIGNUP(raw_vm_size, nt_header->OptionalHeader.SectionAlignment);
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
@@ -226,30 +229,29 @@ int main(int argc, char* argv[])
         //
     }
 
-    PIMAGE_SECTION_HEADER code_section = generator.add_section();
-    code_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    code_section->SizeOfRawData = 0;
-    code_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    code_section->Misc.VirtualSize = 0;
-    code_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    code_section->PointerToRelocations = 0;
-    code_section->NumberOfRelocations = 0;
-    code_section->NumberOfLinenumbers = 0;
+    auto& [code_section, _] = generator.add_section(".vmcode");
+    code_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
+    code_section.SizeOfRawData = 0;
+    code_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    code_section.Misc.VirtualSize = 0;
+    code_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    code_section.PointerToRelocations = 0;
+    code_section.NumberOfRelocations = 0;
+    code_section.NumberOfLinenumbers = 0;
 
     last_section = code_section;
 
-    PIMAGE_SECTION_HEADER packer_section = generator.add_section();
-    packer_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    packer_section->SizeOfRawData = 0;
-    packer_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    packer_section->Misc.VirtualSize = 0;
-    packer_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    packer_section->PointerToRelocations = 0;
-    packer_section->NumberOfRelocations = 0;
-    packer_section->NumberOfLinenumbers = 0;
+    auto& [packer_section, _] = generator.add_section(".pack");
+    packer_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
+    packer_section.SizeOfRawData = 0;
+    packer_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    packer_section.Misc.VirtualSize = 0;
+    packer_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    packer_section.PointerToRelocations = 0;
+    packer_section.NumberOfRelocations = 0;
+    packer_section.NumberOfLinenumbers = 0;
 
     last_section = packer_section;
-
     generator.save_file("box.exe");
 
     return 0;
