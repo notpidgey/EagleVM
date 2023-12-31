@@ -12,6 +12,10 @@
 #include "pe/pe_sections/pe_code_section.h"
 #include "pe/pe_sections/pe_handler_section.h"
 
+#define P2ALIGNUP(x, align) (-(-((LONG64)x) & -((LONG64)align)))
+
+typedef std::pair<IMAGE_SECTION_HEADER, std::vector<char>> generator_section_t;
+
 class pe_generator
 {
 public:
@@ -24,10 +28,14 @@ public:
 		sections = {};
 	}
 
-	void load_existing();
+	void load_parser();
 	
+	PIMAGE_SECTION_HEADER add_section();
 	void add_section(PIMAGE_SECTION_HEADER section_header);
 	void add_section(IMAGE_SECTION_HEADER section_header);
+
+	std::vector<generator_section_t> get_sections();
+	generator_section_t& get_last_section();
 
 	void save_file(const std::string& save_path);
 
@@ -37,11 +45,5 @@ private:
 	IMAGE_DOS_HEADER dos_header;
 	std::array<char, 0xC0> dos_stub;
 	IMAGE_NT_HEADERS nt_headers;
-	std::vector<std::pair<IMAGE_SECTION_HEADER, std::vector<char>>> sections;
-
-	IMAGE_SECTION_HEADER* get_section_rva(const uint32_t rva);
-	IMAGE_SECTION_HEADER* get_section_offset(const uint32_t offset);
-
-	uint32_t offset_to_rva(uint32_t offset);
-	uint32_t rva_to_offset(uint32_t rva);
+	std::vector<generator_section_t> sections;
 };

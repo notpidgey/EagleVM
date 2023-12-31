@@ -1,6 +1,6 @@
 #include "pe/pe_generator.h"
 
-void pe_generator::load_existing()
+void pe_generator::load_parser()
 {
 	//
 	// dos header
@@ -56,6 +56,11 @@ void pe_generator::load_existing()
 	}
 }
 
+IMAGE_SECTION_HEADER* pe_generator::add_section()
+{
+	return nullptr;
+}
+
 void pe_generator::add_section(const PIMAGE_SECTION_HEADER section_header)
 {
 	// section_headers.push_back(*section_header);
@@ -64,6 +69,16 @@ void pe_generator::add_section(const PIMAGE_SECTION_HEADER section_header)
 void pe_generator::add_section(const IMAGE_SECTION_HEADER section_header)
 {
 	// section_headers.push_back(section_header);
+}
+
+std::vector<generator_section_t> pe_generator::get_sections()
+{
+	return sections;
+}
+
+generator_section_t& pe_generator::get_last_section()
+{
+	return sections.back();
 }
 
 void pe_generator::save_file(const std::string& save_path)
@@ -107,48 +122,4 @@ void pe_generator::save_file(const std::string& save_path)
 		protected_binary.write(section_raw.data(), section_raw.size());
 		total_written += section_raw.size();
 	}
-}
-
-IMAGE_SECTION_HEADER* pe_generator::get_section_rva(const uint32_t rva)
-{
-	for (auto& [section_header, _] : sections)
-	{
-		if (section_header.VirtualAddress <= rva && rva < section_header.VirtualAddress + section_header.Misc.VirtualSize)
-		{
-			return &section_header;
-		}
-	}
-
-	return nullptr;
-}
-
-IMAGE_SECTION_HEADER* pe_generator::get_section_offset(const uint32_t offset)
-{
-	for (auto& [section_header, _] : sections)
-	{
-		if (section_header.PointerToRawData <= offset && offset < section_header.PointerToRawData + section_header.SizeOfRawData)
-		{
-			return &section_header;
-		}
-	}
-
-	return nullptr;
-}
-
-uint32_t pe_generator::offset_to_rva(const uint32_t offset)
-{
-	const auto section = get_section_offset(offset);
-	if (!section)
-		return 0;
-
-	return (section->VirtualAddress + offset) - section->PointerToRawData;
-}
-
-uint32_t pe_generator::rva_to_offset(const uint32_t rva)
-{
-	const auto section = get_section_rva(rva);
-	if (!section)
-		return 0;
-
-	return section->PointerToRawData + rva - section->VirtualAddress;
 }
