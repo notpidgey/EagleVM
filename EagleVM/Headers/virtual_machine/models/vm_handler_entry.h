@@ -13,5 +13,5 @@ struct vm_handler_entry
     //each handler might have a specific handler for qword, dwords, words
     //therefore, there may be multiple handlers stored in different locations
     std::array<reg_size, 4> supported_handler_va = {};
-    std::array<uint32_t, 4> handler_va = {};
+    std::array<uint32_t*, 4> handler_va = {};
 };

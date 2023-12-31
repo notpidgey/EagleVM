@@ -21,18 +21,19 @@ enum class encode_status
 };
 
 typedef std::vector<zydis_encoder_request> zydis_instructions;
+typedef std::vector<uint8_t> zydis_encoded_instructions;
+
 typedef std::pair<zydis_instructions, encode_status> encode_data;
+typedef std::tuple<uint32_t, uint32_t, zydis_instructions, zydis_encoded_instructions> encode_handler_data;
 
 class vm_generator
 {
 public:
-    vm_handle_generator hg_;
-
     vm_generator();
 
     void init_reg_order();
     void init_ran_consts();
-    void generate_vm_handlers(uint32_t va_of_section);
+    std::pair<uint32_t, std::vector<encode_handler_data>> generate_vm_handlers(bool randomize_handler_position);
 
     std::vector<zydis_encoder_request> call_vm_enter();
     std::vector<zydis_encoder_request> call_vm_exit();
@@ -42,11 +43,8 @@ public:
 
 private:
     vm_register_manager rm_;
+    vm_handle_generator hg_;
 
-    uint32_t vm_enter_va_ = 0x1;
-    uint32_t vm_exit_va_ = 0x1;
-
-    std::vector<uint8_t> section_data_;
 
     inline zydis_instructions create_func_jump(uint32_t address);
     encode_data encode_operand(const zydis_decode& instruction, zydis_dreg op_reg);

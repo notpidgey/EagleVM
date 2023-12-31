@@ -25,13 +25,13 @@ void vm_generator::init_ran_consts()
     hg_.setup_enc_constants();
 }
 
-void vm_generator::generate_vm_handlers(uint32_t va_of_section)
+std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_handlers(bool randomize_handler_position)
 {
+    uint32_t current_offset = 0;
     hg_.setup_vm_mapping();
 
-    uint32_t current_section_offset = 0;
-    std::printf("%3s %-17s %-10s\n", "", "handler", "instructions");
-    for (auto&[k, v] : hg_.vm_handlers)
+    std::vector<encode_handler_data> vm_handlers;
+    for (auto& [k, v] : hg_.vm_handlers)
     {
         for (int i = 0; i < 4; i++)
         {
@@ -39,14 +39,42 @@ void vm_generator::generate_vm_handlers(uint32_t va_of_section)
             if (supported_size == reg_size::unsupported)
                 break;
 
-            auto instructions = v.creation_binder(supported_size);
-            auto encoded = zydis_helper::encode_queue(instructions);
+            handle_instructions instructions = v.creation_binder(supported_size);
+            zydis_encoded_instructions encoded_bytes = zydis_helper::encode_queue(instructions);
 
-            section_data_ += encoded;
-            v.handler_va[i] = current_section_offset;
-            current_section_offset += encoded.size();
+            vm_handlers.emplace_back(std::tuple{ current_offset, encoded_bytes.size(), instructions, encoded_bytes });
+            v.handler_va[i] = &std::get<0>(vm_handlers.back());
+
+            current_offset += encoded_bytes.size();
         }
     }
+
+    // must be 16 byte aligned 
+    current_offset = 0;
+    for (auto& [handler_offset, handler_size, _, encoded_bytes] : vm_handlers)
+    {
+        uint8_t remaining_pad = handler_size % 16;
+        std::vector<uint8_t> padding = create_padding(remaining_pad);
+
+        encoded_bytes += padding;
+    }
+
+    if (randomize_handler_position)
+    {
+        std::random_device random_device;
+        std::mt19937 g(random_device());
+
+        std::shuffle(vm_handlers.begin(), vm_handlers.end(), g);
+
+        current_offset = 0;
+        for (auto& [handler_offset, handler_size, _, _] : vm_handlers)
+        {
+            handler_offset = current_offset;
+            current_offset += handler_size;
+        }
+    }
+
+    return { current_offset, vm_handlers };
 }
 
 std::vector<zydis_encoder_request> vm_generator::call_vm_enter()
