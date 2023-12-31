@@ -118,6 +118,26 @@ int main(int argc, char* argv[])
         std::printf("[+] successfully verified macro usage\n");
     }
 
+    //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
+    pe_generator generator(&parser);
+    generator.load_parser();
+
+    PIMAGE_SECTION_HEADER last_section = &std::get<0>(generator.get_last_section());
+
+    // its not a great idea to split up the virtual machines into a different section than the virtualized code
+    // as it will aid reverse engineers in understanding what is happening in the binary
+    PIMAGE_SECTION_HEADER vm_section = generator.add_section();
+    vm_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
+    vm_section->SizeOfRawData = 0;
+    vm_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    vm_section->Misc.VirtualSize = 0;
+    vm_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    vm_section->PointerToRelocations = 0;
+    vm_section->NumberOfRelocations = 0;
+    vm_section->NumberOfLinenumbers = 0;
+
+    last_section = vm_section;
+
     vm_generator vm_generator;
     vm_generator.init_reg_order();
     std::printf("[+] initialized random registers\n");
@@ -125,8 +145,11 @@ int main(int argc, char* argv[])
     vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers...\n");
-    vm_generator.generate_vm_handlers(0x00000000005547ED);
+    std::printf("[>] generating vm handlers at %04X...\n", vm_section->VirtualAddress);
+    vm_generator.generate_vm_handlers(false);
+
+    // now that we have all the vm handlers generated, we need to randomize them in the section
+    // we need to create a map of all the handlers
 
     std::printf("\n[>] generating virtualized code...\n\n");
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
@@ -141,7 +164,6 @@ int main(int argc, char* argv[])
         std::printf("[>] instruction begin %u\n", parser.offset_to_rva(vm_iat_calls[c].first));
         std::printf("[>] instruction end %u\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
         std::printf("[>] instruction size %i\n", protect_section.get_instruction_size());
-
 
         std::printf("[+] generated instructions\n\n");
 
@@ -161,7 +183,7 @@ int main(int argc, char* argv[])
 
                             // call into the virtual machine
                             std::vector<zydis_encoder_request> enter_instructions = vm_generator.call_vm_enter();
-                            // section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
+                            section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
 
                             currently_in_vm = true;
                         }
@@ -175,14 +197,14 @@ int main(int argc, char* argv[])
                             std::printf("\n[-] vmexit\n");
 
                             // call out of the virtual machine
-                            // std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit()
-                            // section_instructions.insert(section_instructions.end(), exit_instructions.begin(), exit_instructions.end());
+                            std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit();
+                            section_instructions.insert(section_instructions.end(), exit_instructions.begin(), exit_instructions.end());
 
                             currently_in_vm = false;
                         }
                     }
 
-                    auto messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
+                    std::vector<std::string> messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
                     for(auto& message : messages)
                         std::printf("[>] %s\n", message.c_str());
 
@@ -204,20 +226,31 @@ int main(int argc, char* argv[])
         //
     }
 
-    //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
-    pe_generator generator(&parser);
-    generator.load_existing();
-    generator.save_file("box.exe");
+    PIMAGE_SECTION_HEADER code_section = generator.add_section();
+    code_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
+    code_section->SizeOfRawData = 0;
+    code_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    code_section->Misc.VirtualSize = 0;
+    code_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    code_section->PointerToRelocations = 0;
+    code_section->NumberOfRelocations = 0;
+    code_section->NumberOfLinenumbers = 0;
 
-    // IMAGE_SECTION_HEADER vm_section{};
-    // vm_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    // vm_section.SizeOfRawData = 0;
-    // vm_section.VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    // vm_section.Misc.VirtualSize = 0;
-    // vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    // vm_section.PointerToRelocations = 0;
-    // vm_section.NumberOfRelocations = 0;
-    // vm_section.NumberOfLinenumbers = 0;
+    last_section = code_section;
+
+    PIMAGE_SECTION_HEADER packer_section = generator.add_section();
+    packer_section->PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
+    packer_section->SizeOfRawData = 0;
+    packer_section->VirtualAddress = P2ALIGNUP(last_section->VirtualAddress + last_section->Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    packer_section->Misc.VirtualSize = 0;
+    packer_section->Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    packer_section->PointerToRelocations = 0;
+    packer_section->NumberOfRelocations = 0;
+    packer_section->NumberOfLinenumbers = 0;
+
+    last_section = packer_section;
+
+    generator.save_file("box.exe");
 
     return 0;
 }
