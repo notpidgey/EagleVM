@@ -53,10 +53,14 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
     current_offset = 0;
     for (auto& [handler_offset, handler_size, _, encoded_bytes] : vm_handlers)
     {
-        uint8_t remaining_pad = handler_size % 16;
+        uint8_t remaining_pad = 16 - (handler_size % 16);
         std::vector<uint8_t> padding = create_padding(remaining_pad);
 
         encoded_bytes += padding;
+        handler_size += remaining_pad;
+
+        handler_offset = current_offset;
+        current_offset += handler_size;
     }
 
     if (randomize_handler_position)
@@ -67,7 +71,7 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
         std::shuffle(vm_handlers.begin(), vm_handlers.end(), g);
 
         current_offset = 0;
-        for (auto& [handler_offset, handler_size, _, _] : vm_handlers)
+        for (auto& [handler_offset, handler_size, _1, _2] : vm_handlers)
         {
             handler_offset = current_offset;
             current_offset += handler_size;
@@ -129,7 +133,8 @@ std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_v
 
 std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
 {
-    std::vector<uint8_t> padding(bytes);
+    std::vector<uint8_t> padding;
+    padding.reserve(bytes);
 
     std::random_device dev;
     std::mt19937 rng(dev());

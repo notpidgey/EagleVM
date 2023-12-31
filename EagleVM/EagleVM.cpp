@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     pe_generator generator(&parser);
     generator.load_parser();
 
-    IMAGE_SECTION_HEADER& last_section = std::get<0>(generator.get_last_section());
+    IMAGE_SECTION_HEADER last_section = std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
@@ -150,6 +150,9 @@ int main(int argc, char* argv[])
     auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
     vm_section.SizeOfRawData = raw_vm_size;
     vm_section.Misc.VirtualSize = P2ALIGNUP(raw_vm_size, nt_header->OptionalHeader.SectionAlignment);
+
+    generator.save_file("box.exe");
+    return 0;
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
@@ -229,7 +232,7 @@ int main(int argc, char* argv[])
         //
     }
 
-    auto& [code_section, _] = generator.add_section(".vmcode");
+    auto& [code_section, _1] = generator.add_section(".vmcode");
     code_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
     code_section.SizeOfRawData = 0;
     code_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
@@ -241,7 +244,7 @@ int main(int argc, char* argv[])
 
     last_section = code_section;
 
-    auto& [packer_section, _] = generator.add_section(".pack");
+    auto& [packer_section, _2] = generator.add_section(".pack");
     packer_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
     packer_section.SizeOfRawData = 0;
     packer_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);

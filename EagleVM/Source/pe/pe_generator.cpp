@@ -63,7 +63,7 @@ generator_section_t& pe_generator::add_section(const char* name)
 	
 	sections.push_back(new_section);
 
-	return new_section;
+	return sections.back();
 }
 
 void pe_generator::add_section(const PIMAGE_SECTION_HEADER section_header)
