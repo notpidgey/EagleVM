@@ -126,7 +126,7 @@ int main(int argc, char* argv[])
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
-    auto& [vm_section, _] = generator.add_section(".vmdata");
+    auto& [vm_section, vm_section_bytes] = generator.add_section(".vmdata");
     vm_section.PointerToRawData = P2ALIGNUP(last_section.PointerToRawData + last_section.SizeOfRawData, nt_header->OptionalHeader.FileAlignment);
     vm_section.SizeOfRawData = 0;
     vm_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
@@ -150,6 +150,9 @@ int main(int argc, char* argv[])
     auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
     vm_section.SizeOfRawData = raw_vm_size;
     vm_section.Misc.VirtualSize = P2ALIGNUP(raw_vm_size, nt_header->OptionalHeader.SectionAlignment);
+
+    for (auto& [_, _1, _2, encoded_bytes] : handler_bytes)
+        vm_section_bytes += encoded_bytes;
 
     generator.save_file("box.exe");
     return 0;
