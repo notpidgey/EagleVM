@@ -30,7 +30,7 @@ public:
 
 	void load_parser();
 	
-	PIMAGE_SECTION_HEADER add_section();
+	generator_section_t& add_section(const char* name);
 	void add_section(PIMAGE_SECTION_HEADER section_header);
 	void add_section(IMAGE_SECTION_HEADER section_header);
 
