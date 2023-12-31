@@ -68,10 +68,10 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 stub_import import_type;
                 switch (index) 
                 {
-                case 0:
+                case 1:
                     import_type = stub_import::vm_end;
                     break;
-                case 1:
+                case 0:
                     import_type = stub_import::vm_begin;
                     break;
                 default:
@@ -143,6 +143,9 @@ IMAGE_DATA_DIRECTORY pe_parser::get_directory(short directory)
 
 std::vector<PIMAGE_SECTION_HEADER> pe_parser::get_sections()
 {
+    if (!image_sections.empty())
+        return image_sections;
+
     PIMAGE_NT_HEADERS nt_headers = get_nt_header();
     PIMAGE_SECTION_HEADER section_header = IMAGE_FIRST_SECTION(nt_headers);
 
