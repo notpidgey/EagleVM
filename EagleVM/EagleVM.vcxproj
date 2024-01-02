@@ -114,6 +114,7 @@
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_handler_manager.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_handle_generator.cpp" />
+    <ClCompile Include="Source\virtual_machine\vm_mba.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_register_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +132,7 @@
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />
     <ClInclude Include="Headers\virtual_machine\vm_handler_manager.h" />
     <ClInclude Include="Headers\virtual_machine\vm_handle_generator.h" />
+    <ClInclude Include="Headers\virtual_machine\vm_mba.h" />
     <ClInclude Include="Headers\virtual_machine\vm_register_manager.h" />
   </ItemGroup>
   <ItemGroup>
