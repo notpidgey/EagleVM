@@ -1,5 +1,7 @@
 #include "virtual_machine/vm_mba.h"
 
+#include <algorithm>
+
 #define u_var_op(x, y, z) std::make_unique<mba_var_exp>(x, y, z)
 #define u_var_xy(x) std::make_unique<mba_var_xy>(x)
 #define u_var_const(x, y) std::make_unique<mba_var_const<int>>(y)
@@ -53,13 +55,13 @@ vm_mba::vm_mba()
 	{
 		// ~(x * y)              ->   ((~x * y) + (y - 1))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_mul;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_op(u_var_xy(var_x, mod_not), u_var_xy(var_y), op_plus);
 			eql.vars[1] = u_var_op(u_var_xy(var_y), u_var_const(uint32_t, 1), op_minus);
 			exp.operation = op_plus;
@@ -69,13 +71,13 @@ vm_mba::vm_mba()
 
 		// ~(x + y)              ->   (~x + (~y + 1))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_plus;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_not);
 			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
 			exp.operation = op_plus;
@@ -85,13 +87,13 @@ vm_mba::vm_mba()
 
 		// ~(x - y)              ->   (~x - (~y + 1))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_minus;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_not);
 			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
 			exp.operation = op_minus;
@@ -101,13 +103,13 @@ vm_mba::vm_mba()
 
 		// ~(x & y)              ->   (~x | ~y)
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_and;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_not);
 			eql.vars[1] = u_var_xy(var_y, mod_not);
 			exp.operation = op_or;
@@ -117,13 +119,13 @@ vm_mba::vm_mba()
 
 		// ~(x ^ y)              ->   ((x & y) | ~(x | y))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_xor;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
 			eql.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or, mod_not);
 			exp.operation = op_or;
@@ -133,13 +135,13 @@ vm_mba::vm_mba()
 
 		// ~(x | y)              ->   (~x & ~y)
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_not;
 			exp.operation = op_or;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_not);
 			eql.vars[1] = u_var_xy(var_y, mod_not);
 			exp.operation = op_and;
@@ -149,13 +151,13 @@ vm_mba::vm_mba()
 
 		// -(x * y)              ->   (-x * y)
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_neg;
 			exp.operation = op_mul;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_neg);
 			eql.vars[1] = u_var_xy(var_y);
 			exp.operation = op_mul;
@@ -165,13 +167,13 @@ vm_mba::vm_mba()
 
 		// -(x * y)              ->   (x * -y)
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_neg;
 			exp.operation = op_mul;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x);
 			eql.vars[1] = u_var_xy(var_y, mod_neg);
 			exp.operation = op_mul;
@@ -181,14 +183,14 @@ vm_mba::vm_mba()
 
 		// (x - y)               ->   (x + (-y))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.operation = op_minus;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x);
-			eql.vars[0] = u_var_xy(var_y, mod_neg);
+			eql.vars[1] = u_var_xy(var_y, mod_neg);
 			eql.operation = op_plus;
 
 			mba_simple_truth.push_back({ exp, eql });
@@ -206,16 +208,35 @@ vm_mba::vm_mba()
 
 		// -(x + y)              ->   ((-x) + (-y))
 		{
-			mba_var_exp exp;
+			mba_var_exp exp{};
 			exp.vars[0] = u_var_xy(var_x);
 			exp.vars[1] = u_var_xy(var_y);
 			exp.modifier = mod_neg;
 			exp.operation = op_plus;
 
-			mba_var_exp eql;
+			mba_var_exp eql{};
 			eql.vars[0] = u_var_xy(var_x, mod_neg);
 			eql.vars[1] = u_var_xy(var_y, mod_neg);
 			exp.operation = op_plus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+	}
+
+	// some basic ones, this should probably be automated somehow because its all junk
+	{
+		// (X + Y)              ->   ((X + Y) - (X & 0))
+		{
+			mba_var_exp exp{};
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_none;
+			exp.operation = op_plus;
+
+			mba_var_exp eql{};
+			eql.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
+			eql.vars[1] = u_var_op(u_var_xy(var_x), u_var_const(uint32_t, 0), op_and);
+			exp.operation = op_minus;
 
 			mba_simple_truth.push_back({ exp, eql });
 		}
@@ -227,20 +248,72 @@ std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 	mba_var_exp& root_truth = mba_base_truth[op];
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
 
-	// allow this to expand a few times until it starts to repeat
+	// TODO: add function to walk from bottom of tree, top of tree, and random
 	truth_operator oper = op_none;
 	for (uint32_t i = 0; i < max_expansions; i++)
 	{
-		if (oper == root_truth_exp->operation)
-			break;
+		// allow this to expand a few times until it starts to repeat
+		if (oper != root_truth_exp->operation)
+		{
+			mba_var_exp& root_expansion = mba_base_truth[root_truth_exp->operation];
+			std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
 
-		mba_var_exp& root_expansion = mba_base_truth[root_truth_exp->operation];
-		std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
+			oper = root_truth_exp->operation;
 
-		oper = root_truth_exp->operation;
+			root_expansion_exp->expand(root_truth_exp->vars[0], root_truth_exp->vars[1]);
+			root_truth_exp = std::move(root_expansion_exp);
+		}
 
-		root_expansion_exp->expand(root_truth_exp->vars[0], root_truth_exp->vars[1]);
-		root_truth_exp = std::move(root_expansion_exp);
+		// walk the table
+		root_truth_exp->walk([this](mba_var_exp* inst)
+			{
+				std::ranges::for_each(mba_simple_truth,
+				[inst](std::pair<mba_var_exp, mba_var_exp>& pair)
+					{
+						auto& [target_exp, result_exp] = pair;
+						if (inst->operation != target_exp.operation)
+							return;
+
+						if (target_exp.modifier != mod_none && inst->modifier != target_exp.modifier)
+							return;
+
+						std::array<std::unique_ptr<mba_variable>, 2>& vars = inst->vars;
+						std::unique_ptr<mba_variable>& x_var = vars[0];
+						std::unique_ptr<mba_variable>& y_var = vars[1];
+
+						std::unique_ptr<mba_variable>& target_x_var = target_exp.vars[0];
+						std::unique_ptr<mba_variable>& target_y_var = target_exp.vars[1];
+
+						if (target_x_var->modifier != x_var->modifier)
+							return;
+
+						if (target_y_var->modifier != y_var->modifier)
+							return;
+
+						// successful match, expand, and copy result
+						std::unique_ptr<mba_var_exp> match_exp = result_exp.clone_exp();
+						match_exp->expand(x_var->clone(), y_var->clone());
+
+						vars[0] = std::move(match_exp->vars[0]);
+						vars[1] = std::move(match_exp->vars[1]);
+						inst->operation = match_exp->operation;
+						inst->modifier = match_exp->modifier;
+					});
+
+				// mba_var_exp& root_expansion = mba_base_truth[inst->operation];
+				// std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
+				// root_expansion_exp->expand(inst->vars[0]->clone(), inst->vars[1]->clone());
+				// 
+				// inst->vars[0] = std::move(root_expansion_exp->vars[0]);
+				// inst->vars[1] = std::move(root_expansion_exp->vars[1]);
+				// inst->operation = root_expansion_exp->operation;
+				// inst->modifier = root_expansion_exp->modifier;
+
+
+				return;
+			});
+
+		// walk every constant and just create junk
 	}
 
 	return root_truth_exp->print();
@@ -391,6 +464,14 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 	}
 }
 
+void mba_var_exp::walk(const std::function<void(mba_var_exp*)>& walk_callback)
+{
+	walk_callback(this);
+	
+	for (int i = 0; i < vars.size(); i++)
+		vars[i]->walk(walk_callback);
+}
+
 std::unique_ptr<mba_variable> mba_var_exp::clone()
 {
 	mba_var_exp clone;
@@ -440,6 +521,11 @@ void mba_var_xy::expand(const std::unique_ptr<mba_variable>& x, const std::uniqu
 {
 	// should be exapnded by operation expand function
 	// should not happen
+	return;
+}
+
+void mba_var_xy::walk(const std::function<void(mba_var_exp*)>& walk_callback)
+{
 	return;
 }
 

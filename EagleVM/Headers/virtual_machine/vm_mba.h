@@ -4,6 +4,7 @@
 #include <array>
 #include <vector>
 #include <unordered_map>
+#include <functional>
 
 enum truth_operator
 {
@@ -37,6 +38,7 @@ enum variable_type
 	expression
 };
 
+class mba_var_exp;
 class mba_variable 
 {
 public:
@@ -48,7 +50,7 @@ public:
 
     virtual std::string print() const;
     virtual void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) = 0;
-
+    virtual void walk(const std::function<void(mba_var_exp*)>& walk_callback) = 0;
     virtual std::unique_ptr<mba_variable> clone() = 0;
 
     std::string modifier_string() const;
@@ -68,6 +70,7 @@ public:
 
     std::string print() const override;
     void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) override;
+    void walk(const std::function<void(mba_var_exp*)>& walk_callback) override;
 
     std::unique_ptr<mba_variable> clone() override;
     std::unique_ptr<mba_var_exp> clone_exp();
@@ -96,6 +99,11 @@ public:
     {
         return std::make_unique<mba_var_const>(*this);
     }
+
+    void walk(const std::function<void(mba_var_exp*)>& walk_callback) override
+    {
+        return;
+    }
 };
 
 class mba_var_xy : public mba_variable 
@@ -107,6 +115,7 @@ public:
 
     std::string print() const override;
     void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) override;
+    void walk(const std::function<void(mba_var_exp*)>& walk_callback) override;
 
     std::unique_ptr<mba_variable> clone() override;
 };

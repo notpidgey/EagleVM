@@ -9,7 +9,7 @@
 int main(int argc, char* argv[])
 {
     vm_mba mba = vm_mba();
-    std::cout << mba.create_tree(op_and, 4) << std::endl;
+    std::cout << mba.create_tree(op_plus, 5) << std::endl;
 
     pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
     std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
