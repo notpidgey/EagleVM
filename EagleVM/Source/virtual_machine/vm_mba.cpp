@@ -11,7 +11,7 @@ vm_mba::vm_mba()
 
 	// (X ^ Y) = (X | Y) - (X & Y)
 	{
-		mba_var_exp& xor_truth = mba_truth[op_xor];
+		mba_var_exp& xor_truth = mba_base_truth[op_xor];
 		xor_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or);
 		xor_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
 		xor_truth.operation = op_minus;
@@ -19,7 +19,7 @@ vm_mba::vm_mba()
 
 	// (X + Y) = (X & Y) + (X | Y)
 	{
-		mba_var_exp& plus_truth = mba_truth[op_plus];
+		mba_var_exp& plus_truth = mba_base_truth[op_plus];
 		plus_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
 		plus_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or);
 		plus_truth.operation = op_plus;
@@ -27,7 +27,7 @@ vm_mba::vm_mba()
 
 	// (X - Y) = (X ^ (-1 * Y)) + (2 * (X & (-1 * Y)))
 	{
-		mba_var_exp& minus_truth = mba_truth[op_minus];
+		mba_var_exp& minus_truth = mba_base_truth[op_minus];
 		minus_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_xor);
 		minus_truth.vars[1] = u_var_op(u_var_const(uint8_t, 2), u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_and), op_mul);
 		minus_truth.operation = op_plus;
@@ -35,7 +35,7 @@ vm_mba::vm_mba()
 
 	// (X & Y) = (X + Y) - (X | Y)
 	{
-		mba_var_exp& and_truth = mba_truth[op_and];
+		mba_var_exp& and_truth = mba_base_truth[op_and];
 		and_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
 		and_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or);
 		and_truth.operation = op_minus;
@@ -43,16 +43,188 @@ vm_mba::vm_mba()
 
 	// (X | Y) = ((X + Y) + 1) + (~X | ~Y)
 	{
-		mba_var_exp& or_truth = mba_truth[op_or];
+		mba_var_exp& or_truth = mba_base_truth[op_or];
 		or_truth.vars[0] = u_var_op(u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus), u_var_const(uint8_t, 1), op_plus);
 		or_truth.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_xy(var_y, mod_not), op_or);
 		or_truth.operation = op_plus;
+	}
+
+	// https://secret.club/2022/08/08/eqsat-oracle-synthesis.html
+	{
+		// ~(x * y)              ->   ((~x * y) + (y - 1))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_mul;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_op(u_var_xy(var_x, mod_not), u_var_xy(var_y), op_plus);
+			eql.vars[1] = u_var_op(u_var_xy(var_y), u_var_const(uint32_t, 1), op_minus);
+			exp.operation = op_plus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// ~(x + y)              ->   (~x + (~y + 1))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_plus;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_not);
+			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
+			exp.operation = op_plus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// ~(x - y)              ->   (~x - (~y + 1))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_minus;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_not);
+			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
+			exp.operation = op_minus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// ~(x & y)              ->   (~x | ~y)
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_and;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_not);
+			eql.vars[1] = u_var_xy(var_y, mod_not);
+			exp.operation = op_or;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// ~(x ^ y)              ->   ((x & y) | ~(x | y))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_xor;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
+			eql.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or, mod_not);
+			exp.operation = op_or;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// ~(x | y)              ->   (~x & ~y)
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_not;
+			exp.operation = op_or;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_not);
+			eql.vars[1] = u_var_xy(var_y, mod_not);
+			exp.operation = op_and;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// -(x * y)              ->   (-x * y)
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_neg;
+			exp.operation = op_mul;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_neg);
+			eql.vars[1] = u_var_xy(var_y);
+			exp.operation = op_mul;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// -(x * y)              ->   (x * -y)
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_neg;
+			exp.operation = op_mul;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x);
+			eql.vars[1] = u_var_xy(var_y, mod_neg);
+			exp.operation = op_mul;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// (x - y)               ->   (x + (-y))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.operation = op_minus;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x);
+			eql.vars[0] = u_var_xy(var_y, mod_neg);
+			eql.operation = op_plus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
+
+		// -x                    ->   (~x + 1)
+		{
+
+		}
+
+		// ((x * y) + y)         ->   ((x + 1) * y)
+		{
+
+		}
+
+		// -(x + y)              ->   ((-x) + (-y))
+		{
+			mba_var_exp exp;
+			exp.vars[0] = u_var_xy(var_x);
+			exp.vars[1] = u_var_xy(var_y);
+			exp.modifier = mod_neg;
+			exp.operation = op_plus;
+
+			mba_var_exp eql;
+			eql.vars[0] = u_var_xy(var_x, mod_neg);
+			eql.vars[1] = u_var_xy(var_y, mod_neg);
+			exp.operation = op_plus;
+
+			mba_simple_truth.push_back({ exp, eql });
+		}
 	}
 }
 
 std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 {
-	mba_var_exp& root_truth = mba_truth[op];
+	mba_var_exp& root_truth = mba_base_truth[op];
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
 
 	// allow this to expand a few times until it starts to repeat
@@ -62,7 +234,7 @@ std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 		if (oper == root_truth_exp->operation)
 			break;
 
-		mba_var_exp& root_expansion = mba_truth[root_truth_exp->operation];
+		mba_var_exp& root_expansion = mba_base_truth[root_truth_exp->operation];
 		std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
 
 		oper = root_truth_exp->operation;
@@ -101,6 +273,9 @@ std::string mba_variable::modifier_string() const
 		break;
 	case mod_not:
 		mod = "~";
+		break;
+	case mod_neg:
+		mod = "-";
 		break;
 	default:
 		break;
@@ -161,7 +336,7 @@ std::string mba_var_exp::print() const
 		break;
 	}
 
-	return modifier_string() + "(" + vars[0]->print() + op + vars[1]->print() + ")";
+	return "(" + modifier_string() + "(" + vars[0]->print() + op + vars[1]->print() + "))";
 }
 
 void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y)
