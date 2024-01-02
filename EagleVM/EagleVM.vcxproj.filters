@@ -54,6 +54,21 @@
     <ClCompile Include="Source\virtual_machine\vm_mba.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\mba.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\variable\mba_const.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\variable\mba_exp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\variable\mba_var.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\variable\mba_xy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\pe\pe_parser.h">
@@ -101,7 +116,34 @@
     <ClInclude Include="Headers\virtual_machine\models\vm_handler_entry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\virtual_machine\vm_mba.h">
+    <ClInclude Include="Headers\obfsucation\mba\mba.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfsucation\mba\variable\mba_var.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfsucation\mba\variable\mba_exp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfsucation\mba\variable\mba_xy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfsucation\mba\variable\mba_const.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\variable\mba_const.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\variable\mba_exp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\variable\mba_var.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\variable\mba_xy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\mba.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
