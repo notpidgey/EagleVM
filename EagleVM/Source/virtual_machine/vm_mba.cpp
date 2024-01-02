@@ -29,7 +29,7 @@ vm_mba::vm_mba()
 	{
 		mba_var_exp& minus_truth = mba_truth[op_minus];
 		minus_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_xor);
-		minus_truth.vars[1] = u_var_op(u_var_const(uint8_t, 2), u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_mul), op_and);
+		minus_truth.vars[1] = u_var_op(u_var_const(uint8_t, 2), u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_and), op_mul);
 		minus_truth.operation = op_plus;
 	}
 
@@ -50,20 +50,28 @@ vm_mba::vm_mba()
 	}
 }
 
-void vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
+std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 {
 	mba_var_exp& root_truth = mba_truth[op];
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
 
-	// run the same truth on the root expression
-	for (uint32_t i = 0; i < 4; i++)
+	// allow this to expand a few times until it starts to repeat
+	truth_operator oper = op_none;
+	for (uint32_t i = 0; i < max_expansions; i++)
 	{
+		if (oper == root_truth_exp->operation)
+			break;
+
 		mba_var_exp& root_expansion = mba_truth[root_truth_exp->operation];
 		std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
+
+		oper = root_truth_exp->operation;
 
 		root_expansion_exp->expand(root_truth_exp->vars[0], root_truth_exp->vars[1]);
 		root_truth_exp = std::move(root_expansion_exp);
 	}
+
+	return root_truth_exp->print();
 }
 
 mba_variable::mba_variable()
@@ -81,6 +89,24 @@ mba_variable::mba_variable(variable_type type, variable_modifier modifier)
 std::string mba_variable::print() const
 {
 	return "ERR";
+}
+
+std::string mba_variable::modifier_string() const
+{
+	std::string mod;
+	switch (modifier)
+	{
+	case mod_none:
+		mod = "";
+		break;
+	case mod_not:
+		mod = "~";
+		break;
+	default:
+		break;
+	}
+
+	return mod;
 }
 
 mba_var_exp::mba_var_exp()
@@ -135,7 +161,7 @@ std::string mba_var_exp::print() const
 		break;
 	}
 
-	return "(" + vars[0]->print() + op + vars[1]->print() + ")";
+	return modifier_string() + "(" + vars[0]->print() + op + vars[1]->print() + ")";
 }
 
 void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y)
@@ -153,17 +179,23 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 		case variable:
 		{
 			mba_var_xy& xy = dynamic_cast<mba_var_xy&>(*var);
+			variable_modifier mod = xy.modifier;
+
 			switch (xy.variable_type)
 			{
 			case var_x:
 			{
 				std::unique_ptr<mba_variable> copy = x->clone();
+				copy->modifier = mod;
+
 				vars[i] = std::move(copy);
 			}
 			break;
 			case var_y:
 			{
 				std::unique_ptr<mba_variable> copy = y->clone();
+				copy->modifier = mod;
+
 				vars[i] = std::move(copy);
 			}
 			break;

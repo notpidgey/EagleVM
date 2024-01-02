@@ -49,6 +49,8 @@ public:
     virtual void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) = 0;
 
     virtual std::unique_ptr<mba_variable> clone() = 0;
+
+    std::string modifier_string() const;
 };
 
 class mba_var_exp : public mba_variable
@@ -113,7 +115,7 @@ class vm_mba
 public:
 	vm_mba();
 
-	void create_tree(truth_operator none, uint32_t max_expansions);
+    std::string create_tree(truth_operator none, uint32_t max_expansions);
 
 private:
 	std::unordered_map<truth_operator, mba_var_exp> mba_truth;
