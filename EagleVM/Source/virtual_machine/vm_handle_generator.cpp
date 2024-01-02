@@ -101,7 +101,7 @@ handle_instructions vm_handle_generator::create_vm_enter(reg_size)
         //mov VREGS, rsp
         //add VREGS, 136            ; gets VREGS which is 17 pushes behind
 
-        //mov VTEMP, [rsp-144]      ; the first item to be pushed on the stack was a constant value
+        //mov VTEMP, [rsp-144]      ; the first item to be pushed on the stack was a constant value ( 18 pushes behind )
         //rol VTEMP, key3
         //add VTEMP, key2
         //ror VTEMP, key1
@@ -111,9 +111,9 @@ handle_instructions vm_handle_generator::create_vm_enter(reg_size)
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(GR_RSP)),
 
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(GR_RSP)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VREGS), ZIMMU(136)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VREGS), ZIMMU(8 * 17)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(GR_RSP, +144, 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(GR_RSP, +(8 * 18), 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_ROL, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[2])),
             zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[1])),
             zydis_helper::encode<ZYDIS_MNEMONIC_ROR, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(keys_.values[0])),

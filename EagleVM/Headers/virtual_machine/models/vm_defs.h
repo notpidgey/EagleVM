@@ -7,6 +7,7 @@
 #define I_VSP 1
 #define I_VREGS 2
 #define I_VTEMP 3
+#define I_VADDR 4
 
 #define MNEMONIC_VM_ENTER 0
 #define MNEMONIC_VM_EXIT 1

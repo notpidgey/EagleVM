@@ -4,10 +4,12 @@
 #define VSP         rm_.reg_map[I_VSP]
 #define VREGS       rm_.reg_map[I_VREGS]
 #define VTEMP       rm_.reg_map[I_VTEMP]
+#define VADDR       rm_.reg_map[I_VADDR]
 #define PUSHORDER   rm_.reg_stack_order_
 
-#define CREATE_FUNC_JMP(x) zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)), \
-zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(x)),
+#define CREATE_FUNC_JMP(x) \
+    zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)), \
+    zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(x)),
 
 vm_generator::vm_generator()
 {
@@ -42,7 +44,7 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
             handle_instructions instructions = v.creation_binder(supported_size);
             zydis_encoded_instructions encoded_bytes = zydis_helper::encode_queue(instructions);
 
-            vm_handlers.emplace_back(std::tuple{ current_offset, encoded_bytes.size(), instructions, encoded_bytes });
+            vm_handlers.push_back({ current_offset, encoded_bytes.size(), instructions, encoded_bytes });
             v.handler_va[i] = &std::get<0>(vm_handlers.back());
 
             current_offset += encoded_bytes.size();

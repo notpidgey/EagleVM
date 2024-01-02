@@ -4,8 +4,13 @@
 #include "pe/pe_generator.h"
 #include "virtual_machine/vm_generator.h"
 
+#include "virtual_machine/vm_mba.h"
+
 int main(int argc, char* argv[])
 {
+    vm_mba mba = vm_mba();
+    mba.create_tree(op_plus, 4);
+
     pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
     std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
 
@@ -154,9 +159,6 @@ int main(int argc, char* argv[])
     for (auto& [_, _1, _2, encoded_bytes] : handler_bytes)
         vm_section_bytes += encoded_bytes;
 
-    generator.save_file("box.exe");
-    return 0;
-
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
 
@@ -203,7 +205,7 @@ int main(int argc, char* argv[])
                         if (currently_in_vm)
                         {
                             // instruction is not supported by the virtual machine so we exit
-                            std::printf("\n[-] vmexit\n");
+                            std::printf("[-] vmexit\n\n");
 
                             // call out of the virtual machine
                             std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit();
