@@ -4,12 +4,14 @@
 #include "pe/pe_generator.h"
 #include "virtual_machine/vm_generator.h"
 
-#include "virtual_machine/vm_mba.h"
+#include "obfuscation/mba/mba.h"
 
 int main(int argc, char* argv[])
 {
-    vm_mba mba = vm_mba();
-    std::cout << mba.create_tree(op_plus, 5, 3) << std::endl;
+    mba_gen mba = mba_gen();
+    
+    std::string result = mba.create_tree(op_minus, 5, 3);
+    std::cout << "\n[Final] " << result  << std::endl;
 
     pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
     std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
