@@ -19,7 +19,8 @@ enum truth_operator
 enum variable_modifier
 {
 	mod_none,
-	mod_not
+	mod_not,
+    mod_neg,
 };
 
 enum variable_xy
@@ -110,6 +111,30 @@ public:
     std::unique_ptr<mba_variable> clone() override;
 };
 
+template <typename key, typename value>
+class mba_equality_map {
+public:
+    void insert(const key& key, const value& value)
+    {
+        forward_map[key] = value;
+        reverse_map[value] = key;
+    }
+
+    const value& get_value(const key& key) const
+    {
+        return forward_map.at(key);
+    }
+
+    const key& get_key(const value& value) const
+    {
+        return reverse_map.at(value);
+    }
+
+private:
+    std::unordered_map<key, value> forward_map;
+    std::unordered_map<value, key> reverse_map;
+};
+
 class vm_mba
 {
 public:
@@ -118,5 +143,7 @@ public:
     std::string create_tree(truth_operator none, uint32_t max_expansions);
 
 private:
-	std::unordered_map<truth_operator, mba_var_exp> mba_truth;
+    // mba_equality_map<mba_var_exp, mba_var_exp> mba_communitive_truth;
+	std::unordered_map<truth_operator, mba_var_exp> mba_base_truth;
+    std::vector<std::pair<mba_var_exp, mba_var_exp>> mba_simple_truth;
 };
