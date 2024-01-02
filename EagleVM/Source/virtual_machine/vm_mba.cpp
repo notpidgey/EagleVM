@@ -1,6 +1,7 @@
 #include "virtual_machine/vm_mba.h"
 
 #include <algorithm>
+#include <random>
 
 #define u_var_op(x, y, z) std::make_unique<mba_var_exp>(x, y, z)
 #define u_var_xy(x) std::make_unique<mba_var_xy>(x)
@@ -53,200 +54,248 @@ vm_mba::vm_mba()
 
 	// https://secret.club/2022/08/08/eqsat-oracle-synthesis.html
 	{
-		// ~(x * y)              ->   ((~x * y) + (y - 1))
+		// ~(x * y) -> ((~x * y) + (y - 1))
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_mul;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_mul;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_op(u_var_xy(var_x, mod_not), u_var_xy(var_y), op_plus);
-			eql.vars[1] = u_var_op(u_var_xy(var_y), u_var_const(uint32_t, 1), op_minus);
-			exp.operation = op_plus;
+			mba_var_exp result{};
+			result.vars[0] = u_var_op(u_var_xy(var_x, mod_not), u_var_xy(var_y), op_plus);
+			result.vars[1] = u_var_op(u_var_xy(var_y), u_var_const(uint32_t, 1), op_minus);
+			result.operation = op_plus;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// ~(x + y)              ->   (~x + (~y + 1))
+		// ~(x + y) -> (~x + (~y + 1))
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_plus;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_plus;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_not);
-			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
-			exp.operation = op_plus;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_not);
+			result.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
+			result.operation = op_plus;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// ~(x - y)              ->   (~x - (~y + 1))
+		// ~(x - y) -> (~x - (~y + 1))
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_minus;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_minus;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_not);
-			eql.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
-			exp.operation = op_minus;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_not);
+			result.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_const(uint32_t, 1), op_plus);
+			result.operation = op_minus;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// ~(x & y)              ->   (~x | ~y)
+		// ~(x & y) -> (~x | ~y)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_and;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_and;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_not);
-			eql.vars[1] = u_var_xy(var_y, mod_not);
-			exp.operation = op_or;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_not);
+			result.vars[1] = u_var_xy(var_y, mod_not);
+			result.operation = op_or;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// ~(x ^ y)              ->   ((x & y) | ~(x | y))
+		// ~(x ^ y) -> ((x & y) | ~(x | y))
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_xor;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_xor;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
-			eql.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or, mod_not);
-			exp.operation = op_or;
+			mba_var_exp result{};
+			result.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
+			result.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or, mod_not);
+			result.operation = op_or;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// ~(x | y)              ->   (~x & ~y)
+		// ~(x | y) -> (~x & ~y)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_not;
-			exp.operation = op_or;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_not;
+			target.operation = op_or;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_not);
-			eql.vars[1] = u_var_xy(var_y, mod_not);
-			exp.operation = op_and;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_not);
+			result.vars[1] = u_var_xy(var_y, mod_not);
+			result.operation = op_and;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// -(x * y)              ->   (-x * y)
+		// -(x * y) -> (-x * y)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_neg;
-			exp.operation = op_mul;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_neg;
+			target.operation = op_mul;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_neg);
-			eql.vars[1] = u_var_xy(var_y);
-			exp.operation = op_mul;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_neg);
+			result.vars[1] = u_var_xy(var_y);
+			result.operation = op_mul;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// -(x * y)              ->   (x * -y)
+		// -(x * y) -> (x * -y)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_neg;
-			exp.operation = op_mul;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_neg;
+			target.operation = op_mul;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x);
-			eql.vars[1] = u_var_xy(var_y, mod_neg);
-			exp.operation = op_mul;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x);
+			result.vars[1] = u_var_xy(var_y, mod_neg);
+			result.operation = op_mul;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// (x - y)               ->   (x + (-y))
+		// (x - y) -> (x + (-y))
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.operation = op_minus;
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.operation = op_minus;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x);
-			eql.vars[1] = u_var_xy(var_y, mod_neg);
-			eql.operation = op_plus;
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x);
+			result.vars[1] = u_var_xy(var_y, mod_neg);
+			result.operation = op_plus;
 
-			mba_simple_truth.push_back({ exp, eql });
+			mba_simple_truth.push_back({ target, result });
 		}
 
-		// -x                    ->   (~x + 1)
-		{
-
-		}
-
-		// ((x * y) + y)         ->   ((x + 1) * y)
+		// -x -> (~x + 1)
 		{
 
 		}
 
-		// -(x + y)              ->   ((-x) + (-y))
+		// ((x * y) + y) -> ((x + 1) * y)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_neg;
-			exp.operation = op_plus;
 
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_xy(var_x, mod_neg);
-			eql.vars[1] = u_var_xy(var_y, mod_neg);
-			exp.operation = op_plus;
+		}
 
-			mba_simple_truth.push_back({ exp, eql });
+		// -(x + y) -> ((-x) + (-y))
+		{
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_neg;
+			target.operation = op_plus;
+
+			mba_var_exp result{};
+			result.vars[0] = u_var_xy(var_x, mod_neg);
+			result.vars[1] = u_var_xy(var_y, mod_neg);
+			result.operation = op_plus;
+
+			mba_simple_truth.push_back({ target, result });
+		}
+
+		// (X + Y) -> ((X + Y) - (X & 0))
+		{
+			mba_var_exp target{};
+			target.vars[0] = u_var_xy(var_x);
+			target.vars[1] = u_var_xy(var_y);
+			target.modifier = mod_none;
+			target.operation = op_plus;
+
+			mba_var_exp result{};
+			result.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
+			result.vars[1] = u_var_op(u_var_xy(var_x), u_var_const(uint32_t, 0), op_and);
+			target.operation = op_minus;
+
+			mba_simple_truth.push_back({ target, result });
 		}
 	}
 
-	// some basic ones, this should probably be automated somehow because its all junk
+	// self equivalent truths
 	{
-		// (X + Y)              ->   ((X + Y) - (X & 0))
+		// (X) -> ~(~X + 0)
 		{
-			mba_var_exp exp{};
-			exp.vars[0] = u_var_xy(var_x);
-			exp.vars[1] = u_var_xy(var_y);
-			exp.modifier = mod_none;
-			exp.operation = op_plus;
-
-			mba_var_exp eql{};
-			eql.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
-			eql.vars[1] = u_var_op(u_var_xy(var_x), u_var_const(uint32_t, 0), op_and);
-			exp.operation = op_minus;
-
-			mba_simple_truth.push_back({ exp, eql });
+			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_plus, mod_not };
+			mba_variable_truth.push_back(eql);
 		}
+
+		// (X) -> (X + 0)
+		{
+			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_plus };
+			mba_variable_truth.push_back(eql);
+		}
+
+		// (X) -> (X - 0)
+		{
+			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_minus };
+			mba_variable_truth.push_back(eql);
+		}
+
+		// (X) -> (X | 0)
+		{
+			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_or };
+			mba_variable_truth.push_back(eql);
+		}
+
+		// (X) -> (X ^ 0)
+		{
+			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_xor };
+			mba_variable_truth.push_back(eql);
+		}
+	}
+
+	// zero truths
+	{
+		// (X ^ Y) ^ (X ^ Y)
+
+		// (X + Y) & 0
+
+		// (X | Y) ^ (X | Y)
+
+		// (X & Y) ^ (X & Y)
+
+		// (X & ~X)
+
+		// (X ^ X)
 	}
 }
 
-std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
+std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions, uint8_t equal_expansions)
 {
 	mba_var_exp& root_truth = mba_base_truth[op];
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
+
+	std::random_device rd;
+	std::mt19937 rng(rd());
 
 	// TODO: add function to walk from bottom of tree, top of tree, and random
 	truth_operator oper = op_none;
@@ -264,7 +313,7 @@ std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 			root_truth_exp = std::move(root_expansion_exp);
 		}
 
-		// walk the table
+		// walk the table to expand with simple truths
 		root_truth_exp->walk([this](mba_var_exp* inst)
 			{
 				std::ranges::for_each(mba_simple_truth,
@@ -299,19 +348,36 @@ std::string vm_mba::create_tree(truth_operator op, uint32_t max_expansions)
 						inst->operation = match_exp->operation;
 						inst->modifier = match_exp->modifier;
 					});
-
-				// mba_var_exp& root_expansion = mba_base_truth[inst->operation];
-				// std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
-				// root_expansion_exp->expand(inst->vars[0]->clone(), inst->vars[1]->clone());
-				// 
-				// inst->vars[0] = std::move(root_expansion_exp->vars[0]);
-				// inst->vars[1] = std::move(root_expansion_exp->vars[1]);
-				// inst->operation = root_expansion_exp->operation;
-				// inst->modifier = root_expansion_exp->modifier;
-
-
-				return;
 			});
+
+		// walk the table to expand with self equivalent truths
+		auto curr_eq_expansions = 0;
+		root_truth_exp->walk([this, &rng, equal_expansions, &curr_eq_expansions](mba_var_exp* inst)
+			{
+				if (curr_eq_expansions >= equal_expansions)
+					return;
+
+				std::srand(std::time(0));
+				int size = mba_variable_truth.size();
+
+				int index1 = std::rand() % size;
+				int index2 = std::rand() % size;;
+
+				mba_var_exp& first_result = mba_variable_truth[index1];
+				std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();
+				first_exp->expand(inst->vars[0]->clone(), nullptr);
+
+				inst->vars[0] = std::move(first_exp);
+
+				mba_var_exp& second_result = mba_variable_truth[index2];
+				std::unique_ptr<mba_var_exp> second_exp = second_result.clone_exp();
+				second_exp->expand(inst->vars[1]->clone(), nullptr);
+
+				inst->vars[1] = std::move(second_exp);
+
+				curr_eq_expansions++;
+			}
+		);
 
 		// walk every constant and just create junk
 	}
@@ -427,23 +493,17 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 		case variable:
 		{
 			mba_var_xy& xy = dynamic_cast<mba_var_xy&>(*var);
-			variable_modifier mod = xy.modifier;
-
 			switch (xy.variable_type)
 			{
 			case var_x:
 			{
 				std::unique_ptr<mba_variable> copy = x->clone();
-				copy->modifier = mod;
-
 				vars[i] = std::move(copy);
 			}
 			break;
 			case var_y:
 			{
 				std::unique_ptr<mba_variable> copy = y->clone();
-				copy->modifier = mod;
-
 				vars[i] = std::move(copy);
 			}
 			break;

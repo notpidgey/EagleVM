@@ -149,10 +149,12 @@ class vm_mba
 public:
 	vm_mba();
 
-    std::string create_tree(truth_operator none, uint32_t max_expansions);
+    std::string create_tree(truth_operator none, uint32_t max_expansions, uint8_t equal_expansions);
 
 private:
     // mba_equality_map<mba_var_exp, mba_var_exp> mba_communitive_truth;
 	std::unordered_map<truth_operator, mba_var_exp> mba_base_truth;
     std::vector<std::pair<mba_var_exp, mba_var_exp>> mba_simple_truth;
+    std::vector<mba_var_exp> mba_variable_truth;
+    std::vector<mba_var_exp> mba_zero_truth;
 };
