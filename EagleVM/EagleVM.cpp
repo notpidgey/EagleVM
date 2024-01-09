@@ -135,21 +135,21 @@ int main(int argc, char* argv[])
     pe_generator generator(&parser);
     generator.load_parser();
 
-    IMAGE_SECTION_HEADER last_section = std::get<0>(generator.get_last_section());
+    IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
     auto& [vm_section, vm_section_bytes] = generator.add_section(".vmdata");
-    vm_section.PointerToRawData = P2ALIGNUP(last_section.PointerToRawData + last_section.SizeOfRawData, nt_header->OptionalHeader.FileAlignment);
+    vm_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
     vm_section.SizeOfRawData = 0;
-    vm_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
+    vm_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     vm_section.Misc.VirtualSize = 0;
     vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
     vm_section.PointerToRelocations = 0;
     vm_section.NumberOfRelocations = 0;
     vm_section.NumberOfLinenumbers = 0;
 
-    last_section = vm_section;
+    last_section = &vm_section;
 
     vm_generator vm_generator;
     vm_generator.init_reg_order();
@@ -161,8 +161,8 @@ int main(int argc, char* argv[])
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)vm_section.VirtualAddress);
     
     auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
-    vm_section.SizeOfRawData = raw_vm_size;
-    vm_section.Misc.VirtualSize = P2ALIGNUP(raw_vm_size, nt_header->OptionalHeader.SectionAlignment);
+    vm_section.SizeOfRawData = generator.align_file(raw_vm_size);
+    vm_section.Misc.VirtualSize = generator.align_section(raw_vm_size);
 
     for (auto& [_, _1, _2, encoded_bytes] : handler_bytes)
         vm_section_bytes += encoded_bytes;
@@ -246,28 +246,28 @@ int main(int argc, char* argv[])
     }
 
     auto& [code_section, _1] = generator.add_section(".vmcode");
-    code_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
+    code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     code_section.SizeOfRawData = 0;
-    code_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    code_section.Misc.VirtualSize = 0;
+    code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+    code_section.Misc.VirtualSize = generator.align_section(1);
     code_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
     code_section.PointerToRelocations = 0;
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
 
-    last_section = code_section;
+    last_section = &code_section;
 
     auto& [packer_section, _2] = generator.add_section(".pack");
-    packer_section.PointerToRawData = last_section.PointerToRawData + last_section.SizeOfRawData;
+    packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     packer_section.SizeOfRawData = 0;
-    packer_section.VirtualAddress = P2ALIGNUP(last_section.VirtualAddress + last_section.Misc.VirtualSize, nt_header->OptionalHeader.SectionAlignment);
-    packer_section.Misc.VirtualSize = 0;
+    packer_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+    packer_section.Misc.VirtualSize = generator.align_section(1);
     packer_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
     packer_section.PointerToRelocations = 0;
     packer_section.NumberOfRelocations = 0;
     packer_section.NumberOfLinenumbers = 0;
 
-    last_section = packer_section;
+    last_section = &packer_section;
     generator.save_file("box.exe");
 
     return 0;
