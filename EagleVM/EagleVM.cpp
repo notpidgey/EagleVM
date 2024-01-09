@@ -13,8 +13,14 @@ int main(int argc, char* argv[])
     std::string result = mba.create_tree(op_minus, 5, 3);
     std::cout << "\n[Final] " << result  << std::endl;
 
-    pe_parser parser = pe_parser("C:\\VM\\EagleVMSandbox.exe");
-    std::printf("[+] loaded EagleVMSandbox.exe -> %i bytes\n", parser.get_file_size());
+    auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
+    pe_parser parser = pe_parser(executable);
+    if (!parser.read_file())
+    {
+        std::printf("[!] failed to read file: %s\n", executable);
+        return EXIT_FAILURE;
+    }
+    std::printf("[+] loaded %s -> %i bytes\n", executable, parser.get_file_size());
 
     int i = 1;
 
