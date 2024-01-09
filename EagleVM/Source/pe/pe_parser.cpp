@@ -64,13 +64,14 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
 
             if (std::strcmp((char*)import_library, "EagleVMStub.dll") == 0)
             {
+                // TODO: this needs fixing because sometimes the imports will be in a different order depending on debug/release optimizations
                 stub_import import_type;
                 switch (index) 
                 {
-                case 0:
+                case 1:
                     import_type = stub_import::vm_end;
                     break;
-                case 1:
+                case 0:
                     import_type = stub_import::vm_begin;
                     break;
                 default:
