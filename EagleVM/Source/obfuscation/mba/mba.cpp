@@ -234,7 +234,7 @@ mba_gen::mba_gen()
 			mba_var_exp result{};
 			result.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
 			result.vars[1] = u_var_op(u_var_xy(var_x), u_var_const(uint32_t, 0), op_and);
-			target.operation = op_minus;
+			result.operation = op_minus;
 
 			mba_simple_truth.push_back({ target, result });
 		}
@@ -247,25 +247,25 @@ mba_gen::mba_gen()
 			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_plus, mod_not };
 			mba_variable_truth.push_back(eql);
 		}
-
+		
 		// (X) -> (X + 0)
 		{
 			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_plus };
 			mba_variable_truth.push_back(eql);
 		}
-
+		
 		// (X) -> (X - 0)
 		{
 			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_minus };
 			mba_variable_truth.push_back(eql);
 		}
-
+		
 		// (X) -> (X | 0)
 		{
 			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_or };
 			mba_variable_truth.push_back(eql);
 		}
-
+		
 		// (X) -> (X ^ 0)
 		{
 			mba_var_exp eql{ u_var_xy(var_x), u_var_const(uint32_t, 0), op_xor };
@@ -299,91 +299,100 @@ std::string mba_gen::create_tree(truth_operator op, uint32_t max_expansions, uin
 	{
 		std::cout << "[" << i << "] " << root_truth_exp->print() << std::endl;
 
-		// expand bottoms
-		root_truth_exp->walk_bottom([&](mba_var_exp* inst)
-			{
-				if (!mba_base_truth.contains(inst->operation))
-					return;
-
-				mba_var_exp& root_expansion = mba_base_truth[inst->operation];
-				std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
-
-				root_expansion_exp->expand(inst->vars[0], inst->vars[1]);
-				inst->vars[0] = std::move(root_expansion_exp->vars[0]);
-				inst->vars[1] = std::move(root_expansion_exp->vars[1]);
-				inst->operation = root_expansion_exp->operation;
-				inst->modifier = root_expansion_exp->modifier;
-			}
-		);
-
 		// walk the table to expand with simple truths
-		root_truth_exp->walk_bottom([this](mba_var_exp* inst)
-			{
-				std::ranges::for_each(mba_simple_truth,
-				[inst](std::pair<mba_var_exp, mba_var_exp>& pair)
-					{
-						auto& [target_exp, result_exp] = pair;
-						if (inst->operation != target_exp.operation)
-							return;
-
-						if (target_exp.modifier != mod_none && inst->modifier != target_exp.modifier)
-							return;
-
-						std::array<std::unique_ptr<mba_variable>, 2>& vars = inst->vars;
-						std::unique_ptr<mba_variable>& x_var = vars[0];
-						std::unique_ptr<mba_variable>& y_var = vars[1];
-
-						std::unique_ptr<mba_variable>& target_x_var = target_exp.vars[0];
-						std::unique_ptr<mba_variable>& target_y_var = target_exp.vars[1];
-
-						if (target_x_var->modifier != x_var->modifier)
-							return;
-
-						if (target_y_var->modifier != y_var->modifier)
-							return;
-
-						// successful match, expand, and copy result
-						std::unique_ptr<mba_var_exp> match_exp = result_exp.clone_exp();
-						match_exp->expand(x_var, y_var);
-
-						vars[0] = std::move(match_exp->vars[0]);
-						vars[1] = std::move(match_exp->vars[1]);
-						inst->operation = match_exp->operation;
-						inst->modifier = match_exp->modifier;
-					});
-			});
+		bottom_expand_base(root_truth_exp);
 
 		// walk the table to expand with self equivalent truths
-		auto curr_eq_expansions = 0;
-		root_truth_exp->walk_bottom([this, equal_expansions, &curr_eq_expansions](mba_var_exp* inst)
-			{
-				if (curr_eq_expansions >= equal_expansions)
-					return;
-
-				std::srand(std::time(0));
-				int size = mba_variable_truth.size();
-
-				int index1 = std::rand() % size;
-				int index2 = std::rand() % size;;
-
-				mba_var_exp& first_result = mba_variable_truth[index1];
-				std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();
-				first_exp->expand(inst->vars[0], nullptr);
-
-				inst->vars[0] = std::move(first_exp);
-
-				mba_var_exp& second_result = mba_variable_truth[index2];
-				std::unique_ptr<mba_var_exp> second_exp = second_result.clone_exp();
-				second_exp->expand(inst->vars[1], nullptr);
-
-				inst->vars[1] = std::move(second_exp);
-
-				curr_eq_expansions++;
-			}
-		);
+		bottom_expand_simple(root_truth_exp);
 
 		// walk every constant and just create junk
+		bottom_expand_variable(root_truth_exp);
 	}
 
 	return root_truth_exp->print();
+}
+
+void mba_gen::bottom_expand_base(std::unique_ptr<mba_var_exp>& exp)
+{
+	// expand bottoms
+	exp->walk_bottom([&](mba_var_exp* inst)
+		{
+			if (!mba_base_truth.contains(inst->operation))
+				return;
+
+			mba_var_exp& root_expansion = mba_base_truth[inst->operation];
+			std::unique_ptr<mba_var_exp> root_expansion_exp = root_expansion.clone_exp();
+
+			root_expansion_exp->expand(inst->vars[0], inst->vars[1]);
+			inst->vars[0] = std::move(root_expansion_exp->vars[0]);
+			inst->vars[1] = std::move(root_expansion_exp->vars[1]);
+			inst->operation = root_expansion_exp->operation;
+			inst->modifier = root_expansion_exp->modifier;
+		}
+	);
+}
+
+void mba_gen::bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp)
+{
+	exp->walk_bottom([this](mba_var_exp* inst)
+		{
+			std::ranges::for_each(mba_simple_truth,
+			[inst](std::pair<mba_var_exp, mba_var_exp>& pair)
+				{
+					auto& [target_exp, result_exp] = pair;
+					if (inst->operation != target_exp.operation)
+						return;
+
+					if (target_exp.modifier != mod_none && inst->modifier != target_exp.modifier)
+						return;
+
+					std::array<std::unique_ptr<mba_variable>, 2>& vars = inst->vars;
+					std::unique_ptr<mba_variable>& x_var = vars[0];
+					std::unique_ptr<mba_variable>& y_var = vars[1];
+
+					std::unique_ptr<mba_variable>& target_x_var = target_exp.vars[0];
+					std::unique_ptr<mba_variable>& target_y_var = target_exp.vars[1];
+
+					if (target_x_var->modifier != x_var->modifier)
+						return;
+
+					if (target_y_var->modifier != y_var->modifier)
+						return;
+
+					// successful match, expand, and copy result
+					std::unique_ptr<mba_var_exp> match_exp = result_exp.clone_exp();
+					match_exp->expand(x_var, y_var);
+
+					vars[0] = std::move(match_exp->vars[0]);
+					vars[1] = std::move(match_exp->vars[1]);
+					inst->operation = match_exp->operation;
+					inst->modifier = match_exp->modifier;
+				});
+		});
+}
+
+void mba_gen::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
+{
+	return;
+	exp->walk_bottom([this](mba_var_exp* inst)
+		{
+			std::srand(std::time(0));
+			int size = mba_variable_truth.size();
+
+			int index1 = std::rand() % size;
+			int index2 = std::rand() % size;;
+
+			mba_var_exp& first_result = mba_variable_truth[index1];
+			std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();
+			first_exp->expand(inst->vars[0], nullptr);
+
+			inst->vars[0] = std::move(first_exp);
+
+			mba_var_exp& second_result = mba_variable_truth[index2];
+			std::unique_ptr<mba_var_exp> second_exp = second_result.clone_exp();
+			second_exp->expand(inst->vars[1], nullptr);
+
+			inst->vars[1] = std::move(second_exp);
+		}
+	);
 }
