@@ -18,19 +18,19 @@ void vm_handle_generator::setup_vm_mapping()
 {
     vm_handlers =
         {
-            {MNEMONIC_VM_ENTER,     {HNDL_BIND(create_vm_enter), reg_size::bit64}},
-            {MNEMONIC_VM_EXIT,      {HNDL_BIND(create_vm_exit),  reg_size::bit64}},
-            {MNEMONIC_VM_LOAD_REG,  {HNDL_BIND(create_vm_load),  reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {MNEMONIC_VM_STORE_REG, {HNDL_BIND(create_vm_store), reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {ZYDIS_MNEMONIC_PUSH,   {HNDL_BIND(create_vm_push),  reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {ZYDIS_MNEMONIC_POP,    {HNDL_BIND(create_vm_pop),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
+            {MNEMONIC_VM_ENTER,     {HNDL_BIND(create_vm_enter), {reg_size::bit64}}},
+            {MNEMONIC_VM_EXIT,      {HNDL_BIND(create_vm_exit),  {reg_size::bit64}}},
+            {MNEMONIC_VM_LOAD_REG,  {HNDL_BIND(create_vm_load),  {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {MNEMONIC_VM_STORE_REG, {HNDL_BIND(create_vm_store), {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {ZYDIS_MNEMONIC_PUSH,   {HNDL_BIND(create_vm_push),  {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {ZYDIS_MNEMONIC_POP,    {HNDL_BIND(create_vm_pop),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
 
-            {ZYDIS_MNEMONIC_MUL,    {HNDL_BIND(create_vm_mul),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {ZYDIS_MNEMONIC_DIV,    {HNDL_BIND(create_vm_div),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {ZYDIS_MNEMONIC_INC,    {HNDL_BIND(create_vm_inc),   reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}},
-            {ZYDIS_MNEMONIC_DEC,    {HNDL_BIND(create_vm_dec),   reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}},
-            {ZYDIS_MNEMONIC_ADD,    {HNDL_BIND(create_vm_add),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
-            {ZYDIS_MNEMONIC_SUB,    {HNDL_BIND(create_vm_sub),   reg_size::bit64, reg_size::bit32, reg_size::bit16}},
+            {ZYDIS_MNEMONIC_MUL,    {HNDL_BIND(create_vm_mul),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {ZYDIS_MNEMONIC_DIV,    {HNDL_BIND(create_vm_div),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {ZYDIS_MNEMONIC_INC,    {HNDL_BIND(create_vm_inc),   {reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}}},
+            {ZYDIS_MNEMONIC_DEC,    {HNDL_BIND(create_vm_dec),   {reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}}},
+            {ZYDIS_MNEMONIC_ADD,    {HNDL_BIND(create_vm_add),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+            {ZYDIS_MNEMONIC_SUB,    {HNDL_BIND(create_vm_sub),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
         };
 }
 
