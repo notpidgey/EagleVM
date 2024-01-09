@@ -12,38 +12,39 @@
 #include "pe/pe_sections/pe_code_section.h"
 #include "pe/pe_sections/pe_handler_section.h"
 
-#define P2ALIGNUP(x, align) (-(-((LONG64)x) & -((LONG64)align)))
-
-typedef std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>> generator_section_t;
+using generator_section_t = std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>>;
 
 class pe_generator
 {
 public:
-	explicit pe_generator(pe_parser* pe_parser)
-	{
-		parser = pe_parser;
-		dos_header = {};
-		dos_stub = {};
-		nt_headers = {};
-		sections = {};
-	}
+    explicit pe_generator(pe_parser* pe_parser)
+    {
+        parser = pe_parser;
+        dos_header = {};
+        dos_stub = {};
+        nt_headers = {};
+        sections = {};
+    }
 
-	void load_parser();
-	
-	generator_section_t& add_section(const char* name);
-	void add_section(PIMAGE_SECTION_HEADER section_header);
-	void add_section(IMAGE_SECTION_HEADER section_header);
+    void load_parser();
 
-	std::vector<generator_section_t> get_sections();
-	generator_section_t& get_last_section();
+    generator_section_t& add_section(const char* name);
+    void add_section(PIMAGE_SECTION_HEADER section_header);
+    void add_section(IMAGE_SECTION_HEADER section_header);
 
-	void save_file(const std::string& save_path);
+    std::vector<generator_section_t> get_sections();
+    generator_section_t& get_last_section();
+
+    void save_file(const std::string& save_path);
+
+    uint32_t align_section(uint32_t value) const;
+    uint32_t align_file(uint32_t value) const;
 
 private:
-	pe_parser* parser;
+    pe_parser* parser;
 
-	IMAGE_DOS_HEADER dos_header;
-	std::array<char, 0xC0> dos_stub;
-	IMAGE_NT_HEADERS nt_headers;
-	std::vector<generator_section_t> sections;
+    IMAGE_DOS_HEADER dos_header;
+    std::vector<uint8_t> dos_stub;
+    IMAGE_NT_HEADERS nt_headers;
+    std::vector<generator_section_t> sections;
 };
