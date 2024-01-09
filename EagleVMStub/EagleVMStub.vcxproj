@@ -54,6 +54,8 @@
     <LinkIncremental>false</LinkIncremental>
     <TargetName>EagleVMStub</TargetName>
     <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);$(ProjectDir)Headers</IncludePath>
+    <OutDir>..\out\Build\$(ProjectName)</OutDir>
+    <IntDir>..\out\Intermediate\$(ProjectName)</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
