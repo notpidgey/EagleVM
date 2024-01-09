@@ -1,15 +1,15 @@
 #include "pe/pe_parser.h"
 
 pe_parser::pe_parser(const char* path)
+    : path_(path)
 {
-    read_file(path);
 }
 
-bool pe_parser::read_file(const char* path)
+bool pe_parser::read_file()
 {
     constexpr int MAX_FILEPATH = 255;
     char file_name[MAX_FILEPATH] = {0};
-    memcpy_s(&file_name, MAX_FILEPATH, path, MAX_FILEPATH);
+    memcpy_s(&file_name, MAX_FILEPATH, path_.c_str(), MAX_FILEPATH);
 
     DWORD bytes_read = NULL;
     const HANDLE file = CreateFileA(file_name, GENERIC_READ, FILE_SHARE_READ, nullptr,
@@ -19,10 +19,10 @@ bool pe_parser::read_file(const char* path)
         return false;
 
     unprotected_pe_.resize(GetFileSize(file, nullptr));
-    ReadFile(file, unprotected_pe_.data(), (DWORD)unprotected_pe_.size(), &bytes_read, nullptr);
+    auto success = !!ReadFile(file, unprotected_pe_.data(), (DWORD)unprotected_pe_.size(), &bytes_read, nullptr);
     CloseHandle(file);
 
-    return false;
+    return success;
 }
 
 uint32_t pe_parser::get_file_size()
