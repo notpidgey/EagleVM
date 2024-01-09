@@ -9,7 +9,11 @@
 int main(int argc, char* argv[])
 {
     mba_gen mba = mba_gen();
-    
+
+    // this is definitely a work in progress
+    // also, this is not a true way of generating mba expressions
+    // all this does is use mba rewrites as operators can be rewritten with equivalent expressions
+    // TODO: insertion of identities from "Defeating MBA-based Obfuscation"
     std::string result = mba.create_tree(op_minus, 5, 3);
     std::cout << "\n[Final] " << result  << std::endl;
 
