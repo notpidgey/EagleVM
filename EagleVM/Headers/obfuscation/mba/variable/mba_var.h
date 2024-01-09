@@ -41,6 +41,7 @@ public:
 
     mba_variable();
     mba_variable(variable_type type, variable_modifier modifier);
+    virtual ~mba_variable() = default;
 
     virtual std::string print() const;
     virtual void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) = 0;

@@ -12,12 +12,10 @@ std::string mba_var_xy::print() const
 	{
 	case var_x:
 		return "X";
-		break;
 	case var_y:
 		return "Y";
-		break;
 	default:
-		break;
+		return "<unknown>";
 	}
 }
 

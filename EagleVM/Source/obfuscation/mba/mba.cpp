@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <random>
 
-#define u_var_op(x, y, z) std::make_unique<mba_var_exp>(x, y, z)
-#define u_var_xy(x) std::make_unique<mba_var_xy>(x)
-#define u_var_const(x, y) std::make_unique<mba_var_const<int>>(y)
+#define u_var_op(...) std::make_unique<mba_var_exp>(__VA_ARGS__)
+#define u_var_xy(...) std::make_unique<mba_var_xy>(__VA_ARGS__)
+#define u_var_const(x, y) std::make_unique<mba_var_const<x>>(y)
 
 mba_gen::mba_gen()
 {
@@ -376,8 +376,9 @@ void mba_gen::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 	return;
 	exp->walk_bottom([this](mba_var_exp* inst)
 		{
+			// TODO: pass in a global PRNG instance to make everything deterministic
 			std::srand(std::time(0));
-			int size = mba_variable_truth.size();
+			auto size = mba_variable_truth.size();
 
 			int index1 = std::rand() % size;
 			int index2 = std::rand() % size;;
