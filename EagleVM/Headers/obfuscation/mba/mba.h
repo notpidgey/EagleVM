@@ -16,4 +16,8 @@ private:
     std::vector<std::pair<mba_var_exp, mba_var_exp>> mba_simple_truth;
     std::vector<mba_var_exp> mba_variable_truth;
     std::vector<mba_var_exp> mba_zero_truth;
+
+    void bottom_expand_base(std::unique_ptr<mba_var_exp>& exp);
+    void bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp);
+    void bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp);
 };
