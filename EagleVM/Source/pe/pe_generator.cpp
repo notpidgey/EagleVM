@@ -55,6 +55,9 @@ void pe_generator::load_parser()
 
         sections.push_back({ *section, data });
     }
+
+    // shitty fix but this should stop references from getting reallocated
+    sections.reserve(sections.size() + 3);
 }
 
 generator_section_t& pe_generator::add_section(const char* name)
