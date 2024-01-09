@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
     vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers at %04X...\n", vm_section.VirtualAddress);
+    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)vm_section.VirtualAddress);
     
     auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
     vm_section.SizeOfRawData = raw_vm_size;

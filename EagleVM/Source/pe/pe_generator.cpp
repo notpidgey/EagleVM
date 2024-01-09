@@ -8,7 +8,7 @@ void pe_generator::load_parser()
 	
 	// copy dos header
 	PIMAGE_DOS_HEADER existing_dos_header = parser->get_dos_header();
-	memcpy(&dos_header, existing_dos_header, sizeof IMAGE_DOS_HEADER);
+	memcpy(&dos_header, existing_dos_header, sizeof(IMAGE_DOS_HEADER));
 
 	//
 	// dos stub
@@ -16,7 +16,7 @@ void pe_generator::load_parser()
 	
 	// copy dos stub
 	std::vector<uint8_t> existing_dos_stub = parser->get_dos_stub();
-	memcpy(&dos_stub, existing_dos_stub.data() + sizeof IMAGE_DOS_HEADER, existing_dos_stub.size());
+	memcpy(&dos_stub, existing_dos_stub.data() + sizeof(IMAGE_DOS_HEADER), existing_dos_stub.size());
 
 	// remove rich header
 	// memset(&dos_stub + 0x80, 0, sizeof dos_stub - 0x80);
@@ -27,7 +27,7 @@ void pe_generator::load_parser()
 
 	// copy nt header
 	PIMAGE_NT_HEADERS existing_nt_header = parser->get_nt_header();
-	memcpy(&nt_headers, existing_nt_header, sizeof IMAGE_NT_HEADERS);
+	memcpy(&nt_headers, existing_nt_header, sizeof(IMAGE_NT_HEADERS));
 
 	// signature
 
@@ -111,15 +111,15 @@ void pe_generator::save_file(const std::string& save_path)
 	nt_headers.OptionalHeader.SizeOfImage = binary_virtual_size;
 
 	std::ofstream protected_binary(save_path, std::ios::binary);
-	protected_binary.write((char*)&dos_header, sizeof IMAGE_DOS_HEADER);
-	protected_binary.write((char*)&dos_stub, sizeof dos_stub);
-	protected_binary.write((char*)&nt_headers, sizeof IMAGE_NT_HEADERS);
+	protected_binary.write((char*)&dos_header, sizeof(IMAGE_DOS_HEADER));
+	protected_binary.write((char*)&dos_stub, sizeof(dos_stub));
+	protected_binary.write((char*)&nt_headers, sizeof(IMAGE_NT_HEADERS));
 
 	uint16_t total_sections_size = 0;
 	for (auto& [section, _] : sections)
 	{
-		total_sections_size += sizeof IMAGE_SECTION_HEADER;
-		protected_binary.write((char*)&section, sizeof IMAGE_SECTION_HEADER);
+		total_sections_size += sizeof(IMAGE_SECTION_HEADER);
+		protected_binary.write((char*)&section, sizeof(IMAGE_SECTION_HEADER));
 	}
 
 	std::sort(sections.begin(), sections.end(), [](auto& a, auto& b)
@@ -130,7 +130,7 @@ void pe_generator::save_file(const std::string& save_path)
 			return a_section.PointerToRawData < b_section.PointerToRawData;
 		});
 
-	uint32_t total_written = sizeof dos_header + sizeof dos_stub + sizeof nt_headers + total_sections_size;
+	uint32_t total_written = sizeof(dos_header) + sizeof(dos_stub) + sizeof(nt_headers) + total_sections_size;
 	for (auto& [section, section_raw] : sections)
 	{
 		if (total_written != section.PointerToRawData)

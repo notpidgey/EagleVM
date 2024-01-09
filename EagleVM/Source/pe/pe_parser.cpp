@@ -1,4 +1,4 @@
-#include "PE/pe_parser.h"
+#include "pe/pe_parser.h"
 
 pe_parser::pe_parser(const char* path)
 {
@@ -42,7 +42,6 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
 
     PIMAGE_SECTION_HEADER text_section = get_section(".text");
 
-    bool found = false;
     std::vector<uint32_t> offsets_import_calls;
 
     // Iterate over the .text section with a step of 2 (since FF 15 is two bytes)
@@ -57,7 +56,7 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
 
     std::unordered_map<uint32_t, stub_import> stub_dll_imports;
     enum_imports(
-        [&stub_dll_imports, this](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, 
+        [&stub_dll_imports](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data, const PIMAGE_SECTION_HEADER import_section, 
             int index, uint8_t* data_base)
         {
             const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
@@ -110,7 +109,7 @@ PIMAGE_DOS_HEADER pe_parser::get_dos_header()
 
 std::vector<uint8_t> pe_parser::get_dos_stub()
 {
-    uint8_t* start = (uint8_t*)get_dos_header() + sizeof IMAGE_DOS_HEADER;
+    uint8_t* start = (uint8_t*)get_dos_header() + sizeof(IMAGE_DOS_HEADER);
     uint8_t* end = (uint8_t*)get_nt_header();
 
     std::vector<uint8_t> dos_stub(end - start);
