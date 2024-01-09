@@ -44,7 +44,7 @@ public:
 	explicit pe_parser(const char* path);
 	
 	bool read_file(const char* path);
-	int get_file_size();
+	uint32_t get_file_size();
 
 	std::vector<std::pair<uint32_t, stub_import>> find_iat_calls();
 

@@ -59,7 +59,12 @@ void pe_generator::load_parser()
 generator_section_t& pe_generator::add_section(const char* name)
 {
 	generator_section_t new_section = {};
-	strcpy((char*)&(std::get<0>(new_section).Name), name);
+	auto& section_name = std::get<0>(new_section).Name;
+	auto name_length = strlen(name);
+	for (size_t i = 0; i < (std::min)(_countof(section_name), name_length); i++)
+	{
+		section_name[i] = name[i];
+	}
 	
 	sections.push_back(new_section);
 	nt_headers.FileHeader.NumberOfSections++;
@@ -90,7 +95,7 @@ generator_section_t& pe_generator::get_last_section()
 void pe_generator::save_file(const std::string& save_path)
 {
 	// account for binaries potentially placing sections in a different order virtually
-	uint16_t binary_virtual_size = 0;
+	uint32_t binary_virtual_size = 0;
 	std::sort(sections.begin(), sections.end(), [](auto& a, auto& b)
 		{
 			auto a_section = std::get<0>(a);
@@ -134,6 +139,7 @@ void pe_generator::save_file(const std::string& save_path)
 			if (missing_bytes < 0)
 			{
 				// TODO: handle error, this should not be less than 0
+				__debugbreak();
 				return;
 			}
 
@@ -142,6 +148,6 @@ void pe_generator::save_file(const std::string& save_path)
 		}
 
 		protected_binary.write((char*)section_raw.data(), section_raw.size());
-		total_written += section_raw.size();
+		total_written += (uint32_t)section_raw.size();
 	}
 }

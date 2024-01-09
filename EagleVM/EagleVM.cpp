@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
         std::printf("[+] function %i-%i\n", c, c + 1);
         std::printf("[>] instruction begin %u\n", parser.offset_to_rva(vm_iat_calls[c].first));
         std::printf("[>] instruction end %u\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
-        std::printf("[>] instruction size %i\n", protect_section.get_instruction_size());
+        std::printf("[>] instruction size %zu\n", protect_section.get_instruction_size());
 
         std::printf("[+] generated instructions\n\n");
 
