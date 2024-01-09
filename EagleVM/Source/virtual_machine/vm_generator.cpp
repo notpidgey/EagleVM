@@ -44,10 +44,10 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
             handle_instructions instructions = v.creation_binder(supported_size);
             zydis_encoded_instructions encoded_bytes = zydis_helper::encode_queue(instructions);
 
-            vm_handlers.push_back({ current_offset, encoded_bytes.size(), instructions, encoded_bytes });
+            vm_handlers.push_back({ current_offset, (uint32_t)encoded_bytes.size(), instructions, encoded_bytes });
             v.handler_va[i] = &std::get<0>(vm_handlers.back());
 
-            current_offset += encoded_bytes.size();
+            current_offset += (uint32_t)encoded_bytes.size();
         }
     }
 

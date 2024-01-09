@@ -19,15 +19,15 @@ bool pe_parser::read_file(const char* path)
         return false;
 
     unprotected_pe_.resize(GetFileSize(file, nullptr));
-    ReadFile(file, unprotected_pe_.data(), unprotected_pe_.size(), &bytes_read, nullptr);
+    ReadFile(file, unprotected_pe_.data(), (DWORD)unprotected_pe_.size(), &bytes_read, nullptr);
     CloseHandle(file);
 
     return false;
 }
 
-int pe_parser::get_file_size()
+uint32_t pe_parser::get_file_size()
 {
-    return unprotected_pe_.size();
+    return (uint32_t)unprotected_pe_.size();
 }
 
 std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
