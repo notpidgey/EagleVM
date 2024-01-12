@@ -71,7 +71,7 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 		case variable:
 		{
 			mba_var_xy& xy = dynamic_cast<mba_var_xy&>(*var);
-            variable_modifier mod = xy.modifier;
+            variable_modifier template_mod = xy.modifier;
 
             switch (xy.variable_type)
 			{
@@ -91,7 +91,31 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 				break;
 			}
 
-            vars[i]->modifier = mod;
+            if (template_mod == mod_none)
+            {
+                // current template does not have a modifier
+                // we can override it with the variable modifier
+                template_mod = vars[i]->modifier;
+            }
+            else
+            {
+                // the template has a modifier
+                if (vars[i]->modifier != mod_none)
+                {
+                    // the variable also has a modifier
+                    if (vars[i]->modifier == template_mod)
+                    {
+                        // the modifier agrees, we can cancel it (will not always be true but just for now)
+                        template_mod = mod_none;
+                    }
+                    else
+                    {
+                        __debugbreak();
+                    }
+                }
+            }
+
+            vars[i]->modifier = template_mod;
 			break;
 		}
 		case constant:

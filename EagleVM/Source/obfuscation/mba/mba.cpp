@@ -314,9 +314,9 @@ std::string mba_gen<T>::create_tree(truth_operator op, uint32_t max_expansions, 
 		//bottom_expand_simple(root_truth_exp);
 
 		// walk every constant and just create junk
-		//bottom_expand_variable(root_truth_exp);
+		bottom_expand_variable(root_truth_exp);
 
-        //bottom_insert_identity(root_truth_exp);
+        bottom_insert_identity(root_truth_exp);
 	}
 
 	return root_truth_exp->print();
