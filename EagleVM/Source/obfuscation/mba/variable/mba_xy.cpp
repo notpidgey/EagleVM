@@ -11,9 +11,9 @@ std::string mba_var_xy::print() const
 	switch (variable_type)
 	{
 	case var_x:
-		return "X";
+		return modifier_string() + "X";
 	case var_y:
-		return "Y";
+		return modifier_string() + "Y";
 	default:
 		return "<unknown>";
 	}

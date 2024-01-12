@@ -37,7 +37,7 @@ mba_gen<T>::mba_gen(uint8_t size)
 	{
 		mba_var_exp& minus_truth = mba_base_truth[op_minus];
 		minus_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_xor);
-		minus_truth.vars[1] = u_var_op(u_var_const(uint8_t, 2), u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_and), op_mul);
+		minus_truth.vars[1] = u_var_op(u_var_const(T, 2), u_var_op(u_var_xy(var_x), u_var_op(u_var_const(int8_t, -1), u_var_xy(var_y), op_mul), op_and), op_mul);
 		minus_truth.operation = op_plus;
 	}
 
@@ -52,8 +52,8 @@ mba_gen<T>::mba_gen(uint8_t size)
 	// (X | Y) = ((X + Y) + 1) + (~X | ~Y)
 	{
 		mba_var_exp& or_truth = mba_base_truth[op_or];
-		or_truth.vars[0] = u_var_op(u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus), u_var_const(uint8_t, 1), op_plus);
-		or_truth.vars[1] = u_var_op(u_var_xy(var_y, mod_not), u_var_xy(var_y, mod_not), op_or);
+		or_truth.vars[0] = u_var_op(u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus), u_var_const(T, 1), op_plus);
+		or_truth.vars[1] = u_var_op(u_var_xy(var_x, mod_not), u_var_xy(var_y, mod_not), op_or);
 		or_truth.operation = op_plus;
 	}
 
@@ -303,12 +303,12 @@ std::string mba_gen<T>::create_tree(truth_operator op, uint32_t max_expansions, 
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
 
 	// TODO: add function to walk from bottom of tree, top of tree, and random
-	for (uint32_t i = 0; i < 1; i++)
+	for (uint32_t i = 0; i < max_expansions; i++)
 	{
 		std::cout << "[" << i << "] " << root_truth_exp->print() << std::endl;
 
 		// walk the table to expand with simple truths
-		//bottom_expand_base(root_truth_exp);
+		bottom_expand_base(root_truth_exp);
 
 		// walk the table to expand with self equivalent truths
 		//bottom_expand_simple(root_truth_exp);
@@ -316,7 +316,7 @@ std::string mba_gen<T>::create_tree(truth_operator op, uint32_t max_expansions, 
 		// walk every constant and just create junk
 		//bottom_expand_variable(root_truth_exp);
 
-        bottom_insert_identity(root_truth_exp);
+        //bottom_insert_identity(root_truth_exp);
 	}
 
 	return root_truth_exp->print();
@@ -452,8 +452,8 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
             return (x1 + m0) < 0 ? ((x1 + m0) + m0).to_long_long() : (x1 + m0).to_long_long();
         };
 
-    auto rng = std::default_random_engine{};
-    std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
+    static std::default_random_engine rng = std::default_random_engine{};
+    static std::uniform_int_distribution<> distribution(0, std::numeric_limits<T>::max());
 
     exp->walk_bottom([&](mba_var_exp* inst)
         {
@@ -469,7 +469,7 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
             T d;
 
             truth_operator inverse_op;
-            if (rand() % 2)
+            if (distribution(rng) % 2)
             {
                 // do plus
                 d = static_cast<T>((-static_cast<std::make_signed_t<T>>(c * a0)) & std::numeric_limits<T>::max());

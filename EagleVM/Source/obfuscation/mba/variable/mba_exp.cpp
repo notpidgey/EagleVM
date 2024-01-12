@@ -71,23 +71,27 @@ void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::uniq
 		case variable:
 		{
 			mba_var_xy& xy = dynamic_cast<mba_var_xy&>(*var);
-			switch (xy.variable_type)
+            variable_modifier mod = xy.modifier;
+
+            switch (xy.variable_type)
 			{
 			case var_x:
 			{
 				std::unique_ptr<mba_variable> copy = x->clone();
 				vars[i] = std::move(copy);
+                break;
 			}
-			break;
 			case var_y:
 			{
 				std::unique_ptr<mba_variable> copy = y->clone();
 				vars[i] = std::move(copy);
+                break;
 			}
-			break;
 			default:
 				break;
 			}
+
+            vars[i]->modifier = mod;
 			break;
 		}
 		case constant:
