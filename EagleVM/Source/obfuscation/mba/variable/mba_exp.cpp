@@ -53,9 +53,7 @@ std::string mba_var_exp::print() const
 		break;
 	}
 
-    if(modifier == mod_none)
-        return "(" + vars[0]->print() + op + vars[1]->print() + ")";
-	return modifier_string() + "(" + vars[0]->print() + op + vars[1]->print() + ")";
+	return "(" + modifier_string() + "(" + vars[0]->print() + op + vars[1]->print() + "))";
 }
 
 void mba_var_exp::expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y)
