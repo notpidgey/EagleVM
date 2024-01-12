@@ -3,14 +3,19 @@
 #include <algorithm>
 #include <random>
 
+#include <bigint.hpp>
+
 #define u_var_op(...) std::make_unique<mba_var_exp>(__VA_ARGS__)
 #define u_var_xy(...) std::make_unique<mba_var_xy>(__VA_ARGS__)
 #define u_var_const(x, y) std::make_unique<mba_var_const<x>>(y)
 
-mba_gen::mba_gen()
+template <typename T>
+mba_gen<T>::mba_gen(uint8_t size)
 {
 	// this has so much potential to be expanded
 	// you can add your own truths, build your own truths, randomize truths per operator etc
+
+    gen_size = size;
 
 	// (X ^ Y) = (X | Y) - (X & Y)
 	{
@@ -288,31 +293,37 @@ mba_gen::mba_gen()
 		// (X ^ X)
 	}
 }
+
 #include <iostream>
-std::string mba_gen::create_tree(truth_operator op, uint32_t max_expansions, uint8_t equal_expansions)
+
+template <typename T>
+std::string mba_gen<T>::create_tree(truth_operator op, uint32_t max_expansions, uint8_t equal_expansions)
 {
 	mba_var_exp& root_truth = mba_base_truth[op];
 	std::unique_ptr<mba_var_exp> root_truth_exp = root_truth.clone_exp();
 
 	// TODO: add function to walk from bottom of tree, top of tree, and random
-	for (uint32_t i = 0; i < max_expansions; i++)
+	for (uint32_t i = 0; i < 1; i++)
 	{
 		std::cout << "[" << i << "] " << root_truth_exp->print() << std::endl;
 
 		// walk the table to expand with simple truths
-		bottom_expand_base(root_truth_exp);
+		//bottom_expand_base(root_truth_exp);
 
 		// walk the table to expand with self equivalent truths
-		bottom_expand_simple(root_truth_exp);
+		//bottom_expand_simple(root_truth_exp);
 
 		// walk every constant and just create junk
-		bottom_expand_variable(root_truth_exp);
+		//bottom_expand_variable(root_truth_exp);
+
+        bottom_insert_identity(root_truth_exp);
 	}
 
 	return root_truth_exp->print();
 }
 
-void mba_gen::bottom_expand_base(std::unique_ptr<mba_var_exp>& exp)
+template <typename T>
+void mba_gen<T>::bottom_expand_base(std::unique_ptr<mba_var_exp>& exp)
 {
 	// expand bottoms
 	exp->walk_bottom([&](mba_var_exp* inst)
@@ -332,7 +343,8 @@ void mba_gen::bottom_expand_base(std::unique_ptr<mba_var_exp>& exp)
 	);
 }
 
-void mba_gen::bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp)
+template <typename T>
+void mba_gen<T>::bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp)
 {
 	exp->walk_bottom([this](mba_var_exp* inst)
 		{
@@ -371,7 +383,8 @@ void mba_gen::bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp)
 		});
 }
 
-void mba_gen::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
+template <typename T>
+void mba_gen<T>::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 {
 	return;
 	exp->walk_bottom([this](mba_var_exp* inst)
@@ -397,3 +410,92 @@ void mba_gen::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 		}
 	);
 }
+
+#pragma once 
+
+template <typename T>
+void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
+{
+    // [1] Defeating MBA-based Obfuscation
+    // https://hal.science/hal-01388109v1/document
+
+    // [2] Mixed Boolean-Arithmetic (Part 1): Introduction
+    // https://plzin.github.io/posts/mba
+
+    // [3] Extended Euclidean algorithm
+    // https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Modular_integers
+
+    // we are going to use the "Insertions of identities" component mentioned in [1]
+    // expression e can be rewritten as p(p^{-1}(e)) where p is an invertible function on the set of integers Z/2^nZ
+
+    // we define p(x) as p(x) = a1x+a0 where a1 is an odd term [2]
+    // to compute the inverse of this function we must use the extended euclidean algorithm [3]
+    // the general form of the inverse is given by q(x) = a1^{-1}x-a1^{-1}a0 [2]
+
+    std::function<T(uint64_t, uint8_t)> mod_inverse = [](uint64_t constant, uint8_t bits)
+        {
+            BigInt m = pow(2, bits);
+            BigInt a = constant;
+            BigInt m0 = m, x0 = 0, x1 = 1;
+
+            while (a > 1)
+            {
+                BigInt q = a / m;
+                BigInt temp = m;
+                m = a % m;
+                a = temp;
+                BigInt tempX0 = x0;
+                x0 = x1 - q * x0;
+                x1 = tempX0;
+            }
+
+            return (x1 + m0) < 0 ? ((x1 + m0) + m0).to_long_long() : (x1 + m0).to_long_long();
+        };
+
+    auto rng = std::default_random_engine{};
+    std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
+
+    exp->walk_bottom([&](mba_var_exp* inst)
+        {
+            // p(x) = a1x + a0
+            // generate a a1 that is odd
+            T a1 = distribution(rng);
+            while (a1 % 2 == 0)
+                a1 = distribution(rng);
+            T a0 = distribution(rng);
+
+            // q(x) = a1^{-1}x-a1^{-1}a0
+            T c = mod_inverse(a1, sizeof(T) * 8);
+            T d;
+
+            truth_operator inverse_op;
+            if (rand() % 2)
+            {
+                // do plus
+                d = static_cast<T>((-static_cast<std::make_signed_t<T>>(c * a0)) & std::numeric_limits<T>::max());
+                inverse_op = op_plus;
+            }
+            else
+            {
+                // do minus
+                d = c * a0;
+                inverse_op = op_minus;
+            }
+
+            mba_var_exp affine_expr;
+            affine_expr.vars[0] = u_var_op(u_var_const(T, a1), inst->clone_exp(), op_mul);
+            affine_expr.vars[1] = u_var_const(T, a0);
+            affine_expr.operation = op_plus;
+
+            // turn the root expression into the inverse of the affine
+            inst->vars[0] = u_var_op(u_var_const(T, c), u_var_op(affine_expr), op_mul);
+            inst->vars[1] = u_var_const(T, d);
+            inst->operation = inverse_op;
+        }
+    );
+}
+
+template class mba_gen<uint8_t>;
+template class mba_gen<uint16_t>;
+template class mba_gen<uint32_t>;
+template class mba_gen<uint64_t>;
