@@ -24,4 +24,5 @@ private:
     void bottom_expand_simple(std::unique_ptr<mba_var_exp>& exp);
     void bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp);
     void bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp);
+    void expand_constants(std::unique_ptr<mba_var_exp>& exp);
 };

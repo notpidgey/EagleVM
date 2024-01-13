@@ -495,6 +495,22 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
     );
 }
 
+template<typename T>
+void mba_gen<T>::expand_constants(std::unique_ptr<mba_var_exp>& exp)
+{
+    // Automated Localisation of a Mixed Boolean
+    // Arithmetic Obfuscation Window in a Program Binary
+    // https://libstore.ugent.be/fulltxt/RUG01/003/014/584/RUG01-003014584_2021_0001_AC.pdf
+
+    // P ∈ Pm (Z/2nZ) and Q its inverse: P (Q(X)) = X ∀X ∈ Z/2nZ
+    // K ∈ Z/2nZ the constant to hide
+    // E an MBA expression of variables (x1, . . . , xt) ∈ (Z/2nZ)t non-trivially equal to zero
+    // Then K can be replaced by P (E + Q(K)) = P (Q(K)) = K, no matter the values of the variables (x1, . . ., xt).
+
+    // Generate polynomial inverses?
+    // https://plzin.github.io/posts/perm-poly
+}
+
 template class mba_gen<uint8_t>;
 template class mba_gen<uint16_t>;
 template class mba_gen<uint32_t>;
