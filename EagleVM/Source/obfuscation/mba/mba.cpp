@@ -432,6 +432,7 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
     // to compute the inverse of this function we must use the extended euclidean algorithm [3]
     // the general form of the inverse is given by q(x) = a1^{-1}x-a1^{-1}a0 [2]
 
+    // this seems to be really flawed because its crashing on 64 bit types
     std::function<T(uint64_t, uint8_t)> mod_inverse = [](uint64_t constant, uint8_t bits)
         {
             BigInt m = pow(2, bits);
@@ -453,7 +454,7 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
         };
 
     static std::default_random_engine rng = std::default_random_engine{};
-    static std::uniform_int_distribution<> distribution(0, std::numeric_limits<T>::max());
+    static std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
 
     exp->walk_bottom([&](mba_var_exp* inst)
         {

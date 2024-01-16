@@ -106,6 +106,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EagleVM.cpp" />
+    <ClCompile Include="Source\obfuscation\mba\math\mba_math.cpp" />
     <ClCompile Include="Source\obfuscation\mba\mba.cpp" />
     <ClCompile Include="Source\obfuscation\mba\variable\mba_const.cpp" />
     <ClCompile Include="Source\obfuscation\mba\variable\mba_exp.cpp" />
@@ -116,6 +117,9 @@
     <ClCompile Include="Source\pe\pe_sections\pe_code_section.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp" />
     <ClCompile Include="Source\util\math.cpp" />
+    <ClCompile Include="Source\util\section\code_label.cpp" />
+    <ClCompile Include="Source\util\section\function_container.cpp" />
+    <ClCompile Include="Source\util\section\section_manager.cpp" />
     <ClCompile Include="Source\util\util.cpp" />
     <ClCompile Include="Source\util\zydis_helper.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp" />
@@ -130,6 +134,7 @@
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_exp.h" />
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_var.h" />
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_xy.h" />
+    <ClInclude Include="Headers\obfuscation\mba\math\mba_math.h" />
     <ClInclude Include="Headers\obfuscation\mba\mba.h" />
     <ClInclude Include="Headers\obfuscation\mba\variable\mba_const.h" />
     <ClInclude Include="Headers\obfuscation\mba\variable\mba_exp.h" />
@@ -141,6 +146,9 @@
     <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_section.h" />
     <ClInclude Include="Headers\util\math.h" />
+    <ClInclude Include="Headers\util\section\function_container.h" />
+    <ClInclude Include="Headers\util\section\code_label.h" />
+    <ClInclude Include="Headers\util\section\section_manager.h" />
     <ClInclude Include="Headers\util\util.h" />
     <ClInclude Include="Headers\util\zydis_defs.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
