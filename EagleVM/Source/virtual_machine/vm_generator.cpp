@@ -83,6 +83,30 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
     return { current_offset, vm_handlers };
 }
 
+#include "util/section/section_manager.h"
+
+void vm_generator::generate_vm_section(bool randomize_handler_position)
+{
+    section_manager vm_section;
+    hg_.setup_vm_mapping();
+
+    for (auto& [k, v] : hg_.vm_handlers)
+    {
+        function_container func_container;
+        for (int i = 0; i < 4; i++)
+        {
+            code_label* label = func_container.assign_label("vm_handler." + i);
+
+            reg_size supported_size = v.supported_handler_va[i];
+            if (supported_size == reg_size::unsupported)
+                break;
+
+            handle_instructions instructions = v.creation_binder(supported_size);
+            func_container.add(label, instructions);
+        }
+    }
+}
+
 std::vector<zydis_encoder_request> vm_generator::call_vm_enter()
 {
     return {};

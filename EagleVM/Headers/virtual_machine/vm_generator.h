@@ -34,6 +34,7 @@ public:
     void init_reg_order();
     void init_ran_consts();
     std::pair<uint32_t, std::vector<encode_handler_data>> generate_vm_handlers(bool randomize_handler_position);
+    void generate_vm_section(bool randomize_handler_position);
 
     std::vector<zydis_encoder_request> call_vm_enter();
     std::vector<zydis_encoder_request> call_vm_exit();
