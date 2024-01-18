@@ -1,4 +1,5 @@
 #include "virtual_machine/vm_handle_generator.h"
+#include "util/section/code_label.h"
 
 #define VIP         rm_->reg_map[I_VIP]
 #define VSP         rm_->reg_map[I_VSP]
@@ -16,22 +17,25 @@ vm_handle_generator::vm_handle_generator(vm_register_manager* push_order)
 
 void vm_handle_generator::setup_vm_mapping()
 {
-    vm_handlers =
-        {
-            {MNEMONIC_VM_ENTER,     {HNDL_BIND(create_vm_enter), {reg_size::bit64}}},
-            {MNEMONIC_VM_EXIT,      {HNDL_BIND(create_vm_exit),  {reg_size::bit64}}},
-            {MNEMONIC_VM_LOAD_REG,  {HNDL_BIND(create_vm_load),  {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {MNEMONIC_VM_STORE_REG, {HNDL_BIND(create_vm_store), {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {ZYDIS_MNEMONIC_PUSH,   {HNDL_BIND(create_vm_push),  {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {ZYDIS_MNEMONIC_POP,    {HNDL_BIND(create_vm_pop),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
+// sorry but this is probably the cleanest way to do it, i <3 macros
+#define CREATE_HANDLER(x, y, ...) \
+    vm_handlers[x].handler_label = code_label::create(#x); \
+    vm_handlers[x].creation_binder = HNDL_BIND(y); \
+    vm_handlers[x].supported_handler_size = { __VA_ARGS__ };
 
-            {ZYDIS_MNEMONIC_MUL,    {HNDL_BIND(create_vm_mul),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {ZYDIS_MNEMONIC_DIV,    {HNDL_BIND(create_vm_div),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {ZYDIS_MNEMONIC_INC,    {HNDL_BIND(create_vm_inc),   {reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}}},
-            {ZYDIS_MNEMONIC_DEC,    {HNDL_BIND(create_vm_dec),   {reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8}}},
-            {ZYDIS_MNEMONIC_ADD,    {HNDL_BIND(create_vm_add),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-            {ZYDIS_MNEMONIC_SUB,    {HNDL_BIND(create_vm_sub),   {reg_size::bit64, reg_size::bit32, reg_size::bit16}}},
-        };
+    CREATE_HANDLER(MNEMONIC_VM_ENTER,       create_vm_enter,    reg_size::bit64);
+    CREATE_HANDLER(MNEMONIC_VM_EXIT,        create_vm_exit,     reg_size::bit64);
+    CREATE_HANDLER(MNEMONIC_VM_LOAD_REG,    create_vm_load,     reg_size::bit64, reg_size::bit32, reg_size::bit16);
+    CREATE_HANDLER(MNEMONIC_VM_STORE_REG,   create_vm_store,    reg_size::bit64, reg_size::bit32, reg_size::bit16);
+
+    CREATE_HANDLER(ZYDIS_MNEMONIC_PUSH,     create_vm_push,     reg_size::bit64, reg_size::bit32, reg_size::bit16);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_POP,      create_vm_pop,      reg_size::bit64, reg_size::bit32, reg_size::bit16);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_MUL,      create_vm_mul,      reg_size::bit64, reg_size::bit32, reg_size::bit16);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_DIV,      create_vm_div,      reg_size::bit64, reg_size::bit32, reg_size::bit16);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_INC,      create_vm_inc,      reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_DEC,      create_vm_dec,      reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_ADD,      create_vm_add,      reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8);
+    CREATE_HANDLER(ZYDIS_MNEMONIC_SUB,      create_vm_sub,      reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8);
 }
 
 void vm_handle_generator::setup_enc_constants()
@@ -56,7 +60,7 @@ void vm_handle_generator::setup_enc_constants()
 
 uint32_t vm_handle_generator::get_va_index(const vm_handler_entry& handler, reg_size size)
 {
-    if (std::ranges::find(handler.supported_handler_va, size) == std::end(handler.supported_handler_va))
+    if (std::ranges::find(handler.supported_handler_size, size) == std::end(handler.supported_handler_size))
         return -1;
 
     switch (size)
