@@ -1,4 +1,4 @@
-#include "virtual_machine/vm_handle_generator.h"
+#include "virtual_machine/handlers/vm_handle_generator.h"
 #include "util/section/code_label.h"
 
 #define VIP         rm_->reg_map[I_VIP]
