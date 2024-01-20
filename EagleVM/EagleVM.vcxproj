@@ -165,8 +165,10 @@
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\add.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\dec.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\div.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mul.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\include_vm.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_enter.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_exit.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_load.h" />

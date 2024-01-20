@@ -230,5 +230,11 @@
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\include_vm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
