@@ -1,5 +1,7 @@
 #include "obfuscation/mba/mba.h"
 
+#include "util/random.h"
+
 #include <algorithm>
 #include <random>
 
@@ -389,12 +391,10 @@ void mba_gen<T>::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 	return;
 	exp->walk_bottom([this](mba_var_exp* inst)
 		{
-			// TODO: pass in a global PRNG instance to make everything deterministic
-			std::srand(std::time(0));
 			auto size = mba_variable_truth.size();
 
-			int index1 = std::rand() % size;
-			int index2 = std::rand() % size;;
+			int index1 = ran_device()::get().gen_16() % size;
+			int index2 = ran_device()::get().gen_16() % size;;
 
 			mba_var_exp& first_result = mba_variable_truth[index1];
 			std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();

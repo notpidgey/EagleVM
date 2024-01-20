@@ -125,6 +125,7 @@
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\add.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\dec.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\div.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\inc.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mul.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\sub.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_enter.cpp" />
@@ -133,6 +134,7 @@
     <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_pop.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_push.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_store.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handler_context.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handler_entry.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handle_generator.cpp" />
@@ -165,6 +167,7 @@
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\add.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\dec.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\div.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\inc.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mul.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h" />
@@ -175,6 +178,7 @@
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_pop.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_push.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_store.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_context.h" />
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_entry.h" />
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />

@@ -1,4 +1,5 @@
 #include "virtual_machine/vm_generator.h"
+#include "util/random.h"
 
 #define VIP         rm_.reg_map[I_VIP]
 #define VSP         rm_.reg_map[I_VSP]
@@ -162,12 +163,8 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
     std::vector<uint8_t> padding;
     padding.reserve(bytes);
 
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, UINT8_MAX);
-
     for (int i = 0; i < bytes; i++)
-        padding.push_back(dist(rng));
+        padding.push_back(ran_device::get().gen_8());
 
     return padding;
 }

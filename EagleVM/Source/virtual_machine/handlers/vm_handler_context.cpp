@@ -1,0 +1,30 @@
+#include "virtual_machine/handlers/vm_handler_context.h"
+
+vm_handler_context::vm_handler_context(vm_register_manager* context)
+{
+}
+
+std::vector<zydis_encoder_request> vm_handler_context::generate_handler_return()
+{
+    return std::vector<zydis_encoder_request>();
+}
+
+void vm_handler_context::setup_keys()
+{
+    //encryption
+    //rol r15, key1
+    //sub r15, key2
+    //ror r15, key3
+
+    //decryption
+    //rol r15, key3
+    //add r15, key2
+    //ror r15, key1
+
+    //this should be dynamic and more random.
+    //in the future, each mnemonic should have a std::function definition and an opposite
+    //this will allow for larger and more complex jmp dec/enc routines
+
+    for (unsigned char& value : keys.values)
+        value = math_util::create_pran<uint8_t>(1, UINT8_MAX);
+}

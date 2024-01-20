@@ -1,18 +1,18 @@
-#include "virtual_machine/handlers/ia32_handlers/dec.h"
+#include "virtual_machine/handlers/ia32_handlers/inc.h"
 
-ia32_dec_handler::ia32_dec_handler()
+ia32_inc_handler::ia32_inc_handler()
 {
     supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
 }
 
-handle_instructions ia32_dec_handler::construct_single(reg_size size)
+handle_instructions ia32_inc_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
     handle_instructions handle_instructions;
 
-    //dec [VSP]
+    //inc [VSP]
     handle_instructions = {
-        zydis_helper::encode<ZYDIS_MNEMONIC_DEC, zydis_emem>(ZMEMBD(VSP, 0, size))
+        zydis_helper::encode<ZYDIS_MNEMONIC_INC, zydis_emem>(ZMEMBD(VSP, 0, size))
     };
 
     RETURN_EXECUTION(handle_instructions);
