@@ -393,8 +393,8 @@ void mba_gen<T>::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 		{
 			auto size = mba_variable_truth.size();
 
-			int index1 = ran_device()::get().gen_16() % size;
-			int index2 = ran_device()::get().gen_16() % size;;
+			int index1 = ran_device::get().gen_16() % size;
+			int index2 = ran_device::get().gen_16() % size;
 
 			mba_var_exp& first_result = mba_variable_truth[index1];
 			std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();

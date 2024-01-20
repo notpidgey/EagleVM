@@ -15,7 +15,6 @@
 #include "virtual_machine/vm_register_manager.h"
 #include "util/zydis_helper.h"
 #include "util/util.h"
-#include "util/math.h"
 
 class vm_handle_generator
 {

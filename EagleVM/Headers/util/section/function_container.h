@@ -1,10 +1,13 @@
 #pragma once
 #include <vector>
+#include <variant>
+#include <functional>
 
 #include "util/section/code_label.h"
 #include "util/zydis_defs.h"
 
-typedef std::pair<code_label*, std::vector<zydis_encoder_request>> function_segment;
+typedef std::variant<zydis_encoder_request, std::function<zydis_encoder_request()>> recompiliable_encoder_request;
+typedef std::pair<code_label*, std::vector<recompiliable_encoder_request>> function_segment;
 
 class function_container
 {
@@ -19,8 +22,6 @@ public:
     bool add(code_label* label, std::vector<zydis_encoder_request>& instruction);
 
     std::vector<function_segment>& get_segments();
-
-    void print();
 
 private:
     std::vector<function_segment> function_segments;

@@ -36,9 +36,6 @@
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\util\math.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\virtual_machine\vm_register_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -138,9 +135,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\virtual_machine\vm_generator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Headers\util\math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h">
@@ -246,6 +240,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_context.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\util\random.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

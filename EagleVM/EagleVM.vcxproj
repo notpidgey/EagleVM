@@ -116,7 +116,6 @@
     <ClCompile Include="Source\pe\pe_parser.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_code_section.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp" />
-    <ClCompile Include="Source\util\math.cpp" />
     <ClCompile Include="Source\util\section\code_label.cpp" />
     <ClCompile Include="Source\util\section\function_container.cpp" />
     <ClCompile Include="Source\util\section\section_manager.cpp" />
@@ -157,7 +156,7 @@
     <ClInclude Include="Headers\pe\pe_sections\pe_code_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_section.h" />
-    <ClInclude Include="Headers\util\math.h" />
+    <ClInclude Include="Headers\util\random.h" />
     <ClInclude Include="Headers\util\section\function_container.h" />
     <ClInclude Include="Headers\util\section\code_label.h" />
     <ClInclude Include="Headers\util\section\section_manager.h" />

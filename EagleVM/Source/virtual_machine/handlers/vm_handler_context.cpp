@@ -1,5 +1,7 @@
 #include "virtual_machine/handlers/vm_handler_context.h"
 
+#include "util/random.h"
+
 vm_handler_context::vm_handler_context(vm_register_manager* context)
 {
 }
@@ -26,5 +28,5 @@ void vm_handler_context::setup_keys()
     //this will allow for larger and more complex jmp dec/enc routines
 
     for (unsigned char& value : keys.values)
-        value = math_util::create_pran<uint8_t>(1, UINT8_MAX);
+        value = ran_device::get().gen_8();
 }

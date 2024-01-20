@@ -60,16 +60,3 @@ std::vector<function_segment>& function_container::get_segments()
 {
     return function_segments;
 }
-
-void function_container::print()
-{
-    for (auto& [label, instructions] : function_segments)
-    {
-        std::cout << label->get_name() << std::endl;
-
-        for (zydis_encoder_request& instruction : instructions)
-        {
-            // std::cout << zydis_helper::print
-        }
-    }
-}
