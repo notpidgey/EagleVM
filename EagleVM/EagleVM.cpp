@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
                     //     std::printf("[>] %s\n", message.c_str());
 
                     // append all instructions to the section ( virtual or not )
-                    section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());
+                    //section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());
                 });
 
         // TODO: generate function return to original execution

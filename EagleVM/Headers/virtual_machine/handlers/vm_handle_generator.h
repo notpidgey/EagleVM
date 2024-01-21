@@ -19,7 +19,7 @@
 class vm_handle_generator
 {
 public:
-    std::map<int, vm_handler_entry> vm_handlers;
+    std::unordered_map<int, vm_handler_entry*> vm_handlers;
 
     vm_handle_generator();
     explicit vm_handle_generator(vm_register_manager* push_order);

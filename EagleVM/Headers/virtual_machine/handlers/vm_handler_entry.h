@@ -32,7 +32,7 @@ protected:
     std::vector<reg_size> supported_sizes;
     std::unordered_map<reg_size, code_label*> supported_handlers;
 
-    static vm_register_manager* ctx;
+    inline static vm_register_manager* ctx = nullptr;
 
     virtual dynamic_instructions_vec construct_single(reg_size size) = 0;
 };
