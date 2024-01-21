@@ -36,6 +36,8 @@ void vm_handle_generator::setup_vm_mapping()
     vm_handlers[ZYDIS_MNEMONIC_DEC] = new ia32_dec_handler();
     vm_handlers[ZYDIS_MNEMONIC_ADD] = new ia32_add_handler();
     vm_handlers[ZYDIS_MNEMONIC_SUB] = new ia32_sub_handler();
+
+    vm_handler_entry::ctx = rm_;
 }
 
 void vm_handle_generator::setup_enc_constants()

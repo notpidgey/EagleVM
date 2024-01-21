@@ -3,7 +3,7 @@
 
 #include <variant>
 
-encoded_vec& section_manager::compile_section(uint32_t section_address)
+encoded_vec section_manager::compile_section(uint32_t section_address)
 {
     // i know there are better way to do this without using a variant vector (its disgusting)
     // or recompiling all the instructions 2x
@@ -14,7 +14,7 @@ encoded_vec& section_manager::compile_section(uint32_t section_address)
     uint32_t current_address = section_address;
 
     // this should take all the functions in the section and connect them to desired labels
-    for (auto& [code_label, sec_function] : section_instructions)
+    for (auto& [code_label, sec_function] : section_functions)
     {
         uint8_t align = current_address % 16;
         if (align)
@@ -50,11 +50,11 @@ encoded_vec& section_manager::compile_section(uint32_t section_address)
         }
     }
 
-    std::vector<uint8_t> compiled_section(current_address, 0);
+    std::vector<uint8_t> compiled_section(current_address - section_address, 0);
     auto it = compiled_section.begin();
 
     current_address = 0;
-    for (auto& [code_label, sec_function] : section_instructions)
+    for (auto& [code_label, sec_function] : section_functions)
     {
         uint8_t align = current_address % 16;
         if (align)
@@ -80,11 +80,20 @@ encoded_vec& section_manager::compile_section(uint32_t section_address)
 
             // zydis does not really have a way of checking the length of an encoded instruction without encoding it
             // so we are going to just encode and check the size... sorry
-            std::vector<uint8_t> instructions = zydis_helper::encode_queue(requests);
-            compiled_section.insert(it, instructions.begin(), instructions.end());
+            std::vector<uint8_t> encoded_instructions = zydis_helper::encode_queue(requests);
 
-            current_address += instructions.size();
-            std::advance(it, instructions.size());
+            // Calculate the position of the iterator before the insert operation
+            size_t pos = std::distance(compiled_section.begin(), it);
+
+            // Insert the elements
+            compiled_section.insert(it, encoded_instructions.begin(), encoded_instructions.end());
+
+            // Restore the iterator after the insert operation
+            it = compiled_section.begin();
+            std::advance(it, pos);
+
+            current_address += encoded_instructions.size();
+            std::advance(it, encoded_instructions.size());
         }
     }
 
@@ -93,10 +102,10 @@ encoded_vec& section_manager::compile_section(uint32_t section_address)
 
 void section_manager::add(function_container& function)
 {
-    section_instructions.push_back({ nullptr, function });
+    section_functions.push_back({ nullptr, function });
 }
 
 void section_manager::add(code_label* label, function_container& function)
 {
-    section_instructions.push_back({ label, function });
+    section_functions.push_back({ label, function });
 }

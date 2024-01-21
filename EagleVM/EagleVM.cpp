@@ -12,10 +12,10 @@ int main(int argc, char* argv[])
     // also, this is not a true way of generating mba expressions
     // all this does is use mba rewrites as operators can be rewritten with equivalent expressions
     // TODO: insertion of identities from "Defeating MBA-based Obfuscation"
-    mba_gen mba = mba_gen<std::uint64_t>(std::numeric_limits<uint64_t>::digits);
+    // mba_gen mba = mba_gen<std::uint64_t>(std::numeric_limits<uint64_t>::digits);
 
-    std::string result = mba.create_tree(op_plus, 5, 3);
-    std::cout << "\n[Final] " << result  << std::endl;
+    // std::string result = mba.create_tree(op_plus, 5, 3);
+    // std::cout << "\n[Final] " << result  << std::endl;
 
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
     pe_parser parser = pe_parser(executable);
@@ -164,8 +164,8 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)vm_section.VirtualAddress);
     
-    section_manager& vm_section_manager = vm_generator.generate_vm_handlers(false);
-    encoded_vec& vm_handlers_bytes = vm_section_manager.compile_section(vm_section.VirtualAddress);
+    section_manager vm_section_manager = vm_generator.generate_vm_handlers(false);
+    encoded_vec vm_handlers_bytes = vm_section_manager.compile_section(vm_section.VirtualAddress);
 
     vm_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
     vm_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());

@@ -20,10 +20,12 @@ class code_label;
 class vm_handler_entry
 {
 public:
+    inline static vm_register_manager* ctx = nullptr;
+
     vm_handler_entry();
     code_label* get_handler_va(reg_size size) const;
 
-    function_container& construct_handler();
+    function_container construct_handler();
 
 protected:
     bool is_vm_handler;
@@ -31,8 +33,6 @@ protected:
 
     std::vector<reg_size> supported_sizes;
     std::unordered_map<reg_size, code_label*> supported_handlers;
-
-    inline static vm_register_manager* ctx = nullptr;
 
     virtual dynamic_instructions_vec construct_single(reg_size size) = 0;
 };

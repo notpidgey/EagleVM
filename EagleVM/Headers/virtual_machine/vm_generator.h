@@ -32,7 +32,7 @@ public:
     void init_reg_order();
     void init_ran_consts();
 
-    section_manager& generate_vm_handlers(bool randomize_handler_position);
+    section_manager generate_vm_handlers(bool randomize_handler_position);
 
     std::vector<zydis_encoder_request> call_vm_enter();
     std::vector<zydis_encoder_request> call_vm_exit();

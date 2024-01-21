@@ -16,7 +16,7 @@ code_label* vm_handler_entry::get_handler_va(reg_size size) const
     return nullptr;
 }
 
-function_container& vm_handler_entry::construct_handler()
+function_container vm_handler_entry::construct_handler()
 {
     for (auto size : supported_sizes)
     {
