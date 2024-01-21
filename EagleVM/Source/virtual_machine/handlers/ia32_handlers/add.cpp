@@ -5,10 +5,10 @@ ia32_add_handler::ia32_add_handler()
     supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
 }
 
-instructions_vec ia32_add_handler::construct_single(reg_size reg_size)
+dynamic_instructions_vec ia32_add_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    instructions_vec handle_instructions;
+    dynamic_instructions_vec handle_instructions;
 
     //sub VSP, reg_size
     //mov [vsp], VTEMP

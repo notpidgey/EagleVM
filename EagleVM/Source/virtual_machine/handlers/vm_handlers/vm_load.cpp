@@ -5,10 +5,10 @@ vm_load_handler::vm_load_handler()
     supported_sizes = { reg_size::bit64 };
 }
 
-instructions_vec vm_load_handler::construct_single(reg_size reg_size)
+dynamic_instructions_vec vm_load_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    instructions_vec handle_instructions;
+    dynamic_instructions_vec handle_instructions;
 
     if (reg_size == reg_size::bit64)
     {
@@ -44,5 +44,6 @@ instructions_vec vm_load_handler::construct_single(reg_size reg_size)
 
     RETURN_EXECUTION(handle_instructions);
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, handle_instructions.size());
+
     return handle_instructions;
 }

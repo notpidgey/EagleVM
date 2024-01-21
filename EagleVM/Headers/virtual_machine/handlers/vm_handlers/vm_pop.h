@@ -6,5 +6,5 @@ public:
     vm_pop_handler();
 
 private:
-    virtual instructions_vec construct_single(reg_size size) override;
+    virtual dynamic_instructions_vec construct_single(reg_size size) override;
 };

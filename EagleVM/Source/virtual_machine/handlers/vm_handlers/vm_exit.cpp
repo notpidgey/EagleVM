@@ -5,10 +5,10 @@ vm_exit_handler::vm_exit_handler()
     supported_sizes = { reg_size::bit64 };
 }
 
-instructions_vec vm_exit_handler::construct_single(reg_size size)
+dynamic_instructions_vec vm_exit_handler::construct_single(reg_size size)
 {
     ZydisEncoderRequest req;
-    std::vector<ZydisEncoderRequest> vm_exit_operations;
+    dynamic_instructions_vec vm_exit_operations;
 
     //popfq
     {

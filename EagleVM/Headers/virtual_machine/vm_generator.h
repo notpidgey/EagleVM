@@ -11,6 +11,8 @@
 #include "virtual_machine/models/vm_defs.h"
 #include "virtual_machine/handlers/vm_handle_generator.h"
 #include "virtual_machine/vm_register_manager.h"
+
+#include "util/section/section_manager.h"
 #include "util/util.h"
 
 enum class encode_status
@@ -18,8 +20,6 @@ enum class encode_status
     success,
     unsupported
 };
-
-
 
 typedef std::pair<std::vector<dynamic_instruction>, encode_status> encode_data;
 typedef std::tuple<uint32_t, uint32_t, instructions_vec, encoded_vec> encode_handler_data;
@@ -31,8 +31,8 @@ public:
 
     void init_reg_order();
     void init_ran_consts();
-    std::pair<uint32_t, std::vector<encode_handler_data>> generate_vm_handlers(bool randomize_handler_position);
-    void generate_vm_section(bool randomize_handler_position);
+
+    section_manager& generate_vm_handlers(bool randomize_handler_position);
 
     std::vector<zydis_encoder_request> call_vm_enter();
     std::vector<zydis_encoder_request> call_vm_exit();

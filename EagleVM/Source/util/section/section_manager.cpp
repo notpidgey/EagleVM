@@ -3,8 +3,14 @@
 
 #include <variant>
 
-void section_manager::finalize_section(uint32_t section_address)
+encoded_vec& section_manager::compile_section(uint32_t section_address)
 {
+    // i know there are better way to do this without using a variant vector (its disgusting)
+    // or recompiling all the instructions 2x
+    // but it is the easiest, and this is an open source project
+    // if someone would like to, i am open to changes
+    // but i am not rewriting this unless i really need to
+
     uint32_t current_address = section_address;
 
     // this should take all the functions in the section and connect them to desired labels
@@ -81,6 +87,8 @@ void section_manager::finalize_section(uint32_t section_address)
             std::advance(it, instructions.size());
         }
     }
+
+    return compiled_section;
 }
 
 void section_manager::add(function_container& function)

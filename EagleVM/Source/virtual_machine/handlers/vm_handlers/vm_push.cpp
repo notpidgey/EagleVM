@@ -5,10 +5,10 @@ vm_push_handler::vm_push_handler()
     supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16 };
 }
 
-instructions_vec vm_push_handler::construct_single(reg_size reg_size)
+dynamic_instructions_vec vm_push_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    instructions_vec handle_instructions;
+    dynamic_instructions_vec handle_instructions;
 
     //sub VSP, reg_size
     //mov [vsp], VTEMP
@@ -36,5 +36,6 @@ instructions_vec vm_push_handler::construct_single(reg_size reg_size)
 
     RETURN_EXECUTION(handle_instructions);
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, handle_instructions.size());
+
     return handle_instructions;
 }

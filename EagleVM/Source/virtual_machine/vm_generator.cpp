@@ -28,84 +28,18 @@ void vm_generator::init_ran_consts()
     hg_.setup_enc_constants();
 }
 
-std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_handlers(bool randomize_handler_position)
+section_manager& vm_generator::generate_vm_handlers(bool randomize_handler_position)
 {
-    uint32_t current_offset = 0;
     hg_.setup_vm_mapping();
 
-    std::vector<encode_handler_data> vm_handlers;
-    for (auto& [k, v] : hg_.vm_handlers)
+    section_manager section;
+    for (auto& [index, handler] : hg_.vm_handlers)
     {
-        for (int i = 0; i < 4; i++)
-        {
-            reg_size supported_size = v.supported_handler_va[i];
-            if (supported_size == reg_size::unsupported)
-                break;
-
-            instructions_vec instructions = v.creation_binder(supported_size);
-            zydis_encoded_instructions encoded_bytes = zydis_helper::encode_queue(instructions);
-
-            vm_handlers.push_back({ current_offset, (uint32_t)encoded_bytes.size(), instructions, encoded_bytes });
-            v.handler_va[i] = &std::get<0>(vm_handlers.back());
-
-            current_offset += (uint32_t)encoded_bytes.size();
-        }
+        function_container container = handler.construct_handler();
+        section.add(container);
     }
 
-    // must be 16 byte aligned 
-    current_offset = 0;
-    for (auto& [handler_offset, handler_size, _, encoded_bytes] : vm_handlers)
-    {
-        uint8_t remaining_pad = 16 - (handler_size % 16);
-        std::vector<uint8_t> padding = create_padding(remaining_pad);
-
-        encoded_bytes += padding;
-        handler_size += remaining_pad;
-
-        handler_offset = current_offset;
-        current_offset += handler_size;
-    }
-
-    if (randomize_handler_position)
-    {
-        std::random_device random_device;
-        std::mt19937 g(random_device());
-
-        std::shuffle(vm_handlers.begin(), vm_handlers.end(), g);
-
-        current_offset = 0;
-        for (auto& [handler_offset, handler_size, _1, _2] : vm_handlers)
-        {
-            handler_offset = current_offset;
-            current_offset += handler_size;
-        }
-    }
-
-    return { current_offset, vm_handlers };
-}
-
-#include "util/section/section_manager.h"
-
-void vm_generator::generate_vm_section(bool randomize_handler_position)
-{
-    section_manager vm_section;
-    hg_.setup_vm_mapping();
-
-    for (auto& [k, v] : hg_.vm_handlers)
-    {
-        function_container func_container;
-        for (int i = 0; i < 4; i++)
-        {
-            code_label* label = func_container.assign_label("vm_handler." + i);
-
-            reg_size supported_size = v.supported_handler_va[i];
-            if (supported_size == reg_size::unsupported)
-                break;
-
-            instructions_vec instructions = v.creation_binder(supported_size);
-            func_container.add(label, instructions);
-        }
-    }
+    return section;
 }
 
 std::vector<zydis_encoder_request> vm_generator::call_vm_enter()

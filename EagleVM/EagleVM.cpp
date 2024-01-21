@@ -164,12 +164,12 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)vm_section.VirtualAddress);
     
-    auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
-    vm_section.SizeOfRawData = generator.align_file(raw_vm_size);
-    vm_section.Misc.VirtualSize = generator.align_section(raw_vm_size);
+    section_manager& vm_section_manager = vm_generator.generate_vm_handlers(false);
+    encoded_vec& vm_handlers_bytes = vm_section_manager.compile_section(vm_section.VirtualAddress);
 
-    for (auto& [_, _1, _2, encoded_bytes] : handler_bytes)
-        vm_section_bytes += encoded_bytes;
+    vm_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
+    vm_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
+    vm_handlers_bytes += vm_handlers_bytes;
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
@@ -227,9 +227,9 @@ int main(int argc, char* argv[])
                         }
                     }
 
-                    std::vector<std::string> messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
-                    for(auto& message : messages)
-                        std::printf("[>] %s\n", message.c_str());
+                    // std::vector<std::string> messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
+                    // for(auto& message : messages)
+                    //     std::printf("[>] %s\n", message.c_str());
 
                     // append all instructions to the section ( virtual or not )
                     section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());

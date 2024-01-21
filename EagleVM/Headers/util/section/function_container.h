@@ -16,11 +16,11 @@ public:
     function_container();
 
     code_label* assign_label(const std::string& name);
-    void add(zydis_encoder_request& instruction);
-    void add(std::vector<zydis_encoder_request>& instruction);
+    void add(dynamic_instruction& instruction);
+    void add(std::vector<dynamic_instruction>& instruction);
 
-    bool add(code_label* label, zydis_encoder_request& instruction);
-    bool add(code_label* label, std::vector<zydis_encoder_request>& instruction);
+    bool add(code_label* label, dynamic_instruction& instruction);
+    bool add(code_label* label, std::vector<dynamic_instruction>& instruction);
 
     std::vector<function_segment>& get_segments();
 

@@ -3,6 +3,7 @@
 #include <array>
 #include <functional>
 
+#include "util/util.h"
 #include "util/zydis_helper.h"
 #include "util/section/function_container.h"
 
@@ -33,5 +34,5 @@ protected:
 
     static vm_register_manager* ctx;
 
-    virtual instructions_vec construct_single(reg_size size) = 0;
+    virtual dynamic_instructions_vec construct_single(reg_size size) = 0;
 };
