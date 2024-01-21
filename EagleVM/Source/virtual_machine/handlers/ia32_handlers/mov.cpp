@@ -29,6 +29,7 @@ bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic
 
                 const auto [base_displacement, base_size] = ctx->get_stack_displacement(operand.reg.value);
 
+                // need a way to somehow access all other vm handlers from child classes of "vm_handler_entry"
                 const vm_handler_entry* push_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
                 const auto push_address = push_handler->get_handler_va(base_size);
 
@@ -36,6 +37,7 @@ bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic
                     zydis_helper::encode<ZYDIS_MNEMONIC_MOV>(ZREG(VTEMP), ZREG(VREGS)),
                     zydis_helper::encode<ZYDIS_MNEMONIC_SUB>(ZREG(VREGS), base_displacement),
 
+                    // ... jump ?
                     zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)),
                     RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(push_address)))
                 };
@@ -44,7 +46,7 @@ bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic
                 // for me to be able to create a jump back to the virtualized code execution after the vm handler runs
                 // im going to need a way to know what the code label of the next instruction is going to be
                 // but for me to know this i would need to be able to create code labels instead of just pushing instructions
-                // this means the vm generate needs to implement a function_container !! 
+                // this means the vm generate needs to implement a function_container !!
                 std::function<dynamic_instructions_vec(code_label*)> create_jump =
                         [](code_label* label)
                         {
