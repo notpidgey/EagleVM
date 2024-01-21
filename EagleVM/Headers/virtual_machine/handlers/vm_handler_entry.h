@@ -24,7 +24,7 @@ public:
 
     vm_handler_entry();
 
-    [[nodiscard]] code_label* get_handler_va(reg_size size) const;
+    code_label* get_handler_va(reg_size size) const;
     function_container construct_handler();
 
     virtual bool hook_builder_init(const zydis_decode& decoded, dynamic_instructions_vec& instruction);

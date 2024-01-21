@@ -8,4 +8,5 @@ public:
 
 private:
     dynamic_instructions_vec construct_single(reg_size size) override;
+    bool hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions, int index) override;
 };

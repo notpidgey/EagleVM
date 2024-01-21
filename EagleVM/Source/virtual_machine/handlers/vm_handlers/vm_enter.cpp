@@ -34,9 +34,9 @@ dynamic_instructions_vec vm_enter_handler::construct_single(reg_size size)
         //mov VTEMP, [rsp-144]      ; the first item to be pushed on the stack was a constant value ( 18 pushes behind )
 
         // these will be implemented in the future:
-        //rol VTEMP, key3
-        //add VTEMP, key2
-        //ror VTEMP, key1
+        // rol VTEMP, key3
+        // add VTEMP, key2
+        // ror VTEMP, key1
 
         //jmp VTEMP                 ; jump to vm routine for code section
 

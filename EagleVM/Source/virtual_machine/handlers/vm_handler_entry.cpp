@@ -4,7 +4,7 @@ vm_handler_entry::vm_handler_entry(): has_builder_hook(false), is_vm_handler(fal
 
 code_label* vm_handler_entry::get_handler_va(reg_size size) const
 {
-    auto label = supported_handlers.find(size);
+    const auto label = supported_handlers.find(size);
     if(label != supported_handlers.end())
     {
         return label->second;
