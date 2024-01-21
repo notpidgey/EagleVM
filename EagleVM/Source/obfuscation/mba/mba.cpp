@@ -456,24 +456,22 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
 		return u5;
 	};
 
-    static std::default_random_engine rng = std::default_random_engine{};
     static std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
-
     exp->walk_bottom([&](mba_var_exp* inst)
         {
             // p(x) = a1x + a0
             // generate a a1 that is odd
-            T a1 = distribution(rng);
+            T a1 = ran_device::get().gen_dist(distribution);
             while (a1 % 2 == 0)
-                a1 = distribution(rng);
-            T a0 = distribution(rng);
+                a1 = ran_device::get().gen_dist(distribution);
+            T a0 = ran_device::get().gen_dist(distribution);
 
             // q(x) = a1^{-1}x-a1^{-1}a0
-            T c = (T)mod_inverse(a1);
+            T c = mod_inverse(a1);
             T d;
 
             truth_operator inverse_op;
-            if (distribution(rng) % 2)
+            if (ran_device::get().gen_8() % 2)
             {
                 // do plus
                 d = static_cast<T>((-static_cast<std::make_signed_t<T>>(c * a0)) & std::numeric_limits<T>::max());
