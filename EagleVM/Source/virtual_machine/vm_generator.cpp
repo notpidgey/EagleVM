@@ -67,10 +67,19 @@ std::pair<bool, std::vector<dynamic_instruction>> vm_generator::translate_to_vir
     }
 
     std::vector<dynamic_instruction> virtualized_instruction;
+
+    vm_handler_entry* handler = hg_.vm_handlers[decoded.instruction.mnemonic];
+    handler->hook_builder_init(decoded, virtualized_instruction);
+
     for (int i = 0; i < decoded.instruction.operand_count; i++)
     {
         encode_data encode;
-        switch (const zydis_decoded_operand operand = decoded.operands[i]; operand.type)
+        const zydis_decoded_operand& operand = decoded.operands[i];
+
+        if(!handler->hook_builder_operand(decoded, virtualized_instruction, i))
+            continue;
+
+        switch (operand.type)
         {
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
@@ -94,6 +103,7 @@ std::pair<bool, std::vector<dynamic_instruction>> vm_generator::translate_to_vir
         virtualized_instruction += encode.first;
     }
 
+    handler->hook_builder_finalize(decoded, virtualized_instruction);
     return { true, virtualized_instruction };
 }
 
@@ -141,7 +151,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return {{}, encode_status::unsupported};
 
-    std::vector<dynamic_instruction> translated_mem;
+    dynamic_instructions_vec translated_mem;
 
     const auto[base_displacement, base_size] = rm_.get_stack_displacement(op_mem.base);
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, base_size);
@@ -172,7 +182,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
             RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address)))
         };
 
-    if (op_mem.scale != 0)
+    if (op_mem.scale != 1)
     {
         //2. load the index register and multiply by scale
         //mov VTEMP, imm    ;
@@ -231,7 +241,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const vm_handler_entry* va_of_push_func = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
     const auto func_address_mem = va_of_push_func->get_handler_va(r_size);
 
-    std::vector<dynamic_instruction> translated_imm;
+    dynamic_instructions_vec translated_imm;
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     translated_imm =

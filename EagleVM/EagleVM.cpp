@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
     packer_section.NumberOfLinenumbers = 0;
 
     last_section = &packer_section;
-    generator.save_file("box.exe");
+    generator.save_file("EagleVMSandboxProtected.exe");
 
     return 0;
 }

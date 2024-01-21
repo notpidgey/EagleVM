@@ -4,7 +4,8 @@ file(GLOB_RECURSE EagleVM_SRC
     "*.cpp"
 )
 
-add_executable(EagleVM ${EagleVM_SRC})
+add_executable(EagleVM ${EagleVM_SRC}
+        Headers/virtual_machine/handlers/ia32_handlers/mov.h)
 
 target_include_directories(EagleVM
         PRIVATE

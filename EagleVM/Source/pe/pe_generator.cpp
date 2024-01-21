@@ -225,6 +225,7 @@ void pe_generator::save_file(const std::string& save_path)
             section.SizeOfRawData,
             current_offset
         );
+
         if (current_offset != section.PointerToRawData)
         {
             printf("[!] expected file offset 0x%X, got 0x%X\n", section.PointerToRawData, current_offset);

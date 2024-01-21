@@ -23,11 +23,16 @@ public:
     inline static vm_register_manager* ctx = nullptr;
 
     vm_handler_entry();
-    code_label* get_handler_va(reg_size size) const;
 
+    [[nodiscard]] code_label* get_handler_va(reg_size size) const;
     function_container construct_handler();
 
+    virtual bool hook_builder_init(const zydis_decode& decoded, dynamic_instructions_vec& instruction);
+    virtual bool hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions, int index);
+    virtual bool hook_builder_finalize(const zydis_decode& decoded, dynamic_instructions_vec& instructions);
+
 protected:
+    bool has_builder_hook;
     bool is_vm_handler;
     function_container container;
 
