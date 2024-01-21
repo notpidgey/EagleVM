@@ -432,45 +432,46 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
     // to compute the inverse of this function we must use the extended euclidean algorithm [3]
     // the general form of the inverse is given by q(x) = a1^{-1}x-a1^{-1}a0 [2]
 
-    // this seems to be really flawed because its crashing on 64 bit types
-    std::function<T(uint64_t, uint8_t)> mod_inverse = [](uint64_t constant, uint8_t bits)
-        {
-            BigInt m = pow(2, bits);
-            BigInt a = constant;
-            BigInt m0 = m, x0 = 0, x1 = 1;
+	std::function<T(T)> mod_inverse = [](T a)
+	{
+		// An Improved Integer Multiplicative Inverse (modulo 2^w)
+		// https://arxiv.org/ftp/arxiv/papers/2204/2204.04342.pdf
 
-            while (a > 1)
-            {
-                BigInt q = a / m;
-                BigInt temp = m;
-                m = a % m;
-                a = temp;
-                BigInt tempX0 = x0;
-                x0 = x1 - q * x0;
-                x1 = tempX0;
-            }
+		// this algorith is actually genius, i cannot believe that it works
 
-            return (x1 + m0) < 0 ? ((x1 + m0) + m0).to_long_long() : (x1 + m0).to_long_long();
-        };
+		T y = a - 1;
+		T u0 = 2 - a;
 
-    static std::default_random_engine rng = std::default_random_engine{};
+		y *= y;
+		T u1 = u0*(1 + y);
+		y *= y;
+		T u2 = u1*(1 + y);
+		y *= y;
+		T u3 = u2*(1 + y);
+		y *= y;
+		T u4 = u3*(1 + y);
+		y *= y;
+		T u5 = u4*(1 + y);
+
+		return u5;
+	};
+
     static std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
-
     exp->walk_bottom([&](mba_var_exp* inst)
         {
             // p(x) = a1x + a0
             // generate a a1 that is odd
-            T a1 = distribution(rng);
+            T a1 = ran_device::get().gen_dist(distribution);
             while (a1 % 2 == 0)
-                a1 = distribution(rng);
-            T a0 = distribution(rng);
+                a1 = ran_device::get().gen_dist(distribution);
+            T a0 = ran_device::get().gen_dist(distribution);
 
             // q(x) = a1^{-1}x-a1^{-1}a0
-            T c = mod_inverse(a1, sizeof(T) * 8);
+            T c = mod_inverse(a1);
             T d;
 
             truth_operator inverse_op;
-            if (distribution(rng) % 2)
+            if (ran_device::get().gen_8() % 2)
             {
                 // do plus
                 d = static_cast<T>((-static_cast<std::make_signed_t<T>>(c * a0)) & std::numeric_limits<T>::max());
