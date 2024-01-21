@@ -78,8 +78,6 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
                 }, inst);
             }
 
-            // zydis does not really have a way of checking the length of an encoded instruction without encoding it
-            // so we are going to just encode and check the size... sorry
             std::vector<uint8_t> encoded_instructions = zydis_helper::encode_queue(requests);
 
             // Calculate the position of the iterator before the insert operation
