@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <Zydis/Zydis.h>
 #include <Zydis/DecoderTypes.h>
 
@@ -21,7 +21,7 @@ typedef ZydisEncoderRequest zydis_encoder_request;
 typedef ZydisDecodedInstruction zydis_decoded_inst;
 typedef ZydisDecodedOperand zydis_decoded_operand;
 
-typedef std::vector<zydis_encoder_request> handle_instructions;
+typedef std::vector<zydis_encoder_request> instructions_vec;
 
 struct zydis_decode
 {

@@ -42,7 +42,7 @@ std::pair<uint32_t, std::vector<encode_handler_data>> vm_generator::generate_vm_
             if (supported_size == reg_size::unsupported)
                 break;
 
-            handle_instructions instructions = v.creation_binder(supported_size);
+            instructions_vec instructions = v.creation_binder(supported_size);
             zydis_encoded_instructions encoded_bytes = zydis_helper::encode_queue(instructions);
 
             vm_handlers.push_back({ current_offset, (uint32_t)encoded_bytes.size(), instructions, encoded_bytes });
@@ -102,7 +102,7 @@ void vm_generator::generate_vm_section(bool randomize_handler_position)
             if (supported_size == reg_size::unsupported)
                 break;
 
-            handle_instructions instructions = v.creation_binder(supported_size);
+            instructions_vec instructions = v.creation_binder(supported_size);
             func_container.add(label, instructions);
         }
     }
@@ -180,8 +180,9 @@ zydis_instructions vm_generator::create_func_jump(uint32_t address)
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dreg op_reg)
 {
     const auto[displacement, size] = rm_.get_stack_displacement(op_reg.value);
-    const vm_handler_entry& va_of_push_func = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
-    const auto func_address = hg_.get_va_index(va_of_push_func, zydis_helper::get_reg_size(op_reg.value));
+
+    const vm_handler_entry & va_of_push_func = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
+    const auto func_address = va_of_push_func.get_handler_va(zydis_helper::get_reg_size(op_reg.value));
 
     //this routine will load the register value to the top of the VSTACK
     const std::vector load_register
@@ -207,19 +208,19 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, base_size);
 
     const vm_handler_entry& lreg_handler = hg_.vm_handlers[MNEMONIC_VM_LOAD_REG];
-    const auto lreg_address = hg_.get_va_index(lreg_handler, base_size);
+    const auto lreg_address = lreg_handler.get_handler_va(base_size);
 
     const vm_handler_entry& push_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
-    const auto push_address = hg_.get_va_index(push_handler, base_size);
+    const auto push_address = push_handler.get_handler_va(base_size);
 
     const vm_handler_entry& mul_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_MUL];
-    const auto mul_address = hg_.get_va_index(mul_handler, base_size);
+    const auto mul_address = mul_handler.get_handler_va(base_size);
 
     const vm_handler_entry& add_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_ADD];
-    const auto add_address = hg_.get_va_index(add_handler, base_size);
+    const auto add_address = add_handler.get_handler_va(base_size);
 
     const vm_handler_entry& pop_handler = hg_.vm_handlers[ZYDIS_MNEMONIC_POP];
-    const auto pop_address = hg_.get_va_index(pop_handler, base_size);
+    const auto pop_address = pop_handler.get_handler_va(base_size);
 
     //[base + index * scale + disp]
 
@@ -286,12 +287,13 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dimm op_imm)
 {
     auto imm = op_imm.value;
+    const auto r_size = reg_size(instruction.operands[0].size);
+
     const vm_handler_entry& va_of_push_func = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
+    const auto func_address_mem = va_of_push_func.get_handler_va(r_size);
 
     std::vector<zydis_encoder_request> translated_imm;
 
-    const auto r_size = reg_size(instruction.operands[0].size);
-    const auto func_address_mem = hg_.get_va_index(va_of_push_func, r_size);
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     translated_imm =
         {

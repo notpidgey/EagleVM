@@ -20,7 +20,7 @@ class vm_handler_entry
 {
 public:
     vm_handler_entry();
-    code_label* get_handler_va(reg_size size);
+    code_label* get_handler_va(reg_size size) const;
 
     function_container& construct_handler();
 
@@ -33,5 +33,5 @@ protected:
 
     static vm_register_manager* ctx;
 
-    virtual handle_instructions construct_single(reg_size size) = 0;
+    virtual instructions_vec construct_single(reg_size size) = 0;
 };

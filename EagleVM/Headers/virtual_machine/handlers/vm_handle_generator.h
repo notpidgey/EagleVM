@@ -27,7 +27,7 @@ public:
     void setup_vm_mapping();
     void setup_enc_constants();
 
-    handle_instructions create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected);
+    instructions_vec create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected);
 
 private:
     vm_register_manager* rm_;

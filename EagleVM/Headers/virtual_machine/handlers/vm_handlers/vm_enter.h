@@ -6,5 +6,5 @@ public:
     vm_enter_handler();
 
 private:
-    virtual handle_instructions construct_single(reg_size size) override;
+    virtual instructions_vec construct_single(reg_size size) override;
 };

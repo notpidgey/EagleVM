@@ -5,10 +5,10 @@ ia32_inc_handler::ia32_inc_handler()
     supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
 }
 
-handle_instructions ia32_inc_handler::construct_single(reg_size reg_size)
+instructions_vec ia32_inc_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    handle_instructions handle_instructions;
+    instructions_vec handle_instructions;
 
     //inc [VSP]
     handle_instructions = {

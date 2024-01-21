@@ -20,7 +20,7 @@ function_container& vm_handler_entry::construct_handler()
 {
     for (auto size : supported_sizes)
     {
-        handle_instructions size_handler = construct_single(size);
+        instructions_vec size_handler = construct_single(size);
 
         code_label* label = container.assign_label("handler." + std::to_string(size));
         container.add(size_handler);

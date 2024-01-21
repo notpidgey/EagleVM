@@ -5,10 +5,10 @@ vm_push_handler::vm_push_handler()
     supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16 };
 }
 
-handle_instructions vm_push_handler::construct_single(reg_size reg_size)
+instructions_vec vm_push_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    handle_instructions handle_instructions;
+    instructions_vec handle_instructions;
 
     //sub VSP, reg_size
     //mov [vsp], VTEMP

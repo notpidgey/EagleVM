@@ -5,10 +5,10 @@ vm_load_handler::vm_load_handler()
     supported_sizes = { reg_size::bit64 };
 }
 
-handle_instructions vm_load_handler::construct_single(reg_size reg_size)
+instructions_vec vm_load_handler::construct_single(reg_size reg_size)
 {
     uint64_t size = reg_size;
-    handle_instructions handle_instructions;
+    instructions_vec handle_instructions;
 
     if (reg_size == reg_size::bit64)
     {

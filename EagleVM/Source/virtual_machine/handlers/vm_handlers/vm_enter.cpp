@@ -5,10 +5,10 @@ vm_enter_handler::vm_enter_handler()
     supported_sizes = { reg_size::bit64 };
 }
 
-handle_instructions vm_enter_handler::construct_single(reg_size size)
+instructions_vec vm_enter_handler::construct_single(reg_size size)
 {
     ZydisEncoderRequest req;
-    handle_instructions vm_enter_operations;
+    instructions_vec vm_enter_operations;
 
     //push r0-r15 to stack
     std::ranges::for_each(PUSHORDER,
@@ -40,7 +40,7 @@ handle_instructions vm_enter_handler::construct_single(reg_size size)
 
         //jmp VTEMP                 ; jump to vm routine for code section
 
-        handle_instructions decryption_routine = {
+        instructions_vec decryption_routine = {
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(GR_RSP)),
 
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(GR_RSP)),
