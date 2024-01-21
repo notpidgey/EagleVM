@@ -1,7 +1,6 @@
-﻿#pragma once
+#pragma once
 #include <Zydis/Zydis.h>
 #include <Zydis/DecoderTypes.h>
-
 #include <Zycore/LibC.h>
 
 typedef ZydisRegister zydis_register;
@@ -21,7 +20,18 @@ typedef ZydisEncoderRequest zydis_encoder_request;
 typedef ZydisDecodedInstruction zydis_decoded_inst;
 typedef ZydisDecodedOperand zydis_decoded_operand;
 
-typedef std::vector<zydis_encoder_request> handle_instructions;
+#include <functional>
+#include <variant>
+
+typedef std::function<zydis_encoder_request()> recompile_promise;
+typedef std::variant<zydis_encoder_request, recompile_promise> dynamic_instruction;
+
+typedef std::vector<dynamic_instruction> dynamic_instructions_vec;
+typedef std::vector<zydis_encoder_request> instructions_vec;
+typedef std::vector<uint8_t> encoded_vec;
+
+#define RECOMPILE(...) [=]() { return __VA_ARGS__ ; }
+#define ZLABEL(x) ZIMMU(x->get())
 
 struct zydis_decode
 {

@@ -36,22 +36,13 @@
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\util\math.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\virtual_machine\vm_handler_manager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\virtual_machine\vm_register_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\virtual_machine\vm_handle_generator.cpp">
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handle_generator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\util\util.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\virtual_machine\vm_mba.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\obfuscation\mba\mba.cpp">
@@ -67,6 +58,60 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Source\obfuscation\mba\variable\mba_xy.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\obfuscation\mba\math\mba_math.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\util\section\code_label.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\util\section\function_container.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\util\section\section_manager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_enter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_exit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_load.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_pop.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_push.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_store.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\add.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\dec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\div.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mul.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\sub.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handler_entry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\inc.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handler_context.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -92,28 +137,22 @@
     <ClInclude Include="Headers\virtual_machine\vm_generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\util\math.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\util\zydis_defs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\virtual_machine\vm_handler_manager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Headers\virtual_machine\vm_register_manager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\virtual_machine\vm_handle_generator.h">
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handle_generator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\util\util.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Headers\virtual_machine\models\vm_handler_entry.h">
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_entry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\obfsucation\mba\mba.h">
@@ -144,6 +183,66 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\obfuscation\mba\mba.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\obfuscation\mba\math\mba_math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\util\section\function_container.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\util\section\section_manager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\util\section\code_label.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_enter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_exit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_push.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_pop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_load.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_store.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mul.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\div.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\dec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\add.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\include_vm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\inc.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_context.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\util\random.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

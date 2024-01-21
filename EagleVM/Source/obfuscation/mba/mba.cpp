@@ -1,5 +1,7 @@
 #include "obfuscation/mba/mba.h"
 
+#include "util/random.h"
+
 #include <algorithm>
 #include <random>
 
@@ -389,12 +391,10 @@ void mba_gen<T>::bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp)
 	return;
 	exp->walk_bottom([this](mba_var_exp* inst)
 		{
-			// TODO: pass in a global PRNG instance to make everything deterministic
-			std::srand(std::time(0));
 			auto size = mba_variable_truth.size();
 
-			int index1 = std::rand() % size;
-			int index2 = std::rand() % size;;
+			int index1 = ran_device::get().gen_16() % size;
+			int index2 = ran_device::get().gen_16() % size;
 
 			mba_var_exp& first_result = mba_variable_truth[index1];
 			std::unique_ptr<mba_var_exp> first_exp = first_result.clone_exp();
@@ -432,6 +432,7 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
     // to compute the inverse of this function we must use the extended euclidean algorithm [3]
     // the general form of the inverse is given by q(x) = a1^{-1}x-a1^{-1}a0 [2]
 
+    // this seems to be really flawed because its crashing on 64 bit types
     std::function<T(uint64_t, uint8_t)> mod_inverse = [](uint64_t constant, uint8_t bits)
         {
             BigInt m = pow(2, bits);
@@ -453,7 +454,7 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
         };
 
     static std::default_random_engine rng = std::default_random_engine{};
-    static std::uniform_int_distribution<> distribution(0, std::numeric_limits<T>::max());
+    static std::uniform_int_distribution<uint64_t> distribution(0, std::numeric_limits<T>::max());
 
     exp->walk_bottom([&](mba_var_exp* inst)
         {
@@ -493,6 +494,22 @@ void mba_gen<T>::bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp)
             inst->operation = inverse_op;
         }
     );
+}
+
+template<typename T>
+void mba_gen<T>::expand_constants(std::unique_ptr<mba_var_exp>& exp)
+{
+    // Automated Localisation of a Mixed Boolean
+    // Arithmetic Obfuscation Window in a Program Binary
+    // https://libstore.ugent.be/fulltxt/RUG01/003/014/584/RUG01-003014584_2021_0001_AC.pdf
+
+    // P ∈ Pm (Z/2nZ) and Q its inverse: P (Q(X)) = X ∀X ∈ Z/2nZ
+    // K ∈ Z/2nZ the constant to hide
+    // E an MBA expression of variables (x1, . . . , xt) ∈ (Z/2nZ)t non-trivially equal to zero
+    // Then K can be replaced by P (E + Q(K)) = P (Q(K)) = K, no matter the values of the variables (x1, . . ., xt).
+
+    // Generate polynomial inverses?
+    // https://plzin.github.io/posts/perm-poly
 }
 
 template class mba_gen<uint8_t>;

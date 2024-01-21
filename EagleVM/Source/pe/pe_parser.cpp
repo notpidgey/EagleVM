@@ -68,10 +68,10 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 stub_import import_type;
                 switch (index) 
                 {
-                case 1:
+                case 0:
                     import_type = stub_import::vm_end;
                     break;
-                case 0:
+                case 1:
                     import_type = stub_import::vm_begin;
                     break;
                 default:

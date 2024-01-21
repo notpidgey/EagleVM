@@ -1,4 +1,4 @@
-﻿#include "virtual_machine/vm_register_manager.h"
+#include "virtual_machine/vm_register_manager.h"
 
 void vm_register_manager::init_reg_order()
 {
@@ -35,8 +35,8 @@ void vm_register_manager::set_reg_mapping(const short index, const zydis_registe
 bool vm_register_manager::contains_reg_mapping(short mapping, zydis_register reg)
 {
     return std::ranges::any_of(reg_map,
-            [reg](const zydis_register register_)
-                {
-                    return register_ == reg;
-                });
+        [reg](const zydis_register register_)
+            {
+                return register_ == reg;
+            });
 }

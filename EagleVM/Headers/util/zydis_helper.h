@@ -45,7 +45,8 @@ namespace zydis_helper
 	void add_op(zydis_encoder_request& req, zydis_ereg reg);
 
 	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
-	std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);
+    std::vector<std::string> print(zydis_encoder_request& queue, uint32_t address);
+    std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);
 
 	template<zyids_mnemonic TMnemonic, typename... TArgs>
 	zydis_encoder_request encode(TArgs&&... args)
