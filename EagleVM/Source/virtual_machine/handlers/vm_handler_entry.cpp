@@ -5,7 +5,7 @@ vm_handler_entry::vm_handler_entry()
 
 }
 
-code_label* vm_handler_entry::get_handler_va(reg_size size)
+code_label* vm_handler_entry::get_handler_va(reg_size size) const
 {
     auto label = supported_handlers.find(size);
     if (label != supported_handlers.end())

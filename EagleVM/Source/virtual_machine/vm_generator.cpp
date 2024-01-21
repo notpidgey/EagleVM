@@ -10,7 +10,7 @@
 
 #define CREATE_FUNC_JMP(x) \
     zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)), \
-    zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(x)),
+    RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(x))),
 
 vm_generator::vm_generator()
 {
@@ -118,7 +118,7 @@ std::vector<zydis_encoder_request> vm_generator::call_vm_exit()
     return {};
 }
 
-std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_virtual(const zydis_decode& decoded)
+std::pair<bool, std::vector<dynamic_instruction>> vm_generator::translate_to_virtual(const zydis_decode& decoded)
 {
     //virtualizer does not support more than 2 operands OR all mnemonics
     if (decoded.instruction.operand_count > 2 || !hg_.vm_handlers.contains(decoded.instruction.mnemonic))
@@ -127,7 +127,7 @@ std::pair<bool, std::vector<zydis_encoder_request>> vm_generator::translate_to_v
         return { false, { zydis_helper::decode_to_encode(decoded) } };
     }
 
-    std::vector<zydis_encoder_request> virtualized_instruction;
+    std::vector<dynamic_instruction> virtualized_instruction;
     for (int i = 0; i < decoded.instruction.operand_count; i++)
     {
         encode_data encode;
@@ -169,7 +169,7 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
     return padding;
 }
 
-zydis_instructions vm_generator::create_func_jump(uint32_t address)
+instructions_vec vm_generator::create_func_jump(uint32_t address)
 {
     return {
         zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VSP), ZMEMBD(IP_RIP, 0, 8)),
@@ -185,15 +185,15 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const auto func_address = va_of_push_func.get_handler_va(zydis_helper::get_reg_size(op_reg.value));
 
     //this routine will load the register value to the top of the VSTACK
-    const std::vector load_register
+    const std::vector<dynamic_instruction> load_register
         {
             //mov VTEMP, -8
             //call VM_LOAD_REG
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address)),
+            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address))),
         };
 
-    return {load_register, encode_status::success};
+    return { load_register, encode_status::success };
 }
 
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dmem op_mem)
@@ -202,7 +202,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return {{}, encode_status::unsupported};
 
-    std::vector<zydis_encoder_request> translated_mem;
+    std::vector<dynamic_instruction> translated_mem;
 
     const auto[base_displacement, base_size] = rm_.get_stack_displacement(op_mem.base);
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, base_size);
@@ -229,8 +229,8 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     //jmp VM_LOAD_REG
     translated_mem =
         {
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(lreg_address)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(lreg_address))
+            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZLABEL(lreg_address))),
+            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address)))
         };
 
     if (op_mem.scale != 0)
@@ -246,7 +246,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
         translated_mem +=
             {
                 zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(index_displacement)),
-                zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(lreg_address)),
+                RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address))),
                 zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(op_mem.scale)),
                 CREATE_FUNC_JMP(push_address)
                 CREATE_FUNC_JMP(mul_address)
@@ -275,7 +275,7 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
             CREATE_FUNC_JMP(push_address)
         };
 
-    return {translated_mem, encode_status::success};
+    return { translated_mem, encode_status::success };
 }
 
 encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_dptr op_ptr)
@@ -292,14 +292,14 @@ encode_data vm_generator::encode_operand(const zydis_decode& instruction, zydis_
     const vm_handler_entry& va_of_push_func = hg_.vm_handlers[ZYDIS_MNEMONIC_PUSH];
     const auto func_address_mem = va_of_push_func.get_handler_va(r_size);
 
-    std::vector<zydis_encoder_request> translated_imm;
+    std::vector<dynamic_instruction> translated_imm;
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     translated_imm =
         {
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZIMMU(func_address_mem))
+            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address_mem)))
         };
 
-    return {translated_imm, encode_status::success};
+    return { translated_imm, encode_status::success };
 }

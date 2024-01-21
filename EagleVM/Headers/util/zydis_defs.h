@@ -22,6 +22,13 @@ typedef ZydisDecodedInstruction zydis_decoded_inst;
 typedef ZydisDecodedOperand zydis_decoded_operand;
 
 typedef std::vector<zydis_encoder_request> instructions_vec;
+typedef std::vector<uint8_t> encoded_vec;
+
+typedef std::function<zydis_encoder_request()> recompile_promise;
+typedef std::variant<zydis_encoder_request, recompile_promise> dynamic_instruction;
+
+#define RECOMPILE(...) [=]() { return __VA_ARGS__ ; }
+#define ZLABEL(x) ZIMMU(x->get())
 
 struct zydis_decode
 {

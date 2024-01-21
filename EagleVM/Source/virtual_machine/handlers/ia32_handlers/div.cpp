@@ -7,5 +7,5 @@ ia32_div_handler::ia32_div_handler()
 
 instructions_vec ia32_div_handler::construct_single(reg_size size)
 {
-    return handle_instructions();
+    return instructions_vec();
 }

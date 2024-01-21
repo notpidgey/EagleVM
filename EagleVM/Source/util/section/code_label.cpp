@@ -12,6 +12,11 @@ code_label* code_label::create(const std::string& section_name)
     return new code_label(section_name);
 }
 
+uint32_t code_label::get()
+{
+    return virtual_address;
+}
+
 void code_label::finalize(uint32_t va)
 {
     finalized = true;
