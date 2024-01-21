@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 
     vm_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
     vm_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
-    vm_handlers_bytes += vm_handlers_bytes;
+    vm_section_bytes += vm_handlers_bytes;
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
