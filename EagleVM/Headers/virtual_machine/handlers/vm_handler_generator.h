@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cstddef>
 #include <array>
-#include <map>
+#include <unordered_map>
 #include <ranges>
 
 #include "virtual_machine/handlers/vm_handler_entry.h"

@@ -1,11 +1,6 @@
 #include "virtual_machine/handlers/ia32_handlers/mov.h"
 
-ia32_mov_handler::ia32_mov_handler()
-{
-    supported_sizes = {reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8};
-}
-
-dynamic_instructions_vec ia32_mov_handler::construct_single(reg_size size)
+dynamic_instructions_vec ia32_mov_handler::construct_single(function_container container, reg_size size)
 {
     return {};
 }
@@ -49,12 +44,12 @@ bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic
                 // this means the vm generate needs to implement a function_container !!
                 std::function<dynamic_instructions_vec(code_label*)> create_jump =
                         [](code_label* label)
-                        {
-                            code_label* return_label = code_label::create("return_label");
-                            return dynamic_instructions_vec{
-                                RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(label)))
-                            };
-                        };
+                {
+                    code_label* return_label = code_label::create("return_label");
+                    return dynamic_instructions_vec{
+                        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(label)))
+                    };
+                };
 
                 break;
             }

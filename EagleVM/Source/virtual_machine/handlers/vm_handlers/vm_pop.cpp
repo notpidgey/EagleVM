@@ -1,11 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_pop.h"
 
-vm_pop_handler::vm_pop_handler()
-{
-    supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16 };
-}
-
-dynamic_instructions_vec vm_pop_handler::construct_single(reg_size reg_size)
+dynamic_instructions_vec vm_pop_handler::construct_single(function_container container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

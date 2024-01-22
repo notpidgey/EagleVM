@@ -1,4 +1,4 @@
-#include "..\..\..\Headers\virtual_machine\handlers\vm_handler_generator.h"
+#include "virtual_machine/handlers/vm_handler_generator.h"
 
 #include "virtual_machine/handlers/include_ia32.h"
 #include "virtual_machine/handlers/include_vm.h"
@@ -28,17 +28,15 @@ void vm_handler_generator::setup_vm_mapping()
     vm_handlers[MNEMONIC_VM_LOAD_REG] = new vm_load_handler();
     vm_handlers[MNEMONIC_VM_STORE_REG] = new vm_store_handler();
 
-    vm_handlers[ZYDIS_MNEMONIC_PUSH] = new vm_push_handler();
-    vm_handlers[ZYDIS_MNEMONIC_POP] = new vm_pop_handler();
-    vm_handlers[ZYDIS_MNEMONIC_MUL] = new ia32_mul_handler();
-    vm_handlers[ZYDIS_MNEMONIC_DIV] = new ia32_div_handler();
-    vm_handlers[ZYDIS_MNEMONIC_INC] = new ia32_inc_handler();
-    vm_handlers[ZYDIS_MNEMONIC_DEC] = new ia32_dec_handler();
-    vm_handlers[ZYDIS_MNEMONIC_ADD] = new ia32_add_handler();
-    vm_handlers[ZYDIS_MNEMONIC_SUB] = new ia32_sub_handler();
-    vm_handlers[ZYDIS_MNEMONIC_MOV] = new ia32_mov_handler();
-
-    vm_handler_entry::ctx = rm_;
+    vm_handlers[ZYDIS_MNEMONIC_PUSH] = new vm_push_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_POP] = new vm_pop_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_MUL] = new ia32_mul_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_DIV] = new ia32_div_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_INC] = new ia32_inc_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_DEC] = new ia32_dec_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_ADD] = new ia32_add_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_SUB] = new ia32_sub_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_MOV] = new ia32_mov_handler(rm_, this);
 }
 
 void vm_handler_generator::setup_enc_constants()

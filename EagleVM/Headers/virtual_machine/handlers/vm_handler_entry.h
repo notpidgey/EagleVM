@@ -7,29 +7,22 @@
 #include "util/zydis_helper.h"
 #include "util/section/function_container.h"
 
-#include "vm_handler_context.h"
+#include "virtual_machine/handlers/vm_handler_context.h"
+#include "virtual_machine/base_instruction_virtualizer.h"
 
-#define VIP         ctx->reg_map[I_VIP]
-#define VSP         ctx->reg_map[I_VSP]
-#define VREGS       ctx->reg_map[I_VREGS]
-#define VTEMP       ctx->reg_map[I_VTEMP]
-#define PUSHORDER   ctx->reg_stack_order_
-#define RETURN_EXECUTION(x) x.push_back(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VIP)))
+// im not proud of this but this is the easiest way i can do this dependency injection shenanigans
+#define CREATE_HANDLER_CTOR(x, ...) x::x(vm_register_manager* manager, vm_handler_generator* handler_generator) \
+    : vm_handler_entry(manager, handler_generator) \
+    { supported_sizes = {__VA_ARGS__}; };
 
 class code_label;
-class vm_handler_entry
+class vm_handler_entry : public base_instruction_virtualizer
 {
 public:
-    inline static vm_register_manager* ctx = nullptr;
-
-    vm_handler_entry();
+    explicit vm_handler_entry(vm_register_manager* manager, vm_handler_generator* handler_generator);
 
     code_label* get_handler_va(reg_size size) const;
     function_container construct_handler();
-
-    virtual bool hook_builder_init(const zydis_decode& decoded, dynamic_instructions_vec& instruction);
-    virtual bool hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions, int index);
-    virtual bool hook_builder_finalize(const zydis_decode& decoded, dynamic_instructions_vec& instructions);
 
 protected:
     bool has_builder_hook;
@@ -39,5 +32,5 @@ protected:
     std::vector<reg_size> supported_sizes;
     std::unordered_map<reg_size, code_label*> supported_handlers;
 
-    virtual dynamic_instructions_vec construct_single(reg_size size) = 0;
+    virtual dynamic_instructions_vec construct_single(function_container container, reg_size size) = 0;
 };

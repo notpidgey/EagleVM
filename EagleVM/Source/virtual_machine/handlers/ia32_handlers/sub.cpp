@@ -1,11 +1,6 @@
 #include "virtual_machine/handlers/ia32_handlers/sub.h"
 
-ia32_sub_handler::ia32_sub_handler()
-{
-    supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
-}
-
-dynamic_instructions_vec ia32_sub_handler::construct_single(reg_size reg_size)
+dynamic_instructions_vec ia32_sub_handler::construct_single(function_container container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

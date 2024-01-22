@@ -1,6 +1,10 @@
 #include "virtual_machine/handlers/vm_handler_entry.h"
 
-vm_handler_entry::vm_handler_entry(): has_builder_hook(false), is_vm_handler(false) {}
+vm_handler_entry::vm_handler_entry(vm_register_manager* manager, vm_handler_generator* handler_generator)
+            : base_instruction_virtualizer(manager, handler_generator), has_builder_hook(false), is_vm_handler(false)
+{
+
+}
 
 code_label* vm_handler_entry::get_handler_va(reg_size size) const
 {
@@ -17,29 +21,13 @@ function_container vm_handler_entry::construct_handler()
 {
     for(auto size : supported_sizes)
     {
-        dynamic_instructions_vec size_handler = construct_single(size);
-
         code_label* label = container.assign_label("handler." + std::to_string(size));
-        container.add(size_handler);
+        container.assign_label(label);
+
+        dynamic_instructions_vec size_handler = construct_single(container, size);
 
         supported_handlers[size] = label;
     }
 
     return container;
-}
-
-bool vm_handler_entry::hook_builder_init(const zydis_decode& decoded, dynamic_instructions_vec& instruction)
-{
-    return true;
-}
-
-bool vm_handler_entry::hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions,
-    int index)
-{
-    return true;
-}
-
-bool vm_handler_entry::hook_builder_finalize(const zydis_decode& decoded, dynamic_instructions_vec& instructions)
-{
-    return true;
 }

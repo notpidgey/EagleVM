@@ -1,11 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_exit.h"
 
-vm_exit_handler::vm_exit_handler()
-{
-    supported_sizes = { reg_size::bit64 };
-}
-
-dynamic_instructions_vec vm_exit_handler::construct_single(reg_size size)
+dynamic_instructions_vec vm_exit_handler::construct_single(function_container container, reg_size size)
 {
     ZydisEncoderRequest req;
     dynamic_instructions_vec vm_exit_operations;

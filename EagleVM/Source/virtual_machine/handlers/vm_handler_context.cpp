@@ -1,4 +1,4 @@
-#include "..\..\..\Headers\virtual_machine\handlers\vm_handler_context.h"
+#include "virtual_machine/handlers/vm_handler_context.h"
 
 #include "util/random.h"
 

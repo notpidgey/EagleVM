@@ -3,6 +3,8 @@
 #include <variant>
 #include <functional>
 
+#include "virtual_machine/base_instruction_virtualizer.h"
+
 #include "util/section/code_label.h"
 #include "util/zydis_defs.h"
 
@@ -16,13 +18,21 @@ public:
     function_container();
 
     code_label* assign_label(const std::string& name);
-    void add(dynamic_instruction& instruction);
+    void assign_label(code_label* label);
+
+
+    void add(const dynamic_instruction& instruction);
+    void add(std::vector<dynamic_instruction> instruction);
     void add(std::vector<dynamic_instruction>& instruction);
 
-    bool add(code_label* label, dynamic_instruction& instruction);
-    bool add(code_label* label, std::vector<dynamic_instruction>& instruction);
+    void add(code_label* target_label, const dynamic_instruction& instruction);
+    void add(code_label* target_label, const std::vector<dynamic_instruction>& instruction);
+
+    bool add_to(const code_label* target_label, dynamic_instruction& instruction);
+    bool add_to(const code_label* target_label, std::vector<dynamic_instruction>& instruction);
 
     std::vector<function_segment>& get_segments();
+
 
 private:
     std::vector<function_segment> function_segments;

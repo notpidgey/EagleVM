@@ -1,11 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_enter.h"
 
-vm_enter_handler::vm_enter_handler()
-{
-    supported_sizes = { reg_size::bit64 };
-}
-
-dynamic_instructions_vec vm_enter_handler::construct_single(reg_size size)
+dynamic_instructions_vec vm_enter_handler::construct_single(function_container container, reg_size size)
 {
     ZydisEncoderRequest req;
     dynamic_instructions_vec vm_enter_operations;
