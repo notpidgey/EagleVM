@@ -2,6 +2,14 @@
 
 void ia32_mov_handler::construct_single(function_container& container, reg_size size)
 {
+    // value we want to move should be located at the top of the stack
+    // the address we want to move TO should be located right below it
+    const vm_handler_entry* va_of_push_func = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
+
+
+    container.add({
+        zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_eimm, zydis_register>(ZIMMS(VTEMP), ZREG(VREGS))
+    });
 }
 
 // bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions,

@@ -68,5 +68,9 @@ struct zydis_decode
 #define ZREG(x)			    { (ZydisRegister)x, 0 }
 #define ZIMMU(x)		    { .u = x }
 #define ZIMMS(x)		    { .s = x }
+
+// Z BYTES MEM[REG(X) + Y]
 #define ZMEMBD(x, y, z)	    { (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
+
+// A BYTES MEM[REG(X) + (REG(Y) * Z)]
 #define ZMEMBI(x, y, z, a)	{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }

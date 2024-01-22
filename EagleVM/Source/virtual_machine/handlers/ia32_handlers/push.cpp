@@ -1,6 +1,6 @@
-#include "virtual_machine/handlers/vm_handlers/vm_push.h"
+#include "virtual_machine/handlers/ia32_handlers/push.h"
 
-void vm_push_handler::construct_single(function_container& container, reg_size reg_size)
+void ia32_push_handler::construct_single(function_container& container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;
