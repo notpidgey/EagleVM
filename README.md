@@ -28,7 +28,7 @@ Todo
 
 Todo
 
-### Wishlist / Flaws
+### Wishlist 
 
 - Improve the system for which encryption/decryption routines are created for entering the virtual machine. Currently it is the same rol, add, ror routine. In the future this should be random and custom for each VMENTER. Ideally, when a protected function needs to enter the virtual machine, it will push a virtual address which contains a unique encryption routine in the VM section. So that during VMENTER routine, the other constant which was pushed to the stack can be decrypted uniquely.
 - Everything in the VM section of the PE is in a linear order. This makes reverse engineering the application fairly easy. This will be difficult but some kind of algorithm needs to be developed to create a PE section for the virtual machine first and then at the end fill the addresses which depend on one another.
@@ -37,10 +37,14 @@ Todo
 - For chunks of virtualized instructions, a VM enter could decrypt them using some kind of algorithm at runtime. Would hinder reverse engineering statically
 - Potential CMKR implementation instead of normal vanilla CMake
 - Use of smart pointers over C-style pointers since code_labels will never be deallocated properly until the program closes
+- Unit tests starting with MBA generation
 
-## Resources
+## Thank You To:
 
 - r0da - Inspiring this project with [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/) analysis.
-- Iizerd - Help with general understanding of code virtualization.
-- \_xeroxz - Detailed anaylsis of [VMP2](https://back.engineering/17/05/2021/).
-- hasherezade - Creating [PE-Bear](https://github.com/hasherezade/pe-bear-releases) for help with understanding, creating, and parsing PE headers.
+- _xeroxz - Great analysis of [VMP2](https://back.engineering/17/05/2021/) and clarification of VMP routines.
+- Iizerd - Help with general understanding of code virtualization when starting the project.
+- hasherezade - Creator of tool [PE-Bear](https://github.com/hasherezade/pe-bear-releases) used for this project.
+
+## Resources:
+Todo
