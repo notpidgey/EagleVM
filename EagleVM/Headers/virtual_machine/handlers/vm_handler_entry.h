@@ -7,7 +7,7 @@
 #include "util/zydis_helper.h"
 #include "util/section/function_container.h"
 
-#include "virtual_machine/handlers/vm_handler_context.h"
+#include "vm_handler_context.h"
 
 #define VIP         ctx->reg_map[I_VIP]
 #define VSP         ctx->reg_map[I_VSP]

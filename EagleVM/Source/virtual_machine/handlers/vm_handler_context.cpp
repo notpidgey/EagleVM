@@ -1,4 +1,4 @@
-#include "virtual_machine/handlers/vm_handler_context.h"
+#include "..\..\..\Headers\virtual_machine\handlers\vm_handler_context.h"
 
 #include "util/random.h"
 
@@ -8,7 +8,7 @@ vm_handler_context::vm_handler_context(vm_register_manager* context)
 
 std::vector<zydis_encoder_request> vm_handler_context::generate_handler_return()
 {
-    return std::vector<zydis_encoder_request>();
+    return {};
 }
 
 void vm_handler_context::setup_keys()

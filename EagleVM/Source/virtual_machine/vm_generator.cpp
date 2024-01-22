@@ -15,7 +15,7 @@
 vm_generator::vm_generator()
 {
     zydis_helper::setup_decoder();
-    hg_ = vm_handle_generator(&rm_);
+    hg_ = vm_handler_generator(&rm_);
 }
 
 void vm_generator::init_reg_order()

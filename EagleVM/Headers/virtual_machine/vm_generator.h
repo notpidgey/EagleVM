@@ -9,7 +9,7 @@
 #include <Zydis/Zydis.h>
 
 #include "virtual_machine/models/vm_defs.h"
-#include "virtual_machine/handlers/vm_handle_generator.h"
+#include "handlers\vm_handler_generator.h"
 #include "virtual_machine/vm_register_manager.h"
 
 #include "util/section/section_manager.h"
@@ -42,7 +42,7 @@ public:
 
 private:
     vm_register_manager rm_;
-    vm_handle_generator hg_;
+    vm_handler_generator hg_;
 
     inline instructions_vec create_func_jump(uint32_t address);
     encode_data encode_operand(const zydis_decode& instruction, zydis_dreg op_reg);

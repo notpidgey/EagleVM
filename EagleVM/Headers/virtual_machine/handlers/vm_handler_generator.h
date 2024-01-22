@@ -16,13 +16,13 @@
 #include "util/zydis_helper.h"
 #include "util/util.h"
 
-class vm_handle_generator
+class vm_handler_generator
 {
 public:
     std::unordered_map<int, vm_handler_entry*> vm_handlers;
 
-    vm_handle_generator();
-    explicit vm_handle_generator(vm_register_manager* push_order);
+    vm_handler_generator();
+    explicit vm_handler_generator(vm_register_manager* push_order);
 
     void setup_vm_mapping();
     void setup_enc_constants();

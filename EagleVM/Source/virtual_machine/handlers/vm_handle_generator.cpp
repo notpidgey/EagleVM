@@ -1,4 +1,4 @@
-#include "virtual_machine/handlers/vm_handle_generator.h"
+#include "..\..\..\Headers\virtual_machine\handlers\vm_handler_generator.h"
 
 #include "virtual_machine/handlers/include_ia32.h"
 #include "virtual_machine/handlers/include_vm.h"
@@ -12,16 +12,16 @@
 #define PUSHORDER   rm_->reg_stack_order_
 #define RETURN_EXECUTION(x) x.push_back(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VIP)))
 
-vm_handle_generator::vm_handle_generator()
+vm_handler_generator::vm_handler_generator()
 {
 }
 
-vm_handle_generator::vm_handle_generator(vm_register_manager* push_order)
+vm_handler_generator::vm_handler_generator(vm_register_manager* push_order)
 {
     rm_ = push_order;
 }
 
-void vm_handle_generator::setup_vm_mapping()
+void vm_handler_generator::setup_vm_mapping()
 {
     vm_handlers[MNEMONIC_VM_ENTER] = new vm_enter_handler();
     vm_handlers[MNEMONIC_VM_EXIT] = new vm_exit_handler();
@@ -41,7 +41,7 @@ void vm_handle_generator::setup_vm_mapping()
     vm_handler_entry::ctx = rm_;
 }
 
-void vm_handle_generator::setup_enc_constants()
+void vm_handler_generator::setup_enc_constants()
 {
 
 }
