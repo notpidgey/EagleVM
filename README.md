@@ -35,6 +35,8 @@ Todo
 - Full project refactor? Project might become extremely messy after the item above gets added. Maybe some thinking needs to be done
 - Obfuscation (duh) since a VM is not going to carry all the weight of making the generated VMs difficult to reverse engineer.
 - For chunks of virtualized instructions, a VM enter could decrypt them using some kind of algorithm at runtime. Would hinder reverse engineering statically
+- Potential CMKR implementation instead of normal vanilla CMake
+- Use of smart pointers over C-style pointers since code_labels will never be deallocated properly until the program closes
 
 ## Resources
 
