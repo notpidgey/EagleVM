@@ -20,5 +20,4 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
         });
 
     std::printf("%3c %-17s %-10zi\n", 'Q', __func__, vm_exit_operations.size());
-    return vm_exit_operations;
 }

@@ -2,5 +2,4 @@
 
 void vm_store_handler::construct_single(function_container& container, reg_size reg_size)
 {
-    return;
 }

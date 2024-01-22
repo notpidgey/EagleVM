@@ -2,7 +2,6 @@
 
 void ia32_mov_handler::construct_single(function_container& container, reg_size size)
 {
-    return {};
 }
 
 // bool ia32_mov_handler::hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions,

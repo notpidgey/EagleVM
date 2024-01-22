@@ -28,7 +28,7 @@ public:
     std::vector<zydis_encoder_request> call_vm_enter();
     std::vector<zydis_encoder_request> call_vm_exit();
 
-    std::pair<bool, std::vector<dynamic_instruction>> translate_to_virtual(const zydis_decode& decoded_instruction);
+    std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
     static std::vector<uint8_t> create_padding(size_t bytes);
 
 private:

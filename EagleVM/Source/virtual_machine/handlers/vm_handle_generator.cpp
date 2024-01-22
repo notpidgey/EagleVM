@@ -23,10 +23,10 @@ vm_handler_generator::vm_handler_generator(vm_register_manager* push_order)
 
 void vm_handler_generator::setup_vm_mapping()
 {
-    vm_handlers[MNEMONIC_VM_ENTER] = new vm_enter_handler();
-    vm_handlers[MNEMONIC_VM_EXIT] = new vm_exit_handler();
-    vm_handlers[MNEMONIC_VM_LOAD_REG] = new vm_load_handler();
-    vm_handlers[MNEMONIC_VM_STORE_REG] = new vm_store_handler();
+    vm_handlers[MNEMONIC_VM_ENTER] = new vm_enter_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_EXIT] = new vm_exit_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_LOAD_REG] = new vm_load_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_STORE_REG] = new vm_store_handler(rm_, this);
 
     vm_handlers[ZYDIS_MNEMONIC_PUSH] = new vm_push_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_POP] = new vm_pop_handler(rm_, this);

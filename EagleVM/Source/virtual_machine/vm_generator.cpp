@@ -22,16 +22,13 @@ section_manager vm_generator::generate_vm_handlers(bool randomize_handler_positi
     hg_.setup_vm_mapping();
 
     section_manager section;
-    for (const auto& handler : hg_.vm_handlers | std::views::values)
+    for(const auto& handler : hg_.vm_handlers | std::views::values)
     {
         function_container container = handler->construct_handler();
         section.add(container);
     }
 
-    if (randomize_handler_position)
-    {
-
-    }
+    if(randomize_handler_position) {}
 
     return section;
 }
@@ -46,9 +43,12 @@ std::vector<zydis_encoder_request> vm_generator::call_vm_exit()
     return {};
 }
 
-std::pair<bool, std::vector<dynamic_instruction>> vm_generator::translate_to_virtual(const zydis_decode& decoded)
+std::pair<bool, function_container> vm_generator::translate_to_virtual(const zydis_decode& decoded)
 {
     vm_handler_entry* handler = hg_.vm_handlers[decoded.instruction.mnemonic];
+    if(!handler)
+        return { false, {} };
+
     return handler->translate_to_virtual(decoded);
 }
 
@@ -57,7 +57,7 @@ std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)
     std::vector<uint8_t> padding;
     padding.reserve(bytes);
 
-    for (int i = 0; i < bytes; i++)
+    for(int i = 0; i < bytes; i++)
         padding.push_back(ran_device::get().gen_8());
 
     return padding;

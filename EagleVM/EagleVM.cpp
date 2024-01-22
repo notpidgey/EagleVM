@@ -202,8 +202,6 @@ int main(int argc, char* argv[])
                         // check if we are already inside of virtual machine to prevent multiple enters
                         if (!currently_in_vm)
                         {
-                            std::printf("\n[+] vmenter\n");
-
                             // call into the virtual machine
                             std::vector<zydis_encoder_request> enter_instructions = vm_generator.call_vm_enter();
                             section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
@@ -217,7 +215,6 @@ int main(int argc, char* argv[])
                         if (currently_in_vm)
                         {
                             // instruction is not supported by the virtual machine so we exit
-                            std::printf("[-] vmexit\n\n");
 
                             // call out of the virtual machine
                             std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit();

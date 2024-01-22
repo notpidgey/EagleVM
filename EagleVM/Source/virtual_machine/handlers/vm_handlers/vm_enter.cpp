@@ -52,5 +52,4 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     }
 
     std::printf("%3c %-17s %-10zi\n", 'Q', __func__, vm_enter_operations.size());
-    return vm_enter_operations;
 }
