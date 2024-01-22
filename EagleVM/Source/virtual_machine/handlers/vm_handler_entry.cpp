@@ -24,7 +24,7 @@ function_container vm_handler_entry::construct_handler()
         code_label* label = container.assign_label("handler." + std::to_string(size));
         container.assign_label(label);
 
-        dynamic_instructions_vec size_handler = construct_single(container, size);
+        construct_single(container, size);
 
         supported_handlers[size] = label;
     }

@@ -53,11 +53,16 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
     return {true, container};
 }
 
+void base_instruction_virtualizer::create_vm_return(function_container& container)
+{
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VRET)));
+}
+
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
 {
     code_label* retun_label = code_label::create("return_label");
     container.add({
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZLABEL(retun_label))),
+        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VRET), ZLABEL(retun_label))),
         RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(jump_label)))
     });
 

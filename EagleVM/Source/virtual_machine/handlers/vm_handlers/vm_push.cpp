@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_push.h"
 
-dynamic_instructions_vec vm_push_handler::construct_single(function_container container, reg_size reg_size)
+void vm_push_handler::construct_single(function_container& container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;
@@ -29,7 +29,7 @@ dynamic_instructions_vec vm_push_handler::construct_single(function_container co
         };
     }
 
-    RETURN_EXECUTION(handle_instructions);
+    create_vm_return(container);
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, handle_instructions.size());
 
     return handle_instructions;

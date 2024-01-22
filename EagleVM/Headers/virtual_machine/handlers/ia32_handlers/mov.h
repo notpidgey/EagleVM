@@ -11,5 +11,5 @@ public:
     };
 
 private:
-    dynamic_instructions_vec construct_single(function_container container, reg_size size) override;
+    void construct_single(function_container& container, reg_size size) override;
 };

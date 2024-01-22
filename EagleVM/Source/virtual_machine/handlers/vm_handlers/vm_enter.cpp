@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_enter.h"
 
-dynamic_instructions_vec vm_enter_handler::construct_single(function_container container, reg_size size)
+void vm_enter_handler::construct_single(function_container& container, reg_size size)
 {
     ZydisEncoderRequest req;
     dynamic_instructions_vec vm_enter_operations;

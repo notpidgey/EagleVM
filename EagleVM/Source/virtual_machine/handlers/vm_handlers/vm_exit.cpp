@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_exit.h"
 
-dynamic_instructions_vec vm_exit_handler::construct_single(function_container container, reg_size size)
+void vm_exit_handler::construct_single(function_container& container, reg_size size)
 {
     ZydisEncoderRequest req;
     dynamic_instructions_vec vm_exit_operations;

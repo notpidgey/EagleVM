@@ -1,7 +1,7 @@
 #include "virtual_machine/handlers/ia32_handlers/dec.h"
 
 
-dynamic_instructions_vec ia32_dec_handler::construct_single(function_container container, reg_size reg_size)
+void ia32_dec_handler::construct_single(function_container& container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

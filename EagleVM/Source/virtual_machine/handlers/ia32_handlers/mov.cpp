@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/ia32_handlers/mov.h"
 
-dynamic_instructions_vec ia32_mov_handler::construct_single(function_container container, reg_size size)
+void ia32_mov_handler::construct_single(function_container& container, reg_size size)
 {
     return {};
 }

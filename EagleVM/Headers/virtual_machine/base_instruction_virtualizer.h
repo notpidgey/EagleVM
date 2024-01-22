@@ -19,6 +19,7 @@
 #define VSP         rm_->reg_map[I_VSP]
 #define VREGS       rm_->reg_map[I_VREGS]
 #define VTEMP       rm_->reg_map[I_VTEMP]
+#define VRET        rm_->reg_map[I_VRET]
 #define PUSHORDER   rm_->reg_stack_order_
 
 enum class encode_status
@@ -43,6 +44,7 @@ protected:
     vm_register_manager* rm_;
     vm_handler_generator* hg_;
 
+    virtual void create_vm_return(function_container& container);
     virtual void create_vm_jump(function_container& container, code_label* jump_label);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem);

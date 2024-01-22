@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_pop.h"
 
-dynamic_instructions_vec vm_pop_handler::construct_single(function_container container, reg_size reg_size)
+void vm_pop_handler::construct_single(function_container& container, reg_size reg_size)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

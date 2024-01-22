@@ -32,5 +32,5 @@ protected:
     std::vector<reg_size> supported_sizes;
     std::unordered_map<reg_size, code_label*> supported_handlers;
 
-    virtual dynamic_instructions_vec construct_single(function_container container, reg_size size) = 0;
+    virtual void construct_single(function_container& container, reg_size size) = 0;
 };
