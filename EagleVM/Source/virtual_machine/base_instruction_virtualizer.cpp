@@ -1,5 +1,9 @@
 #include "virtual_machine/base_instruction_virtualizer.h"
 
+#include "virtual_machine/handlers/vm_handler_generator.h"
+#include "virtual_machine/vm_register_manager.h"
+
+
 base_instruction_virtualizer::base_instruction_virtualizer(vm_register_manager* manager, vm_handler_generator* handler_generator)
 {
     rm_ = manager;

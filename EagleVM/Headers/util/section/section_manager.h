@@ -1,6 +1,7 @@
 #pragma once
 #include "function_container.h"
 
+class code_label;
 class section_manager
 {
 public:

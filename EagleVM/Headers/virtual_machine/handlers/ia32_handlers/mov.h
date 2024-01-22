@@ -4,7 +4,7 @@
 class ia32_mov_handler : public vm_handler_entry
 {
 public:
-    ia32_mov_handler::ia32_mov_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
+    ia32_mov_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
         : vm_handler_entry(manager, handler_generator)
     {
         supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
@@ -12,6 +12,4 @@ public:
 
 private:
     dynamic_instructions_vec construct_single(function_container container, reg_size size) override;
-
-    bool hook_builder_operand(const zydis_decode& decoded, dynamic_instructions_vec& instructions, int index) override;
 };

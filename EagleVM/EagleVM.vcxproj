@@ -121,10 +121,12 @@
     <ClCompile Include="Source\util\section\section_manager.cpp" />
     <ClCompile Include="Source\util\util.cpp" />
     <ClCompile Include="Source\util\zydis_helper.cpp" />
+    <ClCompile Include="Source\virtual_machine\base_instruction_virtualizer.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\add.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\dec.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\div.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\inc.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mov.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mul.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\sub.cpp" />
     <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_enter.cpp" />
@@ -163,10 +165,12 @@
     <ClInclude Include="Headers\util\util.h" />
     <ClInclude Include="Headers\util\zydis_defs.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
+    <ClInclude Include="Headers\virtual_machine\base_instruction_virtualizer.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\add.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\dec.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\div.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\inc.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mov.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mul.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h" />
@@ -178,6 +182,7 @@
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_push.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_store.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_context.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_generator.h" />
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h" />
     <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_entry.h" />
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />

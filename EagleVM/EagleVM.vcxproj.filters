@@ -114,6 +114,12 @@
     <ClCompile Include="Source\virtual_machine\handlers\vm_handler_context.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mov.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\virtual_machine\base_instruction_virtualizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Headers\pe\pe_parser.h">
@@ -243,6 +249,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Headers\util\random.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mov.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_generator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Headers\virtual_machine\base_instruction_virtualizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

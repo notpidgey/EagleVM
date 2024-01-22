@@ -9,10 +9,10 @@
 #include <Zydis/Zydis.h>
 
 #include "virtual_machine/models/vm_defs.h"
-#include "handlers/vm_handler_generator.h"
-#include "virtual_machine/vm_register_manager.h"
 
 #include "util/section/section_manager.h"
+#include "util/section/function_container.h"
+
 #include "util/util.h"
 
 #define VIP         rm_->reg_map[I_VIP]
@@ -30,14 +30,16 @@ enum class encode_status
 typedef std::pair<function_container, encode_status> encode_data;
 typedef std::tuple<uint32_t, uint32_t, instructions_vec, encoded_vec> encode_handler_data;
 
+class vm_handler_generator;
+class vm_register_manager;
 class base_instruction_virtualizer
 {
 public:
+    explicit base_instruction_virtualizer(vm_register_manager* manager, vm_handler_generator* handler_generator);
+
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
 
 protected:
-    explicit base_instruction_virtualizer(vm_register_manager* manager, vm_handler_generator* handler_generator);
-
     vm_register_manager* rm_;
     vm_handler_generator* hg_;
 

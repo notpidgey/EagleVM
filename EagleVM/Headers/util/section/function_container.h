@@ -3,8 +3,6 @@
 #include <variant>
 #include <functional>
 
-#include "virtual_machine/base_instruction_virtualizer.h"
-
 #include "util/section/code_label.h"
 #include "util/zydis_defs.h"
 
@@ -19,7 +17,6 @@ public:
 
     code_label* assign_label(const std::string& name);
     void assign_label(code_label* label);
-
 
     void add(const dynamic_instruction& instruction);
     void add(std::vector<dynamic_instruction> instruction);

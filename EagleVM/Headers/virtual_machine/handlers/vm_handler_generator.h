@@ -13,6 +13,7 @@
 
 #include "virtual_machine/handlers/vm_handler_entry.h"
 #include "virtual_machine/vm_register_manager.h"
+
 #include "util/zydis_helper.h"
 #include "util/util.h"
 
