@@ -5,11 +5,11 @@ file(GLOB_RECURSE EagleVM_SRC
 )
 
 add_executable(EagleVM ${EagleVM_SRC}
-        Headers/virtual_machine/handlers/ia32_handlers/mov.h)
+        headers/virtual_machine/handlers/ia32_handlers/mov.h)
 
 target_include_directories(EagleVM
         PRIVATE
-        Headers
+        headers
         ${PROJECT_SOURCE_DIR}/deps/bigint
 )
 target_link_libraries(EagleVM PRIVATE Zydis)
