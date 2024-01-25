@@ -29,6 +29,7 @@ public:
     bool add_to(const code_label* target_label, std::vector<dynamic_instruction>& instruction);
 
     std::vector<function_segment>& get_segments();
+    size_t size() const;
 
 private:
     std::vector<function_segment> function_segments;

@@ -37,6 +37,7 @@ If you're looking to contribute to the project here are some ideas of what I wou
 - Potential CMKR implementation instead of normal vanilla CMake
 - Use of smart pointers over C-style pointers since code_labels will never be deallocated properly until the program closes
 - Unit tests starting with MBA generation
+- For each virtualized code section: instead of assuming there is no stack trickery going on, jump to a function in VM section which allocates stack space and then pushes an address (easy)
 
 ## Thank You To:
 

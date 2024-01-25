@@ -81,3 +81,13 @@ std::vector<function_segment>& function_container::get_segments()
 {
     return function_segments;
 }
+
+size_t function_container::size() const
+{
+    size_t count = 0;
+    for (const auto& segment : function_segments)
+    {
+        count += segment.second.size();
+    }
+    return count;
+}
