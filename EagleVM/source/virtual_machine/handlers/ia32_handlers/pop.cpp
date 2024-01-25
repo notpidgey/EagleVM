@@ -5,7 +5,7 @@ void ia32_pop_handler::construct_single(function_container& container, reg_size 
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;
 
-    //mov VTEMP, [vsp]
+    //mov VTEMP, [VSP]
     //add VSP, reg_size
     if (reg_size == reg_size::bit64)
     {
