@@ -36,7 +36,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
                 status = encode_operand(container, decoded_instruction, operand.reg);
                 break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
-                status = encode_operand(container, decoded_instruction, operand.mem);
+                status = encode_operand(container, decoded_instruction, operand.mem, i);
                 break;
             case ZYDIS_OPERAND_TYPE_POINTER:
                 status = encode_operand(container, decoded_instruction, operand.ptr);
@@ -89,7 +89,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     return encode_status::success;
 }
 
-encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem)
+encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int index)
 {
     //most definitely riddled with bugs
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
@@ -156,28 +156,24 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 
     if(op_mem.disp.has_displacement)
     {
-        //3. load the displacement and add
-        //mov VTEMP, imm
-        //jmp VM_ADD / VM_SUB
-        const ZyanI64 displacement_value = op_mem.disp.value;
-        if(displacement_value < 0)
-        {
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(-1 * op_mem.disp.value)));
-            create_vm_jump(container, sub_address);
-        }
-        else
-        {
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(op_mem.disp.value)));
-            create_vm_jump(container, add_address);
-        }
+        // 3. load the displacement and add
+        // we can do this with some trickery using LEA so we dont modify rflags
+
+        // pop current value into VTEMP
+        // lea VTEMP, [VTEMP +- imm]
+        // push
+
+        create_vm_jump(container, pop_address);
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
+        create_vm_jump(container, push_address);
     }
 
-    //at the end of this, the address inside [] is fully evaluated, now it needs to be transferred to register VTEMP
-    //to get whatever is inside that address we just dereference it, now its in VTEMP
+    // by default, this will be dereferenced and we will get the value at the address,
+    // in the case that we do not, the value at the top of the stack will just be an address
     if(!first_operand_as_ea)
     {
         create_vm_jump(container, pop_address);
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, base_size)));
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)));
         create_vm_jump(container, push_address);
     }
 

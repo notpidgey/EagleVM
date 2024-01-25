@@ -49,7 +49,7 @@ protected:
     virtual void create_vm_return(function_container& container);
     virtual void create_vm_jump(function_container& container, code_label* jump_label);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg);
-    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem);
+    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int index);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm);
 };
