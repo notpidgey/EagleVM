@@ -8,6 +8,7 @@ public:
         : vm_handler_entry(manager, handler_generator)
     {
         supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16, reg_size::bit8 };
+        first_operand_as_ea = true;
     };
 
 private:

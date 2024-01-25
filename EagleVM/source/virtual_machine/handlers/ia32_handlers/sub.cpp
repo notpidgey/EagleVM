@@ -18,6 +18,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)),
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
         });
+
+        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == reg_size::bit32)
     {
@@ -30,6 +32,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))),
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
         });
+
+        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == reg_size::bit16)
     {
@@ -42,6 +46,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))),
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
         });
+
+        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
     }
 
     create_vm_return(container);
@@ -59,16 +65,13 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         case ZYDIS_OPERAND_TYPE_REGISTER:
         {
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
-
-            create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+            // how to call and keep VTEMP?
             create_vm_jump(container, store_handler->get_handler_va(reg_size));
         }
         break;
         case ZYDIS_OPERAND_TYPE_MEMORY:
         {
             const auto reg_size = zydis_helper::get_reg_size(operand.mem.base);
-
-            create_vm_jump(container, pop_handler->get_handler_va(reg_size));
             container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(
                 ZMEMBD(VTEMP, 0, reg_size),
                 ZREG(zydis_helper::get_bit_version(VTEMP, reg_size))
