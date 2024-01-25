@@ -66,6 +66,12 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         {
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
             // how to call and keep VTEMP?
+            // just keep it saved on the stack after the handler is called
+            // you need to rework the operand virtualizer so that everything is a 64 bit value on the stack. cast down inside handlers
+            // also add base_instruction_virtualizer function that tells the operand virtualizer what vmhandler to pick for the mnemnic
+            // figure out how to get rid of adds, subs, mul inside of the operand virtualizer to prevent flags from changing
+            // finally, figure out how to deal with rflags inside of add.sub,dec,inc handlers
+            // shall i say profit ??
             create_vm_jump(container, store_handler->get_handler_va(reg_size));
         }
         break;
