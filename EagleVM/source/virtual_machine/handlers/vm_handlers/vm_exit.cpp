@@ -15,9 +15,15 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
     std::for_each(PUSHORDER.rbegin(), PUSHORDER.rend(),
         [&req, &vm_exit_operations](short reg)
         {
-            // we do not want to pop RIP
-            if(reg == IP_RIP)
-                req = zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_ereg>(ZREG(GR_RSP), 0x8);
+            if(reg == ZYDIS_REGISTER_RSP)
+            {
+                // this is a very shitty solution ...
+                vm_exit_operations += {
+                    zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+                    zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(reg), ZIMMU(16)),
+                    zydis_helper::encode<ZYDIS_MNEMONIC_POPFQ>()
+                };
+            }
 
             req = zydis_helper::encode<ZYDIS_MNEMONIC_POP, zydis_ereg>(ZREG(reg));
             vm_exit_operations.push_back(req);

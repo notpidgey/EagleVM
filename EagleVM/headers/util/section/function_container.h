@@ -30,7 +30,6 @@ public:
 
     std::vector<function_segment>& get_segments();
 
-
 private:
     std::vector<function_segment> function_segments;
 };

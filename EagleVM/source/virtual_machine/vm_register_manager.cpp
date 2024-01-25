@@ -1,12 +1,13 @@
 #include "virtual_machine/vm_register_manager.h"
 
+#include "util/random.h"
+
 void vm_register_manager::init_reg_order()
 {
     for (int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
-        reg_stack_order_[i - ZYDIS_REGISTER_RAX] = (zydis_register)i;
+        reg_stack_order_[i - ZYDIS_REGISTER_RAX] = static_cast<zydis_register>(i);
 
-    auto rng = std::default_random_engine{};
-    std::ranges::shuffle(reg_stack_order_, rng);
+    std::ranges::shuffle(reg_stack_order_, ran_device::get().rd);
 }
 
 std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(zydis_register reg)
@@ -15,7 +16,7 @@ std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(zydis_
     reg_size reg_size = zydis_helper::get_reg_size(reg);
 
     int found_index = 0;
-    for (int i = 0; i < reg_stack_order_.size(); i++)
+    for (int i = reg_stack_order_.size() - 1; i >= 0; i--)
     {
         if (reg == reg_stack_order_[i])
         {
