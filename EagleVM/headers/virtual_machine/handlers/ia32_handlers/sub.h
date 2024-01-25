@@ -11,5 +11,6 @@ public:
     };
 
 private:
-    virtual void construct_single(function_container& container, reg_size size) override;
+    void construct_single(function_container& container, reg_size size) override;
+    void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) override;
 };

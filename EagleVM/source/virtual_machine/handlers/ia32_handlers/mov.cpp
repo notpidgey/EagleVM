@@ -22,7 +22,7 @@ void ia32_mov_handler::construct_single(function_container& container, reg_size 
         // pop  ; load the value into VTEMP
         // mov [VSP], VTEMP
         create_vm_jump(container, push_handler->get_handler_va(size));
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, 4), ZREG(VTEMP)));
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, 4), ZREG(TO32(VTEMP))));
     }
     else if(size == bit16)
     {
@@ -31,6 +31,6 @@ void ia32_mov_handler::construct_single(function_container& container, reg_size 
         // pop  ; load the value into VTEMP
         // mov [VSP], VTEMP
         create_vm_jump(container, push_handler->get_handler_va(size));
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, 2), ZREG(VTEMP)));
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, 2), ZREG(TO16(VTEMP))));
     }
 }

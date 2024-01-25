@@ -45,9 +45,8 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
 
 reg_size zydis_helper::get_reg_size(const zydis_register zy_register)
 {
-    uint16_t bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
-
-    return reg_size(bit_size / 8);
+    const uint16_t bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
+    return static_cast<reg_size>(bit_size / 8);
 }
 
 char zydis_helper::reg_size_to_string(reg_size reg_size)

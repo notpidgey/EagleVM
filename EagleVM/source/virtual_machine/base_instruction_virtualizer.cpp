@@ -50,6 +50,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
             goto INSTRUCTION_NOT_SUPPORTED;
     }
 
+    finalize_translate_to_virtual(decoded_instruction, container);
     return {true, container};
 }
 
@@ -201,4 +202,9 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     });
 
     return encode_status::success;
+}
+
+void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
+{
+
 }
