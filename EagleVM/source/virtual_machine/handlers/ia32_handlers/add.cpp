@@ -13,11 +13,12 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
 
         //add qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
-        //pop VTEMP                     ; get the finalized value
         //pushfq                        ; keep track of rflags
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
@@ -28,11 +29,12 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
 
         //add dword ptr [VSP], VTEMP32
-        //pop VTEMP
         //pushfq
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
@@ -43,11 +45,12 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
 
         //add word ptr [VSP], VTEMP16
-        //pop VTEMP
         //pushfq
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));

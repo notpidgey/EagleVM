@@ -63,7 +63,6 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 
 void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
-    const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
     const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_STORE_REG];
 
     auto operand = decoded_instruction.operands[0];
