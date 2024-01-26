@@ -14,9 +14,12 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 
         //sub qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
         //pushfq                        ; keep track of rflags
+        //lea rsp, [rsp + 8]            ; we overwrote the rflags on the stack by pushing, so we reset
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
@@ -30,7 +33,9 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
         //pushfq
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
@@ -44,7 +49,9 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
         //pushfq
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))),
+
             zydis_helper::encode<ZYDIS_MNEMONIC_PUSHFQ>(),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
         create_vm_jump(container, pop_handler->get_handler_va(reg_size));
@@ -65,12 +72,9 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         case ZYDIS_OPERAND_TYPE_REGISTER:
         {
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
-            // how to call and keep VTEMP?
-            // just keep it saved on the stack after the handler is called
-            // you need to rework the operand virtualizer so that everything is a 64 bit value on the stack. cast down inside handlers
-            // also add base_instruction_virtualizer function that tells the operand virtualizer what vmhandler to pick for the mnemnic
-            // figure out how to get rid of adds, subs, mul inside of the operand virtualizer to prevent flags from changing
-            // finally, figure out how to deal with rflags inside of add.sub,dec,inc handlers
+            // 1. you need to rework the operand virtualizer so that everything is a 64 bit value on the stack. cast down inside handlers
+            // 2. also add base_instruction_virtualizer function that tells the operand virtualizer what vmhandler to pick for the mnemnic
+            // 3. finally, figure out how to deal with rflags inside of add.sub,dec,inc handlers
             // shall i say profit ??
             create_vm_jump(container, store_handler->get_handler_va(reg_size));
         }
