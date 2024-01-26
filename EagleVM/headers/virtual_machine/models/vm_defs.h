@@ -2,12 +2,13 @@
 #include <Zydis/Zydis.h>
 #include "util/zydis_defs.h"
 
-#define NUM_OF_VREGS 5
+#define NUM_OF_VREGS 6
 #define I_VIP 0
 #define I_VSP 1
 #define I_VREGS 2
 #define I_VTEMP 3
 #define I_VRET 4
+#define I_VTEMP2 5
 
 #define MNEMONIC_VM_ENTER 0
 #define MNEMONIC_VM_EXIT 1
