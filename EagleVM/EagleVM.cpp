@@ -8,14 +8,14 @@
 
 int main(int argc, char* argv[])
 {
-    mba_gen mba = mba_gen<std::uint8_t>(std::numeric_limits<uint8_t>::digits);
-
     // this is definitely a work in progress
     // also, this is not a true way of generating mba expressions
     // all this does is use mba rewrites as operators can be rewritten with equivalent expressions
     // TODO: insertion of identities from "Defeating MBA-based Obfuscation"
-    std::string result = mba.create_tree(op_plus, 5, 3);
-    std::cout << "\n[Final] " << result  << std::endl;
+    // mba_gen mba = mba_gen<std::uint64_t>(std::numeric_limits<uint64_t>::digits);
+
+    // std::string result = mba.create_tree(op_plus, 5, 3);
+    // std::cout << "\n[Final] " << result  << std::endl;
 
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
     pe_parser parser = pe_parser(executable);
@@ -164,12 +164,12 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)vm_section.VirtualAddress);
     
-    auto [raw_vm_size, handler_bytes] = vm_generator.generate_vm_handlers(false);
-    vm_section.SizeOfRawData = generator.align_file(raw_vm_size);
-    vm_section.Misc.VirtualSize = generator.align_section(raw_vm_size);
+    section_manager vm_section_manager = vm_generator.generate_vm_handlers(false);
+    encoded_vec vm_handlers_bytes = vm_section_manager.compile_section(vm_section.VirtualAddress);
 
-    for (auto& [_, _1, _2, encoded_bytes] : handler_bytes)
-        vm_section_bytes += encoded_bytes;
+    vm_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
+    vm_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
+    vm_section_bytes += vm_handlers_bytes;
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
@@ -202,8 +202,6 @@ int main(int argc, char* argv[])
                         // check if we are already inside of virtual machine to prevent multiple enters
                         if (!currently_in_vm)
                         {
-                            std::printf("\n[+] vmenter\n");
-
                             // call into the virtual machine
                             std::vector<zydis_encoder_request> enter_instructions = vm_generator.call_vm_enter();
                             section_instructions.insert(section_instructions.end(), enter_instructions.begin(), enter_instructions.end());
@@ -217,7 +215,6 @@ int main(int argc, char* argv[])
                         if (currently_in_vm)
                         {
                             // instruction is not supported by the virtual machine so we exit
-                            std::printf("[-] vmexit\n\n");
 
                             // call out of the virtual machine
                             std::vector<zydis_encoder_request> exit_instructions = vm_generator.call_vm_exit();
@@ -227,12 +224,12 @@ int main(int argc, char* argv[])
                         }
                     }
 
-                    std::vector<std::string> messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
-                    for(auto& message : messages)
-                        std::printf("[>] %s\n", message.c_str());
+                    // std::vector<std::string> messages = zydis_helper::print_queue(instructions, parser.offset_to_rva(vm_iat_calls[c].first));
+                    // for(auto& message : messages)
+                    //     std::printf("[>] %s\n", message.c_str());
 
                     // append all instructions to the section ( virtual or not )
-                    section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());
+                    //section_instructions.insert(section_instructions.end(), instructions.begin(), instructions.end());
                 });
 
         // TODO: generate function return to original execution
@@ -272,7 +269,7 @@ int main(int argc, char* argv[])
     packer_section.NumberOfLinenumbers = 0;
 
     last_section = &packer_section;
-    generator.save_file("box.exe");
+    generator.save_file("EagleVMSandboxProtected.exe");
 
     return 0;
 }

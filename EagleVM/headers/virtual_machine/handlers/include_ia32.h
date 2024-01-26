@@ -1,0 +1,10 @@
+#pragma once
+#include "virtual_machine/handlers/ia32_handlers/add.h"
+#include "virtual_machine/handlers/ia32_handlers/dec.h"
+#include "virtual_machine/handlers/ia32_handlers/div.h"
+#include "virtual_machine/handlers/ia32_handlers/inc.h"
+#include "virtual_machine/handlers/ia32_handlers/mul.h"
+#include "virtual_machine/handlers/ia32_handlers/sub.h"
+#include "virtual_machine/handlers/ia32_handlers/mov.h"
+#include "virtual_machine/handlers/ia32_handlers/pop.h"
+#include "virtual_machine/handlers/ia32_handlers/push.h"

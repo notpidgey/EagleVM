@@ -106,6 +106,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EagleVM.cpp" />
+    <ClCompile Include="Source\obfuscation\mba\math\mba_math.cpp" />
     <ClCompile Include="Source\obfuscation\mba\mba.cpp" />
     <ClCompile Include="Source\obfuscation\mba\variable\mba_const.cpp" />
     <ClCompile Include="Source\obfuscation\mba\variable\mba_exp.cpp" />
@@ -115,13 +116,29 @@
     <ClCompile Include="Source\pe\pe_parser.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_code_section.cpp" />
     <ClCompile Include="Source\pe\pe_sections\pe_handler_section.cpp" />
-    <ClCompile Include="Source\util\math.cpp" />
+    <ClCompile Include="Source\util\section\code_label.cpp" />
+    <ClCompile Include="Source\util\section\function_container.cpp" />
+    <ClCompile Include="Source\util\section\section_manager.cpp" />
     <ClCompile Include="Source\util\util.cpp" />
     <ClCompile Include="Source\util\zydis_helper.cpp" />
+    <ClCompile Include="Source\virtual_machine\base_instruction_virtualizer.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\add.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\dec.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\div.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\inc.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mov.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\mul.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\ia32_handlers\sub.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_enter.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_exit.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_load.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_pop.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_push.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handlers\vm_store.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handler_context.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handler_entry.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_generator.cpp" />
-    <ClCompile Include="Source\virtual_machine\vm_handler_manager.cpp" />
-    <ClCompile Include="Source\virtual_machine\vm_handle_generator.cpp" />
-    <ClCompile Include="Source\virtual_machine\vm_mba.cpp" />
+    <ClCompile Include="Source\virtual_machine\handlers\vm_handle_generator.cpp" />
     <ClCompile Include="Source\virtual_machine\vm_register_manager.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +147,7 @@
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_exp.h" />
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_var.h" />
     <ClInclude Include="Headers\obfsucation\mba\variable\mba_xy.h" />
+    <ClInclude Include="Headers\obfuscation\mba\math\mba_math.h" />
     <ClInclude Include="Headers\obfuscation\mba\mba.h" />
     <ClInclude Include="Headers\obfuscation\mba\variable\mba_const.h" />
     <ClInclude Include="Headers\obfuscation\mba\variable\mba_exp.h" />
@@ -140,15 +158,35 @@
     <ClInclude Include="Headers\pe\pe_sections\pe_code_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_handler_section.h" />
     <ClInclude Include="Headers\pe\pe_sections\pe_section.h" />
-    <ClInclude Include="Headers\util\math.h" />
+    <ClInclude Include="Headers\util\random.h" />
+    <ClInclude Include="Headers\util\section\function_container.h" />
+    <ClInclude Include="Headers\util\section\code_label.h" />
+    <ClInclude Include="Headers\util\section\section_manager.h" />
     <ClInclude Include="Headers\util\util.h" />
     <ClInclude Include="Headers\util\zydis_defs.h" />
     <ClInclude Include="Headers\util\zydis_helper.h" />
+    <ClInclude Include="Headers\virtual_machine\base_instruction_virtualizer.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\add.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\dec.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\div.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\inc.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mov.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\include_ia32.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\mul.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\ia32_handlers\sub.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\include_vm.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_enter.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_exit.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_load.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_pop.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_push.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handlers\vm_store.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_context.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_generator.h" />
     <ClInclude Include="Headers\virtual_machine\models\vm_defs.h" />
-    <ClInclude Include="Headers\virtual_machine\models\vm_handler_entry.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handler_entry.h" />
     <ClInclude Include="Headers\virtual_machine\vm_generator.h" />
-    <ClInclude Include="Headers\virtual_machine\vm_handler_manager.h" />
-    <ClInclude Include="Headers\virtual_machine\vm_handle_generator.h" />
+    <ClInclude Include="Headers\virtual_machine\handlers\vm_handle_generator.h" />
     <ClInclude Include="Headers\virtual_machine\vm_register_manager.h" />
   </ItemGroup>
   <ItemGroup>

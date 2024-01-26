@@ -4,9 +4,14 @@ file(GLOB_RECURSE EagleVM_SRC
     "*.cpp"
 )
 
-add_executable(EagleVM ${EagleVM_SRC})
+add_executable(EagleVM ${EagleVM_SRC}
+        headers/virtual_machine/handlers/ia32_handlers/mov.h)
 
-target_include_directories(EagleVM PRIVATE Headers)
+target_include_directories(EagleVM
+        PRIVATE
+        headers
+        ${PROJECT_SOURCE_DIR}/deps/bigint
+)
 target_link_libraries(EagleVM PRIVATE Zydis)
 target_compile_features(EagleVM PRIVATE cxx_std_23)
 
