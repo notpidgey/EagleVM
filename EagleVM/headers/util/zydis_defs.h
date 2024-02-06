@@ -65,12 +65,12 @@ struct zydis_decode
 
 #define IP_RIP  ZYDIS_REGISTER_RIP
 
-#define ZREG(x)			    { (ZydisRegister)x, 0 }
-#define ZIMMU(x)		    { .u = x }
-#define ZIMMS(x)		    { .s = x }
+#define ZREG(x)			    zydis_ereg{ (ZydisRegister)x, 0 }
+#define ZIMMU(x)		    zydis_eimm{ .u = x }
+#define ZIMMS(x)		    zydis_eimm{ .s = x }
 
 // Z BYTES MEM[REG(X) + Y]
-#define ZMEMBD(x, y, z)	    { (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
+#define ZMEMBD(x, y, z)	    zydis_emem{ (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
 
 // A BYTES MEM[REG(X) + (REG(Y) * Z)]
-#define ZMEMBI(x, y, z, a)	{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
+#define ZMEMBI(x, y, z, a)	zydis_emem{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
