@@ -10,8 +10,7 @@ void vm_register_manager::init_reg_order()
     std::ranges::shuffle(reg_stack_order_, ran_device::get().rd);
 }
 
-std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(zydis_register reg)
-{
+std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const zydis_register reg) const {
     //determine 64bit version of register
     reg_size reg_size = zydis_helper::get_reg_size(reg);
 

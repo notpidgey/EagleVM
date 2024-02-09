@@ -25,6 +25,9 @@ public:
     void add(code_label* target_label, const dynamic_instruction& instruction);
     void add(code_label* target_label, const std::vector<dynamic_instruction>& instruction);
 
+    function_container& operator+=(const dynamic_instruction& instruction);
+    function_container& operator+=(const std::vector<dynamic_instruction>& instruction);
+
     bool add_to(const code_label* target_label, dynamic_instruction& instruction);
     bool add_to(const code_label* target_label, std::vector<dynamic_instruction>& instruction);
 

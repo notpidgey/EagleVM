@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
 
         bool currently_in_vm = false;
         std::ranges::for_each(instructions,
-            [&](const zydis_decode instruction)
+            [&](const zydis_decode& instruction)
                 {
                     auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                     if (successfully_virtualized)
@@ -208,6 +208,8 @@ int main(int argc, char* argv[])
 
                             currently_in_vm = true;
                         }
+
+
                     }
                     else
                     {

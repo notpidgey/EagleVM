@@ -49,6 +49,20 @@ void function_container::add(code_label* target_label, const std::vector<dynamic
     function_segments.emplace_back(target_label, instruction);
 }
 
+function_container& function_container::operator+=(const dynamic_instruction& instruction)
+{
+    auto& [_, instructions] = function_segments.back();
+    instructions.push_back(instruction);
+    return *this;
+}
+
+function_container& function_container::operator+=(const std::vector<dynamic_instruction>& instruction)
+{
+    auto& [_, instructions] = function_segments.back();
+    instructions.insert(instructions.end(), instruction.begin(), instruction.end());
+    return *this;
+}
+
 bool function_container::add_to(const code_label* target_label, dynamic_instruction& instruction)
 {
     for(auto& [label, instructions] : function_segments)

@@ -33,14 +33,29 @@ section_manager vm_generator::generate_vm_handlers(bool randomize_handler_positi
     return section;
 }
 
-std::vector<zydis_encoder_request> vm_generator::call_vm_enter()
+std::vector<dynamic_instruction> vm_generator::call_vm_enter(function_container& container, code_label* target)
 {
-    return {};
+    const vm_handler_entry* vmenter = hg_.vm_handlers[MNEMONIC_VM_ENTER];
+    const auto vmenter_address = vmenter->get_handler_va(bit64);
+
+    return {
+        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))),
+        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(vmenter_address)))
+    };
 }
 
-std::vector<zydis_encoder_request> vm_generator::call_vm_exit()
+std::vector<dynamic_instruction> vm_generator::call_vm_exit(function_container& container, code_label* target)
 {
-    return {};
+    const vm_handler_entry* vmexit = hg_.vm_handlers[MNEMONIC_VM_EXIT];
+    const auto vmexit_address = vmexit->get_handler_va(bit64);
+
+    // we are currently inside the virtual machine
+    // we want to jump back to the original code for whatever reason
+
+    return {
+        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))),
+        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(vmexit_address)))
+    };
 }
 
 std::pair<bool, function_container> vm_generator::translate_to_virtual(const zydis_decode& decoded)
