@@ -16,9 +16,8 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
     // this should take all the functions in the section and connect them to desired labels
     for (auto& [code_label, sec_function] : section_functions)
     {
-        uint8_t align = current_address % 16;
-        if (align)
-            current_address += align;
+        const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
+        current_address += align;
 
         if (code_label)
             code_label->finalize(current_address);
@@ -53,12 +52,10 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
     current_address = 0;
     for (auto& [code_label, sec_function] : section_functions)
     {
-        uint8_t align = current_address % 16;
-        if (align)
-        {
-            current_address += align;
-            std::advance(it, align);
-        }
+        const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
+        current_address += align;
+
+        std::advance(it, align);
 
         auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions] : segments)
