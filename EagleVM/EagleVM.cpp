@@ -258,7 +258,6 @@ int main(int argc, char* argv[])
             vm_generator.call_vm_exit(container, jump_label);
 
             vm_code.add(container);
-            container = function_container();
         }
 
         va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
@@ -275,7 +274,7 @@ int main(int argc, char* argv[])
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
 
-    encoded_vec vm_code_bytes = vm_code.compile_section(vm_section.VirtualAddress);
+    encoded_vec vm_code_bytes = vm_code.compile_section(code_section.VirtualAddress);
     code_section.SizeOfRawData = generator.align_file(vm_code_bytes.size());
     code_section.Misc.VirtualSize = generator.align_section(vm_code_bytes.size());
     code_section_bytes += vm_code_bytes;
