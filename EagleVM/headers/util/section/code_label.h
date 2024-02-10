@@ -4,6 +4,8 @@
 class code_label
 {
 public:
+    inline static uint32_t base_address = 0;
+
     explicit code_label(const std::string& section_name);
     static code_label* create(const std::string& section_name);
 

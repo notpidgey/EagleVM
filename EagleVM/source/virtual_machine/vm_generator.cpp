@@ -38,10 +38,10 @@ void vm_generator::call_vm_enter(function_container& container, code_label* targ
     const vm_handler_entry* vmenter = hg_.vm_handlers[MNEMONIC_VM_ENTER];
     const auto vmenter_address = vmenter->get_handler_va(bit64);
 
-    container.add({
-        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))),
-        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(vmenter_address)))
-    });
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
+
+    code_label* rel_label = code_label::create("call_vm_enter_rel");
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP,  ZREL(vmenter_address, rel_label))));
 }
 
 void vm_generator::call_vm_exit(function_container& container, code_label* target)
@@ -52,15 +52,17 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
     // we are currently inside the virtual machine
     // we want to jump back to the original code for whatever reason
 
-    container.add({
-        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))),
-        RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(vmexit_address)))
-    });
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
+
+    code_label* rel_label = code_label::create("call_vm_exit_rel");
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP,  ZREL(vmexit_address, rel_label))));
 }
 
-encoded_vec vm_generator::create_jump(code_label* target)
+encoded_vec vm_generator::create_jump(uint32_t current, code_label* target)
 {
-    zydis_encoder_request jmp = zydis_helper::enc(ZYDIS_MNEMONIC_JMP, zydis_eimm(target->get()));
+    const uint32_t relative_jump = target->get() - (current + 5);
+
+    zydis_encoder_request jmp = zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZIMMS(relative_jump));
     return zydis_helper::encode_request(jmp);
 }
 

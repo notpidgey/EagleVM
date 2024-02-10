@@ -20,7 +20,7 @@ uint32_t code_label::get()
 void code_label::finalize(uint32_t va)
 {
     finalized = true;
-    virtual_address = va;
+    virtual_address = base_address + va;
 }
 
 std::string code_label::get_name()

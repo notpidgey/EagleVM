@@ -140,7 +140,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
         container.add({
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(index_displacement)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)),
             RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address))),
         });
     }

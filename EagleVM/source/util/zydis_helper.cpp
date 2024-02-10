@@ -73,7 +73,11 @@ std::vector<uint8_t> zydis_helper::encode_request(ZydisEncoderRequest& request)
 {
     std::vector<uint8_t> instruction(ZYDIS_MAX_INSTRUCTION_LENGTH);
     ZyanUSize encoded_length = sizeof(uint8_t) * ZYDIS_MAX_INSTRUCTION_LENGTH;
-    ZydisEncoderEncodeInstruction(&request, instruction.data(), &encoded_length);
+    ZyanStatus status = ZydisEncoderEncodeInstruction(&request, instruction.data(), &encoded_length);
+    if(!ZYAN_SUCCESS(status))
+    {
+        __debugbreak();
+    }
 
     instruction.resize(encoded_length);
 
@@ -142,9 +146,13 @@ std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
-        ZydisEncoderEncodeInstruction(&i, instruction_data.data(), &encoded_length);
-        instruction_data.resize(encoded_length);
+        const ZyanStatus result = ZydisEncoderEncodeInstruction(&i, instruction_data.data(), &encoded_length);
+        if(!ZYAN_SUCCESS(result))
+        {
+            __debugbreak();
+        }
 
+        instruction_data.resize(encoded_length);
         data.insert(data.end(), instruction_data.begin(), instruction_data.end());
     }
 

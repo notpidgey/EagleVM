@@ -32,6 +32,7 @@ typedef std::vector<uint8_t> encoded_vec;
 
 #define RECOMPILE(...) [=]() { return __VA_ARGS__ ; }
 #define ZLABEL(x) ZIMMU(x->get())
+#define ZREL(dest, curr) ZIMMS(int32_t(dest->get()) - (int32_t(curr->get()) + 5))
 
 struct zydis_decode
 {
