@@ -269,10 +269,10 @@ int main(int argc, char* argv[])
     // now that the section is compiled we must:
     // delete the code marked by va_delete
     // create jumps marked by va_enters
+
+    std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for(auto& [enter_va, enter_location] : va_enters)
-    {
-        encoded_vec loc = vm_generator::create_jump(enter_location);
-    }
+        va_inserts.push_back({ enter_va, vm_generator::create_jump(enter_location) });
 
     last_section = &code_section;
 
@@ -287,6 +287,9 @@ int main(int argc, char* argv[])
     packer_section.NumberOfLinenumbers = 0;
 
     last_section = &packer_section;
+
+    generator.add_ignores(va_delete);
+    generator.add_inserts(va_inserts);
     generator.save_file("EagleVMSandboxProtected.exe");
 
     return 0;

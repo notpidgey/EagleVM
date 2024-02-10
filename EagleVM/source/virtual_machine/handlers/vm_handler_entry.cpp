@@ -17,16 +17,24 @@ code_label* vm_handler_entry::get_handler_va(reg_size size) const
     return nullptr;
 }
 
-function_container vm_handler_entry::construct_handler()
+void vm_handler_entry::setup_labels()
 {
     for(auto size : supported_sizes)
     {
         code_label* label = container.assign_label("handler." + std::to_string(size));
+        supported_handlers[size] = label;
+    }
+
+}
+
+function_container vm_handler_entry::construct_handler()
+{
+    for(auto size : supported_sizes)
+    {
+        code_label* label = supported_handlers[size];
         container.assign_label(label);
 
         construct_single(container, size);
-
-        supported_handlers[size] = label;
     }
 
     return container;

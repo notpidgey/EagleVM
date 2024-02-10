@@ -61,6 +61,11 @@ void base_instruction_virtualizer::create_vm_return(function_container& containe
 
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
 {
+    if(!jump_label)
+    {
+        __debugbreak(); // jump_label should never be null
+    }
+
     code_label* retun_label = code_label::create("return_label");
     container.add({
         RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VRET), ZLABEL(retun_label))),
@@ -190,7 +195,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm)
 {
     auto imm = op_imm.value;
-    const auto r_size = reg_size(instruction.operands[0].size);
+    const auto r_size = static_cast<reg_size>(instruction.operands[0].size / 8);
 
     const vm_handler_entry* va_of_push_func = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
     const auto func_address_mem = va_of_push_func->get_handler_va(r_size);
