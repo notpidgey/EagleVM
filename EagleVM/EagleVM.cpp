@@ -139,6 +139,8 @@ int main(int argc, char* argv[])
     pe_generator generator(&parser);
     generator.load_parser();
 
+    // code_label::base_address = parser.get_nt_header()->OptionalHeader.BaseOfCode;
+
     IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
@@ -189,8 +191,8 @@ int main(int argc, char* argv[])
         );
 
         std::printf("[+] function %i-%i\n", c, c + 1);
-        std::printf("[>] instruction begin %u\n", parser.offset_to_rva(vm_iat_calls[c].first));
-        std::printf("[>] instruction end %u\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
+        std::printf("[>] instruction begin 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
+        std::printf("[>] instruction end 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
         std::printf("[>] instruction size %zu\n", protect_section.get_instruction_size());
 
         std::printf("[+] generated instructions\n\n");
@@ -212,19 +214,15 @@ int main(int argc, char* argv[])
                     // check if we are already inside of virtual machine to prevent multiple enters
                     if(!currently_in_vm)
                     {
-                        code_label* target_section = code_label::create("vmenter_location:" + current_va);
-                        va_enters.emplace_back(current_va, target_section);
+                        code_label* vmcode_target = code_label::create("vmcode_target:" + current_va);
+                        container.assign_label(vmcode_target);
 
-                        code_label* jump_label = code_label::create("vmenter_dest:" + current_va);
+                        code_label* vmenter_return_label = code_label::create("vmenter_return:" + current_va);
+                        vm_generator.call_vm_enter(container, vmenter_return_label);
+                        container.assign_label(vmenter_return_label);
+                        container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
 
-                        container.assign_label(target_section);
-
-                        vm_generator.call_vm_enter(container, jump_label);
-                        container.assign_label(jump_label);
-
-                        // this will case the container to jump to the code label which will point to the virtualized instructions
-                        container.merge(instructions);
-
+                        va_enters.emplace_back(current_va, vmcode_target);
                         currently_in_vm = true;
                     }
                 }
@@ -249,6 +247,20 @@ int main(int argc, char* argv[])
 
                 current_va += instruction.instruction.length;
             });
+
+        if(currently_in_vm)
+        {
+            code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+            jump_label->finalize(current_va); // since we already know where we need to jump back to
+
+            vm_generator.call_vm_exit(container, jump_label);
+
+            vm_code.add(container);
+            container = function_container();
+        }
+
+        va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
+        va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
     }
 
     auto& [code_section, code_section_bytes] = generator.add_section(".vmcode");
@@ -272,7 +284,7 @@ int main(int argc, char* argv[])
 
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for(auto& [enter_va, enter_location] : va_enters)
-        va_inserts.push_back({ enter_va, vm_generator::create_jump(enter_location) });
+        va_inserts.emplace_back(enter_va, vm_generator::create_jump(enter_va, enter_location));
 
     last_section = &code_section;
 
