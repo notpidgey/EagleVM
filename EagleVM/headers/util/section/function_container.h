@@ -31,8 +31,10 @@ public:
     bool add_to(const code_label* target_label, dynamic_instruction& instruction);
     bool add_to(const code_label* target_label, std::vector<dynamic_instruction>& instruction);
 
-    std::vector<function_segment>& get_segments();
+    const std::vector<function_segment>& get_segments() const;
     size_t size() const;
+
+    void merge(const function_container& other);
 
 private:
     std::vector<function_segment> function_segments;

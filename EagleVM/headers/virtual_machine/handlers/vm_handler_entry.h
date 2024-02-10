@@ -25,8 +25,8 @@ public:
     function_container construct_handler();
 
 protected:
-    constexpr auto vm_overhead = 20;
-    constexpr auto stack_regs = 17;
+    const uint8_t vm_overhead = 20;
+    const uint8_t stack_regs = 17;
 
     bool has_builder_hook;
     bool is_vm_handler;

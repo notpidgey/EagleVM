@@ -25,8 +25,9 @@ public:
 
     section_manager generate_vm_handlers(bool randomize_handler_position);
 
-    std::vector<dynamic_instruction> call_vm_enter(function_container& container, code_label* target);
-    std::vector<dynamic_instruction> call_vm_exit(function_container& container, code_label* target);
+    void call_vm_enter(function_container& container, code_label* target);
+    void call_vm_exit(function_container& container, code_label* target);
+    static encoded_vec create_jump(code_label* target);
 
     std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
     static std::vector<uint8_t> create_padding(size_t bytes);
