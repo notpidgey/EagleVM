@@ -19,6 +19,7 @@
 #define VSP         rm_->reg_map[I_VSP]
 #define VREGS       rm_->reg_map[I_VREGS]
 #define VTEMP       rm_->reg_map[I_VTEMP]
+#define VTEMP2      rm_->reg_map[I_VTEMP2]
 #define VRET        rm_->reg_map[I_VRET]
 #define PUSHORDER   rm_->reg_stack_order_
 

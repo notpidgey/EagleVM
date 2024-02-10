@@ -57,5 +57,13 @@ namespace zydis_helper
 		return encoder;
 	}
 
+	zydis_encoder_request enc(zyids_mnemonic mnemonic, auto&&... args)
+	{
+		auto encoder = zydis_helper::create_encode_request(mnemonic);
+		(add_op(encoder, std::forward<decltype(args)>(args)), ...);
+
+		return encoder;
+	}
+
 	std::vector<zydis_decode> get_instructions(void* data, size_t size);
 }

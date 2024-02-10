@@ -47,31 +47,35 @@
 
 int main(int argc, char* argv[])
 {
-    int num;
+    char chars[21]; // 20 characters for the license key and 1 for the null terminator
 
-    printf("whats the magic number: ");
-    scanf_s("%i", &num);
+    printf("enter your license key: ");
+    scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
+
+    if(strlen(chars) != 20)
+    {
+        printf("invalid license :(");
+        return 1;
+    }
 
     fnEagleVMBegin();
 
-    int test_num = 421;
-    test_num ^= 2;
-    test_num -= 40;
-    test_num += 1;
-    
-    if(num == test_num) // 384
-    {
-        int i = 5;
-        i++;
-        i--;
-
-        int x = 0;
-        x += i;
-
-        printf("test %i %i", i, x);
-    }
+    // Perform basic arithmetic operations
+    int result1 = chars[0] + chars[4] - chars[8] * chars[12];
+    int result2 = chars[1] - chars[5] * chars[9] + chars[13];
+    int result3 = chars[2] * chars[6] + chars[10] - chars[14];
+    int result4 = chars[3] + chars[7] - chars[11] * chars[15];
 
     fnEagleVMEnd();
+
+    if(result1 == 10 && result2 == 15 && result3 == 20 && result4 == 25)
+    {
+        printf("congradulations, you earned a cookie!");
+    }
+    else
+    {
+        printf("almost...");
+    }
 
     return 0;
 }

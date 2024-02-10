@@ -23,14 +23,14 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
         if (code_label)
             code_label->finalize(current_address);
 
-        std::vector<function_segment>& segments = sec_function.get_segments();
+        auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions] : segments)
         {
             if(seg_code_label)
                 seg_code_label->finalize(current_address);
 
             instructions_vec requests;
-            for (dynamic_instruction& inst : instructions)
+            for (auto& inst : instructions)
             {
                 std::visit([&requests](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
@@ -43,10 +43,7 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
 
             // zydis does not really have a way of checking the length of an encoded instruction without encoding it
             // so we are going to just encode and check the size... sorry
-            std::vector<uint8_t> instructions = zydis_helper::encode_queue(requests);
-            uint32_t segment_size = instructions.size();
-
-            current_address += segment_size;
+            current_address += zydis_helper::encode_queue(requests).size();
         }
     }
 
@@ -63,11 +60,11 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
             std::advance(it, align);
         }
 
-        std::vector<function_segment>& segments = sec_function.get_segments();
+        auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions] : segments)
         {
             instructions_vec requests;
-            for (dynamic_instruction& inst : instructions)
+            for (auto& inst : instructions)
             {
                 std::visit([&requests](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;

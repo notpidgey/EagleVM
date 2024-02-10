@@ -32,6 +32,9 @@ public:
     void add_section(PIMAGE_SECTION_HEADER section_header);
     void add_section(IMAGE_SECTION_HEADER section_header);
 
+    void add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore);
+    void add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert);
+
     std::vector<generator_section_t> get_sections();
     generator_section_t& get_last_section();
 
@@ -47,4 +50,7 @@ private:
     std::vector<uint8_t> dos_stub;
     IMAGE_NT_HEADERS nt_headers;
     std::vector<generator_section_t> sections;
+
+    std::vector<std::pair<uint32_t, uint8_t>> va_ignore;
+    std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_insert;
 };

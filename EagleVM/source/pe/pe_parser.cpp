@@ -220,7 +220,7 @@ void pe_parser::enum_imports(const std::function<void(PIMAGE_IMPORT_DESCRIPTOR, 
 
 pe_protected_section pe_parser::offset_to_ptr(uint32_t offset_begin, uint32_t offset_end)
 {
-    pe_protected_section protect
+    const pe_protected_section protect
     {
         &unprotected_pe_[offset_begin],
         &unprotected_pe_[offset_end + SIZE_OF_QWORD_CALL],

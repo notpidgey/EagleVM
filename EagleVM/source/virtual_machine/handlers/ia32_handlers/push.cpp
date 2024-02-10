@@ -2,7 +2,7 @@
 
 void ia32_push_handler::construct_single(function_container& container, reg_size reg_size)
 {
-    uint64_t size = reg_size;
+    int64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;
 
     //sub VSP, reg_size

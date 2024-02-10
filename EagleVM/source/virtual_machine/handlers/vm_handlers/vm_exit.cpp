@@ -20,7 +20,7 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
         {
             if(reg == ZYDIS_REGISTER_RSP)
             {
-                container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_ereg, zydis_eimm>(ZREG(reg), ZIMMU(16)));
+                container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(reg), ZMEMBD(reg, 8, 8)));
                 return;
             }
 

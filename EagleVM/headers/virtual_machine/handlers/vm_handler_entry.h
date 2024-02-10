@@ -22,9 +22,14 @@ public:
     explicit vm_handler_entry(vm_register_manager* manager, vm_handler_generator* handler_generator);
 
     code_label* get_handler_va(reg_size size) const;
+
+    void setup_labels();
     function_container construct_handler();
 
 protected:
+    inline static uint8_t vm_overhead = 20;
+    inline static uint8_t stack_regs = 17;
+
     bool has_builder_hook;
     bool is_vm_handler;
     function_container container;
