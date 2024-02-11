@@ -20,7 +20,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
         decoded_instruction.instruction.mnemonic))
     {
     INSTRUCTION_NOT_SUPPORTED:
-        return {false, container};
+        return { false, container };
     }
 
     for(int i = 0; i < decoded_instruction.instruction.operand_count; i++)
@@ -51,20 +51,23 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
     }
 
     finalize_translate_to_virtual(decoded_instruction, container);
-    return {true, container};
+    return { true, container };
 }
 
 void base_instruction_virtualizer::create_vm_return(function_container& container)
 {
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VRET)));
+    // we are trying to create a jmp [VRET - RIP + 5]
+    // i suppose we dont really need to use code lables to make these jumps and just use RIP in the mem operand?
+    // but... it would make for some nice MBA obfuscation if we were to implement since we are going to have a nice constant to work with
+
+    code_label* rel_label = code_label::create("create_vm_return");
+    container.add(rel_label, zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_emem>(ZMEMBD(VRET, -rel_label->get() + 5, 8)));
 }
 
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
 {
     if(!jump_label)
-    {
         __debugbreak(); // jump_label should never be null
-    }
 
     code_label* retun_label = code_label::create("return_label");
     container.add({
@@ -84,13 +87,11 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto func_address = va_of_push_func->get_handler_va(zydis_helper::get_reg_size(op_reg.value));
 
     //this routine will load the register value to the top of the VSTACK
-    const std::vector<dynamic_instruction> load_register
-    {
-        //mov VTEMP, -8
-        //call VM_LOAD_REG
-        zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address))),
-    };
+    //mov VTEMP, -8
+    //call VM_LOAD_REG
+
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
+    create_vm_jump(container, func_address);
 
     return encode_status::success;
 }
@@ -139,10 +140,8 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
-        container.add({
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)),
-            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address))),
-        });
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)));
+        create_vm_jump(container, lreg_address);
     }
 
     if(op_mem.scale != 1)
@@ -201,15 +200,10 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto func_address_mem = va_of_push_func->get_handler_va(r_size);
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
-    container.add({
-        zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address_mem)))
-    });
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)));
+    create_vm_jump(container, func_address_mem);
 
     return encode_status::success;
 }
 
-void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
-{
-
-}
+void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) {}

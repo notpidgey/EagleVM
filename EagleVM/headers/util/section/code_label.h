@@ -9,7 +9,7 @@ public:
     explicit code_label(const std::string& section_name);
     static code_label* create(const std::string& section_name);
 
-    uint32_t get();
+    int32_t get();
     void finalize(uint32_t virtual_address);
 
     std::string get_name();

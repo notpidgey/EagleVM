@@ -190,12 +190,12 @@ int main(int argc, char* argv[])
             protect_section.instruction_protect_begin, protect_section.get_instruction_size()
         );
 
-        std::printf("[+] function %i-%i\n", c, c + 1);
-        std::printf("[>] instruction begin 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
-        std::printf("[>] instruction end 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
-        std::printf("[>] instruction size %zu\n", protect_section.get_instruction_size());
+        std::printf("[+] Function %i-%i\n", c, c + 1);
+        std::printf("\t[>] Instruction begin: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
+        std::printf("\t[>] Instruction end: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
+        std::printf("\t[>] Instruction size: %zu\n", protect_section.get_instruction_size());
 
-        std::printf("[+] generated instructions\n\n");
+        std::printf("\n[+] Generated instructions\n");
 
         function_container container;
 
@@ -226,7 +226,11 @@ int main(int argc, char* argv[])
 
                         va_enters.emplace_back(current_va, vmcode_target);
                         currently_in_vm = true;
+
+                        std::printf("\n\t[>] VMENTER\n");
                     }
+
+                    std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
                 }
                 else
                 {
@@ -244,11 +248,17 @@ int main(int argc, char* argv[])
 
                         vm_code_sm.add(container);
                         container = function_container();
+
+                        std::printf("\n\t[>] VMEXIT\n");
                     }
+
+                    std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
                 }
 
                 current_va += instruction.instruction.length;
             });
+
+        std::printf("[+] Virtualized section\n");
 
         if(currently_in_vm)
         {
@@ -263,6 +273,8 @@ int main(int argc, char* argv[])
         va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
         va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
     }
+
+    std::printf("\n\n");
 
     auto& [code_section, code_section_bytes] = generator.add_section(".vmcode");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
