@@ -20,7 +20,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
         decoded_instruction.instruction.mnemonic))
     {
     INSTRUCTION_NOT_SUPPORTED:
-        return {false, container};
+        return { false, container };
     }
 
     for(int i = 0; i < decoded_instruction.instruction.operand_count; i++)
@@ -51,7 +51,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
     }
 
     finalize_translate_to_virtual(decoded_instruction, container);
-    return {true, container};
+    return { true, container };
 }
 
 void base_instruction_virtualizer::create_vm_return(function_container& container)
@@ -87,13 +87,11 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto func_address = va_of_push_func->get_handler_va(zydis_helper::get_reg_size(op_reg.value));
 
     //this routine will load the register value to the top of the VSTACK
-    const std::vector<dynamic_instruction> load_register
-    {
-        //mov VTEMP, -8
-        //call VM_LOAD_REG
-        zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)),
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address))),
-    };
+    //mov VTEMP, -8
+    //call VM_LOAD_REG
+
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
+    create_vm_jump(container, func_address);
 
     return encode_status::success;
 }
@@ -142,10 +140,8 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
-        container.add({
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)),
-            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(lreg_address))),
-        });
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)));
+        create_vm_jump(container, lreg_address);
     }
 
     if(op_mem.scale != 1)
@@ -204,15 +200,10 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto func_address_mem = va_of_push_func->get_handler_va(r_size);
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
-    container.add({
-        zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)),
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(func_address_mem)))
-    });
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)));
+    create_vm_jump(container, func_address_mem);
 
     return encode_status::success;
 }
 
-void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
-{
-
-}
+void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) {}

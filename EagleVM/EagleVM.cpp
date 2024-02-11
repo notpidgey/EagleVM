@@ -228,10 +228,10 @@ int main(int argc, char* argv[])
                         currently_in_vm = true;
 
                         std::printf("\n\t[>] VMENTER\n");
-               }
+                    }
 
                     std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
-            }
+                }
                 else
                 {
                     // exit virtual machine if this is a non-virtual instruction
@@ -250,10 +250,10 @@ int main(int argc, char* argv[])
                         container = function_container();
 
                         std::printf("\n\t[>] VMEXIT\n");
-                }
+                    }
 
                     std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
-            }
+                }
 
                 current_va += instruction.instruction.length;
             });
