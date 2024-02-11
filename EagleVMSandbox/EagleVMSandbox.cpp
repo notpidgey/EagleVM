@@ -47,11 +47,12 @@
 
 int main(int argc, char* argv[])
 {
-    char chars[21]; // 20 characters for the license key and 1 for the null terminator
+    // char chars[21]; // 20 characters for the license key and 1 for the null terminator
 
     printf("enter your license key: ");
-    scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
+    // scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
 
+    const char* chars = "12345678901234567890";
     if(strlen(chars) != 20)
     {
         printf("invalid license :(");
