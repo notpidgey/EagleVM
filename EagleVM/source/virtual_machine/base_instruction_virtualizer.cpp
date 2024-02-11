@@ -56,15 +56,18 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
 
 void base_instruction_virtualizer::create_vm_return(function_container& container)
 {
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VRET)));
+    // we are trying to create a jmp [VRET - RIP + 5]
+    // i suppose we dont really need to use code lables to make these jumps and just use RIP in the mem operand?
+    // but... it would make for some nice MBA obfuscation if we were to implement since we are going to have a nice constant to work with
+
+    code_label* rel_label = code_label::create("create_vm_return");
+    container.add(rel_label, zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_emem>(ZMEMBD(VRET, -rel_label->get() + 5, 8)));
 }
 
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
 {
     if(!jump_label)
-    {
         __debugbreak(); // jump_label should never be null
-    }
 
     code_label* retun_label = code_label::create("return_label");
     container.add({
