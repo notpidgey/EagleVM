@@ -145,17 +145,17 @@ int main(int argc, char* argv[])
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
-    auto& [vm_section, vm_section_bytes] = generator.add_section(".vmdata");
-    vm_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
-    vm_section.SizeOfRawData = 0;
-    vm_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
-    vm_section.Misc.VirtualSize = 0;
-    vm_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    vm_section.PointerToRelocations = 0;
-    vm_section.NumberOfRelocations = 0;
-    vm_section.NumberOfLinenumbers = 0;
+    auto& [data_section, data_section_bytes] = generator.add_section(".vmdata");
+    data_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
+    data_section.SizeOfRawData = 0;
+    data_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+    data_section.Misc.VirtualSize = 0;
+    data_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    data_section.PointerToRelocations = 0;
+    data_section.NumberOfRelocations = 0;
+    data_section.NumberOfLinenumbers = 0;
 
-    last_section = &vm_section;
+    last_section = &data_section;
 
     vm_generator vm_generator;
     vm_generator.init_reg_order();
@@ -164,14 +164,14 @@ int main(int argc, char* argv[])
     vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t) vm_section.VirtualAddress);
+    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t) data_section.VirtualAddress);
 
-    section_manager vm_section_manager = vm_generator.generate_vm_handlers(false);
-    encoded_vec vm_handlers_bytes = vm_section_manager.compile_section(vm_section.VirtualAddress);
+    section_manager vm_data_sm = vm_generator.generate_vm_handlers(false);
+    encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
 
-    vm_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
-    vm_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
-    vm_section_bytes += vm_handlers_bytes;
+    data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
+    data_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
+    data_section_bytes += vm_handlers_bytes;
 
     // now that we have all the vm handlers generated, we need to randomize them in the section
     // we need to create a map of all the handlers
@@ -181,7 +181,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, uint8_t>> va_delete;
     std::vector<std::pair<uint32_t, code_label*>> va_enters;
 
-    section_manager vm_code;
+    section_manager vm_code_sm;
     for(int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[c].first, vm_iat_calls[c + 1].first);
@@ -205,6 +205,8 @@ int main(int argc, char* argv[])
         std::ranges::for_each(instructions,
             [&](const zydis_decode& instruction)
             {
+                // TODO: since all the jumps calculated by the code labels in the binary are relative addresses we are going to need to push a base address of the binary onto the stack after entering the VM, this way we can just to a memory opperand on jmp [VBASE + virtual]
+
                 auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                 if(successfully_virtualized)
                 {
@@ -240,7 +242,7 @@ int main(int argc, char* argv[])
 
                         currently_in_vm = false;
 
-                        vm_code.add(container);
+                        vm_code_sm.add(container);
                         container = function_container();
                     }
                 }
@@ -255,8 +257,7 @@ int main(int argc, char* argv[])
 
             vm_generator.call_vm_exit(container, jump_label);
 
-            vm_code.add(container);
-            container = function_container();
+            vm_code_sm.add(container);
         }
 
         va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
@@ -273,7 +274,7 @@ int main(int argc, char* argv[])
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
 
-    encoded_vec vm_code_bytes = vm_code.compile_section(vm_section.VirtualAddress);
+    encoded_vec vm_code_bytes = vm_code_sm.compile_section(code_section.VirtualAddress);
     code_section.SizeOfRawData = generator.align_file(vm_code_bytes.size());
     code_section.Misc.VirtualSize = generator.align_section(vm_code_bytes.size());
     code_section_bytes += vm_code_bytes;

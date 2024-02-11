@@ -41,7 +41,11 @@ void vm_generator::call_vm_enter(function_container& container, code_label* targ
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
 
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP,  ZREL(vmenter_address, rel_label))));
+    container.add(rel_label, [=]()
+    {
+        int32_t jump = static_cast<int32_t>(vmenter_address->get()) - (static_cast<int32_t>(rel_label->get()) + 8);
+        return zydis_helper::enc(ZYDIS_MNEMONIC_JMP, zydis_eimm{ .s = jump });
+    });
 }
 
 void vm_generator::call_vm_exit(function_container& container, code_label* target)
@@ -55,7 +59,7 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
 
     code_label* rel_label = code_label::create("call_vm_exit_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP,  ZREL(vmexit_address, rel_label))));
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREL(vmexit_address, rel_label))));
 }
 
 encoded_vec vm_generator::create_jump(uint32_t current, code_label* target)

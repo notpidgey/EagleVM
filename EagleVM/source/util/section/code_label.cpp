@@ -4,7 +4,7 @@ code_label::code_label(const std::string& section_name)
 {
     name = section_name;
     finalized = false;
-    virtual_address = 0;
+    virtual_address = INT32_MAX;
 }
 
 code_label* code_label::create(const std::string& section_name)

@@ -41,9 +41,6 @@ void vm_handler_generator::setup_vm_mapping()
 
     for(const auto& handler : vm_handlers | std::views::values)
         handler->setup_labels();
-
-    for(const auto& handler : vm_handlers | std::views::values)
-        handler->construct_handler();
 }
 
 void vm_handler_generator::setup_enc_constants()

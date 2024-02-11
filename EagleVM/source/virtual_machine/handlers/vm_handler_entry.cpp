@@ -24,7 +24,6 @@ void vm_handler_entry::setup_labels()
         code_label* label = container.assign_label("handler." + std::to_string(size));
         supported_handlers[size] = label;
     }
-
 }
 
 function_container vm_handler_entry::construct_handler()
