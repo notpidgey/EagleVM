@@ -28,12 +28,12 @@ Todo
 
 Todo
 
-### Potential Contributions
+## Potential Contributions
 The project is difficult to maintain and develop solo, if you are looking to contribute I encourage you to take a look at any of the following bugs or possible features!
-#### Bugs
+### Bugs
 - The virtualizer does not handle cases where there are jumps into virtualized code resulting in undefined behavior
 - The idea for base instruction virtualization is not concrete. There will be edge cases for future handlers where the virtualization of operands might have to be different and will not function generically.
-#### Features
+### Features
 - Implement encryption routine for entering VM (can be replaced by MBA)
 - Utilize the MBA generation by taking in target registers and an expression to turn into a set of instructions.
 - Control flow flattening and other kinds of mutation
@@ -41,7 +41,7 @@ The project is difficult to maintain and develop solo, if you are looking to con
 - Simple VM packer.
 - Implement a proper stack check instead of allocating a static amount of stack space for virtualized code.
 - Import table builder. Allow for addition and removal of imports.
-#### Refacatoring
+### Refacatoring
 - Potential CMKR implementation instead of normal vanilla CMake
 - Implementation of C++ exceptions to handle deeply nested exceptions that occur while virtualizing instead of using INT3s
 - Dealing with RECOMPILE macro and making the code cleaner when creating a function container. I do not see how this is possible without causing container builders to become longer.
@@ -57,4 +57,7 @@ The project is difficult to maintain and develop solo, if you are looking to con
 - Iizerd - General virtualization clarification.
 
 ## Resources:
-Todo
+- [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/)
+- [VMP2 Virtualization](https://back.engineering/17/05/2021/)
+- [Obfuscation with Mixed Boolean-Arithmetic Expressions : reconstruction, analysis and simplification tools](https://theses.hal.science/tel-01623849/document)
+- [Justus Polzin](https://plzin.github.io/)
