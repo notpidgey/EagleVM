@@ -28,24 +28,33 @@ Todo
 
 Todo
 
-### Wishlist 
-If you're looking to contribute to the project here are some ideas of what I would like to add.
-- Implement encryption for entering VM 
-- Potential project refactor
-- Implement code obfuscation options
-- For chunks of virtualized instructions, a VM enter could decrypt them using some kind of algorithm at runtime.
+### Potential Contributions
+The project is difficult to maintain and develop solo, if you are looking to contribute I encourage you to take a look at any of the following bugs or possible features!
+#### Bugs
+- The virtualizer does not handle cases where there are jumps into virtualized code resulting in undefined behavior
+- The idea for base instruction virtualization is not concrete. There will be edge cases for future handlers where the virtualization of operands might have to be different and will not function generically.
+#### Features
+- Implement encryption routine for entering VM (can be replaced by MBA)
+- Utilize the MBA generation by taking in target registers and an expression to turn into a set of instructions.
+- Control flow flattening and other kinds of mutation
+- For chunks of VM code, a VM enter could decrypt them using some kind of algorithm at runtime.
+- Simple VM packer.
+- Implement a proper stack check instead of allocating a static amount of stack space for virtualized code.
+- Import table builder. Allow for addition and removal of imports.
+#### Refacatoring
 - Potential CMKR implementation instead of normal vanilla CMake
+- Implementation of C++ exceptions to handle deeply nested exceptions that occur while virtualizing instead of using INT3s
+- Dealing with RECOMPILE macro and making the code cleaner when creating a function container. I do not see how this is possible without causing container builders to become longer.
 - Use of smart pointers over C-style pointers since code_labels will never be deallocated properly until the program closes
 - Unit tests starting with MBA generation
-- For each virtualized code section: instead of assuming there is no stack trickery going on, jump to a function in VM section which allocates stack space and then pushes an address (easy)
-- Create proper way of determining what VM handler an instruction should call based on its operands
 
 ## Thank You To:
 
-- r0da - Inspiring this project with [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/) analysis.
-- _xeroxz - Great analysis of [VMP2 Virtualization](https://back.engineering/17/05/2021/) and clarification of VMP routines.
-- Iizerd - Help with general understanding of code virtualization when starting the project.
-- hasherezade - Creator of tool [PE-Bear](https://github.com/hasherezade/pe-bear-releases) used for this project.
+- r0da - [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/).
+- _xeroxz - [VMP2 Virtualization](https://back.engineering/17/05/2021/) and clarification of VMP routines.
+- hasherezade - [PE-Bear](https://github.com/hasherezade/pe-bear-releases) used for this project.
+- mrexodia - Project contribution and project advice. 
+- Iizerd - General virtualization clarification.
 
 ## Resources:
 Todo
