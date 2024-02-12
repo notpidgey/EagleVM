@@ -27,7 +27,7 @@ public:
 
     void call_vm_enter(function_container& container, code_label* target);
     void call_vm_exit(function_container& container, code_label* target);
-    static encoded_vec create_jump(uint32_t current, code_label* target);
+    static encoded_vec create_jump(uint32_t rva, code_label* rva_target);
 
     std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
     static std::vector<uint8_t> create_padding(size_t bytes);

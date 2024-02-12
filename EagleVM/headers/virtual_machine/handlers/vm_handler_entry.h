@@ -15,6 +15,9 @@
     : vm_handler_entry(manager, handler_generator) \
     { supported_sizes = {__VA_ARGS__}; };
 
+constexpr uint8_t vm_overhead = 20;
+constexpr uint8_t stack_regs = 17;
+
 class code_label;
 class vm_handler_entry : public base_instruction_virtualizer
 {
@@ -27,9 +30,6 @@ public:
     function_container construct_handler();
 
 protected:
-    inline static uint8_t vm_overhead = 20;
-    inline static uint8_t stack_regs = 17;
-
     bool has_builder_hook;
     bool is_vm_handler;
     function_container container;

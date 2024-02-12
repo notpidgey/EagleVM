@@ -1,10 +1,7 @@
 #include "virtual_machine/handlers/vm_handler_entry.h"
 
 vm_handler_entry::vm_handler_entry(vm_register_manager* manager, vm_handler_generator* handler_generator)
-            : base_instruction_virtualizer(manager, handler_generator), has_builder_hook(false), is_vm_handler(false)
-{
-
-}
+    : base_instruction_virtualizer(manager, handler_generator), has_builder_hook(false), is_vm_handler(false) {}
 
 code_label* vm_handler_entry::get_handler_va(reg_size size) const
 {
