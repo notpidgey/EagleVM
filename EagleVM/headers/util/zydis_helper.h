@@ -51,7 +51,7 @@ namespace zydis_helper
 	template<zyids_mnemonic TMnemonic, typename... TArgs>
 	zydis_encoder_request encode(TArgs&&... args)
 	{
-		auto encoder = zydis_helper::create_encode_request(TMnemonic);
+		auto encoder = create_encode_request(TMnemonic);
 		(add_op(encoder, std::forward<TArgs>(args)), ...);
 
 		return encoder;
@@ -59,7 +59,7 @@ namespace zydis_helper
 
 	zydis_encoder_request enc(zyids_mnemonic mnemonic, auto&&... args)
 	{
-		auto encoder = zydis_helper::create_encode_request(mnemonic);
+		auto encoder = create_encode_request(mnemonic);
 		(add_op(encoder, std::forward<decltype(args)>(args)), ...);
 
 		return encoder;

@@ -56,8 +56,8 @@ void base_instruction_virtualizer::create_vm_return(function_container& containe
 {
     code_label* rel_label = code_label::create("vm_enter_rel");
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VRET), ZMEMBI(VIP, VRET, 1, 8)));
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VRET)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBI(VIP, VRET, 1, 8)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
 }
 
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
@@ -65,13 +65,18 @@ void base_instruction_virtualizer::create_vm_jump(function_container& container,
     if(!jump_label)
         __debugbreak(); // jump_label should never be null
 
-    code_label* retun_label = code_label::create("return_label");
-    container.add({
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VRET), ZLABEL(retun_label))),
-        RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_eimm>(ZLABEL(jump_label)))
-    });
+    // set VRET to return to all the code generated past create_vm_jump
+    code_label* retun_label = code_label::create("vm_jump_return_label");
+    container.add(RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VRET), ZLABEL(retun_label))));
 
-    container.assign_label(retun_label); // this will force the compiler to evaluate the label at the nop instruction
+    // create a jump by jumping BASE + RVA
+    code_label* rel_label = code_label::create("vm_jump_rel");
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(VIP, jump_label->get(), 8))));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
+
+    // execution after VM handler should end up here
+    container.assign_label(retun_label);
 }
 
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction,
@@ -97,8 +102,6 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     //most definitely riddled with bugs
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
-
-    const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, bit64);
 
     const vm_handler_entry* lreg_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
     const auto lreg_address = lreg_handler->get_handler_va(bit64);
@@ -200,9 +203,4 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     create_vm_jump(container, func_address_mem);
 
     return encode_status::success;
-}
-
-void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
-{
-
 }

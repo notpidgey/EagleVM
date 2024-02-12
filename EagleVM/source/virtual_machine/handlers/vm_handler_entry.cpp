@@ -35,3 +35,8 @@ function_container vm_handler_entry::construct_handler()
 
     return container;
 }
+
+void vm_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
+{
+
+}
