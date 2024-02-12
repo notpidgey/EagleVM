@@ -49,15 +49,14 @@ The project is difficult to maintain and develop solo, if you are looking to con
 - Unit tests starting with MBA generation
 
 ## Thank You To:
-
-- r0da - [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/).
-- _xeroxz - [VMP2 Virtualization](https://back.engineering/17/05/2021/) and clarification of VMP routines.
-- hasherezade - [PE-Bear](https://github.com/hasherezade/pe-bear-releases) used for this project.
-- mrexodia - Project contribution and project advice. 
+- r0da - [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/) and clarification.
+- _xeroxz - [VMP2 Virtualization](https://back.engineering/17/05/2021/) and clarification.
+- mrexodia - Project contribution and advice. 
 - Iizerd - General virtualization clarification.
 
 ## Resources:
-- [VMP3 Virtulization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/)
-- [VMP2 Virtualization](https://back.engineering/17/05/2021/)
+- [Quick look around VMP 3.x - Part 3 : Virtualization](https://whereisr0da.github.io/blog/posts/2021-02-16-vmp-3/)
+- [VMProtect 2 - Detailed Analysis of the Virtual Machine Architecture](https://back.engineering/17/05/2021/)
 - [Obfuscation with Mixed Boolean-Arithmetic Expressions : reconstruction, analysis and simplification tools](https://theses.hal.science/tel-01623849/document)
 - [Justus Polzin](https://plzin.github.io/)
+- [PE-Bear](https://github.com/hasherezade/pe-bear-releases)
