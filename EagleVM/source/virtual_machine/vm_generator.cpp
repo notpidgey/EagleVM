@@ -49,30 +49,27 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
     const vm_handler_entry* vmexit = hg_.vm_handlers[MNEMONIC_VM_EXIT];
     const auto vmexit_address = vmexit->get_handler_va(bit64);
 
-    // we are currently inside the virtual machine
-    // we want to jump back to the original code for whatever reason
-
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
 
     code_label* rel_label = code_label::create("call_vm_exit_rel");
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREL(vmexit_address, rel_label))));
 }
 
-encoded_vec vm_generator::create_jump(uint32_t current, code_label* target)
+encoded_vec vm_generator::create_jump(const uint32_t rva, code_label* rva_target)
 {
-    const uint32_t relative_jump = target->get() - (current + 5);
+    const uint32_t relative_jump = rva_target->get() - (rva + 5);
 
     zydis_encoder_request jmp = zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZIMMS(relative_jump));
     return zydis_helper::encode_request(jmp);
 }
 
-std::pair<bool, function_container> vm_generator::translate_to_virtual(const zydis_decode& decoded)
+std::pair<bool, function_container> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
 {
-    vm_handler_entry* handler = hg_.vm_handlers[decoded.instruction.mnemonic];
+    vm_handler_entry* handler = hg_.vm_handlers[decoded_instruction.instruction.mnemonic];
     if(!handler)
         return { false, {} };
 
-    return handler->translate_to_virtual(decoded);
+    return handler->translate_to_virtual(decoded_instruction);
 }
 
 std::vector<uint8_t> vm_generator::create_padding(const size_t bytes)

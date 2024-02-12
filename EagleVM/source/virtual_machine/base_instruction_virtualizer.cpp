@@ -26,9 +26,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
     for(int i = 0; i < decoded_instruction.instruction.operand_count; i++)
     {
         encode_status status = encode_status::unsupported;
-        const zydis_decoded_operand& operand = decoded_instruction.operands[i];
-
-        switch(operand.type)
+        switch(const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
         {
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
@@ -56,12 +54,10 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
 
 void base_instruction_virtualizer::create_vm_return(function_container& container)
 {
-    // we are trying to create a jmp [VRET - RIP + 5]
-    // i suppose we dont really need to use code lables to make these jumps and just use RIP in the mem operand?
-    // but... it would make for some nice MBA obfuscation if we were to implement since we are going to have a nice constant to work with
-
-    code_label* rel_label = code_label::create("create_vm_return");
-    container.add(rel_label, zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_emem>(ZMEMBD(VRET, -rel_label->get() + 5, 8)));
+    code_label* rel_label = code_label::create("vm_enter_rel");
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VRET), ZMEMBI(VIP, VRET, 1, 8)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VRET)));
 }
 
 void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
@@ -206,4 +202,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     return encode_status::success;
 }
 
-void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) {}
+void base_instruction_virtualizer::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
+{
+
+}

@@ -37,7 +37,6 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     // jmp [VRET]
 
     {
-        code_label* rel_label = code_label::create("vm_enter_rel");
 
         // TODO: for instruction obfuscation, for operands that use MEM, manually expand them out store it in a new register such as VEMEM and then just dereference that register !!!
         container.add({
@@ -52,22 +51,10 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (stack_regs + vm_overhead) + 1, 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(VTEMP)),
 
-            // from here on, this is all dogshit code so i can do relative jmp
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VRET), ZMEMBD(VRET, 0, 8)),
-            RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VRET), ZMEMBD(VRET, -rel_label->get(), 8))),
-
-            /*
-                lea VTEMP2, [rip + 5]
-                lea VTEMP2, [VTEMP2 + VRET]
-                jmp VTEMP2
-             */
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBD(IP_RIP, 5, 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBI(VTEMP2, VRET, 1, 8)),
         });
-
-        // please i beg someone can anyone think of anything better
-        container.add(rel_label, zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VTEMP2)));
     }
 
+    create_vm_return(container);
     std::printf("%3c %-17s %-10zi\n", 'Q', __func__, container.size());
 }
