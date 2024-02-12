@@ -10,7 +10,7 @@ void ia32_dec_handler::construct_single(function_container& container, reg_size 
     if(reg_size == reg_size::bit64)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //dec VTEMP                     ; dec popped value
         //pushfq                        ; keep track of rflags
@@ -22,7 +22,7 @@ void ia32_dec_handler::construct_single(function_container& container, reg_size 
     else if(reg_size == reg_size::bit32)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //dec VTEMP
         //pushfq
@@ -34,7 +34,7 @@ void ia32_dec_handler::construct_single(function_container& container, reg_size 
     else if(reg_size == reg_size::bit16)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //add word ptr [VSP], VTEMP16
         //pushfq

@@ -10,7 +10,7 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
     if(reg_size == reg_size::bit64)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //sub qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
         //pushfq                        ; keep track of rflags
@@ -22,12 +22,12 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == reg_size::bit32)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //sub dword ptr [VSP], VTEMP32
         //pushfq
@@ -38,12 +38,12 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == reg_size::bit16)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //sub word ptr [VSP], VTEMP16
         //pushfq
@@ -54,7 +54,7 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
 
     create_vm_return(container);
@@ -71,11 +71,7 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         case ZYDIS_OPERAND_TYPE_REGISTER:
         {
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
-            // 1. you need to rework the operand virtualizer so that everything is a 64 bit value on the stack. cast down inside handlers
-            // 2. also add base_instruction_virtualizer function that tells the operand virtualizer what vmhandler to pick for the mnemnic
-            // 3. finally, figure out how to deal with rflags inside of add.sub,dec,inc handlers
-            // shall i say profit ??
-            create_vm_jump(container, store_handler->get_handler_va(reg_size));
+            call_vm_handler(container, store_handler->get_handler_va(reg_size));
         }
         break;
         case ZYDIS_OPERAND_TYPE_MEMORY:

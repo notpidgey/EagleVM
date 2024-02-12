@@ -49,7 +49,7 @@ protected:
     bool first_operand_as_ea = false;
 
     virtual void create_vm_return(function_container& container);
-    virtual void create_vm_jump(function_container& container, code_label* jump_label);
+    virtual void call_vm_handler(function_container& container, code_label* jump_label);
 
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int index);

@@ -10,7 +10,7 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
     if(reg_size == bit64)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //add qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
         //pushfq                        ; keep track of rflags
@@ -21,12 +21,12 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == bit32)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //add dword ptr [VSP], VTEMP32
         //pushfq
@@ -37,12 +37,12 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
     else if(reg_size == bit16)
     {
         // pop VTEMP
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
         //add word ptr [VSP], VTEMP16
         //pushfq
@@ -53,7 +53,7 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
 
-        create_vm_jump(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
     }
 
     create_vm_return(container);
@@ -62,6 +62,9 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
 
 void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
+    // this is one of those times where i thought 'hey ill remember what this is when i wake up'
+    // and i have no clue how this works or what this could even be doing
+
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {
@@ -70,7 +73,7 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
             const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_STORE_REG];
 
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
-            create_vm_jump(container, store_handler->get_handler_va(reg_size));
+            call_vm_handler(container, store_handler->get_handler_va(reg_size));
         }
         break;
         case ZYDIS_OPERAND_TYPE_MEMORY:
@@ -82,10 +85,6 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
             ));
         }
         break;
-        default:
-        {
-            __debugbreak();
-        }
-        break;
+        default: __debugbreak();
     }
 }

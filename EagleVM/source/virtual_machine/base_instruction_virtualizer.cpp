@@ -60,7 +60,7 @@ void base_instruction_virtualizer::create_vm_return(function_container& containe
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
 }
 
-void base_instruction_virtualizer::create_vm_jump(function_container& container, code_label* jump_label)
+void base_instruction_virtualizer::call_vm_handler(function_container& container, code_label* jump_label)
 {
     if(!jump_label)
         __debugbreak(); // jump_label should never be null
@@ -92,7 +92,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     //call VM_LOAD_REG
 
     container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
-    create_vm_jump(container, func_address);
+    call_vm_handler(container, func_address);
 
     return encode_status::success;
 }
@@ -130,7 +130,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
 
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(base_displacement)));
-        create_vm_jump(container, lreg_address);
+        call_vm_handler(container, lreg_address);
     }
 
     //2. load the index register and multiply by scale
@@ -140,7 +140,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)));
-        create_vm_jump(container, lreg_address);
+        call_vm_handler(container, lreg_address);
     }
 
     if(op_mem.scale != 1)
@@ -149,13 +149,13 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
         //jmp VM_MUL        ; multiply INDEX * SCALE
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(op_mem.scale)));
-        create_vm_jump(container, push_address);
-        create_vm_jump(container, mul_address);
+        call_vm_handler(container, push_address);
+        call_vm_handler(container, mul_address);
     }
 
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
-        create_vm_jump(container, add_address);
+        call_vm_handler(container, add_address);
     }
 
     if(op_mem.disp.has_displacement)
@@ -167,18 +167,18 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         // lea VTEMP, [VTEMP +- imm]
         // push
 
-        create_vm_jump(container, pop_address);
+        call_vm_handler(container, pop_address);
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
-        create_vm_jump(container, push_address);
+        call_vm_handler(container, push_address);
     }
 
     // by default, this will be dereferenced and we will get the value at the address,
     // in the case that we do not, the value at the top of the stack will just be an address
-    if(!first_operand_as_ea)
+    if(!first_operand_as_ea && index == 0)
     {
-        create_vm_jump(container, pop_address);
+        call_vm_handler(container, pop_address);
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)));
-        create_vm_jump(container, push_address);
+        call_vm_handler(container, push_address);
     }
 
     return encode_status::success;
@@ -186,7 +186,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr)
 {
-    // ¯\_(ツ)_/¯
+    // not a supported operand
     return encode_status::unsupported;
 }
 
@@ -200,7 +200,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)));
-    create_vm_jump(container, func_address_mem);
+    call_vm_handler(container, func_address_mem);
 
     return encode_status::success;
 }
