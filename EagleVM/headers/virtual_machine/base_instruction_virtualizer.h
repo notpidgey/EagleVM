@@ -12,7 +12,7 @@
 
 #include "util/section/section_manager.h"
 #include "util/section/function_container.h"
-
+#include "util/zydis_helper.h"
 #include "util/util.h"
 
 #define VIP         rm_->reg_map[I_VIP]
@@ -37,8 +37,6 @@ class vm_register_manager;
 class base_instruction_virtualizer
 {
 public:
-    virtual ~base_instruction_virtualizer() = default;
-
     explicit base_instruction_virtualizer(vm_register_manager* manager, vm_handler_generator* handler_generator);
 
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
@@ -57,4 +55,5 @@ protected:
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm);
 
     virtual void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) = 0;
+    virtual reg_size get_target_handler_size(const zydis_decode& decoded) = 0;
 };

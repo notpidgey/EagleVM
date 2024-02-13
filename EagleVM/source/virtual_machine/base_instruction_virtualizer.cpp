@@ -173,8 +173,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     }
 
     // by default, this will be dereferenced and we will get the value at the address,
-    // in the case that we do not, the value at the top of the stack will just be an address
-    if(!first_operand_as_ea && index == 0)
+    if(!(first_operand_as_ea == true && index == 0))
     {
         call_vm_handler(container, pop_address);
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)));

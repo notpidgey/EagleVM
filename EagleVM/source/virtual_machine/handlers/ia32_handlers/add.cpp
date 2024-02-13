@@ -71,13 +71,20 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         case ZYDIS_OPERAND_TYPE_REGISTER:
         {
             const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_STORE_REG];
-
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
+
+            // the sum is at the top of the stack
+            // we can save to the destination register by specifying the displacement
+            // and then calling store reg
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
             call_vm_handler(container, store_handler->get_handler_va(reg_size));
         }
         break;
         case ZYDIS_OPERAND_TYPE_MEMORY:
         {
+            // the sum is at the top of the stack
+            // we can save to the destination register by specifying the displacement
+
             const reg_size reg_size = zydis_helper::get_reg_size(operand.mem.base);
             container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(
                 ZMEMBD(VTEMP, 0, reg_size),

@@ -38,5 +38,7 @@ protected:
     std::unordered_map<reg_size, code_label*> supported_handlers;
 
     virtual void construct_single(function_container& container, reg_size size) = 0;
-    void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container);
+
+    void finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container) override;
+    reg_size get_target_handler_size(const zydis_decode& decode) override;
 };
