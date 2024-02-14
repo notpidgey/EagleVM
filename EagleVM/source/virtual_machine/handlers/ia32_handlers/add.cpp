@@ -65,6 +65,8 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
     // this is one of those times where i thought 'hey ill remember what this is when i wake up'
     // and i have no clue how this works or what this could even be doing
 
+    vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {

@@ -63,6 +63,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 
 void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
+    vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {

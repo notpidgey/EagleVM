@@ -31,6 +31,7 @@ void vm_handler_generator::setup_vm_mapping()
     vm_handlers[ZYDIS_MNEMONIC_PUSH] = new ia32_push_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_POP] = new ia32_pop_handler(rm_, this);
 
+    vm_handlers[ZYDIS_MNEMONIC_IMUL] = new ia32_imul_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_MUL] = new ia32_mul_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_DIV] = new ia32_div_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_INC] = new ia32_inc_handler(rm_, this);
