@@ -199,14 +199,12 @@ int main(int argc, char* argv[])
 
         function_container container;
 
-        uint32_t current_va = parser.offset_to_rva(vm_iat_calls[c].first + instructions.front().instruction.length);
+        uint32_t current_va = parser.offset_to_rva(vm_iat_calls[c].first) + 0x6;
         bool currently_in_vm = false;
 
         std::ranges::for_each(instructions,
             [&](const zydis_decode& instruction)
             {
-                // TODO: since all the jumps calculated by the code labels in the binary are relative addresses we are going to need to push a base address of the binary onto the stack after entering the VM, this way we can just to a memory opperand on jmp [VBASE + virtual]
-
                 auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                 if(successfully_virtualized)
                 {
