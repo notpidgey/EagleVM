@@ -4,25 +4,26 @@
 vm_generator::vm_generator()
 {
     zydis_helper::setup_decoder();
-    hg_ = vm_handler_generator(&rm_);
+    rm_ = new vm_register_manager();
+    hg_ = new vm_handler_generator(rm_);
 }
 
 void vm_generator::init_reg_order()
 {
-    rm_.init_reg_order();
+    rm_->init_reg_order();
 }
 
 void vm_generator::init_ran_consts()
 {
-    hg_.setup_enc_constants();
+    hg_->setup_enc_constants();
 }
 
 section_manager vm_generator::generate_vm_handlers(bool randomize_handler_position)
 {
-    hg_.setup_vm_mapping();
+    hg_->setup_vm_mapping();
 
     section_manager section;
-    for(const auto& handler : hg_.vm_handlers | std::views::values)
+    for(const auto& handler : hg_->vm_handlers | std::views::values)
     {
         function_container container = handler->construct_handler();
         section.add(container);
@@ -35,7 +36,7 @@ section_manager vm_generator::generate_vm_handlers(bool randomize_handler_positi
 
 void vm_generator::call_vm_enter(function_container& container, code_label* target)
 {
-    const vm_handler_entry* vmenter = hg_.vm_handlers[MNEMONIC_VM_ENTER];
+    const vm_handler_entry* vmenter = hg_->vm_handlers[MNEMONIC_VM_ENTER];
     const auto vmenter_address = vmenter->get_handler_va(bit64);
 
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
@@ -46,10 +47,11 @@ void vm_generator::call_vm_enter(function_container& container, code_label* targ
 
 void vm_generator::call_vm_exit(function_container& container, code_label* target)
 {
-    const vm_handler_entry* vmexit = hg_.vm_handlers[MNEMONIC_VM_EXIT];
+    const vm_handler_entry* vmexit = hg_->vm_handlers[MNEMONIC_VM_EXIT];
     const auto vmexit_address = vmexit->get_handler_va(bit64);
 
-    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZLABEL(target))));
+    // mov VCSRET, ZLABEL(target)
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VCSRET), ZLABEL(target))));
 
     code_label* rel_label = code_label::create("call_vm_exit_rel");
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREL(vmexit_address, rel_label))));
@@ -65,7 +67,7 @@ encoded_vec vm_generator::create_jump(const uint32_t rva, code_label* rva_target
 
 std::pair<bool, function_container> vm_generator::translate_to_virtual(const zydis_decode& decoded_instruction)
 {
-    vm_handler_entry* handler = hg_.vm_handlers[decoded_instruction.instruction.mnemonic];
+    vm_handler_entry* handler = hg_->vm_handlers[decoded_instruction.instruction.mnemonic];
     if(!handler)
         return { false, {} };
 

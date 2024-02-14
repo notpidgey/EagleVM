@@ -35,7 +35,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     // lea VCS, [VCS - 8]   ; allocate space to place return address
     // mov [VCS], VTEMP     ; put return address onto call stack
 
-    // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp
+    // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
     // mov VSP, VTEMP
 
     {
