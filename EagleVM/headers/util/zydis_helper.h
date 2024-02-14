@@ -14,6 +14,7 @@
 #define TO8(x) zydis_helper::get_bit_version(x, reg_size::bit8)
 #define TO16(x) zydis_helper::get_bit_version(x, reg_size::bit16)
 #define TO32(x) zydis_helper::get_bit_version(x, reg_size::bit32)
+#define TO64(x) zydis_helper::get_bit_version(x, reg_size::bit64)
 
 enum reg_size
 {

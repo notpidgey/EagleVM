@@ -99,9 +99,9 @@ void base_instruction_virtualizer::call_vm_handler(function_container& container
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction,
                                                            zydis_dreg op_reg, int index)
 {
-    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
     if(first_operand_as_ea == true && index == 0)
     {
+        const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
         const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // this means we want to put the address of of the target register at the top of the stack
@@ -113,6 +113,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     }
     else
     {
+        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
         const vm_handler_entry* load_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
 
         // this routine will load the register value to the top of the VSTACK
