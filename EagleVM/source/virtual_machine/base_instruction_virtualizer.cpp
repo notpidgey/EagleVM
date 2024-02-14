@@ -31,7 +31,7 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
             case ZYDIS_OPERAND_TYPE_REGISTER:
-                status = encode_operand(container, decoded_instruction, operand.reg);
+                status = encode_operand(container, decoded_instruction, operand.reg, i);
                 break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
                 status = encode_operand(container, decoded_instruction, operand.mem, i);
@@ -97,19 +97,31 @@ void base_instruction_virtualizer::call_vm_handler(function_container& container
 }
 
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction,
-                                                           zydis_dreg op_reg)
+                                                           zydis_dreg op_reg, int index)
 {
     const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+    if(first_operand_as_ea == true && index == 0)
+    {
+        const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
 
-    const vm_handler_entry* va_of_push_func = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
-    const auto func_address = va_of_push_func->get_handler_va(zydis_helper::get_reg_size(op_reg.value));
+        // this means we want to put the address of of the target register at the top of the stack
+        // mov VTEMP, VREGS + DISPLACEMENT
+        // push
 
-    // this routine will load the register value to the top of the VSTACK
-    // mov VTEMP, -8
-    // call VM_LOAD_REG
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
+        call_vm_handler(container, push_handler->get_handler_va(bit64)); // always 64 bit because its an address
+    }
+    else
+    {
+        const vm_handler_entry* load_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
 
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
-    call_vm_handler(container, func_address);
+        // this routine will load the register value to the top of the VSTACK
+        // mov VTEMP, -8
+        // call VM_LOAD_REG
+
+        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
+        call_vm_handler(container, load_handler->get_handler_va(zydis_helper::get_reg_size(op_reg.value)));
+    }
 
     return encode_status::success;
 }
