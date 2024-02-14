@@ -33,6 +33,6 @@ public:
     static std::vector<uint8_t> create_padding(size_t bytes);
 
 private:
-    vm_register_manager rm_;
-    vm_handler_generator hg_;
+    vm_register_manager* rm_;
+    vm_handler_generator* hg_;
 };

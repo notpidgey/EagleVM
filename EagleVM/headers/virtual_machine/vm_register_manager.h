@@ -18,8 +18,9 @@ public:
         ZYDIS_REGISTER_RSI, //I_VSP
         ZYDIS_REGISTER_RDI, //I_VREGS
         ZYDIS_REGISTER_R8,  //I_VTEMP
-        ZYDIS_REGISTER_R9,  //I_VRET
-        ZYDIS_REGISTER_R15, //I_VTEMP2
+        ZYDIS_REGISTER_R9,  //I_VTEMP2
+        ZYDIS_REGISTER_R14, //I_VCALLSTACK
+        ZYDIS_REGISTER_R15, //I_VCSRET
     };
 
     void init_reg_order();

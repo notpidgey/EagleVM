@@ -11,5 +11,5 @@ public:
     };
 
 private:
-    virtual void construct_single(function_container& container, reg_size size) override;
+    void construct_single(function_container& container, reg_size size) override;
 };

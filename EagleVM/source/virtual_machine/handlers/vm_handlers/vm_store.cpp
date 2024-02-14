@@ -13,19 +13,19 @@ void vm_store_handler::construct_single(function_container& container, reg_size 
         // call pop                     ; puts the value at the top of the stack into VTEMP
         // mov [VTEMP2], VTEMP          ; move value into register location
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-        create_vm_jump(container, push_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(bit64));
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VTEMP2, 0, 8), ZREG(VTEMP)));
     }
     else if (reg_size == reg_size::bit32)
     {
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-        create_vm_jump(container, push_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(bit64));
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VTEMP2, 0, 4), ZREG(TO32(VTEMP))));
     }
     else if (reg_size == reg_size::bit16)
     {
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-        create_vm_jump(container, push_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(bit64));
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VTEMP2, 0, 2), ZREG(TO16(VTEMP))));
     }
 

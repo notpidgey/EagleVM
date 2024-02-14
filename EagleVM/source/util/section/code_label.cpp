@@ -7,9 +7,20 @@ code_label::code_label(const std::string& section_name)
     virtual_address = INT32_MAX;
 }
 
+code_label::code_label()
+{
+    finalized = false;
+    virtual_address = INT32_MAX;
+}
+
 code_label* code_label::create(const std::string& section_name)
 {
     return new code_label(section_name);
+}
+
+code_label* code_label::create()
+{
+    return new code_label();
 }
 
 int32_t code_label::get()

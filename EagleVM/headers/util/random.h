@@ -9,7 +9,11 @@ public:
 
     ran_device()
     {
+        #if _DEBUG
+        gen.seed(12345);
+        #else
         gen.seed(rd());
+        #endif
     }
 
     static ran_device& get()

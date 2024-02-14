@@ -14,6 +14,7 @@
 #define TO8(x) zydis_helper::get_bit_version(x, reg_size::bit8)
 #define TO16(x) zydis_helper::get_bit_version(x, reg_size::bit16)
 #define TO32(x) zydis_helper::get_bit_version(x, reg_size::bit32)
+#define TO64(x) zydis_helper::get_bit_version(x, reg_size::bit64)
 
 enum reg_size
 {
@@ -51,7 +52,7 @@ namespace zydis_helper
 	template<zyids_mnemonic TMnemonic, typename... TArgs>
 	zydis_encoder_request encode(TArgs&&... args)
 	{
-		auto encoder = zydis_helper::create_encode_request(TMnemonic);
+		auto encoder = create_encode_request(TMnemonic);
 		(add_op(encoder, std::forward<TArgs>(args)), ...);
 
 		return encoder;
@@ -59,7 +60,7 @@ namespace zydis_helper
 
 	zydis_encoder_request enc(zyids_mnemonic mnemonic, auto&&... args)
 	{
-		auto encoder = zydis_helper::create_encode_request(mnemonic);
+		auto encoder = create_encode_request(mnemonic);
 		(add_op(encoder, std::forward<decltype(args)>(args)), ...);
 
 		return encoder;
