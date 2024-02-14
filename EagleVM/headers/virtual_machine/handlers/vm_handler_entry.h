@@ -16,7 +16,8 @@
     { supported_sizes = {__VA_ARGS__}; };
 
 constexpr uint8_t vm_overhead = 20;
-constexpr uint8_t stack_regs = 17;
+constexpr uint8_t vm_stack_regs = 17;
+constexpr uint8_t vm_call_stack = 3;
 
 class code_label;
 class vm_handler_entry : public base_instruction_virtualizer

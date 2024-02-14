@@ -54,9 +54,21 @@ std::pair<bool, function_container> base_instruction_virtualizer::translate_to_v
 
 void base_instruction_virtualizer::create_vm_return(function_container& container)
 {
-    code_label* rel_label = code_label::create("vm_enter_rel");
+    // now that we use a virtual call stack we must pop the top address
+
+    // mov VCSRET, [VCS]        ; pop from call stack
+    // lea VCS, [VCS + 8]       ; move up the call stack pointer
+    // lea VIP, [0x14000000]    ; load base
+    // lea VIP, [VIP + VCSRET]  ; add rva to base
+    // jmp VIP
+
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VCSRET), ZMEMBD(VCS, 0, 8)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VCS), ZMEMBD(VCS, 8, 8)));
+
+    code_label* rel_label = code_label::create();
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBI(VIP, VRET, 1, 8)));
+
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, 8)));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
 }
 
@@ -65,12 +77,17 @@ void base_instruction_virtualizer::call_vm_handler(function_container& container
     if(!jump_label)
         __debugbreak(); // jump_label should never be null
 
-    // set VRET to return to all the code generated past create_vm_jump
-    code_label* retun_label = code_label::create("vm_jump_return_label");
-    container.add(RECOMPILE(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VRET), ZLABEL(retun_label))));
+    code_label* retun_label = code_label::create();
+    code_label* rel_label = code_label::create();
 
-    // create a jump by jumping BASE + RVA
-    code_label* rel_label = code_label::create("vm_jump_rel");
+    // lea VCS, [VCS - 8]       ; allocate space for new return address
+    // mov [VCS], code_label    ; place return rva on the stack
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VCS, 0, 8), ZLABEL(retun_label))));
+
+    // lea VIP, [0x14000000]    ; load base
+    // lea VIP, [VIP + VCSRET]  ; add rva to base
+    // jmp VIP
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(VIP, jump_label->get(), 8))));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
@@ -87,9 +104,9 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* va_of_push_func = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
     const auto func_address = va_of_push_func->get_handler_va(zydis_helper::get_reg_size(op_reg.value));
 
-    //this routine will load the register value to the top of the VSTACK
-    //mov VTEMP, -8
-    //call VM_LOAD_REG
+    // this routine will load the register value to the top of the VSTACK
+    // mov VTEMP, -8
+    // call VM_LOAD_REG
 
     container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
     call_vm_handler(container, func_address);

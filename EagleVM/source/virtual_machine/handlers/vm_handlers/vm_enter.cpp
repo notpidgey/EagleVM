@@ -6,35 +6,37 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     // we allocate the registers for the virtual machine 20 pushes after the current stack
     container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, -(8 * vm_overhead), 8)));
 
-    //pushfq
+    // pushfq
     {
         container.add(zydis_helper::create_encode_request(ZYDIS_MNEMONIC_PUSHFQ));
     }
 
-    //push r0-r15 to stack
+    // push r0-r15 to stack
     std::ranges::for_each(PUSHORDER,
         [&container](short reg)
         {
             container.add(zydis_helper::encode<ZYDIS_MNEMONIC_PUSH, zydis_ereg>(ZREG(reg)));
         });
 
-    // reserve VM STACK
+    // reserve VM call stack
+    // reserve VM stack
 
     // pushfq
     // push r0-r15
 
     // mov VSP, rsp         ; begin virtualization by setting VSP to rsp
     // mov VREGS, VSP       ; set VREGS to currently pushed stack items
+    // mov VCS, VSP         ; set VCALLSTACK to current stack top
 
     // lea rsp, [rsp + stack_regs] ; this allows us to move the stack pointer in such a way that pushfq overwrite rflags on the stack
 
     // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead))] ; load the address of where return address is located
-    // mov VRET, VTEMP      ; get address of return address
+    // mov VTEMP, [VTEMP]   ; load actual value into VTEMP
+    // lea VCS, [VCS - 8]   ; allocate space to place return address
+    // mov [VCS], VTEMP     ; put return address onto call stack
 
     // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp
     // mov VSP, VTEMP
-
-    // jmp [VRET]
 
     {
 
@@ -42,16 +44,17 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
         container.add({
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(GR_RSP)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(VSP)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VCS), ZREG(VSP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8 * (stack_regs), 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8 * (vm_stack_regs), 8)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (stack_regs + vm_overhead), 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VRET), ZREG(VTEMP)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VCS), ZMEMBD(VCS, -8, 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (stack_regs + vm_overhead) + 1, 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead) + 1, 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(VTEMP)),
-
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VRET), ZMEMBD(VRET, 0, 8)),
         });
     }
 

@@ -20,7 +20,9 @@
 #define VREGS       rm_->reg_map[I_VREGS]
 #define VTEMP       rm_->reg_map[I_VTEMP]
 #define VTEMP2      rm_->reg_map[I_VTEMP2]
-#define VRET        rm_->reg_map[I_VRET]
+#define VCS         rm_->reg_map[I_VCALLSTACK]
+#define VCSRET      rm_->reg_map[I_VCSRET]
+
 #define PUSHORDER   rm_->reg_stack_order_
 
 enum class encode_status
