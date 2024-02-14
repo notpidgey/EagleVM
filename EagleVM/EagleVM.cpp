@@ -234,7 +234,6 @@ int main(int argc, char* argv[])
                         code_label* vmenter_return_label = code_label::create("vmenter_return:" + current_va);
                         vm_generator.call_vm_enter(container, vmenter_return_label);
                         container.assign_label(vmenter_return_label);
-                        container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
 
                         va_enters.emplace_back(current_va, vmcode_target);
                         currently_in_vm = true;
@@ -242,6 +241,7 @@ int main(int argc, char* argv[])
                         std::printf("\n\t[>] VMENTER\n");
                     }
 
+                    container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
                     std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
                 }
                 else
@@ -253,7 +253,6 @@ int main(int argc, char* argv[])
                         // call out of the virtual machine, jump to the current instruction
                         code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
                         jump_label->finalize(current_va); // since we already know where we need to jump back to
-
                         vm_generator.call_vm_exit(container, jump_label);
 
                         currently_in_vm = false;
