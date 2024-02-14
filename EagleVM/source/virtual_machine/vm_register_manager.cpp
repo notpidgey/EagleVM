@@ -7,7 +7,7 @@ void vm_register_manager::init_reg_order()
     for (int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
         reg_stack_order_[i - ZYDIS_REGISTER_RAX] = static_cast<zydis_register>(i);
 
-    std::ranges::shuffle(reg_stack_order_, ran_device::get().rd);
+    std::ranges::shuffle(reg_stack_order_, ran_device::get().gen);
 }
 
 std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const zydis_register reg) const {
@@ -15,9 +15,9 @@ std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const 
     reg_size reg_size = zydis_helper::get_reg_size(reg);
 
     int found_index = 0;
-    for (int i = reg_stack_order_.size() - 1; i >= 0; i--)
+    for (int i = 0; i < reg_stack_order_.size(); i++)
     {
-        if (reg == reg_stack_order_[i])
+        if (reg == zydis_helper::get_bit_version(reg_stack_order_[15 - i], reg_size))
         {
             found_index = i;
             break;
