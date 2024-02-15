@@ -248,10 +248,10 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, int& stack_disp)
 {
     auto imm = op_imm.value;
-    const auto r_size = static_cast<reg_size>(instruction.operands[0].size / 8);
+    const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
     const vm_handler_entry* va_of_push_func = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
-    const auto func_address_mem = va_of_push_func->get_handler_va(r_size);
+    const auto func_address_mem = va_of_push_func->get_handler_va(bit64);
 
     stack_disp += r_size;
 
