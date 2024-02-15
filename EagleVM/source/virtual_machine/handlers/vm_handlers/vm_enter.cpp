@@ -28,7 +28,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     // mov VREGS, VSP       ; set VREGS to currently pushed stack items
     // mov VCS, VSP         ; set VCALLSTACK to current stack top
 
-    // lea rsp, [rsp + stack_regs] ; this allows us to move the stack pointer in such a way that pushfq overwrite rflags on the stack
+    // lea rsp, [rsp + stack_regs + 1] ; this allows us to move the stack pointer in such a way that pushfq overwrite rflags on the stack
 
     // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead))] ; load the address of where return address is located
     // mov VTEMP, [VTEMP]   ; load actual value into VTEMP
@@ -46,7 +46,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(VSP)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VCS), ZREG(VSP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, 8 * (vm_stack_regs), 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(VREGS, 8 * (vm_stack_regs + 1), 8)),
 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),

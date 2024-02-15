@@ -13,7 +13,7 @@ void ia32_movsx_handler::construct_single(function_container& container, reg_siz
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(size), __func__, container.size());
 }
 
-encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int index)
+encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index)
 {
     if(index == 0)
     {
@@ -53,7 +53,7 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     return encode_status::success;
 }
 
-encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int index)
+encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index)
 {
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;

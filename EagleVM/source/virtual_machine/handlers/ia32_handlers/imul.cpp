@@ -57,6 +57,8 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
 {
     if(decoded_instruction.operands->element_size == 1)
     {
+        int current_disp = 0;
+
         // use the same operand twice
         encode_status status = encode_status::unsupported;
         switch(const zydis_decoded_operand& operand = decoded_instruction.operands[0]; operand.type)
@@ -64,16 +66,16 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
             case ZYDIS_OPERAND_TYPE_REGISTER:
-                status = encode_operand(container, decoded_instruction, operand.reg, 1);
+                status = encode_operand(container, decoded_instruction, operand.reg, current_disp, 1);
             break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
-                status = encode_operand(container, decoded_instruction, operand.mem, 1);
+                status = encode_operand(container, decoded_instruction, operand.mem, current_disp, 1);
             break;
             case ZYDIS_OPERAND_TYPE_POINTER:
-                status = encode_operand(container, decoded_instruction, operand.ptr);
+                status = encode_operand(container, decoded_instruction, operand.ptr, current_disp);
             break;
             case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                status = encode_operand(container, decoded_instruction, operand.imm);
+                status = encode_operand(container, decoded_instruction, operand.imm, current_disp);
             break;
         }
 
