@@ -136,6 +136,9 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* lreg_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
     const auto lreg_address = lreg_handler->get_handler_va(bit64);
 
+    const vm_handler_entry* trash_handler = hg_->vm_handlers[MNEMONIC_VM_TRASH_RFLAGS];
+    const auto trash_address = trash_handler->get_handler_va(bit64);
+
     const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
     const auto push_address = push_handler->get_handler_va(bit64);
 
@@ -145,11 +148,9 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* add_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_ADD];
     const auto add_address = add_handler->get_handler_va(bit64);
 
-    const vm_handler_entry* sub_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_SUB];
-    const auto sub_address = sub_handler->get_handler_va(bit64);
-
     const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
     const auto pop_address = pop_handler->get_handler_va(bit64);
+
 
     //[base + index * scale + disp]
 
@@ -169,6 +170,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
+
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)));
         call_vm_handler(container, lreg_address);
     }
@@ -178,14 +180,17 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         //mov VTEMP, imm    ;
         //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
         //jmp VM_MUL        ; multiply INDEX * SCALE
+        //vmscratch         ; ignore the rflags we just modified
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(op_mem.scale)));
         call_vm_handler(container, push_address);
         call_vm_handler(container, mul_address);
+        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         call_vm_handler(container, add_address);
+        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.disp.has_displacement)

@@ -31,6 +31,8 @@ public:
     function_container construct_handler();
 
 protected:
+    ~vm_handler_entry() = default;
+
     bool has_builder_hook;
     bool is_vm_handler;
     function_container container;

@@ -44,6 +44,8 @@ public:
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
 
 protected:
+    ~base_instruction_virtualizer() = default;
+
     vm_register_manager* rm_;
     vm_handler_generator* hg_;
     bool first_operand_as_ea = false;

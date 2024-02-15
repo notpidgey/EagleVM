@@ -1,0 +1,21 @@
+#include "virtual_machine/handlers/vm_handlers/vm_pop_rflags.h"
+
+#include "virtual_machine/vm_generator.h"
+
+void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size)
+{
+    if(size == bit64)
+    {
+        container.add({
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(GR_RSP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZREG(VSP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_POPFQ),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VSP), ZMEMBD(VSP, 8, 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZREG(VTEMP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_PUSHFQ),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
+        });
+    }
+
+    create_vm_return(container);
+}

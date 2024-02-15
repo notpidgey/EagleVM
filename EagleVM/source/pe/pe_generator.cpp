@@ -257,10 +257,10 @@ void pe_generator::save_file(const std::string& save_path)
             if(va >= section_start_va && va < section_end_va)
             {
                 // calculate the offset within the section data
-                uint32_t offset = va - section_start_va;
+                const uint32_t offset = va - section_start_va;
 
                 // replace the bytes at the offset with 0x90
-                std::fill(data.begin() + offset, data.begin() + offset + bytes, 0x90);
+                std::fill_n(data.begin() + offset, bytes, 0x90);
             }
         }
 
@@ -270,10 +270,10 @@ void pe_generator::save_file(const std::string& save_path)
             if(va >= section_start_va && va < section_end_va)
             {
                 // calculate the offset within the section data
-                uint32_t offset = va - section_start_va;
+                const uint32_t offset = va - section_start_va;
 
                 // replace the bytes at the offset with the bytes from the vector
-                std::copy(bytes_to_insert.begin(), bytes_to_insert.end(), data.begin() + offset);
+                std::ranges::copy(bytes_to_insert, data.begin() + offset);
             }
         }
 

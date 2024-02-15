@@ -6,7 +6,9 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
 {
     uint64_t size = reg_size;
 
+    const vm_handler_entry* push_rflags_handler = hg_->vm_handlers[MNEMONIC_VM_PUSH_RFLAGS];
     const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
+
     if(reg_size == bit64)
     {
         // pop VTEMP
@@ -62,8 +64,10 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
 
 void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
-    // this is one of those times where i thought 'hey ill remember what this is when i wake up'
-    // and i have no clue how this works or what this could even be doing
+    vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+
+    const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
+    call_vm_handler(container, store_handler->get_handler_va(bit64));
 
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)

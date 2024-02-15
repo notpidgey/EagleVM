@@ -205,6 +205,20 @@ int main(int argc, char* argv[])
         std::ranges::for_each(instructions,
             [&](const zydis_decode& instruction)
             {
+                /*
+                 * currently there are a lot of issues in the project that are bothering me
+                 * first,   something is wrong with getting the second instruction to virtualize
+                 * second,  i cannot figure out a good implementation for movsx handler
+                 * third,   need some kind of abstraction to support 3 operands for the handlers that do want to support 3 operands
+                 * fourth,  i hate the zydis_helper::encode<T> template thing i created, need to convert everything to zydis_helper::enc()
+                 * fifth,   handlers need to be able to override the target VM handler that beyond simple bit64,bit32,etc handlers
+                 * sixth,   i might have abused LEA way too much when i couldve just been subtracting in the handlers, potentially do this instead
+                 * seventh, i wish i could see the assembly generated for each instruction and the reason for that generation, need better logging
+                 *
+                 * too many problems, little time.
+                 */
+
+
                 auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                 if(successfully_virtualized)
                 {
@@ -220,7 +234,6 @@ int main(int argc, char* argv[])
                         code_label* vmenter_return_label = code_label::create("vmenter_return:" + current_va);
                         vm_generator.call_vm_enter(container, vmenter_return_label);
                         container.assign_label(vmenter_return_label);
-                        container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
 
                         va_enters.emplace_back(current_va, vmcode_target);
                         currently_in_vm = true;
@@ -228,6 +241,7 @@ int main(int argc, char* argv[])
                         std::printf("\n\t[>] VMENTER\n");
                     }
 
+                    container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
                     std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
                 }
                 else
@@ -239,7 +253,6 @@ int main(int argc, char* argv[])
                         // call out of the virtual machine, jump to the current instruction
                         code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
                         jump_label->finalize(current_va); // since we already know where we need to jump back to
-
                         vm_generator.call_vm_exit(container, jump_label);
 
                         currently_in_vm = false;
