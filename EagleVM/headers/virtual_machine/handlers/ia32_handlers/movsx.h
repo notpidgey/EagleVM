@@ -13,8 +13,8 @@ public:
 
 private:
     void construct_single(function_container& container, reg_size size) override;
-    encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int index) override;
-    encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int index) override;
+    encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index) override;
+    encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index) override;
 
     void upscale_temp(function_container& container, reg_size target, reg_size current);
 };
