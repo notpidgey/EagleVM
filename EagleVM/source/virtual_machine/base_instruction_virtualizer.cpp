@@ -142,12 +142,6 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* mul_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_MUL];
     const auto mul_address = mul_handler->get_handler_va(bit64);
 
-    const vm_handler_entry* add_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_ADD];
-    const auto add_address = add_handler->get_handler_va(bit64);
-
-    const vm_handler_entry* sub_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_SUB];
-    const auto sub_address = sub_handler->get_handler_va(bit64);
-
     const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
     const auto pop_address = pop_handler->get_handler_va(bit64);
 

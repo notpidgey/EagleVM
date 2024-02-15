@@ -53,7 +53,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
             zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VCS), ZMEMBD(VCS, -8, 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead) + 1, 8)),
+            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
             zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(VTEMP)),
         });
     }

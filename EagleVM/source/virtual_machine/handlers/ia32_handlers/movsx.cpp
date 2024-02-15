@@ -4,21 +4,10 @@
 
 void ia32_movsx_handler::construct_single(function_container& container, reg_size size)
 {
-    const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
-    if(size == bit64)
-    {
-        // we can literally call the mov handler because we upgraded the operand
+    const vm_handler_entry* mov_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_MOV];
 
-
-    }
-    else if(size == bit32)
-    {
-
-    }
-    else if(size == bit16)
-    {
-
-    }
+    // we can literally call the mov handler because we upgraded the operand
+    call_vm_handler(container, mov_handler->get_handler_va(size));
 
     create_vm_return(container);
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(size), __func__, container.size());
@@ -54,38 +43,9 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         call_vm_handler(container, load_handler->get_handler_va(zydis_helper::get_reg_size(op_reg.value)));
         call_vm_handler(container, pop_handler->get_handler_va(zydis_helper::get_reg_size(op_reg.value)));
 
-        // mov eax/ax/al, VTEMP
         reg_size current_size = size;
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
-            ZREG(zydis_helper::get_bit_version(GR_RAX, current_size),
-            ZREG(zydis_helper::get_bit_version(VTEMP, current_size)
-        ))));
-
-        // keep upgrading the operand until we get to destination size
         reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
-        while(current_size != target_size)
-        {
-            switch(current_size)
-            {
-                case bit32:
-                    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CDQE));
-                    current_size = bit64;
-                    break;
-                case bit16:
-                    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CWDE));
-                    current_size = bit32;
-                    break;
-                case bit8:
-                    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CBW));
-                    current_size = bit16;
-                    break;
-            }
-        }
-
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
-            ZREG(zydis_helper::get_bit_version(VTEMP, target_size),
-            ZREG(zydis_helper::get_bit_version(GR_RAX, target_size),
-        ))));
+        upscale_temp(container, target_size, current_size);
 
         call_vm_handler(container, push_handler->get_handler_va(target_size));
     }
@@ -167,14 +127,59 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         call_vm_handler(container, push_address);
     }
 
+    reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
     reg_size mem_size = reg_size(instruction.operands[index].size / 8);
 
     // for movsx this is always going to be the second operand
     // this means that we want to get the value and pop it
     call_vm_handler(container, pop_address);
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)));
+    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(
+        ZREG(zydis_helper::get_bit_version(VTEMP, mem_size)),
+        ZMEMBD(VTEMP, 0, mem_size)
+    ));
+    upscale_temp(container, target_size, mem_size);
     call_vm_handler(container, push_address);
 
-
     return encode_status::success;
+}
+
+void ia32_movsx_handler::upscale_temp(function_container& container, reg_size target_size, reg_size current_size)
+{
+    // mov eax/ax/al, VTEMP
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
+        ZREG(zydis_helper::get_bit_version(GR_RAX, current_size)),
+        ZREG(zydis_helper::get_bit_version(VTEMP, current_size))
+    ));
+
+    // keep upgrading the operand until we get to destination size
+    while(current_size != target_size)
+    {
+        // other sizes should not be possible
+        switch(current_size)
+        {
+            case bit32:
+            {
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CDQE));
+                current_size = bit64;
+                break;
+            }
+            case bit16:
+            {
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CWDE));
+                current_size = bit32;
+                break;
+            }
+            case bit8:
+            {
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_CBW));
+                current_size = bit16;
+                break;
+            }
+        }
+    }
+
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
+        ZREG(zydis_helper::get_bit_version(VTEMP, target_size)),
+        ZREG(zydis_helper::get_bit_version(GR_RAX, target_size))
+    ));
 }

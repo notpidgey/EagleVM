@@ -39,6 +39,7 @@ void vm_handler_generator::setup_vm_mapping()
     vm_handlers[ZYDIS_MNEMONIC_ADD] = new ia32_add_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_SUB] = new ia32_sub_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_MOV] = new ia32_mov_handler(rm_, this);
+    vm_handlers[ZYDIS_MNEMONIC_MOVSX] = new ia32_movsx_handler(rm_, this);
 
     for(const auto& handler : vm_handlers | std::views::values)
         handler->setup_labels();
