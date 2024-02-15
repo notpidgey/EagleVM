@@ -27,6 +27,9 @@ void vm_handler_generator::setup_vm_mapping()
     vm_handlers[MNEMONIC_VM_EXIT] = new vm_exit_handler(rm_, this);
     vm_handlers[MNEMONIC_VM_LOAD_REG] = new vm_load_handler(rm_, this);
     vm_handlers[MNEMONIC_VM_STORE_REG] = new vm_store_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_POP_RFLAGS] = new vm_pop_rflags_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_PUSH_RFLAGS] = new vm_push_rflags_handler(rm_, this);
+    vm_handlers[MNEMONIC_VM_TRASH_RFLAGS] = new vm_trash_rflags_handler(rm_, this);
 
     vm_handlers[ZYDIS_MNEMONIC_PUSH] = new ia32_push_handler(rm_, this);
     vm_handlers[ZYDIS_MNEMONIC_POP] = new ia32_pop_handler(rm_, this);

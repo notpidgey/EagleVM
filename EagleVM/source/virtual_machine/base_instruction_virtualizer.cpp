@@ -179,7 +179,11 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
-        call_vm_handler(container, add_address);
+        call_vm_handler(container, pop_address);
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZREG(VTEMP)));
+
+        call_vm_handler(container, pop_address);
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBI(VTEMP, VTEMP2,)));
     }
 
     if(op_mem.disp.has_displacement)
