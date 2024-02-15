@@ -17,10 +17,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
         // sub qword ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)));
 
-        // pop                              ; remove second value at the top of the stack
         // push rflags                      ; push rflags in case we want to accept these changes
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(reg_size));
+        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
     }
     else if(reg_size == bit32)
     {
@@ -28,8 +26,7 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))));
 
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(reg_size));
+        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
     }
     else if(reg_size == bit16)
     {
@@ -37,8 +34,7 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 
         container.add(zydis_helper::encode<ZYDIS_MNEMONIC_SUB, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))));
 
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(reg_size));
+        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
     }
 
     create_vm_return(container);
@@ -48,6 +44,9 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
 void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
     vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+
+    const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
+    call_vm_handler(container, store_handler->get_handler_va(bit64));
 
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
