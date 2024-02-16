@@ -102,7 +102,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 {
     if(first_operand_as_ea == true && index == 0)
     {
-        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+        const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
         const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // this means we want to put the address of of the target register at the top of the stack
@@ -260,7 +260,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
     container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)));
 
-    call_vm_handler(container, push_handler->get_handler_va(bit64));
+    call_vm_handler(container, push_handler->get_handler_va(r_size));
 
     stack_disp += r_size;
     return encode_status::success;
