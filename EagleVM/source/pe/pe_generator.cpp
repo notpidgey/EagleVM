@@ -96,7 +96,7 @@ void pe_generator::add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8
     va_insert = insert;
 }
 
-std::vector<generator_section_t> pe_generator::get_sections()
+std::vector<generator_section_t>& pe_generator::get_sections()
 {
     return sections;
 }
@@ -104,6 +104,32 @@ std::vector<generator_section_t> pe_generator::get_sections()
 generator_section_t& pe_generator::get_last_section()
 {
     return sections.back();
+}
+
+void pe_generator::remove_section(const char* section_name)
+{
+    std::erase_if(sections, [section_name](const auto& section)
+    {
+        const IMAGE_SECTION_HEADER pe = std::get<0>(section);
+        return strcmp(reinterpret_cast<const char*>(pe.Name), section_name) == 0;
+    });
+
+    // make sure sections are properly sorted before updating raw offsets
+    std::ranges::sort(sections, [](auto& a, auto& b)
+    {
+        auto a_section = std::get<0>(a);
+        auto b_section = std::get<0>(b);
+
+        return a_section.PointerToRawData < b_section.PointerToRawData;
+    });
+
+    // walk each section in "sections and upddate the PointerToRawData so that there are not gaps between the previous section
+    uint32_t current_offset = std::get<0>(sections.front()).PointerToRawData;
+    for(auto& [section, _] : sections)
+    {
+        section.PointerToRawData = current_offset;
+        current_offset += align_file(section.SizeOfRawData);
+    }
 }
 
 static std::string section_name(const IMAGE_SECTION_HEADER& section)
@@ -136,7 +162,7 @@ void pe_generator::save_file(const std::string& save_path)
 
     // update nt headers
     nt_headers.OptionalHeader.SizeOfImage = align_section(binary_virtual_size);
-    nt_headers.FileHeader.NumberOfSections = (uint16_t) sections.size();
+    nt_headers.FileHeader.NumberOfSections = static_cast<uint16_t>(sections.size());
 
     const auto header_size = align_file((uint32_t) (
         sizeof(dos_header) +
@@ -166,18 +192,22 @@ void pe_generator::save_file(const std::string& save_path)
     protected_binary.write((char*) &dos_header, sizeof(dos_header));
     protected_binary.write((char*) dos_stub.data(), dos_stub.size());
     protected_binary.write((char*) &nt_headers, sizeof(nt_headers));
+
     for(auto& [section, data] : sections)
     {
         auto name = section_name(section);
         const auto aligned_offset = align_file(section.PointerToRawData);
+
         if(aligned_offset != section.PointerToRawData)
         {
             printf("[!] section %s has invalid offset alignment -> 0x%X (adjusting)\n",
                 name.c_str(),
                 section.PointerToRawData
             );
+
             section.PointerToRawData = aligned_offset;
         }
+
         const auto aligned_size = align_file(section.SizeOfRawData);
         if(aligned_size != section.SizeOfRawData)
         {
@@ -185,9 +215,11 @@ void pe_generator::save_file(const std::string& save_path)
                 name.c_str(),
                 section.SizeOfRawData
             );
+
             section.SizeOfRawData = aligned_size;
         }
-        const auto data_size = (uint32_t) data.size();
+
+        const auto data_size = static_cast<uint32_t>(data.size());
         const auto aligned_data_size = align_file(data_size);
         if(aligned_size != aligned_data_size)
         {
@@ -197,15 +229,18 @@ void pe_generator::save_file(const std::string& save_path)
                 data_size,
                 aligned_data_size
             );
+
             __debugbreak();
         }
+
         if(section.Misc.VirtualSize == 0)
         {
             printf("[!] section %s has virtual size of 0\n",
                 name.c_str()
             );
         }
-        protected_binary.write((char*) &section, sizeof(section));
+
+        protected_binary.write(reinterpret_cast<char*>(&section), sizeof(section));
     }
 
     // sort the sections by file offset to emit them in file order
@@ -229,7 +264,7 @@ void pe_generator::save_file(const std::string& save_path)
     for(auto& [section, data] : sections)
     {
         // sanity checks
-        const auto current_offset = (uint32_t) protected_binary.tellp();
+        const auto current_offset = static_cast<uint32_t>(protected_binary.tellp());
         printf("[+] section %s -> 0x%X bytes (current offset: 0x%X)\n",
             section_name(section).c_str(),
             section.SizeOfRawData,

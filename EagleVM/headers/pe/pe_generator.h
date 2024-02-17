@@ -35,8 +35,9 @@ public:
     void add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore);
     void add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert);
 
-    std::vector<generator_section_t> get_sections();
+    std::vector<generator_section_t>& get_sections();
     generator_section_t& get_last_section();
+    void remove_section(const char* section_name);
 
     void save_file(const std::string& save_path);
 
