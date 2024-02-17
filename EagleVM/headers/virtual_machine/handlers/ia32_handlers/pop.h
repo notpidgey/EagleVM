@@ -7,7 +7,7 @@ public:
     ia32_pop_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
         : vm_handler_entry(manager, handler_generator)
     {
-        supported_sizes = { reg_size::bit64, reg_size::bit32, reg_size::bit16 };
+        supported_sizes = { bit64, bit32, bit16, bit8 };
     };
 
 private:
