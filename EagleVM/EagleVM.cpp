@@ -252,6 +252,7 @@ int main(int argc, char* argv[])
                         // instruction is not supported by the virtual machine so we exit
                         // call out of the virtual machine, jump to the current instruction
                         code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+
                         jump_label->finalize(current_va); // since we already know where we need to jump back to
                         vm_generator.call_vm_exit(container, jump_label);
 
@@ -273,8 +274,10 @@ int main(int argc, char* argv[])
 
         if(currently_in_vm)
         {
-            code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-            jump_label->finalize(current_va); // since we already know where we need to jump back to
+            auto target_rva = parser.offset_to_rva(vm_iat_calls[c + 1].first) + 6;
+
+            code_label* jump_label = code_label::create("vmleave_dest:" + target_rva);
+            jump_label->finalize(target_rva); // since we already know where we need to jump back to
 
             vm_generator.call_vm_exit(container, jump_label);
 
