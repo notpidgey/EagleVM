@@ -8,22 +8,25 @@ void zydis_helper::setup_decoder()
 zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_size requested_size)
 {
     auto index = 0;
-    switch (zydis_helper::get_reg_size(zy_register))
+    switch (get_reg_size(zy_register))
     {
         case unsupported:
             return zy_register;
         case bit64:
             index = zy_register - ZYDIS_REGISTER_RAX;
-            break;
+        break;
         case bit32:
             index = zy_register - ZYDIS_REGISTER_EAX;
-            break;
+        break;
         case bit16:
             index = zy_register - ZYDIS_REGISTER_AX;
-            break;
+        break;
         case bit8:
-            index = zy_register - ZYDIS_REGISTER_AL;
-            break;
+            if (zy_register >= ZYDIS_REGISTER_SPL)
+                index = zy_register - ZYDIS_REGISTER_SPL + 4;
+            else
+                index = zy_register - ZYDIS_REGISTER_AL;
+        break;
     }
 
     switch (requested_size)
@@ -31,13 +34,16 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
         case unsupported:
             break;
         case bit64:
-            return zydis_register(ZYDIS_REGISTER_RAX + index);
+            return static_cast<zydis_register>(ZYDIS_REGISTER_RAX + index);
         case bit32:
-            return zydis_register(ZYDIS_REGISTER_EAX + index);
+            return static_cast<zydis_register>(ZYDIS_REGISTER_EAX + index);
         case bit16:
-            return zydis_register(ZYDIS_REGISTER_AX + index);
+            return static_cast<zydis_register>(ZYDIS_REGISTER_AX + index);
         case bit8:
-            return zydis_register(ZYDIS_REGISTER_AL + index);
+            if (index >= 4)
+                return static_cast<zydis_register>(ZYDIS_REGISTER_SPL + index - 4);
+            else
+                return static_cast<zydis_register>(ZYDIS_REGISTER_AL + index);
     }
 
     return zy_register;
@@ -57,13 +63,10 @@ char zydis_helper::reg_size_to_string(reg_size reg_size)
             return 'Q';
         case bit32:
             return 'D';
-            break;
         case bit16:
             return 'W';
-            break;
         case bit8:
             return 'B';
-            break;
         default:
             return '?';
     }

@@ -141,7 +141,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* trash_handler = hg_->vm_handlers[MNEMONIC_VM_TRASH_RFLAGS];
     const auto trash_address = trash_handler->get_handler_va(bit64);
 
-    const vm_handler_entry* mul_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_MUL];
+    const vm_handler_entry* mul_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_IMUL];
     const auto mul_address = mul_handler->get_handler_va(bit64);
 
     const vm_handler_entry* add_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_ADD];
@@ -154,6 +154,8 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto pop_address = pop_handler->get_handler_va(bit64);
 
     //[base + index * scale + disp]
+    // todo: this needs to be revisited because the registers might be 32 bit
+    // for instance mov rax, [eax + 4] is valid
 
     //1. begin with loading the base register
     //mov VTEMP, imm
