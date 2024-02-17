@@ -15,7 +15,7 @@ void vm_trash_rflags_handler::construct_single(function_container& container, re
         call_vm_handler(container, pop_handler->get_handler_va(bit64));
 
         container.add({
-            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZMEMBD(GR_RSP, -8, 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(GR_RSP, -8, 8)),
             zydis_helper::enc(ZYDIS_MNEMONIC_POPFQ),
         });
     }
