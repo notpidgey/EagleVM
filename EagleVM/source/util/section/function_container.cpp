@@ -10,7 +10,7 @@ function_container::function_container()
 
 code_label* function_container::assign_label(const std::string& name)
 {
-    code_label* label = new code_label(name);
+    auto* label = new code_label(name);
 
     function_segments.push_back({label, {}});
     return label;

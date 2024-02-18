@@ -41,6 +41,8 @@ public:
 
     void save_file(const std::string& save_path);
 
+    void zero_memory_rva(uint32_t rva, uint32_t size);
+
     uint32_t align_section(uint32_t value) const;
     uint32_t align_file(uint32_t value) const;
 

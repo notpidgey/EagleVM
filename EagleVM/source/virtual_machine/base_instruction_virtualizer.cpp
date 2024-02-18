@@ -121,7 +121,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         // mov VTEMP, -8
         // call VM_LOAD_REG
 
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(displacement)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
         call_vm_handler(container, load_handler->get_handler_va(zydis_helper::get_reg_size(op_reg.value)));
     }
 
@@ -131,7 +131,6 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
 
 encode_status base_instruction_virtualizer::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index)
 {
-    //most definitely riddled with bugs
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
 
@@ -154,8 +153,6 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const auto pop_address = pop_handler->get_handler_va(bit64);
 
     //[base + index * scale + disp]
-    // todo: this needs to be revisited because the registers might be 32 bit
-    // for instance mov rax, [eax + 4] is valid
 
     //1. begin with loading the base register
     //mov VTEMP, imm
@@ -165,17 +162,17 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         {
             const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
 
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(base_displacement)));
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
             call_vm_handler(container, lreg_address);
         }
         else
         {
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VTEMP), ZREG(VSP)));
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
             if(stack_disp)
             {
                 // this is meant to account for any possible pushes we set up
                 // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, stack_disp, 8)));
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, stack_disp, 8)));
             }
 
             call_vm_handler(container, push_address);
@@ -189,7 +186,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
 
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMS(index_displacement)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement)));
         call_vm_handler(container, lreg_address);
     }
 
@@ -199,7 +196,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
         //jmp VM_MUL        ; multiply INDEX * SCALE
         //vmscratch         ; ignore the rflags we just modified
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(VTEMP), ZIMMU(op_mem.scale)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale)));
         call_vm_handler(container, push_address);
         call_vm_handler(container, mul_address);
         call_vm_handler(container, trash_address);
@@ -221,7 +218,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         // push
 
         call_vm_handler(container, pop_address);
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
         call_vm_handler(container, push_address);
     }
 
@@ -233,7 +230,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
         auto target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
 
         call_vm_handler(container, pop_address);
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(target_temp), ZMEMBD(target_temp, 0, target_size)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(target_temp, 0, target_size)));
         call_vm_handler(container, push_address);
 
         stack_disp += target_size;
@@ -260,7 +257,7 @@ encode_status base_instruction_virtualizer::encode_operand(function_container& c
     const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
 
     const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_eimm>(ZREG(desired_temp_reg), ZIMMU(imm.u)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(desired_temp_reg), ZIMMU(imm.u)));
 
     call_vm_handler(container, push_handler->get_handler_va(r_size));
 

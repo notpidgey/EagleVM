@@ -137,6 +137,13 @@ int main(int argc, char* argv[])
     pe_generator generator(&parser);
     generator.load_parser();
 
+    // failed attempts to remove debug info, i dont think its as easy as it looks
+    // auto [debug_rva, debug_size] = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+    // if(debug_rva != 0 && debug_size != 0)
+    // {
+    //     // generator.zero_memory_rva(debug_rva, debug_size);
+    // }
+
     // generator.remove_section(".rdata");
     // generator.remove_section("_RDATA");
 

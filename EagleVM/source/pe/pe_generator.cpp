@@ -327,6 +327,23 @@ void pe_generator::save_file(const std::string& save_path)
     }
 }
 
+void pe_generator::zero_memory_rva(uint32_t rva, uint32_t size)
+{
+    // find section where rva is located
+    auto section = std::ranges::find_if(sections, [rva](const auto& section)
+    {
+        auto section_start = std::get<0>(section).VirtualAddress;
+        auto section_end = section_start + std::get<0>(section).Misc.VirtualSize;
+
+        return rva >= section_start && rva < section_end;
+    });
+
+    uint32_t offset = rva - std::get<0>(*section).VirtualAddress;
+    std::vector<uint8_t>& section_buffer = std::get<1>(*section);
+
+    std::fill_n(section_buffer.begin() + offset, size, 0);
+}
+
 static uint32_t align_up(uint32_t value, uint32_t alignment)
 {
     auto mask = alignment - 1;

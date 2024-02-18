@@ -47,12 +47,11 @@
 
 int main(int argc, char* argv[])
 {
-    // char chars[21]; // 20 characters for the license key and 1 for the null terminator
+    char chars[21]; // 20 characters for the license key and 1 for the null terminator
 
     printf("enter your license key: ");
-    // scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
+    scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
 
-    const char* chars = "12345678901234567890";
     if(strlen(chars) != 20)
     {
         printf("invalid license :(");
@@ -62,10 +61,10 @@ int main(int argc, char* argv[])
     fnEagleVMBegin();
 
     // Perform basic arithmetic operations
-    int result1 = chars[0] + chars[4] - chars[8] * chars[12];
-    int result2 = chars[1] - chars[5] * chars[9] + chars[13];
-    int result3 = chars[2] * chars[6] + chars[10] - chars[14];
-    int result4 = chars[3] + chars[7] - chars[11] * chars[15];
+    const int result1 = chars[0] + chars[4] - chars[8] * chars[12];
+    const int result2 = chars[1] - chars[5] * chars[9] + chars[13];
+    const int result3 = chars[2] * chars[6] + chars[10] - chars[14];
+    const int result4 = chars[3] + chars[7] - chars[11] * chars[15];
 
     fnEagleVMEnd();
 

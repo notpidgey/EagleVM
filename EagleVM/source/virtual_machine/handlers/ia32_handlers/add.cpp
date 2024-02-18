@@ -9,39 +9,16 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
     const vm_handler_entry* push_rflags_handler = hg_->vm_handlers[MNEMONIC_VM_PUSH_RFLAGS];
     const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
 
-    if(reg_size == bit64)
-    {
-        // pop VTEMP
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+    const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);
 
-        //add qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
-        //pushfq                        ; keep track of rflags
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)));
+    // pop VTEMP
+    call_vm_handler(container, pop_handler->get_handler_va(reg_size));
 
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
-    }
-    else if(reg_size == bit32)
-    {
-        // pop VTEMP
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+    // sub qword ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(target_temp)));
 
-        //add dword ptr [VSP], VTEMP32
-        //pushfq
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))));
-
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
-    }
-    else if(reg_size == bit16)
-    {
-        // pop VTEMP
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
-
-        //add word ptr [VSP], VTEMP16
-        //pushfq
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))));
-
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
-    }
+    // push rflags                      ; push rflags in case we want to accept these changes
+    call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
 
     create_vm_return(container);
 }
@@ -71,7 +48,7 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
             // we can save to the destination register by specifying the displacement
 
             const reg_size reg_size = zydis_helper::get_reg_size(operand.mem.base);
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
                 ZMEMBD(VTEMP, 0, reg_size),
                 ZREG(zydis_helper::get_bit_version(VTEMP, reg_size))
             ));
