@@ -11,7 +11,7 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
     inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
     code_label* target = handler->get_handler_va(
         static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8),
-        decoded_instruction.instruction.operand_count
+        decoded_instruction.instruction.operand_count_visible
     );
 
     if(target == nullptr)
@@ -21,7 +21,7 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
     }
 
     int current_disp = 0;
-    for(int i = 0; i < decoded_instruction.instruction.operand_count; i++)
+    for(int i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
     {
         encode_status status = encode_status::unsupported;
         switch(const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
@@ -74,7 +74,7 @@ bool inst_handler_entry::virtualize_as_address(const zydis_decode& inst, int ind
 
 void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)
 {
-    code_label* target_handler = get_handler_va(static_cast<reg_size>(decoded.instruction.operand_width / 8), decoded.instruction.operand_count);
+    code_label* target_handler = get_handler_va(static_cast<reg_size>(decoded.instruction.operand_width / 8), decoded.instruction.operand_count_visible);
     call_vm_handler(container, target_handler);
 }
 

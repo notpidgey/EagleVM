@@ -67,7 +67,7 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     const vm_handler_entry* rlfags_handler = hg_->v_handlers[MNEMONIC_VM_POP_RFLAGS];
     call_vm_handler(container, rlfags_handler->get_vm_handler_va(bit64));
 
-    switch(decoded_instruction.instruction.operand_count)
+    switch(decoded_instruction.instruction.operand_count_visible)
     {
         case 1:
             // we do not support yet
@@ -107,7 +107,7 @@ bool ia32_imul_handler::virtualize_as_address(const zydis_decode& inst, int inde
      *  The intermediate product (twice the size of the first source operand) is truncated and stored in the destination operand (a general-purpose register).
      */
 
-    if(index == 0 && inst.instruction.operand_count == 3)
+    if(index == 0 && inst.instruction.operand_count_visible == 3)
         return true;
 
     return false;
