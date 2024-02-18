@@ -13,9 +13,9 @@ public:
             { bit16, 2, HANDLER_BUILDER(construct_single) },
 
             // its 3 operands but we handle in finalize_translate_to_virtual
-            { bit64, 3, HANDLER_BUILDER(construct_single) },
-            { bit32, 3, HANDLER_BUILDER(construct_single) },
-            { bit16, 3, HANDLER_BUILDER(construct_single) },
+            // { bit64, 3, HANDLER_BUILDER(construct_single) },
+            // { bit32, 3, HANDLER_BUILDER(construct_single) },
+            // { bit16, 3, HANDLER_BUILDER(construct_single) },
         };
 
         first_operand_as_ea = false;
