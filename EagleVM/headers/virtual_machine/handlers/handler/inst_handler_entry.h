@@ -10,6 +10,8 @@ public:
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
     code_label* get_handler_va(reg_size width, uint8_t operands) const;
 
+    virtual bool virtualize_as_address(const zydis_decode& inst, int index);
+
 protected:
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index);
     virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index);

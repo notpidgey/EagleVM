@@ -67,6 +67,11 @@ code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands)
     return nullptr;
 }
 
+bool inst_handler_entry::virtualize_as_address(const zydis_decode& inst, int index)
+{
+    return first_operand_as_ea && index == 0;
+}
+
 void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)
 {
     code_label* target_handler = get_handler_va(static_cast<reg_size>(decoded.instruction.operand_width / 8), decoded.instruction.operand_count);
@@ -76,7 +81,7 @@ void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decod
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction,
                                                  zydis_dreg op_reg, int& stack_disp, int index)
 {
-    if(first_operand_as_ea == true && index == 0)
+    if(virtualize_as_address(instruction, index))
     {
         const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
@@ -200,7 +205,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
     // by default, this will be dereferenced and we will get the value at the address,
     reg_size target_size = reg_size(instruction.operands[index].size / 8);
-    if(!(first_operand_as_ea == true && index == 0))
+    if(!virtualize_as_address(instruction, index))
     {
         // this means we are working with the second operand
         auto target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
