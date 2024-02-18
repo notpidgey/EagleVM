@@ -69,7 +69,7 @@ code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands)
 
 void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)
 {
-    code_label* target_handler = get_handler_va(static_cast<reg_size>(decoded.instruction.address_width / 8), decoded.instruction.operand_count);
+    code_label* target_handler = get_handler_va(static_cast<reg_size>(decoded.instruction.operand_width / 8), decoded.instruction.operand_count);
     call_vm_handler(container, target_handler);
 }
 
