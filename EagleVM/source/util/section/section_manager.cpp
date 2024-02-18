@@ -60,6 +60,9 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
         auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions] : segments)
         {
+            if(seg_code_label && !seg_code_label->is_finalized())
+                __debugbreak();
+
             instructions_vec requests;
             for (auto& inst : instructions)
             {

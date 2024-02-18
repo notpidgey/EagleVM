@@ -41,8 +41,6 @@ class base_instruction_virtualizer
 public:
     explicit base_instruction_virtualizer(vm_register_manager* manager, vm_handler_generator* handler_generator);
 
-    virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
-
 protected:
     ~base_instruction_virtualizer() = default;
 
@@ -52,12 +50,4 @@ protected:
 
     virtual void create_vm_return(function_container& container);
     virtual void call_vm_handler(function_container& container, code_label* jump_label);
-
-    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index);
-    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index);
-    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr, int& stack_disp);
-    virtual encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, int& stack_disp);
-
-    virtual void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) = 0;
-    virtual reg_size get_target_handler_size(const zydis_decode& decoded) = 0;
 };

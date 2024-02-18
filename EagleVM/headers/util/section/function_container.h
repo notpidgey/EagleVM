@@ -39,3 +39,15 @@ public:
 private:
     std::vector<function_segment> function_segments;
 };
+
+/*
+ * brainstorming:
+ * potential look at what container add might do
+ *
+ * code_label* label = code_label::create();
+ * container.add([=](dynamic_instruction_vec& vec){
+ *      vec += enc(ZYDIS_MNEMONIC_PUSHFQ),
+ *      vec += enc(code_label, ZYDIS_MNEMONIC_PUSHFQ)
+ *      vec += enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_R11), ZIMMU(label->get()))
+ * })
+ */

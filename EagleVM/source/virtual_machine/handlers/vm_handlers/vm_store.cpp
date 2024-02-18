@@ -4,7 +4,7 @@
 
 void vm_store_handler::construct_single(function_container& container, reg_size reg_size)
 {
-    const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
+    const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
 
     const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);
 
@@ -13,7 +13,7 @@ void vm_store_handler::construct_single(function_container& container, reg_size 
     // mov [VTEMP2], VTEMP          ; move value into register location
 
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-    call_vm_handler(container, push_handler->get_handler_va(bit64));
+    call_vm_handler(container, push_handler->get_handler_va(bit64, 1));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
 
     create_vm_return(container);

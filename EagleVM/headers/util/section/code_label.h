@@ -17,6 +17,8 @@ public:
     int32_t get();
     void finalize(uint32_t virtual_address);
 
+    bool is_finalized();
+
     std::string get_name();
 
 private:

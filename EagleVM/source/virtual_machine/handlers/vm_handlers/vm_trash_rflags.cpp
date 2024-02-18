@@ -11,8 +11,8 @@ void vm_trash_rflags_handler::construct_single(function_container& container, re
         // pop rflags
         // rsp is now at where it was before the move
 
-        const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
-        call_vm_handler(container, pop_handler->get_handler_va(bit64));
+        const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
+        call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
 
         container.add({
             zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(GR_RSP, -8, 8)),
