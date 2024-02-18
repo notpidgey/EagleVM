@@ -27,6 +27,10 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
 {
     vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 
+    // accept changes to rflags
+    const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
+    call_vm_handler(container, store_handler->get_handler_va(bit64));
+
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {
@@ -56,8 +60,4 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         break;
         default: __debugbreak();
     }
-
-    // accept changes to rflags
-    const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
-    call_vm_handler(container, store_handler->get_handler_va(bit64));
 }

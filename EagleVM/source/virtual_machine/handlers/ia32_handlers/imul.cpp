@@ -89,6 +89,9 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     // perform the imul
     vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 
+    const vm_handler_entry* rlfags_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
+    call_vm_handler(container, rlfags_handler->get_handler_va(bit64));
+
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {
@@ -118,8 +121,4 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
         break;
         default: __debugbreak();
     }
-
-    // accept changes to rflags
-    const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
-    call_vm_handler(container, store_handler->get_handler_va(bit64));
 }
