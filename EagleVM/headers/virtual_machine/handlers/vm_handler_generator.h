@@ -11,7 +11,8 @@
 #include <unordered_map>
 #include <ranges>
 
-#include "virtual_machine/handlers/vm_handler_entry.h"
+#include "virtual_machine/handlers/handler/inst_handler_entry.h"
+#include "virtual_machine/handlers/handler/vm_handler_entry.h"
 #include "virtual_machine/vm_register_manager.h"
 
 #include "util/zydis_helper.h"
@@ -20,7 +21,8 @@
 class vm_handler_generator
 {
 public:
-    std::unordered_map<int, vm_handler_entry*> vm_handlers;
+    std::unordered_map<int, inst_handler_entry*> inst_handlers;
+    std::unordered_map<int, vm_handler_entry*> v_handlers;
 
     vm_handler_generator();
     explicit vm_handler_generator(vm_register_manager* push_order);

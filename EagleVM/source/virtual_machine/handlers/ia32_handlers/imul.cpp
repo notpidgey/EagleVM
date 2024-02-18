@@ -6,48 +6,48 @@ void ia32_imul_handler::construct_single(function_container& container, reg_size
 {
     uint64_t size = reg_size;
 
-    const vm_handler_entry* push_rflags_handler = hg_->vm_handlers[MNEMONIC_VM_PUSH_RFLAGS];
-    const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
-    const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
+    const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_PUSH_RFLAGS];
+    const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
+    const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
     if(reg_size == bit64)
     {
         // pop VTEMP2
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZREG(VTEMP)));
 
         // pop VTEMP
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
 
         //imul VTEMP, VTEMP2            ; imul the two registers
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_IMUL, ZREG(VTEMP), ZREG(VTEMP2)));
 
-        call_vm_handler(container, push_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(reg_size, 1));
+        call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
     }
     else if(reg_size == bit32)
     {
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZREG(VTEMP)));
 
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_IMUL, ZREG(TO32(VTEMP)), ZREG(TO32(VTEMP2))));
 
-        call_vm_handler(container, push_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(reg_size, 1));
+        call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
     }
     else if(reg_size == bit16)
     {
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZREG(VTEMP)));
 
-        call_vm_handler(container, pop_handler->get_handler_va(reg_size));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_IMUL, ZREG(TO16(VTEMP)), ZREG(TO16(VTEMP2))));
 
-        call_vm_handler(container, push_handler->get_handler_va(reg_size));
-        call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
+        call_vm_handler(container, push_handler->get_handler_va(reg_size, 1));
+        call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
     }
 
     create_vm_return(container);
@@ -87,26 +87,26 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     }
 
     // perform the imul
-    vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+    inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 
     // top of the stack should have the rflags, since this is a real emulation of imul
     // we pop the rflags and store them on the VREG stack
-    const vm_handler_entry* rlfags_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
-    call_vm_handler(container, rlfags_handler->get_handler_va(bit64));
+    const vm_handler_entry* rlfags_handler = hg_->v_handlers[MNEMONIC_VM_POP_RFLAGS];
+    call_vm_handler(container, rlfags_handler->get_vm_handler_va(bit64));
 
     auto operand = decoded_instruction.operands[0];
     switch(operand.type)
     {
         case ZYDIS_OPERAND_TYPE_REGISTER:
         {
-            const vm_handler_entry* store_handler = hg_->vm_handlers[MNEMONIC_VM_STORE_REG];
+            const vm_handler_entry* store_handler = hg_->v_handlers[MNEMONIC_VM_STORE_REG];
             const auto [base_displacement, reg_size] = rm_->get_stack_displacement(operand.reg.value);
 
             // the product is at the top of the stack
             // we can save to the destination register by specifying the displacement
             // and then calling store reg
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
-            call_vm_handler(container, store_handler->get_handler_va(reg_size));
+            call_vm_handler(container, store_handler->get_vm_handler_va(reg_size));
         }
         break;
         case ZYDIS_OPERAND_TYPE_MEMORY:

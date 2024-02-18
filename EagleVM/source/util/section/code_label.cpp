@@ -34,6 +34,11 @@ void code_label::finalize(uint32_t va)
     virtual_address = base_address + va;
 }
 
+bool code_label::is_finalized()
+{
+    return finalized;
+}
+
 std::string code_label::get_name()
 {
     return name;

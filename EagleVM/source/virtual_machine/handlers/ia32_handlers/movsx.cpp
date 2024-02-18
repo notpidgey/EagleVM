@@ -4,10 +4,10 @@
 
 void ia32_movsx_handler::construct_single(function_container& container, reg_size size)
 {
-    const vm_handler_entry* mov_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_MOV];
+    const inst_handler_entry* mov_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_MOV];
 
-    // we can literally call the mov handler because we upgraded the operand
-    call_vm_handler(container, mov_handler->get_handler_va(size));
+    // we can literally call the mov handler because we upgraded the operand-
+    call_vm_handler(container, mov_handler->get_handler_va(size, 2));
 
     create_vm_return(container);
     std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(size), __func__, container.size());
@@ -18,21 +18,21 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     if(index == 0)
     {
         const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
-        const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
+        const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // this means we want to put the address of of the target register at the top of the stack
         // mov VTEMP, VREGS + DISPLACEMENT
         // push
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
-        call_vm_handler(container, push_handler->get_handler_va(bit64)); // always 64 bit because its an address
+        call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
     }
     else
     {
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
-        const vm_handler_entry* load_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
-        const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
-        const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
+        const vm_handler_entry* load_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
+        const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
+        const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // this routine will load the register value to the top of the VSTACK
         // mov VTEMP, -8
@@ -40,14 +40,14 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         // pop VTEMP
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
-        call_vm_handler(container, load_handler->get_handler_va(size));
-        call_vm_handler(container, pop_handler->get_handler_va(size));
+        call_vm_handler(container, load_handler->get_vm_handler_va(size));
+        call_vm_handler(container, pop_handler->get_handler_va(size, 1));
 
         const reg_size current_size = size;
         const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
         upscale_temp(container, target_size, current_size);
 
-        call_vm_handler(container, push_handler->get_handler_va(target_size));
+        call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
     }
 
     return encode_status::success;
@@ -58,23 +58,23 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
 
-    const vm_handler_entry* lreg_handler = hg_->vm_handlers[MNEMONIC_VM_LOAD_REG];
-    const auto lreg_address = lreg_handler->get_handler_va(bit64);
+    const vm_handler_entry* lreg_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
+    const auto lreg_address = lreg_handler->get_vm_handler_va(bit64);
 
-    const vm_handler_entry* trash_handler = hg_->vm_handlers[MNEMONIC_VM_TRASH_RFLAGS];
-    const auto trash_address = trash_handler->get_handler_va(bit64);
+    const vm_handler_entry* trash_handler = hg_->v_handlers[MNEMONIC_VM_TRASH_RFLAGS];
+    const auto trash_address = trash_handler->get_vm_handler_va(bit64);
 
-    const vm_handler_entry* mul_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_IMUL];
-    const auto mul_address = mul_handler->get_handler_va(bit64);
+    const inst_handler_entry* mul_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_IMUL];
+    const auto mul_address = mul_handler->get_handler_va(bit64, 2);
 
-    const vm_handler_entry* add_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_ADD];
-    const auto add_address = add_handler->get_handler_va(bit64);
+    const inst_handler_entry* add_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_ADD];
+    const auto add_address = add_handler->get_handler_va(bit64, 2);
 
-    const vm_handler_entry* push_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_PUSH];
-    const auto push_address = push_handler->get_handler_va(bit64);
+    const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
+    const auto push_address = push_handler->get_handler_va(bit64, 1);
 
-    const vm_handler_entry* pop_handler = hg_->vm_handlers[ZYDIS_MNEMONIC_POP];
-    const auto pop_address = pop_handler->get_handler_va(bit64);
+    const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
+    const auto pop_address = pop_handler->get_handler_va(bit64, 1);
 
     //[base + index * scale + disp]
 
@@ -157,7 +157,7 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         ZMEMBD(VTEMP, 0, mem_size)
     ));
     upscale_temp(container, target_size, mem_size);
-    call_vm_handler(container, push_handler->get_handler_va(target_size));
+    call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
     return encode_status::success;
 }
