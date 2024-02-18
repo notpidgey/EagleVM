@@ -89,6 +89,8 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     // perform the imul
     vm_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 
+    // top of the stack should have the rflags, since this is a real emulation of imul
+    // we pop the rflags and store them on the VREG stack
     const vm_handler_entry* rlfags_handler = hg_->vm_handlers[MNEMONIC_VM_POP_RFLAGS];
     call_vm_handler(container, rlfags_handler->get_handler_va(bit64));
 
