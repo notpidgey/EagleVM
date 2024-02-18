@@ -130,16 +130,22 @@ int main(int argc, char* argv[])
         std::printf("[+] failed to verify macro usage\n");
         exit(-1);
     }
-    else
-    {
-        std::printf("[+] successfully verified macro usage\n");
-    }
+
+    std::printf("[+] successfully verified macro usage\n");
 
     //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
     pe_generator generator(&parser);
     generator.load_parser();
 
-    // code_label::base_address = parser.get_nt_header()->OptionalHeader.BaseOfCode;
+    // failed attempts to remove debug info, i dont think its as easy as it looks
+    // auto [debug_rva, debug_size] = nt_header->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+    // if(debug_rva != 0 && debug_size != 0)
+    // {
+    //     // generator.zero_memory_rva(debug_rva, debug_size);
+    // }
+
+    // generator.remove_section(".rdata");
+    // generator.remove_section("_RDATA");
 
     IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
 
@@ -329,6 +335,7 @@ int main(int argc, char* argv[])
 
     generator.add_ignores(va_delete);
     generator.add_inserts(va_inserts);
+
     generator.save_file("EagleVMSandboxProtected.exe");
 
     return 0;

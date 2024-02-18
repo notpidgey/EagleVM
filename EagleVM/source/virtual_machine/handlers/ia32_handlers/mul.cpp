@@ -19,7 +19,7 @@ void ia32_mul_handler::construct_single(function_container& container, reg_size 
 
         //add qword ptr [VSP], VTEMP    ; subtracts topmost value from 2nd top most value
         //pushfq                        ; keep track of rflags
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(VTEMP)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(VTEMP)));
 
         call_vm_handler(container, pop_handler->get_handler_va(reg_size));
         call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
@@ -31,7 +31,7 @@ void ia32_mul_handler::construct_single(function_container& container, reg_size 
 
         //add dword ptr [VSP], VTEMP32
         //pushfq
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(TO32(VTEMP))));
 
         call_vm_handler(container, pop_handler->get_handler_va(reg_size));
         call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));
@@ -43,7 +43,7 @@ void ia32_mul_handler::construct_single(function_container& container, reg_size 
 
         //add word ptr [VSP], VTEMP16
         //pushfq
-        container.add(zydis_helper::encode<ZYDIS_MNEMONIC_ADD, zydis_emem, zydis_ereg>(ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(TO16(VTEMP))));
 
         call_vm_handler(container, pop_handler->get_handler_va(reg_size));
         call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));

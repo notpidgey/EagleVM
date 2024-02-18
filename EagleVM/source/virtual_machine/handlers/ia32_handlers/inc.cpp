@@ -11,7 +11,7 @@ void ia32_inc_handler::construct_single(function_container& container, reg_size 
     call_vm_handler(container, pop_handler->get_handler_va(bit64));
 
     //dec [VTEMP]                   ; dec popped value
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_INC, zydis_emem>(ZMEMBD(VSP, 0, reg_size)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_INC, ZMEMBD(VSP, 0, reg_size)));
 
     //pushfq                        ; keep track of rflags
     call_vm_handler(container, push_rflags_handler->get_handler_va(bit64));

@@ -14,8 +14,8 @@ void ia32_mov_handler::construct_single(function_container& container, reg_size 
     // mov [VTEMP2], VTEMP  ; write VTEMP into the address we have
     // pop                  ; we want to maintain the stack
     call_vm_handler(container, pop_handler->get_handler_va(size));
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP2), ZMEMBD(VSP, 0, 8)));
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VTEMP2, 0, 8), ZREG(VTEMP)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZMEMBD(VSP, 0, 8)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, 8), ZREG(VTEMP)));
     call_vm_handler(container, pop_handler->get_handler_va(bit64));
 
     create_vm_return(container);

@@ -4,7 +4,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
 {
     // TODO: this is a temporary fix before i add stack overrun checks
     // we allocate the registers for the virtual machine 20 pushes after the current stack
-    container.add(zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(GR_RSP, -(8 * vm_overhead), 8)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(GR_RSP, -(8 * vm_overhead), 8)));
 
     // pushfq
     {
@@ -15,7 +15,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     std::ranges::for_each(PUSHORDER,
         [&container](short reg)
         {
-            container.add(zydis_helper::encode<ZYDIS_MNEMONIC_PUSH, zydis_ereg>(ZREG(reg)));
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZREG(reg)));
         });
 
     // reserve VM call stack
@@ -42,19 +42,19 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
 
         // TODO: for instruction obfuscation, for operands that use MEM, manually expand them out store it in a new register such as VEMEM and then just dereference that register !!!
         container.add({
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(GR_RSP)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VREGS), ZREG(VSP)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VCS), ZREG(VSP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VSP), ZREG(GR_RSP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VREGS), ZREG(VSP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VCS), ZREG(VSP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(GR_RSP), ZMEMBD(VREGS, 8 * (vm_stack_regs + 1), 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(VREGS, 8 * (vm_stack_regs + 1), 8)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VCS), ZMEMBD(VCS, -8, 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_emem, zydis_ereg>(ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VCS), ZMEMBD(VCS, -8, 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
 
-            zydis_helper::encode<ZYDIS_MNEMONIC_LEA, zydis_ereg, zydis_emem>(ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
-            zydis_helper::encode<ZYDIS_MNEMONIC_MOV, zydis_ereg, zydis_ereg>(ZREG(VSP), ZREG(VTEMP)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VSP), ZREG(VTEMP)),
         });
     }
 
