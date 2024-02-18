@@ -11,6 +11,11 @@ public:
             { bit64, 2, HANDLER_BUILDER(construct_single) },
             { bit32, 2, HANDLER_BUILDER(construct_single) },
             { bit16, 2, HANDLER_BUILDER(construct_single) },
+
+            // its 3 operands but we handle in finalize_translate_to_virtual
+            { bit64, 3, HANDLER_BUILDER(construct_single) },
+            { bit32, 3, HANDLER_BUILDER(construct_single) },
+            { bit16, 3, HANDLER_BUILDER(construct_single) },
         };
 
         first_operand_as_ea = false;
@@ -19,4 +24,6 @@ public:
 private:
     void construct_single(function_container& container, reg_size size);
     void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) override;
+
+    bool virtualize_as_address(const zydis_decode& inst, int index) override;
 };
