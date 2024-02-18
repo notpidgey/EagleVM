@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     printf("enter your license key: ");
     scanf_s("%20s", chars, _countof(chars)); // _countof(chars) will give the size of the chars array
 
-    if(strlen(chars) != 20)
+    if(strlen(chars) <= 20)
     {
         printf("invalid license :(");
         return 1;
