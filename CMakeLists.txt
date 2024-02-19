@@ -29,5 +29,5 @@ option(ZYDIS_BUILD_EXAMPLES "" OFF)
 
 add_subdirectory(deps/zydis)
 add_subdirectory(EagleVM)
-add_subdirectory(EagleVMSandbox)
-add_subdirectory(EagleVMStub)
+add_subdirectory(EagleVM.Sandbox)
+add_subdirectory(EagleVM.Stub)
