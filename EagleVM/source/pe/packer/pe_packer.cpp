@@ -41,9 +41,10 @@ section_manager pe_packer::create_section()
         for(auto& [header, data] : generator->sections)
         {
             const std::string section_name = pe_generator::section_name(header);
-            if(section_name != ".vmcode" && section_name != ".vmdata")
+            if(section_name != ".vmcode" && section_name != ".vmdata" && section_name != ".text")
                 continue;
 
+            header.Characteristics |= IMAGE_SCN_MEM_WRITE;
             const uint32_t section_rva = header.VirtualAddress;
 
             code_label* rel_label = code_label::create();
