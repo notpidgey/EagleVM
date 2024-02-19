@@ -2,6 +2,7 @@
 
 #include "pe/pe_parser.h"
 #include "pe/pe_generator.h"
+#include "pe/packer/pe_packer.h"
 #include "virtual_machine/vm_generator.h"
 
 #include "obfuscation/mba/mba.h"
@@ -156,7 +157,7 @@ int main(int argc, char* argv[])
     data_section.SizeOfRawData = 0;
     data_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     data_section.Misc.VirtualSize = 0;
-    data_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    data_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
     data_section.PointerToRelocations = 0;
     data_section.NumberOfRelocations = 0;
     data_section.NumberOfLinenumbers = 0;
@@ -299,7 +300,7 @@ int main(int argc, char* argv[])
     code_section.SizeOfRawData = 0;
     code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     code_section.Misc.VirtualSize = generator.align_section(1);
-    code_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+    code_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
     code_section.PointerToRelocations = 0;
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
@@ -309,6 +310,8 @@ int main(int argc, char* argv[])
     code_section.Misc.VirtualSize = generator.align_section(vm_code_bytes.size());
     code_section_bytes += vm_code_bytes;
 
+    last_section = &code_section;
+
     // now that the section is compiled we must:
     // delete the code marked by va_delete
     // create jumps marked by va_enters
@@ -317,9 +320,16 @@ int main(int argc, char* argv[])
     for(auto& [enter_va, enter_location] : va_enters)
         va_inserts.emplace_back(enter_va, vm_generator::create_jump(enter_va, enter_location));
 
-    last_section = &code_section;
+    generator.add_ignores(va_delete);
+    generator.add_inserts(va_inserts);
+    generator.bake_modifications();
 
-    auto& [packer_section, _2] = generator.add_section(".pack");
+    pe_packer packer(&generator);
+    packer.set_overlay(false);
+
+    section_manager packer_sm = packer.create_section();
+
+    auto& [packer_section, packer_bytes] = generator.add_section(".pack");
     packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     packer_section.SizeOfRawData = 0;
     packer_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
@@ -329,10 +339,14 @@ int main(int argc, char* argv[])
     packer_section.NumberOfRelocations = 0;
     packer_section.NumberOfLinenumbers = 0;
 
-    last_section = &packer_section;
+    encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.VirtualAddress);
+    packer_section.SizeOfRawData = generator.align_file(packer_code_bytes.size());
+    packer_section.Misc.VirtualSize = generator.align_section(packer_code_bytes.size());
+    packer_bytes += packer_code_bytes;
 
-    generator.add_ignores(va_delete);
-    generator.add_inserts(va_inserts);
+    generator.nt_headers.OptionalHeader.AddressOfEntryPoint = packer_section.VirtualAddress;
+
+    last_section = &packer_section;
 
     generator.save_file("EagleVMSandboxProtected.exe");
 

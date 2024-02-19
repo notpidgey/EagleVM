@@ -96,6 +96,42 @@ void pe_generator::add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8
     va_insert = insert;
 }
 
+void pe_generator::bake_modifications()
+{
+    for(auto& [section, data] : sections)
+    {
+        // calculate the start and end virtual addresses of the section
+        uint32_t section_start_va = section.VirtualAddress;
+        uint32_t section_end_va = section_start_va + section.Misc.VirtualSize;
+
+        // iterate over va_ignore
+        for(auto& [va, bytes] : va_ignore)
+        {
+            if(va >= section_start_va && va < section_end_va)
+            {
+                // calculate the offset within the section data
+                const uint32_t offset = va - section_start_va;
+
+                // replace the bytes at the offset with 0x90
+                std::fill_n(data.begin() + offset, bytes, 0x90);
+            }
+        }
+
+        // iterate over va_insert
+        for(auto& [va, bytes_to_insert] : va_insert)
+        {
+            if(va >= section_start_va && va < section_end_va)
+            {
+                // calculate the offset within the section data
+                const uint32_t offset = va - section_start_va;
+
+                // replace the bytes at the offset with the bytes from the vector
+                std::ranges::copy(bytes_to_insert, data.begin() + offset);
+            }
+        }
+    }
+}
+
 std::vector<generator_section_t>& pe_generator::get_sections()
 {
     return sections;
@@ -132,7 +168,7 @@ void pe_generator::remove_section(const char* section_name)
     }
 }
 
-static std::string section_name(const IMAGE_SECTION_HEADER& section)
+std::string pe_generator::section_name(const IMAGE_SECTION_HEADER& section)
 {
     // NOTE: the section.Name is not guaranteed to be null-terminated
     char name[sizeof(section.Name) + 1] = {};
@@ -280,36 +316,6 @@ void pe_generator::save_file(const std::string& save_path)
         if(data.empty())
         {
             continue;
-        }
-
-        // calculate the start and end virtual addresses of the section
-        uint32_t section_start_va = section.VirtualAddress;
-        uint32_t section_end_va = section_start_va + section.Misc.VirtualSize;
-
-        // iterate over va_ignore
-        for(auto& [va, bytes] : va_ignore)
-        {
-            if(va >= section_start_va && va < section_end_va)
-            {
-                // calculate the offset within the section data
-                const uint32_t offset = va - section_start_va;
-
-                // replace the bytes at the offset with 0x90
-                std::fill_n(data.begin() + offset, bytes, 0x90);
-            }
-        }
-
-        // iterate over va_insert
-        for(auto& [va, bytes_to_insert] : va_insert)
-        {
-            if(va >= section_start_va && va < section_end_va)
-            {
-                // calculate the offset within the section data
-                const uint32_t offset = va - section_start_va;
-
-                // replace the bytes at the offset with the bytes from the vector
-                std::ranges::copy(bytes_to_insert, data.begin() + offset);
-            }
         }
 
         // write the data

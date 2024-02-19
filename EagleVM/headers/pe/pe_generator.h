@@ -17,6 +17,10 @@ using generator_section_t = std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>
 class pe_generator
 {
 public:
+    IMAGE_DOS_HEADER dos_header;
+    IMAGE_NT_HEADERS nt_headers;
+    std::vector<generator_section_t> sections;
+
     explicit pe_generator(pe_parser* pe_parser)
     {
         parser = pe_parser;
@@ -35,9 +39,13 @@ public:
     void add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore);
     void add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert);
 
+    void bake_modifications();
+
     std::vector<generator_section_t>& get_sections();
     generator_section_t& get_last_section();
     void remove_section(const char* section_name);
+
+    static std::string section_name(const IMAGE_SECTION_HEADER& section);
 
     void save_file(const std::string& save_path);
 
@@ -49,10 +57,8 @@ public:
 private:
     pe_parser* parser;
 
-    IMAGE_DOS_HEADER dos_header;
+    // TODO: probably just make these public? why does it even matter
     std::vector<uint8_t> dos_stub;
-    IMAGE_NT_HEADERS nt_headers;
-    std::vector<generator_section_t> sections;
 
     std::vector<std::pair<uint32_t, uint8_t>> va_ignore;
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_insert;
