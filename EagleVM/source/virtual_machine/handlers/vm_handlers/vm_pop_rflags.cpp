@@ -2,7 +2,7 @@
 
 #include "virtual_machine/vm_generator.h"
 
-void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size)
+void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     if(size == bit64)
     {

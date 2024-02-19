@@ -31,6 +31,8 @@ public:
     function_container construct_handler();
     void initialize_labels();
 
+    virtual void construct_single(function_container& container, reg_size size, uint8_t operands) = 0;
+
 protected:
     ~base_handler_entry() = default;
 

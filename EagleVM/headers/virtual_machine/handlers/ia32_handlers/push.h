@@ -8,13 +8,13 @@ public:
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {
-            { bit64, 1, HANDLER_BUILDER(construct_single) },
-            { bit32, 1, HANDLER_BUILDER(construct_single) },
-            { bit16, 1, HANDLER_BUILDER(construct_single) },
-            { bit8, 1, HANDLER_BUILDER(construct_single) },
+            { bit64, 1 },
+            { bit32, 1 },
+            { bit16, 1 },
+            { bit8, 1 },
         };
     };
 
 private:
-    void construct_single(function_container& container, reg_size size);
+    void construct_single(function_container& container, reg_size size, uint8_t operands) override;
 };

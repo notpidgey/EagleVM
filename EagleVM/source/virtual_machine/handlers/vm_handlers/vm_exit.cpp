@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_exit.h"
 
-void vm_exit_handler::construct_single(function_container& container, reg_size size)
+void vm_exit_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     // we need to place the target RSP after all the pops
     // lea VTEMP, [VREGS + vm_stack_regs]

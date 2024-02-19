@@ -8,7 +8,7 @@ function_container base_handler_entry::construct_handler()
     std::ranges::for_each(handlers, [this](handler_info& info)
     {
         container.assign_label(info.target_label);
-        info.construct(container, info.instruction_width);
+        construct_single(container, info.instruction_width, info.operand_count);
     });
 
     return container;

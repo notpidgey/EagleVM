@@ -216,8 +216,6 @@ int main(int argc, char* argv[])
                  * first,   something is wrong with getting the second instruction to virtualize
                  * second,  i cannot figure out a good implementation for movsx handler
                  * third,   need some kind of abstraction to support 3 operands for the handlers that do want to support 3 operands
-                 * fourth,  i hate the zydis_helper::encode<T> template thing i created, need to convert everything to zydis_helper::enc()
-                 * fifth,   handlers need to be able to override the target VM handler that beyond simple bit64,bit32,etc handlers
                  * sixth,   i might have abused LEA way too much when i couldve just been subtracting in the handlers, potentially do this instead
                  * seventh, i wish i could see the assembly generated for each instruction and the reason for that generation, need better logging
                  *

@@ -2,7 +2,7 @@
 
 #include "virtual_machine/vm_generator.h"
 
-void ia32_movsx_handler::construct_single(function_container& container, reg_size size)
+void ia32_movsx_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     const inst_handler_entry* mov_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_MOV];
 

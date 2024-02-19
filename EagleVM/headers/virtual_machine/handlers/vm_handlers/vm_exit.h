@@ -8,10 +8,10 @@ public:
         : vm_handler_entry(manager, handler_generator)
     {
         handlers = {
-            { bit64, 0, HANDLER_BUILDER(construct_single) },
+            { bit64, 0 },
         };
     };
 
 private:
-    virtual void construct_single(function_container& container, reg_size size);
+    virtual void construct_single(function_container& container, reg_size size, uint8_t operands) override;
 };
