@@ -1,6 +1,6 @@
 #include "virtual_machine/handlers/vm_handlers/vm_enter.h"
 
-void vm_enter_handler::construct_single(function_container& container, reg_size size)
+void vm_enter_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     // TODO: this is a temporary fix before i add stack overrun checks
     // we allocate the registers for the virtual machine 20 pushes after the current stack

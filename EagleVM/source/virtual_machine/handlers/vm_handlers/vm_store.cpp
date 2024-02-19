@@ -2,7 +2,7 @@
 
 #include "virtual_machine/vm_generator.h"
 
-void vm_store_handler::construct_single(function_container& container, reg_size reg_size)
+void vm_store_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
 

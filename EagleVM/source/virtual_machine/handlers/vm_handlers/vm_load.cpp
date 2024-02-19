@@ -6,7 +6,7 @@
     VMLOAD
     Load the value displacement (located in VTEMP) from VREGS onto the stack
 */
-void vm_load_handler::construct_single(function_container& container, reg_size reg_size)
+void vm_load_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
     uint64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

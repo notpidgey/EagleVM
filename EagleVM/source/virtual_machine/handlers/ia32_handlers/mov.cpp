@@ -2,7 +2,7 @@
 
 #include "virtual_machine/vm_generator.h"
 
-void ia32_mov_handler::construct_single(function_container& container, reg_size size)
+void ia32_mov_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     // value we want to move should be located at the top of the stack
     // the address we want to move TO should be located right below it

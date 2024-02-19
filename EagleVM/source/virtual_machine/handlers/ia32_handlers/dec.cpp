@@ -2,7 +2,7 @@
 
 #include "virtual_machine/vm_generator.h"
 
-void ia32_dec_handler::construct_single(function_container& container, reg_size reg_size)
+void ia32_dec_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
     const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_PUSH_RFLAGS];
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
