@@ -46,7 +46,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VREGS), ZREG(VSP)),
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VCS), ZREG(VSP)),
 
-            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(VREGS, 8 * (vm_stack_regs + 1), 8)),
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(VREGS, 8 * (vm_stack_regs), 8)),
 
             zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
