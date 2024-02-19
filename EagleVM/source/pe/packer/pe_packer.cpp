@@ -48,35 +48,34 @@ section_manager pe_packer::create_section()
             container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
             container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
 
-            for(int i = 0; i < data.size(); i++)
+            for(int i = 0; i < data.size(); i += 4)
             {
-                if(current_byte == text.size())
+                if(current_byte + 4 > text.size())
                     break;
 
-                const unsigned char target_char = text[current_byte];
-                const unsigned char current_char = data[i];
+                uint32_t target_value = *reinterpret_cast<uint32_t*>(&text[current_byte]);
+                uint32_t current_value = *reinterpret_cast<uint32_t*>(&data[i]);
 
                 // first we write the target
-                data[i] = target_char;
+                *reinterpret_cast<uint32_t*>(&data[i]) = target_value;
 
                 // then we find a way to get it back
-                signed char diff = target_char - current_char;
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(GR_RAX, 0, 1), ZIMMS(diff)));
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_INC, ZREG(GR_RAX)));
+                int32_t diff = target_value - current_value;
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(GR_RAX, 0, 4), ZIMMS(diff)));
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZREG(GR_RAX), ZIMMS(4)));
 
-                current_byte++;
+                current_byte += 8;
             }
         }
 
         section_manager.add(container);
-    }
-
-    {
+    } {
         function_container container;
 
         code_label* rel_label = code_label::create();
         container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
-        container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, generator->nt_headers.OptionalHeader.AddressOfEntryPoint, 8))));
+        container.add(RECOMPILE(
+                zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, generator->nt_headers.OptionalHeader.AddressOfEntryPoint, 8))));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(GR_RAX)));
 
         section_manager.add(container);
