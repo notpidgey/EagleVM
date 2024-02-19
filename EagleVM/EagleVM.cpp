@@ -325,7 +325,7 @@ int main(int argc, char* argv[])
     generator.bake_modifications();
 
     pe_packer packer(&generator);
-    packer.set_overlay(true);
+    packer.set_overlay(false);
 
     section_manager packer_sm = packer.create_section();
 
