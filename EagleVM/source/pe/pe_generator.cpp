@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "util/random.h"
+
 void pe_generator::load_parser()
 {
     //
@@ -91,6 +93,11 @@ void pe_generator::add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& 
     va_ignore = ignore;
 }
 
+void pe_generator::add_randoms(const std::vector<std::pair<uint32_t, uint8_t>>& random)
+{
+    va_random = random;
+}
+
 void pe_generator::add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert)
 {
     va_insert = insert;
@@ -114,6 +121,21 @@ void pe_generator::bake_modifications()
 
                 // replace the bytes at the offset with 0x90
                 std::fill_n(data.begin() + offset, bytes, 0x90);
+            }
+        }
+
+        for(auto& [va, bytes] : va_random)
+        {
+            if(va >= section_start_va && va < section_end_va)
+            {
+                // calculate the offset within the section data
+                const uint32_t offset = va - section_start_va;
+
+                // replace the bytes at the offset with 0x90
+                std::generate_n(data.begin() + offset, bytes, [&]
+                {
+                    return ran_device::get().gen_8();
+                });
             }
         }
 

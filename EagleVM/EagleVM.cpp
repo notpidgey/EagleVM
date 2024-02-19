@@ -185,7 +185,8 @@ int main(int argc, char* argv[])
 
     std::printf("\n[>] generating virtualized code...\n\n");
 
-    std::vector<std::pair<uint32_t, uint8_t>> va_delete;
+    std::vector<std::pair<uint32_t, uint8_t>> va_nop;
+    std::vector<std::pair<uint32_t, uint8_t>> va_ran;
     std::vector<std::pair<uint32_t, code_label*>> va_enters;
 
     section_manager vm_code_sm;
@@ -228,7 +229,10 @@ int main(int argc, char* argv[])
                 if(successfully_virtualized)
                 {
                     // since we are virtualizing this instruction, we are going to delete it
-                    va_delete.emplace_back(current_va, instruction.instruction.length);
+                    if(!currently_in_vm)
+                        va_nop.emplace_back(current_va, instruction.instruction.length);
+                    else
+                        va_ran.emplace_back(current_va, instruction.instruction.length);
 
                     // check if we are already inside of virtual machine to prevent multiple enters
                     if(!currently_in_vm)
@@ -289,8 +293,8 @@ int main(int argc, char* argv[])
             vm_code_sm.add(container);
         }
 
-        va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
-        va_delete.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
+        va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
+        va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
     }
 
     std::printf("\n\n");
@@ -320,7 +324,8 @@ int main(int argc, char* argv[])
     for(auto& [enter_va, enter_location] : va_enters)
         va_inserts.emplace_back(enter_va, vm_generator::create_jump(enter_va, enter_location));
 
-    generator.add_ignores(va_delete);
+    generator.add_ignores(va_nop);
+    generator.add_randoms(va_ran);
     generator.add_inserts(va_inserts);
     generator.bake_modifications();
 

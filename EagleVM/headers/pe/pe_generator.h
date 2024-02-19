@@ -37,6 +37,9 @@ public:
     void add_section(IMAGE_SECTION_HEADER section_header);
 
     void add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore);
+
+    void add_randoms(const std::vector<std::pair<uint32_t, uint8_t>>& random);
+
     void add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert);
 
     void bake_modifications();
@@ -61,5 +64,6 @@ private:
     std::vector<uint8_t> dos_stub;
 
     std::vector<std::pair<uint32_t, uint8_t>> va_ignore;
+    std::vector<std::pair<uint32_t, uint8_t>> va_random;
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_insert;
 };
