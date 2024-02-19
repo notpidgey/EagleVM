@@ -71,7 +71,10 @@ section_manager pe_packer::create_section()
         }
 
         section_manager.add(container);
-    } {
+    }
+
+    // return to main
+    {
         function_container container;
 
         code_label* rel_label = code_label::create();
