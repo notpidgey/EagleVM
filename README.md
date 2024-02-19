@@ -42,6 +42,7 @@ The project is difficult to maintain and develop solo, if you are looking to con
 - Simple VM packer.
 - Implement a proper stack check instead of allocating a static amount of stack space for virtualized code.
 - Import table builder. Allow for addition and removal of imports.
+- Some kind of logging so its visible what kind of VM functions are called as a result of each instruction being virtualized along with operands.
 ### Refacatoring
 - Potential CMKR implementation instead of normal vanilla CMake
 - Implementation of C++ exceptions to handle deeply nested exceptions that occur while virtualizing instead of using INT3s
