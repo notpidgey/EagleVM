@@ -215,11 +215,7 @@ int main(int argc, char* argv[])
             {
                 /*
                  * currently there are a lot of issues in the project that are bothering me
-                 * first,   something is wrong with getting the second instruction to virtualize
-                 * second,  i cannot figure out a good implementation for movsx handler
-                 * third,   need some kind of abstraction to support 3 operands for the handlers that do want to support 3 operands
                  * sixth,   i might have abused LEA way too much when i couldve just been subtracting in the handlers, potentially do this instead
-                 * seventh, i wish i could see the assembly generated for each instruction and the reason for that generation, need better logging
                  *
                  * too many problems, little time.
                  */
