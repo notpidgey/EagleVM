@@ -67,7 +67,7 @@ section_manager pe_packer::create_section()
                 container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(GR_RAX, 0, 4), ZIMMS(diff)));
                 container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZREG(GR_RAX), ZIMMS(4)));
 
-                current_byte += 8;
+                current_byte += 4;
             }
         }
 
