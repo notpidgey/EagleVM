@@ -13,9 +13,9 @@ public:
             { bit16, 2 },
 
             // its 3 operands but we handle in finalize_translate_to_virtual
-            // { bit64, 3 },
-            // { bit32, 3 },
-            // { bit16, 3 },
+            { bit64, 3 },
+            { bit32, 3 },
+            { bit16, 3 },
         };
 
         first_operand_as_ea = false;

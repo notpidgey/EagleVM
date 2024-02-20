@@ -28,7 +28,7 @@ void ia32_imul_handler::construct_single(function_container& container, reg_size
 
 void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
-    if(decoded_instruction.operands->element_size == 1)
+    if(decoded_instruction.instruction.operand_count_visible == 1)
     {
         int current_disp = 0;
 
@@ -70,8 +70,10 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     switch(decoded_instruction.instruction.operand_count_visible)
     {
         case 1:
+        {
             // we do not support yet
             break;
+        }
         case 2:
         {
             // in two operand mode, we can only have the first operand be a OPREG type

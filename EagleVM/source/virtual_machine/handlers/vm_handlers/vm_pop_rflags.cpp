@@ -13,7 +13,7 @@ void vm_pop_rflags_handler::construct_single(function_container& container, reg_
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VSP), ZREG(GR_RSP)),
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZREG(VTEMP)),
             zydis_helper::enc(ZYDIS_MNEMONIC_PUSHFQ),
-            zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
+            zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8))
         });
     }
 
