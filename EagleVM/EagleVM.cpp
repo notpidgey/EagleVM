@@ -356,11 +356,11 @@ int main(int argc, char* argv[])
 
     // please somehow split up this single function this is actually painful
     std::vector<std::string> debug_comments;
-    debug_comments.append_range(vm_data_sm.generate_comments("EagleVMSandboxProtected.exe"));
-    debug_comments.append_range(vm_code_sm.generate_comments("EagleVMSandboxProtected.exe"));
-    debug_comments.append_range(packer_sm.generate_comments("EagleVMSandboxProtected.exe"));
+    debug_comments.append_range(vm_data_sm.generate_comments("eaglevmsandboxprotected.exe"));
+    debug_comments.append_range(vm_code_sm.generate_comments("eaglevmsandboxprotected.exe"));
+    debug_comments.append_range(packer_sm.generate_comments("eaglevmsandboxprotected.exe"));
 
-    std::ofstream protected_binary("EagleVMSandboxProtectedDB.dd64");
+    std::ofstream protected_binary("EagleVMSandboxProtected.dd64");
 
     protected_binary << "{\"comments\": [";
     for(i = 0; i < debug_comments.size(); i++)
