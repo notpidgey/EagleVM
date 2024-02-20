@@ -17,6 +17,8 @@ int main(int argc, char* argv[])
 
     fnEagleVMBegin();
 
+    char* chars = key_input.data();
+
     // Perform basic arithmetic operations
     const int result1 = chars[0] + chars[4] - chars[8] * chars[12]; // 40 + 50 - 89 * 100
     const int result2 = chars[1] - chars[5] * chars[9] + chars[13]; //
