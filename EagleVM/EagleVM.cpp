@@ -198,12 +198,12 @@ int main(int argc, char* argv[])
             protect_section.instruction_protect_begin, protect_section.get_instruction_size()
         );
 
-        std::printf("[+] Function %i-%i\n", c, c + 1);
-        std::printf("\t[>] Instruction begin: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
-        std::printf("\t[>] Instruction end: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
-        std::printf("\t[>] Instruction size: %zu\n", protect_section.get_instruction_size());
+        std::printf("[+] function %i-%i\n", c, c + 1);
+        std::printf("\t[>] instruction begin: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
+        std::printf("\t[>] instruction end: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
+        std::printf("\t[>] instruction size: %zu\n", protect_section.get_instruction_size());
 
-        std::printf("\n[+] Generated instructions\n");
+        std::printf("\n[+] generated instructions\n");
 
         function_container container;
 
@@ -227,7 +227,7 @@ int main(int argc, char* argv[])
                     if(!currently_in_vm)
                         va_nop.emplace_back(current_va, instruction.instruction.length);
                     else
-                        va_ran.emplace_back(current_va, instruction.instruction.length);
+                        va_nop.emplace_back(current_va, instruction.instruction.length);
 
                     // check if we are already inside of virtual machine to prevent multiple enters
                     if(!currently_in_vm)
@@ -246,7 +246,7 @@ int main(int argc, char* argv[])
                     }
 
                     container.merge(instructions); // this will cause jump to the code label which will point to the virtualized instructions
-                    std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
+                    std::printf("\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
                 }
                 else
                 {
@@ -268,13 +268,13 @@ int main(int argc, char* argv[])
                         std::printf("\n\t[>] VMEXIT\n");
                     }
 
-                    std::printf("\t%s\n", ZydisMnemonicGetString(instruction.instruction.mnemonic));
+                    std::printf("\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
                 }
 
                 current_va += instruction.instruction.length;
             });
 
-        std::printf("[+] Virtualized section\n");
+        std::printf("\n[+] virtualized section\n");
 
         if(currently_in_vm)
         {
@@ -292,7 +292,7 @@ int main(int argc, char* argv[])
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
     }
 
-    std::printf("\n\n");
+    std::printf("\n");
 
     auto& [code_section, code_section_bytes] = generator.add_section(".vmcode");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
@@ -349,6 +349,7 @@ int main(int argc, char* argv[])
     last_section = &packer_section;
 
     generator.save_file("EagleVMSandboxProtected.exe");
+    std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");
 
     // please somehow split up this single function this is actually painful
     std::vector<std::string> debug_comments;
@@ -356,18 +357,20 @@ int main(int argc, char* argv[])
     debug_comments.append_range(vm_code_sm.generate_comments("eaglevmsandboxprotected.exe"));
     debug_comments.append_range(packer_sm.generate_comments("eaglevmsandboxprotected.exe"));
 
-    std::ofstream protected_binary("EagleVMSandboxProtected.dd64");
+    std::ofstream comments_file("EagleVMSandboxProtected.dd64");
 
-    protected_binary << "{\"comments\": [";
+    comments_file << "{\"comments\": [";
     for(i = 0; i < debug_comments.size(); i++)
     {
         std::string& comment = debug_comments[i];
-        protected_binary << comment;
+        comments_file << comment;
 
         if(i != debug_comments.size() - 1)
-            protected_binary << ",";
+            comments_file << ",";
     }
-    protected_binary << "]}";
+    comments_file << "]}";
+
+    std::printf("[+] generated %i x64dbg comments -> EagleVMSandboxProtected.dd64\n", debug_comments.size());
 
     return 0;
 }
