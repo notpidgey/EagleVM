@@ -39,6 +39,7 @@ struct zydis_decode
     ZydisDecodedInstruction instruction;
     ZydisDecodedOperand		operands[ZYDIS_MAX_OPERAND_COUNT];
 };
+typedef std::vector<zydis_decode> decode_vec;
 
 #define GR_RAX  ZYDIS_REGISTER_RAX
 #define GR_RCX  ZYDIS_REGISTER_RCX

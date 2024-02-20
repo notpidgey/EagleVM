@@ -3,6 +3,9 @@
 #include "pe/pe_parser.h"
 #include "pe/pe_generator.h"
 #include "pe/packer/pe_packer.h"
+
+#include "disassembler/disassembler.h"
+
 #include "virtual_machine/vm_generator.h"
 
 #include "obfuscation/mba/mba.h"
@@ -209,6 +212,9 @@ int main(int argc, char* argv[])
 
         uint32_t current_va = parser.offset_to_rva(vm_iat_calls[c].first) + 0x6;
         bool currently_in_vm = false;
+
+        segment_disassembler dasm(instructions, current_va);
+        dasm.generate_blocks();
 
         std::ranges::for_each(instructions,
             [&](const zydis_decode& instruction)

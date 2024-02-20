@@ -6,13 +6,14 @@
 class segment_disassembler
 {
 public:
-    explicit segment_disassembler(instructions_vec& segment, uint32_t rva);
+    explicit segment_disassembler(const decode_vec& segment, uint32_t binary_rva);
 
     void generate_blocks();
 
 private:
     uint32_t rva;
-    instructions_vec function;
+    decode_vec function;
 
+    std::vector<basic_block*> blocks;
     basic_block* root_block;
 };
