@@ -224,7 +224,6 @@ int main(int argc, char* argv[])
                  * too many problems, little time.
                  */
 
-
                 auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                 if(successfully_virtualized)
                 {
@@ -354,6 +353,25 @@ int main(int argc, char* argv[])
     last_section = &packer_section;
 
     generator.save_file("EagleVMSandboxProtected.exe");
+
+    // please somehow split up this single function this is actually painful
+    std::vector<std::string> debug_comments;
+    debug_comments.append_range(vm_data_sm.generate_comments("EagleVMSandboxProtected.exe"));
+    debug_comments.append_range(vm_code_sm.generate_comments("EagleVMSandboxProtected.exe"));
+    debug_comments.append_range(packer_sm.generate_comments("EagleVMSandboxProtected.exe"));
+
+    std::ofstream protected_binary("EagleVMSandboxProtectedDB.dd64");
+
+    protected_binary << "{\"comments\": [";
+    for(i = 0; i < debug_comments.size(); i++)
+    {
+        std::string& comment = debug_comments[i];
+        protected_binary << comment;
+
+        if(i != debug_comments.size() - 1)
+            protected_binary << ",";
+    }
+    protected_binary << "]}";
 
     return 0;
 }

@@ -24,7 +24,7 @@ section_manager pe_packer::create_section()
 
         // if you want to use this feature add some kind of text file where the run directory for eaglevm is
         // ill keep this feature disabled by default
-        std::ifstream file("intel.txt");
+        std::ifstream file("1984.txt");
         std::stringstream buffer;
         buffer << file.rdbuf();
 

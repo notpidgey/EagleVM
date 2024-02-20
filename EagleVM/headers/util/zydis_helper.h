@@ -26,6 +26,7 @@ enum reg_size
 };
 
 inline ZydisDecoder zyids_decoder;
+inline ZydisFormatter zydis_formatter;
 
 namespace zydis_helper
 {
@@ -44,6 +45,9 @@ namespace zydis_helper
 	void add_op(zydis_encoder_request& req, zydis_emem mem);
 	void add_op(zydis_encoder_request& req, zydis_eptr ptr);
 	void add_op(zydis_encoder_request& req, zydis_ereg reg);
+
+	std::string instruction_to_string(const zydis_decode& decode);
+	std::string operand_to_string(const zydis_decode& decode, int index);
 
 	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
     std::vector<std::string> print(zydis_encoder_request& queue, uint32_t address);

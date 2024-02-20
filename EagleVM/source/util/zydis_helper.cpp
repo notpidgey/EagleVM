@@ -3,6 +3,7 @@
 void zydis_helper::setup_decoder()
 {
     ZydisDecoderInit(&zyids_decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
+    ZydisFormatterInit(&zydis_formatter, ZYDIS_FORMATTER_STYLE_INTEL);
 }
 
 zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_size requested_size)
@@ -139,6 +140,29 @@ void zydis_helper::add_op(ZydisEncoderRequest& req, zydis_ereg reg)
     req.operands[op_index].type = ZYDIS_OPERAND_TYPE_REGISTER;
     req.operands[op_index].reg = reg;
     req.operand_count++;
+}
+
+std::string zydis_helper::instruction_to_string(const zydis_decode& decode)
+{
+    char buffer[256];
+    ZydisFormatterFormatInstruction(&zydis_formatter,
+        &decode.instruction,
+        (ZydisDecodedOperand*)&decode.operands,
+        decode.instruction.operand_count_visible,
+        buffer, sizeof(buffer), 0x140000000, ZYAN_NULL);
+
+    return std::string(buffer);
+}
+
+std::string zydis_helper::operand_to_string(const zydis_decode& decode, const int index)
+{
+    char buffer[256];
+    ZydisFormatterFormatOperand(&zydis_formatter,
+        &decode.instruction,
+        &decode.operands[index],
+        buffer, sizeof(buffer), 0x140000000, ZYAN_NULL);
+
+    return std::string(buffer);
 }
 
 std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>& queue)

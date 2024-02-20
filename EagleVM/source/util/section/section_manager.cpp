@@ -1,9 +1,12 @@
 #include "util/section/section_manager.h"
+
+#include <ranges>
+
 #include "util/zydis_helper.h"
 
 #include <variant>
 
-encoded_vec section_manager::compile_section(uint32_t section_address)
+encoded_vec section_manager::compile_section(const uint32_t section_address)
 {
     // i know there are better way to do this without using a variant vector (its disgusting)
     // or recompiling all the instructions 2x
@@ -93,6 +96,37 @@ encoded_vec section_manager::compile_section(uint32_t section_address)
     }
 
     return compiled_section;
+}
+
+std::vector<std::string> section_manager::generate_comments(const std::string& output)
+{
+    const std::function create_json = [output](code_label* label)
+    {
+        std::stringstream stream;
+        stream << "0x" << std::hex << label->get();
+        std::string hex_address(stream.str());
+
+        std::string manual = "\"manual\": true";
+        std::string module = "\"module\": \"" + output + "\"";
+        std::string text = "\"text\": \"" + label->get_name() + "\"";
+        std::string address = "\"address\": \"" + hex_address + "\"";
+
+        return "{" + manual + "," + module + "," + text + "," + address + "}";
+    };
+
+    std::vector<std::string> json_array;
+    for (auto& [code_label, sec_function] : section_functions)
+    {
+        if(code_label && code_label->is_comment())
+            json_array.push_back(create_json(code_label));
+
+        auto& segments = sec_function.get_segments();
+        for (const auto& seg_code_label : segments | std::views::keys)
+            if(seg_code_label && seg_code_label->is_comment())
+                json_array.push_back(create_json(seg_code_label));
+    }
+
+    return json_array;
 }
 
 void section_manager::add(function_container& function)
