@@ -215,15 +215,10 @@ int main(int argc, char* argv[])
             {
                 /*
                  * currently there are a lot of issues in the project that are bothering me
-                 * first,   something is wrong with getting the second instruction to virtualize
-                 * second,  i cannot figure out a good implementation for movsx handler
-                 * third,   need some kind of abstraction to support 3 operands for the handlers that do want to support 3 operands
                  * sixth,   i might have abused LEA way too much when i couldve just been subtracting in the handlers, potentially do this instead
-                 * seventh, i wish i could see the assembly generated for each instruction and the reason for that generation, need better logging
                  *
                  * too many problems, little time.
                  */
-
 
                 auto [successfully_virtualized, instructions] = vm_generator.translate_to_virtual(instruction);
                 if(successfully_virtualized)
@@ -354,6 +349,25 @@ int main(int argc, char* argv[])
     last_section = &packer_section;
 
     generator.save_file("EagleVMSandboxProtected.exe");
+
+    // please somehow split up this single function this is actually painful
+    std::vector<std::string> debug_comments;
+    debug_comments.append_range(vm_data_sm.generate_comments("eaglevmsandboxprotected.exe"));
+    debug_comments.append_range(vm_code_sm.generate_comments("eaglevmsandboxprotected.exe"));
+    debug_comments.append_range(packer_sm.generate_comments("eaglevmsandboxprotected.exe"));
+
+    std::ofstream protected_binary("EagleVMSandboxProtected.dd64");
+
+    protected_binary << "{\"comments\": [";
+    for(i = 0; i < debug_comments.size(); i++)
+    {
+        std::string& comment = debug_comments[i];
+        protected_binary << comment;
+
+        if(i != debug_comments.size() - 1)
+            protected_binary << ",";
+    }
+    protected_binary << "]}";
 
     return 0;
 }

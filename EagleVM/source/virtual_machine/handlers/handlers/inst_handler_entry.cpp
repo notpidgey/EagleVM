@@ -7,9 +7,8 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
 {
     function_container container = {};
 
-    //virtualizer does not support more than 2 operands OR all mnemonics
-    inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
-    code_label* target = handler->get_handler_va(
+    const inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
+    const code_label* target = handler->get_handler_va(
         static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8),
         decoded_instruction.instruction.operand_count_visible
     );
@@ -20,10 +19,15 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
         return { false, container };
     }
 
+    // add x64dbg comment
+    container.assign_label(code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
+
     int current_disp = 0;
     for(int i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
     {
         encode_status status = encode_status::unsupported;
+        container.assign_label(code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
+
         switch(const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
         {
             case ZYDIS_OPERAND_TYPE_UNUSED:

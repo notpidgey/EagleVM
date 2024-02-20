@@ -8,6 +8,38 @@ void vm_register_manager::init_reg_order()
         reg_stack_order_[i - ZYDIS_REGISTER_RAX] = static_cast<zydis_register>(i);
 
     std::ranges::shuffle(reg_stack_order_, ran_device::get().gen);
+
+    bool success_shuffle = false;
+    std::array<zydis_register, 16> access_order = reg_stack_order_;
+
+    while(!success_shuffle)
+    {
+        std::ranges::shuffle(access_order, ran_device::get().gen);
+
+        success_shuffle = true;
+        for(int i = 0; i < NUM_OF_VREGS; i++)
+        {
+            const zydis_register target = access_order[i];
+
+            // these are registers we do not want to be using as VM registers
+            if(target == ZYDIS_REGISTER_RIP || target == ZYDIS_REGISTER_RAX || target == ZYDIS_REGISTER_RSP)
+            {
+                success_shuffle = false;
+                break;
+            }
+        }
+    }
+
+    reg_vm_order_ = access_order;
+}
+
+zydis_register vm_register_manager::get_reg(const uint8_t target) const
+{
+    // this would be something like VIP, VSP, VTEMP, etc
+    if(target > NUM_OF_VREGS - 1 )
+        __debugbreak();
+
+    return reg_vm_order_[target];
 }
 
 std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const zydis_register reg) const
@@ -31,18 +63,4 @@ std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const 
     }
 
     return { (found_index * 8) + (8 - reg_size), reg_size };
-}
-
-void vm_register_manager::set_reg_mapping(const short index, const zydis_register reg)
-{
-    reg_map[index] = reg;
-}
-
-bool vm_register_manager::contains_reg_mapping(short mapping, zydis_register reg)
-{
-    return std::ranges::any_of(reg_map,
-        [reg](const zydis_register register_)
-        {
-            return register_ == reg;
-        });
 }

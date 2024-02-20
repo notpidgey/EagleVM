@@ -15,13 +15,13 @@
 #include "util/zydis_helper.h"
 #include "util/util.h"
 
-#define VIP         rm_->reg_map[I_VIP]
-#define VSP         rm_->reg_map[I_VSP]
-#define VREGS       rm_->reg_map[I_VREGS]
-#define VTEMP       rm_->reg_map[I_VTEMP]
-#define VTEMP2      rm_->reg_map[I_VTEMP2]
-#define VCS         rm_->reg_map[I_VCALLSTACK]
-#define VCSRET      rm_->reg_map[I_VCSRET]
+#define VIP         rm_->get_reg(I_VIP)
+#define VSP         rm_->get_reg(I_VSP)
+#define VREGS       rm_->get_reg(I_VREGS)
+#define VTEMP       rm_->get_reg(I_VTEMP)
+#define VTEMP2      rm_->get_reg(I_VTEMP2)
+#define VCS         rm_->get_reg(I_VCALLSTACK)
+#define VCSRET      rm_->get_reg(I_VCSRET)
 
 #define PUSHORDER   rm_->reg_stack_order_
 
