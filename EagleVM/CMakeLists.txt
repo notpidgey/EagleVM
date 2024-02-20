@@ -5,7 +5,9 @@ file(GLOB_RECURSE EagleVM_SRC
 )
 
 add_executable(EagleVM ${EagleVM_SRC}
-        headers/virtual_machine/handlers/ia32_handlers/mov.h)
+        headers/virtual_machine/handlers/ia32_handlers/mov.h
+        Headers/virtual_machine/handlers/ia32_handlers/lea.h
+        Source/virtual_machine/handlers/ia32_handlers/lea.cpp)
 
 target_include_directories(EagleVM
         PRIVATE
