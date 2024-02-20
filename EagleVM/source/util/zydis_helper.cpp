@@ -101,7 +101,8 @@ ZydisEncoderRequest zydis_helper::create_encode_request(const ZydisMnemonic mnem
 zydis_encoder_request zydis_helper::decode_to_encode(const zydis_decode& decode)
 {
     zydis_encoder_request encode_request;
-    ZydisEncoderDecodedInstructionToEncoderRequest(&decode.instruction, decode.operands, decode.instruction.operand_count, &encode_request);
+    ZydisEncoderDecodedInstructionToEncoderRequest(&decode.instruction, decode.operands,
+            decode.instruction.operand_count_visible, &encode_request);
 
     return encode_request;
 }

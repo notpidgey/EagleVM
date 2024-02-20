@@ -10,7 +10,7 @@
 
 #include "obfuscation/mba/mba.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     // this is definitely a work in progress
     // also, this is not a true way of generating mba expressions
@@ -37,35 +37,35 @@ int main(int argc, char* argv[])
     std::printf("[>] image sections\n");
     std::printf("%3s %-10s %-10s %-10s\n", "", "name", "va", "size");
     std::ranges::for_each
-    (
-        sections.begin(), sections.end(),
-        [&i](const PIMAGE_SECTION_HEADER image_section)
-        {
-            std::printf
-            (
-                "%3i %-10s %-10lu %-10lu\n", i, image_section->Name,
-                image_section->VirtualAddress, image_section->SizeOfRawData);
-            i++;
-        });
+        (
+            sections.begin(), sections.end(),
+            [&i](const PIMAGE_SECTION_HEADER image_section)
+            {
+                std::printf
+                    (
+                        "%3i %-10s %-10lu %-10lu\n", i, image_section->Name,
+                        image_section->VirtualAddress, image_section->SizeOfRawData);
+                i++;
+            });
 
     i = 1;
 
     std::printf("\n[>] image imports\n");
     std::printf("%3s %-20s %-s\n", "", "source", "import");
     parser.enum_imports
-    (
-        [&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data,
-             const PIMAGE_SECTION_HEADER import_section, int, const uint8_t* data_base)
-        {
-            const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
-            const uint8_t* import_library = const_cast<uint8_t *>(import_section_raw + (import_descriptor->Name -
-                                                                      import_section->VirtualAddress));
-            const uint8_t* import_name = const_cast<uint8_t *>(import_section_raw + (thunk_data->u1.AddressOfData -
-                                                                   import_section->VirtualAddress + 2));
+        (
+            [&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data,
+                 const PIMAGE_SECTION_HEADER import_section, int, const uint8_t *data_base)
+            {
+                const uint8_t *import_section_raw = data_base + import_section->PointerToRawData;
+                const uint8_t *import_library = const_cast<uint8_t *>(import_section_raw + (import_descriptor->Name -
+                    import_section->VirtualAddress));
+                const uint8_t *import_name = const_cast<uint8_t *>(import_section_raw + (thunk_data->u1.AddressOfData -
+                    import_section->VirtualAddress + 2));
 
-            std::printf("%3i %-20s %-s\n", i, import_library, import_name);
-            i++;
-        });
+                std::printf("%3i %-20s %-s\n", i, import_library, import_name);
+                i++;
+            });
 
     std::printf("\n[+] porting original pe properties to new executable...\n");
 
@@ -81,16 +81,16 @@ int main(int argc, char* argv[])
     std::printf("\n[>] searching for uses of vm macros...\n");
 
     i = 1;
-    std::vector<std::pair<uint32_t, stub_import> > vm_iat_calls = parser.find_iat_calls();
+    std::vector<std::pair<uint32_t, stub_import>> vm_iat_calls = parser.find_iat_calls();
     std::printf("%3s %-10s %-10s\n", "", "rva", "vm");
     std::ranges::for_each
-    (
-        vm_iat_calls.begin(), vm_iat_calls.end(),
-        [&i, &parser](const auto call)
-        {
-            auto [file_offset, stub_import] = call;
-            switch (stub_import)
+        (
+            vm_iat_calls.begin(), vm_iat_calls.end(),
+            [&i, &parser](const auto call)
             {
+                auto [file_offset, stub_import] = call;
+                switch (stub_import)
+                {
                 case stub_import::vm_begin:
                     std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
                     break;
@@ -100,10 +100,10 @@ int main(int argc, char* argv[])
                 case stub_import::unknown:
                     std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
                     break;
-            }
+                }
 
-            i++;
-        });
+                i++;
+            });
 
     std::printf("\n");
 
@@ -115,19 +115,19 @@ int main(int argc, char* argv[])
     bool success = true;
     stub_import previous_call = stub_import::vm_end;
     std::ranges::for_each
-    (
-        vm_iat_calls.begin(), vm_iat_calls.end(),
-        [&previous_call, &success](const auto call)
-        {
-            if (call.second == previous_call)
+        (
+            vm_iat_calls.begin(), vm_iat_calls.end(),
+            [&previous_call, &success](const auto call)
             {
-                success = false;
-                return false;
-            }
+                if (call.second == previous_call)
+                {
+                    success = false;
+                    return false;
+                }
 
-            previous_call = call.second;
-            return true;
-        });
+                previous_call = call.second;
+                return true;
+            });
 
     if (!success)
     {
@@ -151,18 +151,18 @@ int main(int argc, char* argv[])
     // generator.remove_section(".rdata");
     // generator.remove_section("_RDATA");
 
-    IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
+    IMAGE_SECTION_HEADER *last_section = &std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
-    auto& [data_section, data_section_bytes] = generator.add_section(".vmdata");
+    auto &[data_section, data_section_bytes] = generator.add_section(".vmdata");
     data_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
     data_section.SizeOfRawData = 0;
     data_section.VirtualAddress = generator.
-            align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+        align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     data_section.Misc.VirtualSize = 0;
     data_section.Characteristics =
-            IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
+        IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
     data_section.PointerToRelocations = 0;
     data_section.NumberOfRelocations = 0;
     data_section.NumberOfLinenumbers = 0;
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
     vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t) data_section.VirtualAddress);
+    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)data_section.VirtualAddress);
 
     section_manager vm_data_sm = vm_generator.generate_vm_handlers(false);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
@@ -190,18 +190,18 @@ int main(int argc, char* argv[])
 
     std::printf("\n[>] generating virtualized code...\n\n");
 
-    std::vector<std::pair<uint32_t, uint8_t> > va_nop;
-    std::vector<std::pair<uint32_t, uint8_t> > va_ran;
-    std::vector<std::pair<uint32_t, code_label *> > va_enters;
+    std::vector<std::pair<uint32_t, uint8_t>> va_nop;
+    std::vector<std::pair<uint32_t, uint8_t>> va_ran;
+    std::vector<std::pair<uint32_t, code_label *>> va_enters;
 
     section_manager vm_code_sm;
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[c].first, vm_iat_calls[c + 1].first);
         std::vector<zydis_decode> instructions = zydis_helper::get_instructions
-        (
-            protect_section.instruction_protect_begin, protect_section.get_instruction_size()
-        );
+            (
+                protect_section.instruction_protect_begin, protect_section.get_instruction_size()
+                );
 
         std::printf("[+] function %i-%i\n", c, c + 1);
         std::printf("\t[>] instruction begin: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
@@ -213,116 +213,136 @@ int main(int argc, char* argv[])
 
         std::printf("\t[>] found %llu basic blocks\n", dasm.blocks.size());
 
+        for(auto& block : dasm.blocks)
+        {
+            code_label* block_label = code_label::create("block:" + block->start_rva);
+            block->start_rva_label = block_label;
+        }
+
         function_container container;
-        bool currently_in_vm = false;
-        for (auto& block: dasm.blocks)
+        for (auto &block : dasm.blocks)
         {
             // std::string target_comment = std::string("basic_block rva " + block->start_rva);
             // container.assign_label(code_label::create(target_comment, true));
 
             std::printf("\n\t[>] basic_block rva %i:\n", block->start_rva);
-            for (auto instruction: block->instructions)
+            for (auto instruction : block->instructions)
                 std::printf("\t\tinstruction: %s\n", zydis_helper::instruction_to_string(instruction).c_str());
 
             std::printf("\n\t[>] basic_block vm\n");
 
             uint32_t current_va = block->start_rva;
-            std::ranges::for_each(block->instructions,
-                  [&](const zydis_decode& instruction)
-                  {
-                      /*
-                       * currently there are a lot of issues in the project that are bothering me
-                       * sixth,   i might have abused LEA way too much when i couldve just been subtracting in the handlers, potentially do this instead
-                       *
-                       * too many problems, little time.
-                       */
+            bool currently_in_vm = false;
 
-                      auto [virt_status, instructions] = vm_generator.translate_to_virtual(instruction);
-                      if (virt_status)
-                      {
-                          // since we are virtualizing this instruction, we are going to delete it
-                          if (!currently_in_vm)
-                              va_nop.emplace_back(current_va, instruction.instruction.length);
-                          else
-                              va_nop.emplace_back(current_va, instruction.instruction.length);
-
-                          // check if we are already inside of virtual machine to prevent multiple enters
-                          if (!currently_in_vm)
-                          {
-                              code_label* vmcode_target = code_label::create("vmcode_target:" + current_va);
-                              container.assign_label(vmcode_target);
-
-                              code_label* vmenter_return_label = code_label::create("vmenter_return:" + current_va);
-                              vm_generator.call_vm_enter(container, vmenter_return_label);
-                              container.assign_label(vmenter_return_label);
-
-                              va_enters.emplace_back(current_va, vmcode_target);
-                              currently_in_vm = true;
-
-                              std::printf("\n\t\t[>] vmenter\n");
-                          }
-
-                          container.merge(instructions);
-                          // this will cause jump to the code label which will point to the virtualized instructions
-                          std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
-                      } else
-                      {
-                          // exit virtual machine if this is a non-virtual instruction
-                          if (currently_in_vm)
-                          {
-                              // instruction is not supported by the virtual machine so we exit
-                              // call out of the virtual machine, jump to the current instruction
-                              code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-
-                              jump_label->finalize(current_va);
-                              // since we already know where we need to jump back to
-                              vm_generator.call_vm_exit(container, jump_label);
-
-                              currently_in_vm = false;
-
-                              vm_code_sm.add(container);
-                              container = function_container();
-
-                              std::printf("\n\t\t[>] vmexit\n");
-                          }
-
-                          std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
-                      }
-
-                      current_va += instruction.instruction.length;
-                  });
-
-            if (currently_in_vm)
+            container.assign_label(block->start_rva_label);
+            for (i = 0; i < block->instructions.size(); i++)
             {
-                auto target_rva = parser.offset_to_rva(vm_iat_calls[c + 1].first) + 6;
+                auto &instruction = block->instructions[i];
 
-                code_label* jump_label = code_label::create("vmleave_dest:" + target_rva);
-                jump_label->finalize(target_rva); // since we already know where we need to jump back to
+                zyids_mnemonic& mnemonic = instruction.instruction.mnemonic;
+                if(mnemonic >= ZYDIS_MNEMONIC_JB && mnemonic <= ZYDIS_MNEMONIC_JZ)
+                    continue;
 
-                vm_generator.call_vm_exit(container, jump_label);
+                auto [virt_status, instructions] = vm_generator.translate_to_virtual(instruction);
+                if (virt_status)
+                {
+                    // check if we are already inside of virtual machine to prevent multiple enters
+                    if (!currently_in_vm)
+                    {
+                        code_label *vmenter_return_label = code_label::create("vmenter_return:" + current_va);
+                        vm_generator.call_vm_enter(container, vmenter_return_label);
+                        container.assign_label(vmenter_return_label);
 
-                vm_code_sm.add(container);
+                        currently_in_vm = true;
+                        std::printf("\n\t\t[>] vmenter\n");
+                    }
 
-                std::printf("\n\t\t[>] vmexit\n");
+                    container.merge(instructions);
+                    // this will cause jump to the code label which will point to the virtualized instructions
+                    std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
+                }
+                else
+                {
+                    // exit virtual machine if this is a non-virtual instruction
+                    if (currently_in_vm)
+                    {
+                        code_label *jump_label = code_label::create("vmleave_dest:" + current_va);
+                        vm_generator.call_vm_exit(container, jump_label);
+                        container.assign_label(jump_label);
+
+                        currently_in_vm = false;
+                        std::printf("\n\t\t[>] vmexit\n");
+                    }
+
+                    container.add(zydis_helper::decode_to_encode(instruction));
+                    std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
+                }
+
+                current_va += instruction.instruction.length;
             }
+
+            if(!block->target_rvas.empty())
+            {
+                // this is a jump, this means we can either go somewhere else, or next block
+                basic_block* jump = block->target_blocks.back();
+
+                // exit vm
+                if (currently_in_vm)
+                {
+                    code_label *jump_label = code_label::create("vmleave_dest:" + current_va);
+                    vm_generator.call_vm_exit(container, jump_label);
+                    container.assign_label(jump_label);
+
+                    std::printf("\n\t\t[>] vmexit\n");
+                }
+
+                // recreate jump to next block
+                const zydis_decode& last_inst = block->instructions.back();
+                auto target_mneominc = last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE ?
+                    last_inst.instruction.mnemonic : ZYDIS_MNEMONIC_JMP;
+
+                container.add(RECOMPILE(zydis_helper::enc(target_mneominc, ZLABEL(jump->start_rva_label))));
+            }
+            else
+            {
+                // this is the last block in the tree, return to normal code execution
+                uint32_t exit_va = parser.offset_to_rva(vm_iat_calls[c + 1].first);
+
+                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+                jump_label->finalize(exit_va);
+
+                if(currently_in_vm)
+                {
+                    // exit vm, jump to the end of the function
+                    vm_generator.call_vm_exit(container, jump_label);
+                    std::printf("\n\t\t[>] vmexit\n");
+                }
+                else
+                {
+                    // jump to end of function
+                    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(jump_label))));
+                }
+            }
+
+            vm_code_sm.add(container);
+            container = function_container();
         }
 
         std::printf("\n[+] virtualized section\n");
 
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
+        va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), dasm.root_block->start_rva_label);
     }
 
     std::printf("\n");
 
-    auto& [code_section, code_section_bytes] = generator.add_section(".vmcode");
+    auto &[code_section, code_section_bytes] = generator.add_section(".vmcode");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     code_section.SizeOfRawData = 0;
-    code_section.VirtualAddress = generator.
-            align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+    code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     code_section.Misc.VirtualSize = generator.align_section(1);
-    code_section.Characteristics =
-            IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
+    code_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
     code_section.PointerToRelocations = 0;
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
@@ -338,8 +358,8 @@ int main(int argc, char* argv[])
     // delete the code marked by va_delete
     // create jumps marked by va_enters
 
-    std::vector<std::pair<uint32_t, std::vector<uint8_t> > > va_inserts;
-    for (auto& [enter_va, enter_location]: va_enters)
+    std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
+    for (auto &[enter_va, enter_location] : va_enters)
         va_inserts.emplace_back(enter_va, vm_generator::create_jump(enter_va, enter_location));
 
     generator.add_ignores(va_nop);
@@ -352,7 +372,7 @@ int main(int argc, char* argv[])
 
     section_manager packer_sm = packer.create_section();
 
-    auto& [packer_section, packer_bytes] = generator.add_section(".pack");
+    auto &[packer_section, packer_bytes] = generator.add_section(".pack");
     packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     packer_section.SizeOfRawData = 0;
     packer_section.VirtualAddress = generator.align_section(
@@ -386,7 +406,7 @@ int main(int argc, char* argv[])
     comments_file << "{\"comments\": [";
     for (i = 0; i < debug_comments.size(); i++)
     {
-        std::string& comment = debug_comments[i];
+        std::string &comment = debug_comments[i];
         comments_file << comment;
 
         if (i != debug_comments.size() - 1)
