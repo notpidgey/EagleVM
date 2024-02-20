@@ -216,6 +216,13 @@ int main(int argc, char* argv[])
         segment_disassembler dasm(instructions, current_va);
         dasm.generate_blocks();
 
+        for(auto& block : dasm.blocks)
+        {
+            printf("\nrva %i:\n", block->start_rva);
+            for(auto instruction : block->instructions)
+                printf("instruction: %s\n", zydis_helper::instruction_to_string(instruction).c_str());
+        }
+
         std::ranges::for_each(instructions,
             [&](const zydis_decode& instruction)
             {

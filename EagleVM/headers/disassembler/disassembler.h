@@ -10,10 +10,11 @@ public:
 
     void generate_blocks();
 
+    std::vector<basic_block*> blocks;
+
 private:
     uint32_t rva;
     decode_vec function;
 
-    std::vector<basic_block*> blocks;
     basic_block* root_block;
 };
