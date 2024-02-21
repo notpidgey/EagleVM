@@ -18,7 +18,7 @@
     return (x)(y, z); \
 }
 
-constexpr uint8_t vm_overhead = 50;
+constexpr uint8_t vm_overhead = 100;
 constexpr uint8_t vm_stack_regs = 17;
 constexpr uint8_t vm_call_stack = 3;
 

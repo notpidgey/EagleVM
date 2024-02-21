@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
             if(!block->target_rvas.empty())
             {
                 // this is a jump, this means we can either go somewhere else, or next block
-                basic_block* jump = block->target_blocks.back();
+                basic_block* next_block = block->target_blocks.back();
 
                 // exit vm
                 if (currently_in_vm)
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
                 auto target_mneominc = last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE ?
                     last_inst.instruction.mnemonic : ZYDIS_MNEMONIC_JMP;
 
-                container.add(RECOMPILE(zydis_helper::enc(target_mneominc, ZLABEL(jump->start_rva_label))));
+                vm_generator.create_vm_jump(target_mneominc, container, next_block->start_rva_label);
             }
             else
             {
@@ -320,7 +320,7 @@ int main(int argc, char *argv[])
                 else
                 {
                     // jump to end of function
-                    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZLABEL(jump_label))));
+                    vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
                 }
             }
 
