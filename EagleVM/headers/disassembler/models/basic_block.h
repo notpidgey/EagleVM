@@ -2,9 +2,16 @@
 #include "util/zydis_defs.h"
 #include "util/section/code_label.h"
 
+enum block_end_reason
+{
+    block_end,
+    block_jump,
+    block_conditional_jump,
+};
+
 struct basic_block
 {
-    code_label* start_rva_label = nullptr;
+    block_end_reason end_reason = block_end;
 
     uint32_t start_rva;
     uint32_t end_rva_inc;
@@ -16,14 +23,12 @@ struct basic_block
 
     bool is_conditional_jump() const
     {
-        return target_rvas.size() == 2;
+        const auto& [instruction, _] = instructions.back();
+        return instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && instruction.mnemonic != ZYDIS_MNEMONIC_JMP;
     }
 
-    code_label* get_label()
+    bool is_final_block() const
     {
-        if(start_rva_label == nullptr)
-            start_rva_label = code_label::create();
-
-        return start_rva_label;
+        return target_rvas.empty();
     }
 };
