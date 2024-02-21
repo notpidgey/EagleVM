@@ -213,9 +213,9 @@ int main(int argc, char *argv[])
 
         std::printf("\t[>] found %llu basic blocks\n", dasm.blocks.size());
 
-        for(auto& block : dasm.blocks)
+        for (auto &block : dasm.blocks)
         {
-            code_label* block_label = code_label::create("block:" + block->start_rva);
+            code_label *block_label = code_label::create("block:" + block->start_rva);
             block->start_rva_label = block_label;
         }
 
@@ -238,9 +238,10 @@ int main(int argc, char *argv[])
             for (i = 0; i < block->instructions.size(); i++)
             {
                 auto &instruction = block->instructions[i];
+                va_nop.emplace_back(current_va, instruction.instruction.length);
 
-                zyids_mnemonic& mnemonic = instruction.instruction.mnemonic;
-                if(mnemonic >= ZYDIS_MNEMONIC_JB && mnemonic <= ZYDIS_MNEMONIC_JZ)
+                zyids_mnemonic &mnemonic = instruction.instruction.mnemonic;
+                if (mnemonic >= ZYDIS_MNEMONIC_JB && mnemonic <= ZYDIS_MNEMONIC_JZ)
                     continue;
 
                 auto [virt_status, instructions] = vm_generator.translate_to_virtual(instruction);
@@ -281,10 +282,10 @@ int main(int argc, char *argv[])
                 current_va += instruction.instruction.length;
             }
 
-            if(!block->target_rvas.empty())
+            if (!block->target_rvas.empty())
             {
                 // this is a jump, this means we can either go somewhere else, or next block
-                basic_block* next_block = block->target_blocks.back();
+                basic_block *next_block = block->target_blocks.back();
 
                 // exit vm
                 if (currently_in_vm)
@@ -297,9 +298,10 @@ int main(int argc, char *argv[])
                 }
 
                 // recreate jump to next block
-                const zydis_decode& last_inst = block->instructions.back();
-                auto target_mneominc = last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE ?
-                    last_inst.instruction.mnemonic : ZYDIS_MNEMONIC_JMP;
+                const zydis_decode &last_inst = block->instructions.back();
+                auto target_mneominc = last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE
+                    ? last_inst.instruction.mnemonic
+                    : ZYDIS_MNEMONIC_JMP;
 
                 vm_generator.create_vm_jump(target_mneominc, container, next_block->start_rva_label);
             }
@@ -308,10 +310,10 @@ int main(int argc, char *argv[])
                 // this is the last block in the tree, return to normal code execution
                 uint32_t exit_va = parser.offset_to_rva(vm_iat_calls[c + 1].first);
 
-                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+                code_label *jump_label = code_label::create("vmleave_dest:" + current_va);
                 jump_label->finalize(exit_va);
 
-                if(currently_in_vm)
+                if (currently_in_vm)
                 {
                     // exit vm, jump to the end of the function
                     vm_generator.call_vm_exit(container, jump_label);
@@ -332,6 +334,7 @@ int main(int argc, char *argv[])
 
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), 6);
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), 6);
+
         va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), dasm.root_block->start_rva_label);
     }
 
