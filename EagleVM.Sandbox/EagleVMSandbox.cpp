@@ -10,18 +10,20 @@ int main(int argc, char* argv[])
     std::cout << "license key: ";
     std::getline(std::cin, key);
 
-    if(key.size() <= 20)
+    if(key.size() < 20)
     {
         printf("invalid key : (");
         return 0;
     }
 
+    const char* key_dat = key.c_str();
+
     fnEagleVMBegin();
 
     int sum1 = 0, sum2 = 0, prod1 = 1, prod2 = 1;
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 20; i++)
     {
-        int val = key[i];
+        int val = key_dat[i] - '0';
         auto res = i % 2 == 0;
 
         if (res)

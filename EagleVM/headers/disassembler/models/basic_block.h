@@ -16,7 +16,7 @@ struct basic_block
 
     bool is_conditional_jump() const
     {
-        return target_blocks.size() == 2;
+        return target_rvas.size() == 2;
     }
 
     code_label* get_label()

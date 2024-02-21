@@ -69,38 +69,38 @@ void segment_disassembler::generate_blocks()
         if (block->target_rvas.empty())
             continue;
 
-        const uint32_t far_rva = block->target_rvas.back();
+        const uint32_t jump_rva = block->target_rvas.back();
         for (const auto &target_block : blocks)
         {
             // non inclusive is key because we might already be at that block
-            if (far_rva > target_block->start_rva && far_rva < target_block->end_rva_inc)
+            if (jump_rva > target_block->start_rva && jump_rva < target_block->end_rva_inc)
             {
                 // we found a jump to the middle of a block
                 // we need to split the block
+
                 basic_block *new_block = new basic_block();
-                new_block->start_rva = far_rva;
+                new_block->start_rva = jump_rva;
                 new_block->end_rva_inc = target_block->end_rva_inc;
+                target_block->end_rva_inc = jump_rva;
+                new_block->target_rvas = target_block->target_rvas;
 
-                target_block->end_rva_inc = far_rva;
-
-                if (target_block->is_conditional_jump())
-                {
-                    // this means that the new block will have a conditional jump
-                    new_block->target_rvas = target_block->target_rvas;
-                }
-
-                target_block->target_rvas = {far_rva};
+                target_block->target_rvas = {jump_rva};
+                target_block->end_rva_inc = jump_rva;
 
                 // for the new_block, we copy all the instructions starting at the far_rva
                 uint32_t curr_rva = target_block->start_rva;
-                for (int i = 0; i < target_block->instructions.size(); i++)
+                for (int i = 0; i < target_block->instructions.size();)
                 {
                     zydis_decode &inst = target_block->instructions[i];
-                    if (curr_rva >= far_rva)
+                    if (curr_rva >= jump_rva)
                     {
                         // add to new block, remove from old block
                         new_block->instructions.push_back(inst);
                         target_block->instructions.erase(target_block->instructions.begin() + i);
+                    }
+                    else
+                    {
+                        ++i;
                     }
 
                     curr_rva += inst.instruction.length;

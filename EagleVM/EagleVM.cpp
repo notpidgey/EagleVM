@@ -299,11 +299,22 @@ int main(int argc, char *argv[])
 
                 // recreate jump to next block
                 const zydis_decode &last_inst = block->instructions.back();
-                auto target_mneominc = last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE
-                    ? last_inst.instruction.mnemonic
-                    : ZYDIS_MNEMONIC_JMP;
+                if(last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
+                {
+                    auto target_mneominc = last_inst.instruction.mnemonic;
+                    vm_generator.create_vm_jump(target_mneominc, container, next_block->start_rva_label);
 
-                vm_generator.create_vm_jump(target_mneominc, container, next_block->start_rva_label);
+                    if(target_mneominc != ZYDIS_MNEMONIC_JMP)
+                    {
+                        next_block = block->target_blocks.front();
+                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, next_block->start_rva_label);
+                    }
+                }
+                else
+                {
+                    // we just fall through
+                    vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, next_block->start_rva_label);
+                }
             }
             else
             {
