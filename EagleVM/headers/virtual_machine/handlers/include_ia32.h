@@ -10,3 +10,4 @@
 #include "virtual_machine/handlers/ia32_handlers/movsx.h"
 #include "virtual_machine/handlers/ia32_handlers/pop.h"
 #include "virtual_machine/handlers/ia32_handlers/push.h"
+#include "virtual_machine/handlers/ia32_handlers/lea.h"

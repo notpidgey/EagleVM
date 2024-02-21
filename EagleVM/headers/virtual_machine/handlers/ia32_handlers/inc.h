@@ -8,10 +8,10 @@ public:
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {
-            { bit64, 2 },
-            { bit32, 2 },
-            { bit16, 2 },
-            { bit8, 2 },
+            { bit64, 1 },
+            { bit32, 1 },
+            { bit16, 1 },
+            { bit8, 1 },
         };
 
         first_operand_as_ea = true;

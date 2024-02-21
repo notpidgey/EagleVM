@@ -11,9 +11,10 @@ public:
             { bit64, 0 },
             { bit32, 0 },
             { bit16, 0 },
+            { bit8, 0 },
         };
     };
 
 private:
-    virtual void construct_single(function_container& container, reg_size size, uint8_t operands) override;
+    void construct_single(function_container& container, reg_size size, uint8_t operands) override;
 };
