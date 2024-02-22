@@ -22,7 +22,7 @@ void vm_register_manager::init_reg_order()
             const zydis_register target = access_order[i];
 
             // these are registers we do not want to be using as VM registers
-            if(target == ZYDIS_REGISTER_RIP || target == ZYDIS_REGISTER_RAX || target == ZYDIS_REGISTER_RSP)
+            if(target == ZYDIS_REGISTER_RIP || target == ZYDIS_REGISTER_RSP)
             {
                 success_shuffle = false;
                 break;

@@ -24,7 +24,7 @@ code_label* code_label::create()
     return new code_label("");
 }
 
-int32_t code_label::get()
+int64_t code_label::get()
 {
     return virtual_address;
 }

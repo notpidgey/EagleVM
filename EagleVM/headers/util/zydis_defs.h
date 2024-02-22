@@ -33,6 +33,13 @@ typedef std::vector<uint8_t> encoded_vec;
 #define RECOMPILE(...) [=]() { return __VA_ARGS__ ; }
 #define ZLABEL(x) ZIMMS(int32_t(x->get()))
 #define ZREL(dest, curr) ZIMMS(int32_t(dest->get()) - (int32_t(curr->get()) + 5))
+#define ZREL_COND(dest, curr) \
+    ((dest)->get() > (curr)->get()) ? \
+        ZIMMU(uint32_t((dest)->get() - uint32_t((curr)->get()) - 6)) \
+        : \
+        ZIMMU(uint64_t(~uint16_t(curr->get() - dest->get() + 5)))
+#define ZREL_TEST(dest, curr, x) \
+    x == ZYDIS_MNEMONIC_JMP ? ZREL(dest, curr) : ZREL_COND(dest, curr)
 
 struct zydis_decode
 {
