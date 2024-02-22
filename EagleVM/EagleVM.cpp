@@ -203,12 +203,15 @@ int main(int argc, char* argv[])
             protect_section.instruction_protect_begin, protect_section.get_instruction_size()
         );
 
+        uint32_t instructions_begin = parser.offset_to_rva(vm_iat_calls[c].first);
+        uint32_t instructions_end = parser.offset_to_rva(vm_iat_calls[c + 1].first);
+
         std::printf("[+] function %i-%i\n", c, c + 1);
-        std::printf("\t[>] instruction begin: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c].first));
-        std::printf("\t[>] instruction end: 0x%x\n", parser.offset_to_rva(vm_iat_calls[c + 1].first));
+        std::printf("\t[>] instruction begin: 0x%x\n", instructions_begin);
+        std::printf("\t[>] instruction end: 0x%x\n", instructions_end);
         std::printf("\t[>] instruction size: %zu\n", protect_section.get_instruction_size());
 
-        segment_disassembler dasm(instructions, parser.offset_to_rva(vm_iat_calls[c].first) + 0x6);
+        segment_disassembler dasm(instructions, instructions_begin, instructions_end);
         dasm.generate_blocks();
 
         std::printf("\t[>] found %llu basic blocks\n", dasm.blocks.size());

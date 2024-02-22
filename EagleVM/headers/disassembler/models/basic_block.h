@@ -26,7 +26,7 @@ struct basic_block
     decode_vec instructions;
 
     std::vector<std::pair<uint32_t, jump_location>> target_rvas;
-    std::vector<std::pair<basic_block*, jump_location>> target_blocks;
+    std::vector<basic_block*> target_blocks;
 
     bool is_conditional_jump() const
     {

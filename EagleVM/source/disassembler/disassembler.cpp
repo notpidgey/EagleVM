@@ -1,7 +1,7 @@
 #include "disassembler/disassembler.h"
 
-segment_disassembler::segment_disassembler(const decode_vec& segment, const uint32_t binary_rva, const uint32_t binary_end) :
-    root_block(nullptr)
+segment_disassembler::segment_disassembler(const decode_vec& segment, const uint32_t binary_rva,
+                                           const uint32_t binary_end) : root_block(nullptr)
 {
     function = segment;
     rva_begin = binary_rva;
@@ -14,7 +14,7 @@ void segment_disassembler::generate_blocks()
     uint32_t current_rva = rva_begin;
 
     decode_vec block_instructions;
-    for (auto& inst : function)
+    for (auto& inst: function)
     {
         block_instructions.push_back(inst);
 
@@ -34,8 +34,7 @@ void segment_disassembler::generate_blocks()
             {
                 block->target_rvas.emplace_back(block->end_rva_inc, undiscovered);
                 block->end_reason = block_jump;
-            }
-            else
+            } else
             {
                 block->end_reason = block_conditional_jump;
             }
@@ -74,15 +73,15 @@ void segment_disassembler::generate_blocks()
 
     // but here we have an issue, some block may be jumping inside of another block
     // we need to fix that
-    std::vector<basic_block*> new_blocks;
+    std::vector<basic_block *> new_blocks;
 
-    for (const basic_block* block : blocks)
+    for (const basic_block* block: blocks)
     {
         if (block->target_rvas.empty())
             continue;
 
         const auto& [jump_rva, jump_type] = block->target_rvas.back();
-        for (basic_block* target_block : blocks)
+        for (basic_block* target_block: blocks)
         {
             // non inclusive is key because we might already be at that block
             if (jump_rva > target_block->start_rva && jump_rva < target_block->end_rva_inc)
@@ -96,7 +95,8 @@ void segment_disassembler::generate_blocks()
                 target_block->end_rva_inc = jump_rva;
                 new_block->target_rvas = target_block->target_rvas;
 
-                target_block->target_rvas = {jump_rva};
+                jump_location location = jump_rva > rva_end || jump_rva < rva_begin ? outside_segment : inside_segment;
+                target_block->target_rvas = {{jump_rva, location}};
                 target_block->end_rva_inc = jump_rva;
                 new_block->end_reason = target_block->end_reason;
                 target_block->end_reason = block_end;
@@ -111,8 +111,7 @@ void segment_disassembler::generate_blocks()
                         // add to new block, remove from old block
                         new_block->instructions.push_back(inst);
                         target_block->instructions.erase(target_block->instructions.begin() + i);
-                    }
-                    else
+                    } else
                     {
                         ++i;
                     }
@@ -128,22 +127,16 @@ void segment_disassembler::generate_blocks()
     blocks.insert(blocks.end(), new_blocks.begin(), new_blocks.end());
 
     root_block = blocks[0];
-    for (basic_block* block : blocks)
+    for (basic_block* block: blocks)
     {
-        for (auto& target_rva : block->target_rvas)
+        for (auto& [target_rva, rva_type]: block->target_rvas)
         {
-            for (auto& target_block : blocks)
-            {
+            if (rva_type == outside_segment)
+                continue;
+
+            for (auto& target_block: blocks)
                 if (target_rva == target_block->start_rva)
-                {
-                    block->target_blocks.push_back({target_block, inside_segment});
-                }
-            }
-        }
-
-        for(auto& target_rva : block->target_rvas)
-        {
-
+                    block->target_blocks.push_back(target_block);
         }
     }
 }
