@@ -1,4 +1,4 @@
-﻿#include "EagleVMStub/EagleVMStub.h"
+#include "EagleVMStub/EagleVMStub.h"
 #include <cstdio>
 #include <intrin.h>
 #include <iostream>
@@ -16,35 +16,28 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    const char* key_dat = key.c_str();
+    char* key_buf = key.data();
 
     fnEagleVMBegin();
 
-    int sum1 = 0, sum2 = 0, prod1 = 1, prod2 = 1;
-    for (int i = 0; i < 20; i++)
+    int odd_sum = 0;
+    int even_sum = 0;
+    for(int i = 0; i < 20; i++)
     {
-        int val = key_dat[i] - '0';
-        auto res = i % 2 == 0;
-
-        if (res)
+        int ia = key_buf[i] - '0';
+        if(i % 2)
         {
-            sum1 += val;
-            prod1 *= val;
+            even_sum += ia;
         }
         else
         {
-            sum2 -= val;
-            prod2 *= val;
+            odd_sum += ia;
         }
     }
 
-    int result1 = sum1 * prod1;
-    int result2 = sum2 * prod2;
-    int finalResult = result1 % result2; // Use modulus operation for more complexity
-
     fnEagleVMEnd();
 
-    if(finalResult == 0)
+    if(odd_sum == 25 && even_sum == 60)
     {
         printf("congradulations, you earned a cookie!");
     }
