@@ -96,6 +96,8 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
         call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
+
+        stack_disp += bit64;
     }
     else
     {
@@ -108,9 +110,10 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
         call_vm_handler(container, load_handler->get_vm_handler_va(zydis_helper::get_reg_size(op_reg.value)));
+
+        stack_disp += zydis_helper::get_reg_size(op_reg.value);
     }
 
-    stack_disp += bit64;
     return encode_status::success;
 }
 
@@ -215,8 +218,8 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         auto target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
 
         call_vm_handler(container, pop_address);
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(target_temp, 0, target_size)));
-        call_vm_handler(container, push_address);
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size)));
+        call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
         stack_disp += target_size;
     }
