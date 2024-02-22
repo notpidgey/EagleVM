@@ -309,12 +309,18 @@ int main(int argc, char* argv[])
                 {
                     if(last_inst.instruction.mnemonic == ZYDIS_MNEMONIC_JMP)
                     {
-                        auto [target, _] = block->target_rvas.back();
+                        auto [target, type] = block->target_rvas.back();
+                        if(type == outside_segment)
+                        {
+                            code_label* jump_label = code_label::create("vmleave_dest:" + target);
+                            jump_label->finalize(target);
 
-                        code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-                        jump_label->finalize(target);
-
-                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                        }
+                        else
+                        {
+                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[block->target_blocks.back()]);
+                        }
                     }
                     else
                     {
@@ -326,7 +332,7 @@ int main(int argc, char* argv[])
                             auto [target, type] = block->target_rvas.back();
                             if(type == outside_segment)
                             {
-                                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+                                code_label* jump_label = code_label::create("vmleave_dest:" + target);
                                 jump_label->finalize(target);
 
                                 auto target_mneominc = last_inst.instruction.mnemonic;
@@ -347,7 +353,7 @@ int main(int argc, char* argv[])
                             auto [target, type] = block->target_rvas.front();
                             if(type == outside_segment)
                             {
-                                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+                                code_label* jump_label = code_label::create("vmleave_dest:" + target);
                                 jump_label->finalize(target);
 
                                 vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
