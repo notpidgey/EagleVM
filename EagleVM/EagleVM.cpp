@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
                 zydis_decode& instruction = block->instructions[i];
                 va_nop.emplace_back(current_va, instruction.instruction.length);
 
-                zyids_mnemonic& mnemonic = instruction.instruction.mnemonic;
+                const zyids_mnemonic& mnemonic = instruction.instruction.mnemonic;
                 if (mnemonic >= ZYDIS_MNEMONIC_JB && mnemonic <= ZYDIS_MNEMONIC_JZ)
                     continue;
 

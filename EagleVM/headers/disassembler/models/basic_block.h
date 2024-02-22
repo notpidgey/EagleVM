@@ -9,6 +9,13 @@ enum block_end_reason
     block_conditional_jump,
 };
 
+enum jump_location
+{
+    undiscovered,
+    outside_segment,
+    inside_segment,
+};
+
 struct basic_block
 {
     block_end_reason end_reason = block_end;
@@ -18,8 +25,8 @@ struct basic_block
 
     decode_vec instructions;
 
-    std::vector<uint32_t> target_rvas;
-    std::vector<basic_block*> target_blocks;
+    std::vector<std::pair<uint32_t, jump_location>> target_rvas;
+    std::vector<std::pair<basic_block*, jump_location>> target_blocks;
 
     bool is_conditional_jump() const
     {
@@ -29,6 +36,6 @@ struct basic_block
 
     bool is_final_block() const
     {
-        return target_rvas.empty();
+        return end_reason == block_end;
     }
 };
