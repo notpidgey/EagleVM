@@ -72,7 +72,7 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
 void vm_generator::create_vm_jump(zyids_mnemonic mnemonic, function_container &container, code_label* rva_target)
 {
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(mnemonic, ZREL(rva_target, rel_label))));
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(mnemonic, ZREL_TEST(rva_target, rel_label, mnemonic))));
 }
 
 encoded_vec vm_generator::create_jump(const uint32_t rva, code_label* rva_target)

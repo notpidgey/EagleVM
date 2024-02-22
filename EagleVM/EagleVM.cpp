@@ -203,7 +203,7 @@ int main(int argc, char* argv[])
             protect_section.instruction_protect_begin, protect_section.get_instruction_size()
         );
 
-        uint32_t instructions_begin = parser.offset_to_rva(vm_iat_calls[c].first);
+        uint32_t instructions_begin = parser.offset_to_rva(vm_iat_calls[c].first) + 6;
         uint32_t instructions_end = parser.offset_to_rva(vm_iat_calls[c + 1].first);
 
         std::printf("[+] function %i-%i\n", c, c + 1);

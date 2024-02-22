@@ -10,7 +10,7 @@ public:
     static code_label* create(const std::string& section_name, bool generate_comments);
     static code_label* create();
 
-    int32_t get();
+    int64_t get();
     void finalize(uint32_t virtual_address);
 
     bool is_finalized();
