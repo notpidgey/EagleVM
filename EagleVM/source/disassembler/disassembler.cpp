@@ -27,9 +27,6 @@ void segment_disassembler::generate_blocks()
             block->end_rva_inc = current_rva + inst.instruction.length;
             block->instructions = block_instructions;
 
-            const zydis_decoded_operand op = inst.operands[0];
-            const auto immediate = op.imm;
-
             if (mnemonic != ZYDIS_MNEMONIC_JMP)
             {
                 block->target_rvas.emplace_back(block->end_rva_inc, undiscovered);
@@ -41,10 +38,12 @@ void segment_disassembler::generate_blocks()
 
             // conditional jumps can either go somewhere else, or next
             uint64_t target_address;
+
+            const zydis_decoded_operand op = inst.operands[0];
             ZydisCalcAbsoluteAddress(&inst.instruction, &op, current_rva, &target_address);
 
             jump_location location = inside_segment;
-            if (target_address < rva_begin || target_address > rva_end)
+            if (target_address < rva_begin || target_address >= rva_end)
                 location = outside_segment;
 
             block->target_rvas.emplace_back(target_address, location);
@@ -106,6 +105,7 @@ void segment_disassembler::generate_blocks()
                 for (int i = 0; i < target_block->instructions.size();)
                 {
                     zydis_decode& inst = target_block->instructions[i];
+
                     if (curr_rva >= jump_rva)
                     {
                         // add to new block, remove from old block
@@ -116,7 +116,7 @@ void segment_disassembler::generate_blocks()
                         ++i;
                     }
 
-                    curr_rva += inst.instruction.length;
+                    curr_rva += inst.instruction.length;  // move this line up
                 }
 
                 new_blocks.push_back(new_block);
