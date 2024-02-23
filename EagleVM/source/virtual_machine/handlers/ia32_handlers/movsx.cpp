@@ -146,8 +146,8 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         call_vm_handler(container, push_address);
     }
 
-    const reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
-    const reg_size mem_size = reg_size(instruction.operands[index].size / 8);
+    reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
+    reg_size mem_size = reg_size(instruction.operands[index].size / 8);
 
     // for movsx this is always going to be the second operand
     // this means that we want to get the value and pop it
@@ -164,15 +164,6 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
 
 void ia32_movsx_handler::upscale_temp(function_container& container, reg_size target_size, reg_size current_size)
 {
-    const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
-    const auto push_address = push_handler->get_handler_va(bit64, 1);
-
-    const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
-    const auto pop_address = pop_handler->get_handler_va(bit64, 1);
-
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(GR_RAX)));
-    call_vm_handler(container, push_address);
-
     // mov eax/ax/al, VTEMP
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
         ZREG(zydis_helper::get_bit_version(GR_RAX, current_size)),
@@ -210,7 +201,4 @@ void ia32_movsx_handler::upscale_temp(function_container& container, reg_size ta
         ZREG(zydis_helper::get_bit_version(VTEMP, target_size)),
         ZREG(zydis_helper::get_bit_version(GR_RAX, target_size))
     ));
-
-    call_vm_handler(container, pop_address);
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RAX), ZREG(VTEMP)));
 }
