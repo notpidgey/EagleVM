@@ -34,6 +34,12 @@ struct basic_block
         return instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && instruction.mnemonic != ZYDIS_MNEMONIC_JMP;
     }
 
+    bool is_jump() const
+    {
+        const auto& [instruction, _] = instructions.back();
+        return instruction.meta.branch_type == ZYDIS_MNEMONIC_JMP;
+    }
+
     bool is_final_block() const
     {
         return end_reason == block_end;

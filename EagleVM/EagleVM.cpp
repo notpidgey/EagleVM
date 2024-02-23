@@ -292,26 +292,71 @@ int main(int argc, char* argv[])
                 current_va += instruction.instruction.length;
             }
 
-            if (!block->is_final_block())
+            // exit vm
+            if (currently_in_vm)
             {
-                // exit vm
-                if (currently_in_vm)
-                {
-                    code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-                    vm_generator.call_vm_exit(container, jump_label);
-                    container.assign_label(jump_label);
+                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
+                vm_generator.call_vm_exit(container, jump_label);
+                container.assign_label(jump_label);
 
-                    std::printf("\n\t\t[>] vmexit\n");
-                }
+                std::printf("\n\t\t[>] vmexit\n");
+            }
 
-                auto last_inst = block->instructions.back();
-                if(last_inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
+            if(block->end_reason != block_end)
+            {
+                if(block->end_reason == block_jump)
                 {
-                    if(last_inst.instruction.mnemonic == ZYDIS_MNEMONIC_JMP)
+                    // block_jump should only ever have 1 target_rvas
+                    auto [target, type] = block->target_rvas.back();
+                    if(type == outside_segment)
                     {
+                        // this means we are exiting our virtualized block, jump back to .text
+                        code_label* jump_label = code_label::create("vmleave_dest:" + target);
+                        jump_label->finalize(target);
+
+                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                    }
+                    else
+                    {
+                        // we are still inside the segment, jump to target block
+                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[block->target_blocks.back()]);
+                    }
+                }
+                else
+                {
+                    // this is a conditional jump
+
+                    // there could be different types of final blocks, but we just checked if the explicit one is present
+                    // case 1: conditional jump goes to outside rva
+                    {
+                        const zydis_decode& last_inst = block->instructions.back();
+
                         auto [target, type] = block->target_rvas.back();
                         if(type == outside_segment)
                         {
+                            // we are still inside the segment, so we do a conditional jump if we want to leave
+                            code_label* jump_label = code_label::create("vmleave_dest:" + target);
+                            jump_label->finalize(target);
+
+                            auto target_mneominc = last_inst.instruction.mnemonic;
+                            vm_generator.create_vm_jump(target_mneominc, container, jump_label);
+                        }
+                        else
+                        {
+                            // we are still in the segment, so we do a conditional jump to a virtualized basic block
+                            basic_block* next_block = block->target_blocks.back();
+
+                            auto target_mneominc = last_inst.instruction.mnemonic;
+                            vm_generator.create_vm_jump(target_mneominc, container, basic_block_labels[next_block]);
+                        }
+                    }
+
+                    // case 2: conditional jump fails and goes to next block
+                    {
+                        auto [target, type] = block->target_rvas.front();
+                        if(type == outside_segment)
+                        {
+                            // the next block is outside of this segment, we just do a normal jump
                             code_label* jump_label = code_label::create("vmleave_dest:" + target);
                             jump_label->finalize(target);
 
@@ -319,73 +364,33 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
-                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[block->target_blocks.back()]);
-                        }
-                    }
-                    else
-                    {
-                        // this is a conditional jump
-
-                        // there could be different types of final blocks, but we just checked if the explicit one is present
-                        // case 1: conditional jump goes to outside rva
-                        {
-                            auto [target, type] = block->target_rvas.back();
-                            if(type == outside_segment)
-                            {
-                                code_label* jump_label = code_label::create("vmleave_dest:" + target);
-                                jump_label->finalize(target);
-
-                                auto target_mneominc = last_inst.instruction.mnemonic;
-                                vm_generator.create_vm_jump(target_mneominc, container, jump_label);
-                            }
-                            else
-                            {
-                                // we have a normal conditional jump inside our segment
-                                basic_block* next_block = block->target_blocks.back();
-
-                                auto target_mneominc = last_inst.instruction.mnemonic;
-                                vm_generator.create_vm_jump(target_mneominc, container, basic_block_labels[next_block]);
-                            }
-                        }
-
-                        // case 2: conditional jump fails and goes to next block which is outside rva
-                        {
-                            auto [target, type] = block->target_rvas.front();
-                            if(type == outside_segment)
-                            {
-                                code_label* jump_label = code_label::create("vmleave_dest:" + target);
-                                jump_label->finalize(target);
-
-                                vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
-                            }
-                            else
-                            {
-                                basic_block* next_block = block->target_blocks.back();
-                                vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[next_block]);
-                            }
+                            // the next block is inside this segment, so its virtualized
+                            basic_block* next_block = block->target_blocks.back();
+                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[next_block]);
                         }
                     }
                 }
             }
             else
             {
-                // this is the last block in the tree, return to normal code execution
-                uint32_t exit_va = parser.offset_to_rva(vm_iat_calls[c + 1].first);
+                // simple block end, go to next rva after the instruction
+                code_label* jump_label = nullptr;
 
-                code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-                jump_label->finalize(exit_va);
-
-                if (currently_in_vm)
+                auto [target, type] = block->target_rvas.back();
+                if(type == outside_segment)
                 {
-                    // exit vm, jump to the end of the function
-                    vm_generator.call_vm_exit(container, jump_label);
-                    std::printf("\n\t\t[>] vmexit\n");
+                    // we return back to .text
+                    jump_label = code_label::create("vmleave_dest:" + instructions_end, true);
+                    jump_label->finalize(instructions_end);
                 }
                 else
                 {
-                    // jump to end of function
-                    vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                    // we are still inside the segment
+                    auto next_block = block->target_blocks.back();
+                    jump_label = basic_block_labels[next_block];
                 }
+
+                vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
             }
 
             vm_code_sm.add(container);
