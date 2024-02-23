@@ -76,11 +76,7 @@ void vm_generator::create_vm_jump(zyids_mnemonic mnemonic, function_container &c
     {
         int32_t immediate_value;
         if (mnemonic == ZYDIS_MNEMONIC_JMP) {
-            if ((int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 5)) == 0) {
-                immediate_value = int32_t(rva_target->get()) - (int32_t(rel_label->get()));
-            } else {
-                immediate_value = int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 5);
-            }
+            immediate_value = int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 5);
         } else {
             bool is_short = false;
             auto diff = uint32_t(rva_target->get()) - int32_t(rel_label->get());
