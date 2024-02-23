@@ -72,7 +72,36 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
 void vm_generator::create_vm_jump(zyids_mnemonic mnemonic, function_container &container, code_label* rva_target)
 {
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(mnemonic, ZREL_TEST(rva_target, rel_label, mnemonic))));
+    container.add(rel_label, [=]()
+    {
+        int32_t immediate_value;
+        if (mnemonic == ZYDIS_MNEMONIC_JMP) {
+            if ((int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 5)) == 0) {
+                immediate_value = int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 2);
+            } else {
+                immediate_value = int32_t(rva_target->get()) - (int32_t(rel_label->get()) + 5);
+            }
+        } else {
+            bool is_short = false;
+            auto diff = uint32_t(rva_target->get()) - int32_t(rel_label->get());
+            if(diff <= 0xFF)
+            {
+                if(rel_label->get() > rva_target->get())
+                    immediate_value = ~uint64_t(rel_label->get() - rva_target->get() + 1);
+                else
+                    immediate_value = rva_target->get() - rel_label->get() - 2;
+            }
+            else
+            {
+                if(rel_label->get() > rva_target->get())
+                    immediate_value = ~uint64_t(rel_label->get() - rva_target->get() + 5);
+                else
+                    immediate_value = rva_target->get() - rel_label->get() -6;
+            }
+        }
+
+        return zydis_helper::enc(mnemonic, zydis_eimm{ .s = immediate_value });
+    });
 }
 
 encoded_vec vm_generator::create_jump(const uint32_t rva, code_label* rva_target)
