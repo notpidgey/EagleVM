@@ -50,6 +50,8 @@ namespace zydis_helper
 	std::string operand_to_string(const zydis_decode& decode, int index);
 
 	std::vector<uint8_t> encode_queue(std::vector<zydis_encoder_request>& queue);
+    std::vector<uint8_t> encode_queue_absolute(std::vector<zydis_encoder_request>& queue, uint32_t address);
+
     std::vector<std::string> print(zydis_encoder_request& queue, uint32_t address);
     std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);
 

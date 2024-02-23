@@ -48,7 +48,7 @@ section_manager pe_packer::create_section()
             const uint32_t section_rva = header.VirtualAddress;
 
             code_label* rel_label = code_label::create();
-            container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
+            container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
             container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
 
             for(int i = 0; i < data.size(); i += 4)
@@ -77,11 +77,11 @@ section_manager pe_packer::create_section()
     // return to main
     {
         function_container container;
+        auto orig_entry = generator->nt_headers.OptionalHeader.AddressOfEntryPoint;
 
         code_label* rel_label = code_label::create();
-        container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
-        container.add(RECOMPILE(
-                zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, generator->nt_headers.OptionalHeader.AddressOfEntryPoint, 8))));
+        container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
+        container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, orig_entry, 8))));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(GR_RAX)));
 
         section_manager.add(container);
