@@ -294,13 +294,13 @@ int main(int argc, char* argv[])
                 std::printf("\n\t\t[>] vmexit\n");
             }
 
-            if(block->end_reason != block_end)
+            if (block->end_reason != block_end)
             {
-                if(block->end_reason == block_jump)
+                if (block->end_reason == block_jump)
                 {
                     // block_jump should only ever have 1 target_rvas
                     auto [target, type] = block->target_rvas.back();
-                    if(type == jump_outside_segment)
+                    if (type == jump_outside_segment)
                     {
                         // this means we are exiting our virtualized block, jump back to .text
                         code_label* jump_label = code_label::create("vmleave_dest:" + target);
@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
                         const zydis_decode& last_inst = block->instructions.back();
 
                         auto [target, type] = block->target_rvas.back();
-                        if(type == jump_outside_segment)
+                        if (type == jump_outside_segment)
                         {
                             // we are still inside the segment, so we do a conditional jump if we want to leave
                             code_label* jump_label = code_label::create("vmleave_dest:" + target);
@@ -346,7 +346,7 @@ int main(int argc, char* argv[])
                     // case 2: conditional jump fails and goes to next block
                     {
                         auto [target, type] = block->target_rvas.front();
-                        if(type == jump_outside_segment)
+                        if (type == jump_outside_segment)
                         {
                             // the next block is outside of this segment, we just do a normal jump
                             code_label* jump_label = code_label::create("vmleave_dest:" + target);
@@ -369,7 +369,7 @@ int main(int argc, char* argv[])
                 code_label* jump_label = nullptr;
 
                 auto [target, type] = block->target_rvas.back();
-                if(type == jump_outside_segment)
+                if (type == jump_outside_segment)
                 {
                     // we return back to .text
                     jump_label = code_label::create("vmleave_dest:" + instructions_end, true);
