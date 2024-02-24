@@ -158,11 +158,9 @@ int main(int argc, char* argv[])
     auto& [data_section, data_section_bytes] = generator.add_section(".vmdata");
     data_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
     data_section.SizeOfRawData = 0;
-    data_section.VirtualAddress = generator.
-        align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+    data_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
     data_section.Misc.VirtualSize = 0;
-    data_section.Characteristics =
-        IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
+    data_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
     data_section.PointerToRelocations = 0;
     data_section.NumberOfRelocations = 0;
     data_section.NumberOfLinenumbers = 0;
@@ -178,7 +176,7 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)data_section.VirtualAddress);
 
-    section_manager vm_data_sm = vm_generator.generate_vm_handlers(false);
+    section_manager vm_data_sm = vm_generator.generate_vm_handlers(true);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
 
     data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
@@ -222,12 +220,6 @@ int main(int argc, char* argv[])
             code_label* block_label = code_label::create("block:" + block->start_rva);
             basic_block_labels[block] = block_label;
         }
-
-        // write code to sort dasm.blocks by block->start_rva
-        std::ranges::sort(dasm.blocks, [](const basic_block* a, const basic_block* b)
-        {
-            return a->start_rva < b->start_rva;
-        });
 
         function_container container;
         for (auto& block : dasm.blocks)
