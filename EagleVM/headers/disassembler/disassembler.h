@@ -11,7 +11,7 @@ public:
     void generate_blocks();
     void set_end_reason(basic_block* block);
     void set_block_rvas(basic_block* block, uint32_t current_rva) const;
-    jump_location get_jump_location(uint32_t rva) const;
+    block_jump_location get_jump_location(uint32_t rva) const;
 
 
     std::vector<basic_block*> blocks;

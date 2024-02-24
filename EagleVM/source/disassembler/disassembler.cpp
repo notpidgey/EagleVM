@@ -77,7 +77,7 @@ void segment_disassembler::generate_blocks()
                 target_block->end_rva_inc = jump_rva;
                 new_block->target_rvas = target_block->target_rvas;
 
-                jump_location location = jump_rva > rva_end || jump_rva < rva_begin ? outside_segment : inside_segment;
+                block_jump_location location = jump_rva > rva_end || jump_rva < rva_begin ? jump_outside_segment : jump_inside_segment;
                 target_block->target_rvas = {{jump_rva, location}};
                 target_block->end_rva_inc = jump_rva;
                 new_block->end_reason = target_block->end_reason;
@@ -114,7 +114,7 @@ void segment_disassembler::generate_blocks()
     {
         for (auto& [target_rva, rva_type]: block->target_rvas)
         {
-            if (rva_type == outside_segment)
+            if (rva_type == jump_outside_segment)
                 continue;
 
             for (auto& target_block: blocks)
@@ -168,10 +168,10 @@ void segment_disassembler::set_block_rvas(basic_block* block, uint32_t current_r
     }
 }
 
-jump_location segment_disassembler::get_jump_location(const uint32_t rva) const
+block_jump_location segment_disassembler::get_jump_location(const uint32_t rva) const
 {
     if(rva >= rva_begin && rva < rva_end)
-        return inside_segment;
+        return jump_inside_segment;
 
-    return outside_segment;
+    return jump_outside_segment;
 }
