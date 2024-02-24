@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
             const uint8_t* import_name = const_cast<uint8_t*>(import_section_raw + (thunk_data->u1.AddressOfData -
                 import_section->VirtualAddress + 2));
 
-            std::printf("%3i %-20s %-s\n", i, import_library, import_name);
+            std::printf("%3i %-20p %-p\n", i, import_library, import_name);
             i++;
         });
 

@@ -10,7 +10,6 @@ void ia32_movsx_handler::construct_single(function_container& container, reg_siz
     call_vm_handler(container, mov_handler->get_handler_va(size, 2));
 
     create_vm_return(container);
-    std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(size), __func__, container.size());
 }
 
 encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index)
