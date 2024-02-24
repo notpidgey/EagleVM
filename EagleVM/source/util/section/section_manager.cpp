@@ -58,6 +58,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
         const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
         current_address += align;
 
+        if(code_label && !valid_label(code_label, current_address, section_address))
+            code_label->finalize(current_address + section_address);
+
         std::advance(it, align);
 
         auto& segments = sec_function.get_segments();
@@ -65,6 +68,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
         {
             if(seg_code_label && !seg_code_label->is_finalized())
                 __debugbreak();
+
+            if(seg_code_label && !valid_label(seg_code_label, current_address, section_address))
+                seg_code_label->finalize(current_address + section_address);
 
             instructions_vec requests;
             for (auto& inst : instructions)
@@ -136,5 +142,14 @@ void section_manager::add(function_container& function)
 
 void section_manager::add(code_label* label, function_container& function)
 {
-    section_functions.push_back({ label, function });
+  section_functions.push_back({label, function});
+}
+
+bool section_manager::valid_label(code_label* label, uint32_t current_address, uint32_t section_address)
+{
+    auto label_address = label->get();
+    if(label_address != current_address + section_address)
+        return false;
+
+    return true;
 }
