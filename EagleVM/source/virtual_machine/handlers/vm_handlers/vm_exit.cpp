@@ -41,5 +41,4 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
     // the rsp that we setup earlier before popping all the regs
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_POP, ZREG(GR_RSP)));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZMEMBD(GR_RSP, -8, 8)));
-    std::printf("%3c %-17s %-10zi\n", 'Q', __func__, container.size());
 }

@@ -59,5 +59,4 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     }
 
     create_vm_return(container);
-    std::printf("%3c %-17s %-10zi\n", 'Q', __func__, container.size());
 }

@@ -15,5 +15,4 @@ void vm_store_handler::construct_single(function_container& container, reg_size 
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, 8), ZREG(VTEMP)));
 
     create_vm_return(container);
-    std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, container.size());
 }

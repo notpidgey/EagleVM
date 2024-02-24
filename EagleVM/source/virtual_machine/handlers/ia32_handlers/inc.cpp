@@ -17,7 +17,6 @@ void ia32_inc_handler::construct_single(function_container& container, reg_size 
     call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
 
     create_vm_return(container);
-    std::printf("%3c %-17s %-10zi\n", zydis_helper::reg_size_to_string(reg_size), __func__, container.size());
 }
 
 void ia32_inc_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
