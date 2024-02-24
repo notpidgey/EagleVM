@@ -46,7 +46,9 @@ void base_instruction_virtualizer::call_vm_handler(function_container& container
     // lea VIP, [0x14000000]    ; load base
     // lea VIP, [VIP + VCSRET]  ; add rva to base
     // jmp VIP
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZJMP(jump_label, rel_label))));
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(VIP, jump_label->get(), 8))));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
 
     // execution after VM handler should end up here
     container.assign_label(retun_label);
