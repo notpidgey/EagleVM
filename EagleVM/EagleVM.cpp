@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     std::printf("\n[+] porting original pe properties to new executable...\n");
 
     auto nt_header = parser.get_nt_header();
-    std::printf("[>] image base -> %I64d bytes\n", nt_header->OptionalHeader.ImageBase);
+    std::printf("[>] image base -> 0x%llx bytes\n", nt_header->OptionalHeader.ImageBase);
     std::printf("[>] section alignment -> %lu bytes\n", nt_header->OptionalHeader.SectionAlignment);
     std::printf("[>] file alignment -> %lu bytes\n", nt_header->OptionalHeader.FileAlignment);
     std::printf("[>] stack reserve -> %I64d bytes\n", nt_header->OptionalHeader.SizeOfStackReserve);
