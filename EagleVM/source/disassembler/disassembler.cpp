@@ -118,8 +118,13 @@ void segment_disassembler::generate_blocks()
                 continue;
 
             for (auto& target_block: blocks)
+            {
                 if (target_rva == target_block->start_rva)
+                {
                     block->target_blocks.push_back(target_block);
+                    break;
+                }
+            }
         }
     }
 }

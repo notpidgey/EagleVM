@@ -365,7 +365,7 @@ int main(int argc, char* argv[])
                         else
                         {
                             // the next block is inside this segment, so its virtualized
-                            basic_block* next_block = block->target_blocks.back();
+                            basic_block* next_block = block->target_blocks.front();
                             vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[next_block]);
                         }
                     }

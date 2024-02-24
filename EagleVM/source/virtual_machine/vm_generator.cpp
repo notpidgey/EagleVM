@@ -77,9 +77,7 @@ void vm_generator::create_vm_jump(zyids_mnemonic mnemonic, function_container &c
 
 encoded_vec vm_generator::create_jump(const uint32_t rva, code_label* rva_target)
 {
-    const uint32_t relative_jump = rva_target->get() - (rva + 5);
-
-    zydis_encoder_request jmp = zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZIMMS(relative_jump));
+    zydis_encoder_request jmp = zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZIMMS(rva_target->get() - rva - 5));
     return zydis_helper::encode_request(jmp);
 }
 
