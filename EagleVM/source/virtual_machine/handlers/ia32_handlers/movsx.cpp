@@ -17,6 +17,8 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
 {
     if(index == 0)
     {
+        // destination register
+
         const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
@@ -26,9 +28,13 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
         call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
+
+        stack_disp += bit64;
     }
     else
     {
+        // source register
+
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
         const vm_handler_entry* load_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
         const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
@@ -38,6 +44,8 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         // mov VTEMP, -8
         // VM_LOAD_REG
         // pop VTEMP
+        // UPSCALE
+        // push
 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
         call_vm_handler(container, load_handler->get_vm_handler_va(size));
@@ -48,6 +56,7 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         upscale_temp(container, target_size, current_size);
 
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
+        stack_disp += target_size;
     }
 
     return encode_status::success;

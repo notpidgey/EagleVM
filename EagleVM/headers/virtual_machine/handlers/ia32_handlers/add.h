@@ -13,8 +13,6 @@ public:
             { bit16, 2 },
             { bit8, 2 }
         };
-
-        first_operand_as_ea = false;
     };
 
 private:
