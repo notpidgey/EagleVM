@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, uint8_t>> va_ran;
     std::vector<std::pair<uint32_t, code_label*>> va_enters;
 
-    section_manager vm_code_sm;
+    section_manager vm_code_sm(true);
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         pe_protected_section protect_section = parser.offset_to_ptr(vm_iat_calls[c].first, vm_iat_calls[c + 1].first);

@@ -21,7 +21,7 @@ void vm_generator::init_ran_consts()
 section_manager vm_generator::generate_vm_handlers(bool randomize_handler_position)
 {
     hg_->setup_vm_mapping();
-    section_manager section;
+    section_manager section(randomize_handler_position);
 
     for(const auto& handler : hg_->v_handlers | std::views::values)
         handler->initialize_labels();
@@ -40,8 +40,6 @@ section_manager vm_generator::generate_vm_handlers(bool randomize_handler_positi
         function_container container = handler->construct_handler();
         section.add(container);
     }
-
-    if(randomize_handler_position) {}
 
     return section;
 }

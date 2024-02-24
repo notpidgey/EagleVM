@@ -1,10 +1,20 @@
 #include "util/section/section_manager.h"
 
-#include <ranges>
-
 #include "util/zydis_helper.h"
+#include "util/random.h"
 
+#include <ranges>
 #include <variant>
+
+section_manager::section_manager()
+{
+    shuffle_functions = false;
+}
+
+section_manager::section_manager(bool shuffle)
+{
+    shuffle_functions = shuffle;
+}
 
 encoded_vec section_manager::compile_section(const uint32_t section_address)
 {
@@ -13,6 +23,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
     // but it is the easiest, and this is an open source project
     // if someone would like to, i am open to changes
     // but i am not rewriting this unless i really need to
+
+    if(shuffle_functions)
+        perform_shuffle();
 
     uint32_t current_address = section_address;
 
@@ -152,4 +165,9 @@ bool section_manager::valid_label(code_label* label, uint32_t current_address, u
         return false;
 
     return true;
+}
+
+void section_manager::perform_shuffle()
+{
+    std::ranges::shuffle(section_functions, ran_device::get().gen);
 }
