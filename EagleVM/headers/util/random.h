@@ -10,7 +10,7 @@ public:
     ran_device()
     {
         #if _DEBUG
-        gen.seed(12345);
+        gen.seed(0xDEADBEEF);
         #else
         gen.seed(rd());
         #endif

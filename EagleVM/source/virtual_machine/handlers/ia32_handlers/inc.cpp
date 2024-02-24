@@ -10,8 +10,8 @@ void ia32_inc_handler::construct_single(function_container& container, reg_size 
     // pop VTEMP                    ; VTEMP should be an address (always 64 bits)
     call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
 
-    //dec [VTEMP]                   ; dec popped value
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_INC, ZMEMBD(VSP, 0, reg_size)));
+    //inc [VTEMP]                   ; inc popped value
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_INC, ZMEMBD(VTEMP, 0, reg_size)));
 
     //pushfq                        ; keep track of rflags
     call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));

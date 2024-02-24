@@ -13,7 +13,7 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
     // we also need to setup an RIP to return to main program execution
     // we will place that after the RSP
     code_label* rel_label = code_label::create();
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get() - 7, 8))));
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, 8)));
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VSP, -8, 8), ZREG(VIP)));
 

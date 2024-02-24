@@ -1,10 +1,20 @@
 #include "util/section/section_manager.h"
 
-#include <ranges>
-
 #include "util/zydis_helper.h"
+#include "util/random.h"
 
+#include <ranges>
 #include <variant>
+
+section_manager::section_manager()
+{
+    shuffle_functions = false;
+}
+
+section_manager::section_manager(bool shuffle)
+{
+    shuffle_functions = shuffle;
+}
 
 encoded_vec section_manager::compile_section(const uint32_t section_address)
 {
@@ -13,6 +23,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
     // but it is the easiest, and this is an open source project
     // if someone would like to, i am open to changes
     // but i am not rewriting this unless i really need to
+
+    if(shuffle_functions)
+        perform_shuffle();
 
     uint32_t current_address = section_address;
 
@@ -45,7 +58,7 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
 
             // zydis does not really have a way of checking the length of an encoded instruction without encoding it
             // so we are going to just encode and check the size... sorry
-            current_address += zydis_helper::encode_queue(requests).size();
+            current_address += zydis_helper::encode_queue_absolute(requests, current_address).size();
         }
     }
 
@@ -58,6 +71,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
         const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
         current_address += align;
 
+        if(code_label && !valid_label(code_label, current_address, section_address))
+            code_label->finalize(current_address + section_address);
+
         std::advance(it, align);
 
         auto& segments = sec_function.get_segments();
@@ -65,6 +81,9 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
         {
             if(seg_code_label && !seg_code_label->is_finalized())
                 __debugbreak();
+
+            if(seg_code_label && !valid_label(seg_code_label, current_address, section_address))
+                seg_code_label->finalize(current_address + section_address);
 
             instructions_vec requests;
             for (auto& inst : instructions)
@@ -78,7 +97,7 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
                 }, inst);
             }
 
-            std::vector<uint8_t> encoded_instructions = zydis_helper::encode_queue(requests);
+            std::vector<uint8_t> encoded_instructions = zydis_helper::encode_queue_absolute(requests, current_address);
 
             // Calculate the position of the iterator before the insert operation
             size_t pos = std::distance(compiled_section.begin(), it);
@@ -136,5 +155,19 @@ void section_manager::add(function_container& function)
 
 void section_manager::add(code_label* label, function_container& function)
 {
-    section_functions.push_back({ label, function });
+  section_functions.push_back({label, function});
+}
+
+bool section_manager::valid_label(code_label* label, uint32_t current_address, uint32_t section_address)
+{
+    auto label_address = label->get();
+    if(label_address != current_address + section_address)
+        return false;
+
+    return true;
+}
+
+void section_manager::perform_shuffle()
+{
+    std::ranges::shuffle(section_functions, ran_device::get().gen);
 }

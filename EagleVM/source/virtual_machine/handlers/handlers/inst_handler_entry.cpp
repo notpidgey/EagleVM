@@ -85,6 +85,7 @@ void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decod
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction,
                                                  zydis_dreg op_reg, int& stack_disp, int index)
 {
+    // what about cases where we have RSP as the register?
     if(virtualize_as_address(instruction, index))
     {
         const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
@@ -211,7 +212,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     }
 
     // by default, this will be dereferenced and we will get the value at the address,
-    reg_size target_size = reg_size(instruction.operands[index].size / 8);
+    reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
     if(!virtualize_as_address(instruction, index))
     {
         // this means we are working with the second operand

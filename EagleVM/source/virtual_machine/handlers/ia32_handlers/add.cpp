@@ -14,7 +14,7 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
     // pop VTEMP
     call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
 
-    // sub qword ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
+    // add size ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(target_temp)));
 
     // push rflags                      ; push rflags in case we want to accept these changes
