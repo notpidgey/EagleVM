@@ -445,13 +445,17 @@ int main(int argc, char* argv[])
     packer_section.NumberOfLinenumbers = 0;
 
     encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.VirtualAddress);
+    auto [packer_pdb_offset, size] = pe_packer::insert_pdb(packer_code_bytes);
+
     packer_section.SizeOfRawData = generator.align_file(packer_code_bytes.size());
     packer_section.Misc.VirtualSize = generator.align_section(packer_code_bytes.size());
     packer_bytes += packer_code_bytes;
 
-    generator.nt_headers.OptionalHeader.AddressOfEntryPoint = packer_section.VirtualAddress;
-
-    last_section = &packer_section;
+    generator.add_custom_pdb(
+        packer_section.VirtualAddress + packer_pdb_offset,
+        packer_section.PointerToRawData + packer_pdb_offset,
+        size
+    );
 
     generator.save_file("EagleVMSandboxProtected.exe");
     std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");

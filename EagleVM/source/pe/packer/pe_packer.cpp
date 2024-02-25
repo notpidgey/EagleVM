@@ -1,4 +1,6 @@
 #include "pe/packer/pe_packer.h"
+#include "pe/models/code_view_pdb.h"
+
 #include "util/zydis_helper.h"
 #include "util/section/function_container.h"
 #include "util/section/section_manager.h"
@@ -8,14 +10,42 @@ void pe_packer::set_overlay(bool overlay)
     text_overlay = overlay;
 }
 
+std::pair<uint32_t, uint32_t> pe_packer::insert_pdb(encoded_vec& encoded_vec)
+{
+    uint32_t address = encoded_vec.size();
+
+    code_view_pdb pdb{};
+    pdb.signature[0] = 'R';
+    pdb.signature[1] = 'S';
+    pdb.signature[2] = 'D';
+    pdb.signature[3] = 'S';
+    pdb.age = 0xE;
+
+    // inser the "pdb" structure to the back of encoded_vec
+    encoded_vec.insert(encoded_vec.end(), reinterpret_cast<uint8_t*>(&pdb), reinterpret_cast<uint8_t*>(&pdb) + sizeof(pdb));
+
+    std::string pdb_value;
+    //pdb_value += "\n⠀⠀⠀⢀⡴⠋⠉⢉⠍⣉⡉⠉⠉⠉⠓⠲⠶⠤⣄\n";
+    pdb_value += "⠀⠀⢀⠎⠀⠪⠾⢊⣁⣀⡀⠄⠀⠀⡌⠉⠁⠄⢳\n";
+    pdb_value += "⠀⣰⠟⣢⣤⣐⠘⠛⣻⠻⠭⠇⠀⢤⡶⠟⠛⠂⠀⢌⢷\n";
+    pdb_value += "⢸⢈⢸⠠⡶⠬⣉⡉⠁⠀⣠⢄⡀⠀⠳⣄⠑⠚⣏⠁⣪⠇\n";
+    pdb_value += "⠀⢯⡊⠀⠹⡦⣼⣍⠛⢲⠯⢭⣁⣲⣚⣁⣬⢾⢿⠈⡜\n";
+    pdb_value += "⠀⠀⠙⡄⠀⠘⢾⡉⠙⡟⠶⢶⣿⣶⣿⣶⣿⣾⣿⠀⡇\n";
+    pdb_value += "⠀⠀⠀⠙⢦⣤⡠⡙⠲⠧⠀⣠⣇⣨⣏⣽⡹⠽⠏⠀⡇\n";
+    pdb_value += "⠀⠀⠀⠀⠀⠈⠙⠦⢕⡋⠶⠄⣤⠤⠤⠤⠤⠂⡠⠀⡇\n";
+    pdb_value += "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⠒⠦⠤⣄⣀⣀⣀⣠⠔⠁\n";
+
+    // conver the string to bytes and insert at the end of the file
+    encoded_vec.insert(encoded_vec.end(), pdb_value.begin(), pdb_value.end());
+    return {address, pdb_value.size() + sizeof(pdb)};
+}
+
 section_manager pe_packer::create_section()
 {
     section_manager section_manager;
 
-    // the entry point of the PE needs to be changed
-
     // apply text overlay
-    if(text_overlay)
+    if (text_overlay)
     {
         function_container container;
 
@@ -38,10 +68,10 @@ section_manager pe_packer::create_section()
             return a_section.PointerToRawData < b_section.PointerToRawData;
         });
 
-        for(auto& [header, data] : generator->sections)
+        for (auto& [header, data] : generator->sections)
         {
             const std::string section_name = pe_generator::section_name(header);
-            if(section_name != ".vmcode" && section_name != ".vmdata" && section_name != ".text")
+            if (section_name != ".vmcode" && section_name != ".vmdata" && section_name != ".text")
                 continue;
 
             header.Characteristics |= IMAGE_SCN_MEM_WRITE;
@@ -51,9 +81,9 @@ section_manager pe_packer::create_section()
             container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
             container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
 
-            for(int i = 0; i < data.size(); i += 4)
+            for (int i = 0; i < data.size(); i += 4)
             {
-                if(current_byte + 4 > text.size())
+                if (current_byte + 4 > text.size())
                     break;
 
                 uint32_t target_value = *reinterpret_cast<uint32_t*>(&text[current_byte]);

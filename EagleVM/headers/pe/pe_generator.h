@@ -17,8 +17,8 @@ using generator_section_t = std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>
 class pe_generator
 {
 public:
-    IMAGE_DOS_HEADER dos_header;
-    IMAGE_NT_HEADERS nt_headers;
+    IMAGE_DOS_HEADER dos_header{};
+    IMAGE_NT_HEADERS nt_headers{};
     std::vector<generator_section_t> sections;
 
     explicit pe_generator(pe_parser* pe_parser)
@@ -37,9 +37,7 @@ public:
     void add_section(IMAGE_SECTION_HEADER section_header);
 
     void add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore);
-
     void add_randoms(const std::vector<std::pair<uint32_t, uint8_t>>& random);
-
     void add_inserts(std::vector<std::pair<uint32_t, std::vector<uint8_t>>>& insert);
 
     void bake_modifications();
@@ -49,6 +47,8 @@ public:
     void remove_section(const char* section_name);
 
     static std::string section_name(const IMAGE_SECTION_HEADER& section);
+
+    void add_custom_pdb(uint32_t target_rva, uint32_t target_raw, uint32_t target_size);
 
     void save_file(const std::string& save_path);
 

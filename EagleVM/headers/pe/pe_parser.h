@@ -67,6 +67,7 @@ public:
 
     uint32_t offset_to_rva(uint32_t offset);
     uint32_t rva_to_offset(uint32_t rva);
+    uint8_t* rva_to_pointer(uint32_t rva);
 
 private:
     std::string path_;

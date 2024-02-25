@@ -387,3 +387,41 @@ uint32_t pe_generator::align_file(uint32_t value) const
 {
     return align_up(value, nt_headers.OptionalHeader.FileAlignment);
 }
+
+void pe_generator::add_custom_pdb(uint32_t target_rva, uint32_t target_raw, uint32_t target_size)
+{
+    const IMAGE_DATA_DIRECTORY debug_data = nt_headers.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG];
+    if(debug_data.Size == 0)
+        return;
+
+    // given debug_data.VirtualAddress enumerate sections to find the section that contains the debug data
+    for(auto& [section, data] : sections)
+    {
+        const uint32_t section_start_va = section.VirtualAddress;
+        const uint32_t section_end_va = section_start_va + section.Misc.VirtualSize;
+
+        if(debug_data.VirtualAddress >= section_start_va && debug_data.VirtualAddress < section_end_va)
+        {
+            uint32_t debug_data_rva = debug_data.VirtualAddress;
+            uint32_t debug_data_offset = debug_data_rva - section_start_va;
+
+            const auto debug_dir = reinterpret_cast<PIMAGE_DEBUG_DIRECTORY>(data.data() + debug_data_offset);
+            for(int i = 0; i < debug_data.Size / sizeof(IMAGE_DEBUG_DIRECTORY); i++)
+            {
+                IMAGE_DEBUG_DIRECTORY* debug_entry = &debug_dir[i];
+                if(debug_entry->Type != IMAGE_DEBUG_TYPE_CODEVIEW)
+                    continue;
+
+                uint8_t* pdb_data = data.data() + debug_entry->PointerToRawData - section.PointerToRawData;
+                memset(pdb_data, 0, debug_entry->SizeOfData);
+
+                debug_entry->PointerToRawData = target_raw;
+                debug_entry->AddressOfRawData = target_rva;
+                debug_entry->SizeOfData = target_size ;
+                break;
+            }
+
+            break;
+        }
+    }
+}
