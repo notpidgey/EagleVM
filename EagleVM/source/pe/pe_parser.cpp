@@ -257,3 +257,12 @@ uint32_t pe_parser::rva_to_offset(const uint32_t rva)
 
     return section->PointerToRawData + rva - section->VirtualAddress;
 }
+
+uint8_t* pe_parser::rva_to_pointer(const uint32_t rva)
+{
+    const auto section = get_section_rva(rva);
+    if (!section)
+        return nullptr;
+
+    return unprotected_pe_.data() + section->PointerToRawData + (rva - section->VirtualAddress);
+}
