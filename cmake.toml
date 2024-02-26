@@ -1,0 +1,24 @@
+[project]
+name = "EagleVM"
+
+[options]
+BUILD_TESTS = false
+
+[conditions]
+build-tests = "BUILD_TESTS"
+
+[subdir.deps]
+
+[target.EagleVM]
+type = "executable"
+include-directories = ["EagleVM/headers"]
+sources = [
+    "EagleVM/**.cpp",
+    "EagleVM/**.hpp"
+]
+compile-features = ["cxx_std_23"]
+link-libraries = ["Zydis", "bigint"]
+msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W3", "/Zc:inline", "/Zc:wchar_t"]
+
+# [target.EagleVMStub]
+# type = "executable"
