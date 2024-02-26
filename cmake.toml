@@ -37,6 +37,7 @@ sources = [
     "EagleVM.Sandbox/**.hpp"
 ]
 compile-features = ["cxx_std_23"]
+link-options = ["/DEBUG:FULL"]
 link-libraries = ["EagleVMStub"]
 
 # TODO: Tests
