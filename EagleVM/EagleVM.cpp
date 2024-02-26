@@ -58,12 +58,12 @@ int main(int argc, char* argv[])
              const PIMAGE_SECTION_HEADER import_section, int, const uint8_t* data_base)
         {
             const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
-            const uint8_t* import_library = const_cast<uint8_t*>(import_section_raw + (import_descriptor->Name -
+            const char* import_library = reinterpret_cast<const char*>(import_section_raw + (import_descriptor->Name -
                 import_section->VirtualAddress));
-            const uint8_t* import_name = const_cast<uint8_t*>(import_section_raw + (thunk_data->u1.AddressOfData -
+            const char* import_name = reinterpret_cast<const char*>(import_section_raw + (thunk_data->u1.AddressOfData -
                 import_section->VirtualAddress + 2));
 
-            std::printf("%3i %-20p %-p\n", i, import_library, import_name);
+            std::printf("%3i %-20s %-s\n", i, import_library, import_name);
             i++;
         });
 
