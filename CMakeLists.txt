@@ -125,3 +125,47 @@ if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVM)
 endif()
 
+# Target: EagleVMStub
+set(EagleVMStub_SOURCES
+	"EagleVM.Stub/EagleVMStub.cpp"
+	"EagleVM.Stub/dllmain.cpp"
+	cmake.toml
+)
+
+add_library(EagleVMStub SHARED)
+
+target_sources(EagleVMStub PRIVATE ${EagleVMStub_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMStub_SOURCES})
+
+target_compile_features(EagleVMStub PUBLIC
+	cxx_std_23
+)
+
+target_include_directories(EagleVMStub PUBLIC
+	"EagleVM.Stub/Headers"
+)
+
+# Target: EagleVMSandbox
+set(EagleVMSandbox_SOURCES
+	"EagleVM.Sandbox/EagleVMSandbox.cpp"
+	cmake.toml
+)
+
+add_executable(EagleVMSandbox)
+
+target_sources(EagleVMSandbox PRIVATE ${EagleVMSandbox_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMSandbox_SOURCES})
+
+target_compile_features(EagleVMSandbox PRIVATE
+	cxx_std_23
+)
+
+target_link_libraries(EagleVMSandbox PRIVATE
+	EagleVMStub
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVMSandbox)
+endif()
+
