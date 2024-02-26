@@ -18,7 +18,8 @@ sources = [
 ]
 compile-features = ["cxx_std_23"]
 link-libraries = ["Zydis", "bigint"]
-msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W3", "/Zc:inline", "/Zc:wchar_t"]
+msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W3", "/Zc:inline", "/Zc:wchar_t", "$<$<CONFIG:Debug>:/FC;/JMC>", "$<$<NOT:$<CONFIG:Debug>>:/Gy;/O1;/Os>"]
+msvc.link-options = ["/INCREMENTAL:NO"]
 
 [target.EagleVMStub]
 type = "shared"

@@ -108,6 +108,8 @@ if(MSVC) # msvc
 		"/W3"
 		"/Zc:inline"
 		"/Zc:wchar_t"
+		"$<$<CONFIG:Debug>:/FC;/JMC>"
+		"$<$<NOT:$<CONFIG:Debug>>:/Gy;/O1;/Os>"
 	)
 endif()
 
@@ -119,6 +121,12 @@ target_link_libraries(EagleVM PRIVATE
 	Zydis
 	bigint
 )
+
+if(MSVC) # msvc
+	target_link_options(EagleVM PRIVATE
+		"/INCREMENTAL:NO"
+	)
+endif()
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
