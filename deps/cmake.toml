@@ -1,0 +1,9 @@
+[options]
+ZYDIS_BUILD_TOOLS = false
+ZYDIS_BUILD_EXAMPLES = false
+
+[subdir.zydis]
+
+[target.bigint]
+type = "interface"
+include-directories = ["bigint"]
