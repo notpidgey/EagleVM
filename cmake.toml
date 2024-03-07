@@ -1,0 +1,43 @@
+[project]
+name = "EagleVM"
+
+[options]
+BUILD_TESTS = false
+
+[conditions]
+build-tests = "BUILD_TESTS"
+
+[subdir.deps]
+
+[target.EagleVM]
+type = "executable"
+include-directories = ["EagleVM/headers"]
+sources = [
+    "EagleVM/**.cpp",
+    "EagleVM/**.hpp"
+]
+compile-features = ["cxx_std_23"]
+link-libraries = ["Zydis", "bigint"]
+msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W3", "/Zc:inline", "/Zc:wchar_t", "$<$<CONFIG:Debug>:/FC;/JMC>", "$<$<NOT:$<CONFIG:Debug>>:/Gy;/O1;/Os>"]
+msvc.link-options = ["/INCREMENTAL:NO"]
+
+[target.EagleVMStub]
+type = "shared"
+include-directories = ["EagleVM.Stub/Headers"]
+sources = [
+    "EagleVM.Stub/**.cpp",
+    "EagleVM.Stub/**.hpp"
+]
+compile-features = ["cxx_std_23"]
+
+[target.EagleVMSandbox]
+type = "executable"
+sources = [
+    "EagleVM.Sandbox/**.cpp",
+    "EagleVM.Sandbox/**.hpp"
+]
+compile-features = ["cxx_std_23"]
+link-options = ["/DEBUG:FULL"]
+link-libraries = ["EagleVMStub"]
+
+# TODO: Tests
