@@ -75,22 +75,15 @@ std::vector<std::pair<uint32_t, stub_import>> pe_parser::find_iat_calls()
                 const char* import_name = reinterpret_cast<char*>(import_by_name->Name);
 
                 if (strstr(import_name, "fnEagleVMBegin") != nullptr)
-                {
                     import_type = stub_import::vm_begin;
-                }
                 else if (strstr(import_name, "fnEagleVMEnd") != nullptr)
-                {
                     import_type = stub_import::vm_end;
-                }
                 else
-                {
                     import_type = stub_import::unknown;
-                }
 
                 //call rva , import type
                 stub_dll_imports[import_descriptor->FirstThunk + index * 8] = import_type;
             }
-                
         });
 
     std::vector<std::pair<uint32_t, stub_import>> offsets_to_vm_macros;

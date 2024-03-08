@@ -35,9 +35,6 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     // lea VCS, [VCS - 8]   ; allocate space to place return address
     // mov [VCS], VTEMP     ; put return address onto call stack
 
-    // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
-    // mov VSP, VTEMP
-
     {
 
         // TODO: for instruction obfuscation, for operands that use MEM, manually expand them out store it in a new register such as VEMEM and then just dereference that register !!!
@@ -52,7 +49,17 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
             zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VCS), ZMEMBD(VCS, -8, 8)),
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
+        });
 
+        // lea VIP, [0x14000000]    ; load base
+        code_label* rel_label = code_label::create();
+        container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VBASE), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
+
+
+        // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
+        // mov VSP, VTEMP
+
+        container.add({
             zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
             zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VSP), ZREG(VTEMP)),
         });
