@@ -31,7 +31,6 @@ void base_instruction_virtualizer::call_vm_handler(function_container& container
         __debugbreak(); // jump_label should never be null
 
     code_label* retun_label = code_label::create();
-    code_label* rel_label = code_label::create();
 
     // lea VCS, [VCS - 8]       ; allocate space for new return address
     // mov [VCS], code_label    ; place return rva on the stack
