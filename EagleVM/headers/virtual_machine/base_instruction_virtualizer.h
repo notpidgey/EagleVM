@@ -22,6 +22,7 @@
 #define VTEMP2      rm_->get_reg(I_VTEMP2)
 #define VCS         rm_->get_reg(I_VCALLSTACK)
 #define VCSRET      rm_->get_reg(I_VCSRET)
+#define VBASE       rm_->get_reg(I_VBASE)
 
 #define PUSHORDER   rm_->reg_stack_order_
 
