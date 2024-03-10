@@ -63,8 +63,9 @@ void vm_generator::call_vm_exit(function_container& container, code_label* targe
     // mov VCSRET, ZLABEL(target)
     container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VCSRET), ZLABEL(target))));
 
-    code_label* rel_label = code_label::create("call_vm_exit_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZJMP(vmexit_address, rel_label))));
+    // lea VRIP, [VBASE + vmexit_address]
+    container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(VBASE, vmexit_address->get(), 8))));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
 }
 
 void vm_generator::create_vm_jump(zyids_mnemonic mnemonic, function_container &container, code_label* rva_target)
