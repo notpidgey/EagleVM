@@ -166,7 +166,37 @@ std::string zydis_helper::operand_to_string(const zydis_decode& decode, const in
     return std::string(buffer);
 }
 
-std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>& queue)
+std::vector<uint8_t> zydis_helper::compile(zydis_encoder_request& request)
+{
+    std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
+    ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
+
+    const ZyanStatus result = ZydisEncoderEncodeInstruction(&request, instruction_data.data(), &encoded_length);
+    if(!ZYAN_SUCCESS(result))
+    {
+        __debugbreak();
+    }
+
+    instruction_data.resize(encoded_length);
+    return instruction_data;
+}
+
+std::vector<uint8_t> zydis_helper::compile_absolute(zydis_encoder_request& request, uint32_t address)
+{
+    std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
+    ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
+
+    const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&request, instruction_data.data(), &encoded_length, address);
+    if(!ZYAN_SUCCESS(result))
+    {
+        __debugbreak();
+    }
+
+    instruction_data.resize(encoded_length);
+    return instruction_data;
+}
+
+std::vector<uint8_t> zydis_helper::compile_queue(std::vector<ZydisEncoderRequest>& queue)
 {
     std::vector<uint8_t> data;
     for (auto& i : queue)
@@ -187,7 +217,7 @@ std::vector<uint8_t> zydis_helper::encode_queue(std::vector<ZydisEncoderRequest>
     return data;
 }
 
-std::vector<uint8_t> zydis_helper::encode_queue_absolute(std::vector<zydis_encoder_request>& queue, uint32_t address)
+std::vector<uint8_t> zydis_helper::compile_queue_absolute(std::vector<zydis_encoder_request>& queue, uint32_t address)
 {
     std::vector<uint8_t> data;
 

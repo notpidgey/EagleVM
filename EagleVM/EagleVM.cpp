@@ -266,7 +266,28 @@ int main(int argc, char* argv[])
                         std::printf("\n\t\t[>] vmexit\n");
                     }
 
-                    container.add(zydis_helper::decode_to_encode(instruction));
+                    if(instruction.instruction.mnemonic == ZYDIS_MNEMONIC_CALL)
+                    {
+                        if(instruction.operands[0].imm.is_relative)
+                        {
+                            container.add([&instruction, block, i](const uint32_t rva)
+                            {
+                                const uint64_t call_target = block->calc_jump_address(i);
+                                instruction.operands[0].imm.value.u = call_target - rva;
+
+                                return zydis_helper::decode_to_encode(instruction);
+                            });
+                        }
+                        else
+                        {
+                            container.add(zydis_helper::decode_to_encode(instruction));
+                        }
+                    }
+                    else
+                    {
+                        container.add(zydis_helper::decode_to_encode(instruction));
+                    }
+
                     std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
                 }
 

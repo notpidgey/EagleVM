@@ -23,14 +23,15 @@ typedef ZydisDecodedOperand zydis_decoded_operand;
 #include <functional>
 #include <variant>
 
-typedef std::function<zydis_encoder_request()> recompile_promise;
+typedef std::function<zydis_encoder_request(uint32_t)> recompile_promise;
 typedef std::variant<zydis_encoder_request, recompile_promise> dynamic_instruction;
 
 typedef std::vector<dynamic_instruction> dynamic_instructions_vec;
 typedef std::vector<zydis_encoder_request> instructions_vec;
 typedef std::vector<uint8_t> encoded_vec;
 
-#define RECOMPILE(...) [=]() { return __VA_ARGS__ ; }
+#define RECOMPILE(...) [=](uint32_t rva) { return __VA_ARGS__ ; }
+
 #define ZLABEL(x) ZIMMS(int32_t(x->get()))
 
 #define ZJMP(x, y) ZIMMS(x->get() - y->get())

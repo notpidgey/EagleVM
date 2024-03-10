@@ -6,8 +6,6 @@
 #include "util/section/code_label.h"
 #include "util/zydis_defs.h"
 
-typedef std::function<zydis_encoder_request()> recompile_promise;
-typedef std::variant<zydis_encoder_request, recompile_promise> dynamic_instruction;
 typedef std::pair<code_label*, std::vector<dynamic_instruction>> function_segment;
 
 class function_container
