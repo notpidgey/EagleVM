@@ -273,9 +273,11 @@ int main(int argc, char* argv[])
                             container.add([&instruction, block, i](const uint32_t rva)
                             {
                                 const uint64_t call_target = block->calc_jump_address(i);
-                                instruction.operands[0].imm.value.u = call_target - rva;
 
-                                return zydis_helper::decode_to_encode(instruction);
+                                auto encode_request = zydis_helper::decode_to_encode(instruction);
+                                encode_request.operands[0].imm.u = call_target - rva;
+
+                                return encode_request;
                             });
                         }
                         else

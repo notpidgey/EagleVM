@@ -25,7 +25,7 @@ bool basic_block::is_final_block() const
 
 uint64_t basic_block::calc_jump_address(const uint8_t instruction_index)
 {
-    uint64_t current_rva = 0;
+    uint64_t current_rva = start_rva;
     for(int i = 0; i < instruction_index; i++)
     {
         const auto& [instruction, operands] = instructions[i];
