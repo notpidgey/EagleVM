@@ -6,25 +6,37 @@
 
 int main(int argc, char* argv[])
 {
+    fnEagleVMBegin();
+
     std::string key;
     std::cout << "license key: ";
     std::getline(std::cin, key);
 
-    fnEagleVMBegin();
-    if(key.size() < 20)
+    if (key.size() < 20)
     {
-        printf("invalid key : (");
+        printf("invalid key :(\n");
         return 0;
     }
 
     char* key_buf = key.data();
 
+    // appears to crash here
+    bool authed = false;
+
+    if (key == "1337") {
+        authed = true;
+    }
+
+    if (authed == true) {
+        printf("correct key\n");
+    }
+
     int odd_sum = 0;
     int even_sum = 0;
-    for(int i = 0; i < 20; i++)
+    for (int i = 0; i < 20; i++)
     {
         int ia = key_buf[i] - '0';
-        if(i % 2)
+        if (i % 2)
         {
             even_sum += ia;
         }
@@ -34,13 +46,13 @@ int main(int argc, char* argv[])
         }
     }
 
-    if(odd_sum == 25 && even_sum == 60)
+    if (odd_sum == 25 && even_sum == 60)
     {
-        printf("congradulations, you earned a cookie!");
+        printf("congradulations, you earned a cookie!\n");
     }
     else
     {
-        printf("almost...");
+        printf("almost...\n");
     }
 
     fnEagleVMEnd();

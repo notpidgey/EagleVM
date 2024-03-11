@@ -8,7 +8,7 @@
 #include "util/zydis_defs.h"
 #include "util/zydis_helper.h"
 
-class vm_register_manager
+class vm_inst_regs
 {
 public:
     std::array<zydis_register, 16> reg_stack_order_;

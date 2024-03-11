@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <virtual_machine/vm_inst.h>
 
 #include "pe/pe_parser.h"
 #include "pe/pe_generator.h"
@@ -159,16 +160,15 @@ int main(int argc, char* argv[])
 
     last_section = &data_section;
 
-    vm_generator vm_generator;
-    vm_generator.init_reg_order();
+    vm_inst vm_inst;
+    vm_inst.init_reg_order();
     std::printf("[+] initialized random registers\n");
 
-    vm_generator.init_ran_consts();
     std::printf("[+] created random constants\n\n");
 
     std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)data_section.VirtualAddress);
 
-    section_manager vm_data_sm = vm_generator.generate_vm_handlers(true);
+    section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
 
     data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
@@ -235,14 +235,14 @@ int main(int argc, char* argv[])
                 if (mnemonic >= ZYDIS_MNEMONIC_JB && mnemonic <= ZYDIS_MNEMONIC_JZ)
                     continue;
 
-                auto [virt_status, instructions] = vm_generator.translate_to_virtual(instruction);
+                auto [virt_status, instructions] = vm_inst.translate_to_virtual(instruction);
                 if (virt_status)
                 {
                     // check if we are already inside of virtual machine to prevent multiple enters
                     if (!currently_in_vm)
                     {
                         code_label* vmenter_return_label = code_label::create("vmenter_return:" + current_va);
-                        vm_generator.call_vm_enter(container, vmenter_return_label);
+                        vm_inst.call_vm_enter(container, vmenter_return_label);
                         container.assign_label(vmenter_return_label);
 
                         currently_in_vm = true;
@@ -259,7 +259,7 @@ int main(int argc, char* argv[])
                     if (currently_in_vm)
                     {
                         code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-                        vm_generator.call_vm_exit(container, jump_label);
+                        vm_inst.call_vm_exit(container, jump_label);
                         container.assign_label(jump_label);
 
                         currently_in_vm = false;
@@ -319,7 +319,7 @@ int main(int argc, char* argv[])
             if (currently_in_vm)
             {
                 code_label* jump_label = code_label::create("vmleave_dest:" + current_va);
-                vm_generator.call_vm_exit(container, jump_label);
+                vm_inst.call_vm_exit(container, jump_label);
                 container.assign_label(jump_label);
 
                 std::printf("\n\t\t[>] vmexit\n");
@@ -337,12 +337,12 @@ int main(int argc, char* argv[])
                         code_label* jump_label = code_label::create("vmleave_dest:" + target);
                         jump_label->finalize(target);
 
-                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                        vm_inst.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
                     }
                     else
                     {
                         // we are still inside the segment, jump to target block
-                        vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[block->target_blocks.back()]);
+                        vm_inst.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[block->target_blocks.back()]);
                     }
                 }
                 else
@@ -362,7 +362,7 @@ int main(int argc, char* argv[])
                             jump_label->finalize(target);
 
                             auto target_mneominc = last_inst.instruction.mnemonic;
-                            vm_generator.create_vm_jump(target_mneominc, container, jump_label);
+                            vm_inst.create_vm_jump(target_mneominc, container, jump_label);
                         }
                         else
                         {
@@ -370,7 +370,7 @@ int main(int argc, char* argv[])
                             basic_block* next_block = block->target_blocks.back();
 
                             auto target_mneominc = last_inst.instruction.mnemonic;
-                            vm_generator.create_vm_jump(target_mneominc, container, basic_block_labels[next_block]);
+                            vm_inst.create_vm_jump(target_mneominc, container, basic_block_labels[next_block]);
                         }
                     }
 
@@ -383,13 +383,13 @@ int main(int argc, char* argv[])
                             code_label* jump_label = code_label::create("vmleave_dest:" + target);
                             jump_label->finalize(target);
 
-                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                            vm_inst.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
                         }
                         else
                         {
                             // the next block is inside this segment, so its virtualized
                             basic_block* next_block = block->target_blocks.front();
-                            vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[next_block]);
+                            vm_inst.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, basic_block_labels[next_block]);
                         }
                     }
                 }
@@ -413,7 +413,7 @@ int main(int argc, char* argv[])
                     jump_label = basic_block_labels[next_block];
                 }
 
-                vm_generator.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
+                vm_inst.create_vm_jump(ZYDIS_MNEMONIC_JMP, container, jump_label);
             }
 
             vm_code_sm.add(container);
@@ -453,7 +453,7 @@ int main(int argc, char* argv[])
 
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for (auto& [enter_va, enter_location] : va_enters)
-        va_inserts.emplace_back(enter_va, vm_generator::create_jump(enter_va, enter_location));
+        va_inserts.emplace_back(enter_va, vm_inst::create_jump(enter_va, enter_location));
 
     generator.add_ignores(va_nop);
     generator.add_randoms(va_ran);

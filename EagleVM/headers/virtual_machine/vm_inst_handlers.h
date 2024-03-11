@@ -13,25 +13,23 @@
 
 #include "virtual_machine/handlers/handler/inst_handler_entry.h"
 #include "virtual_machine/handlers/handler/vm_handler_entry.h"
-#include "virtual_machine/vm_register_manager.h"
+#include "virtual_machine/vm_inst_handlers.h"
+#include "virtual_machine/vm_inst_regs.h"
 
 #include "util/zydis_helper.h"
 #include "util/util.h"
 
-class vm_handler_generator
+class vm_inst_handlers
 {
 public:
     std::unordered_map<int, inst_handler_entry*> inst_handlers;
     std::unordered_map<int, vm_handler_entry*> v_handlers;
 
-    vm_handler_generator();
-    explicit vm_handler_generator(vm_register_manager* push_order);
+    explicit vm_inst_handlers(vm_inst_regs* push_order);
+    vm_inst_handlers();
 
     void setup_vm_mapping();
-    void setup_enc_constants();
-
-    instructions_vec create_vm_enter_jump(uint32_t va_vm_enter, uint32_t va_protected);
 
 private:
-    vm_register_manager* rm_;
+    vm_inst_regs* rm_;
 };

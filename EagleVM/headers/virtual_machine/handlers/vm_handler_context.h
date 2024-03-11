@@ -4,9 +4,9 @@
 class vm_handler_context
 {
 public:
-    vm_register_manager* rm = nullptr;
+    vm_inst_regs* rm = nullptr;
 
-    vm_handler_context(vm_register_manager* context);
+    vm_handler_context(vm_inst_regs* context);
 
     std::vector<zydis_encoder_request> generate_handler_return();
     void setup_keys();

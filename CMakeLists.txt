@@ -61,7 +61,6 @@ set(EagleVM_SOURCES
 	"EagleVM/source/util/section/section_manager.cpp"
 	"EagleVM/source/util/util.cpp"
 	"EagleVM/source/util/zydis_helper.cpp"
-	"EagleVM/source/virtual_machine/base_instruction_virtualizer.cpp"
 	"EagleVM/source/virtual_machine/handlers/handlers/base_handler_entry.cpp"
 	"EagleVM/source/virtual_machine/handlers/handlers/inst_handler_entry.cpp"
 	"EagleVM/source/virtual_machine/handlers/handlers/vm_handler_entry.cpp"
@@ -77,7 +76,6 @@ set(EagleVM_SOURCES
 	"EagleVM/source/virtual_machine/handlers/ia32_handlers/pop.cpp"
 	"EagleVM/source/virtual_machine/handlers/ia32_handlers/push.cpp"
 	"EagleVM/source/virtual_machine/handlers/ia32_handlers/sub.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handle_generator.cpp"
 	"EagleVM/source/virtual_machine/handlers/vm_handler_context.cpp"
 	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_enter.cpp"
 	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_exit.cpp"
@@ -86,8 +84,10 @@ set(EagleVM_SOURCES
 	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_push_rflags.cpp"
 	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_store.cpp"
 	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_trash_rflags.cpp"
-	"EagleVM/source/virtual_machine/vm_generator.cpp"
-	"EagleVM/source/virtual_machine/vm_register_manager.cpp"
+	"EagleVM/source/virtual_machine/vm_inst.cpp"
+	"EagleVM/source/virtual_machine/vm_inst_handlers.cpp"
+	"EagleVM/source/virtual_machine/vm_inst_regs.cpp"
+	"EagleVM/source/virtual_machine/vm_virtualizer.cpp"
 	cmake.toml
 )
 

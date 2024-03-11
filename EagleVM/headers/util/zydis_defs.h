@@ -30,7 +30,7 @@ typedef std::vector<dynamic_instruction> dynamic_instructions_vec;
 typedef std::vector<zydis_encoder_request> instructions_vec;
 typedef std::vector<uint8_t> encoded_vec;
 
-#define RECOMPILE(...) [=](uint32_t rva) { return __VA_ARGS__ ; }
+#define RECOMPILE(...) [=](uint64_t rva) { return __VA_ARGS__ ; }
 
 #define ZLABEL(x) ZIMMS(int32_t(x->get()))
 

@@ -2,7 +2,7 @@
 
 #include "util/random.h"
 
-vm_handler_context::vm_handler_context(vm_register_manager* context)
+vm_handler_context::vm_handler_context(vm_inst_regs* context)
 {
 }
 
