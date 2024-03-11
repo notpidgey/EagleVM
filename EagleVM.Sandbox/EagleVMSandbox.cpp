@@ -10,6 +10,7 @@ int main(int argc, char* argv[])
     std::cout << "license key: ";
     std::getline(std::cin, key);
 
+    fnEagleVMBegin();
     if(key.size() < 20)
     {
         printf("invalid key : (");
@@ -17,8 +18,6 @@ int main(int argc, char* argv[])
     }
 
     char* key_buf = key.data();
-
-    fnEagleVMBegin();
 
     int odd_sum = 0;
     int even_sum = 0;
@@ -35,8 +34,6 @@ int main(int argc, char* argv[])
         }
     }
 
-    fnEagleVMEnd();
-
     if(odd_sum == 25 && even_sum == 60)
     {
         printf("congradulations, you earned a cookie!");
@@ -46,5 +43,6 @@ int main(int argc, char* argv[])
         printf("almost...");
     }
 
+    fnEagleVMEnd();
     return 0;
 }

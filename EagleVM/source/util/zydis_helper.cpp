@@ -244,7 +244,7 @@ std::vector<uint8_t> zydis_helper::compile_queue_absolute(std::vector<zydis_enco
 
 std::vector<std::string> zydis_helper::print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address)
 {
-    std::vector<std::string> data; 
+    std::vector<std::string> data;
     for (auto& instruction : queue)
     {
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
@@ -252,10 +252,10 @@ std::vector<std::string> zydis_helper::print_queue(std::vector<zydis_encoder_req
 
         ZydisEncoderEncodeInstruction(&instruction, instruction_data.data(), &encoded_length);
         instruction_data.resize(encoded_length);
-        
+
         std::stringstream format;
         format << ZydisMnemonicGetString(instruction.mnemonic) << " ";
-        
+
         for (uint8_t byte : instruction_data)
             format << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
 
@@ -263,6 +263,64 @@ std::vector<std::string> zydis_helper::print_queue(std::vector<zydis_encoder_req
     }
 
     return data;
+}
+
+bool zydis_helper::has_relative_operand(zydis_decode& decode)
+{
+    const auto& [instruction, operands] = decode;
+    for(int i = 0; i < instruction.operand_count; i++)
+    {
+        const zydis_decoded_operand& operand = operands[i];
+        switch(operand.type)
+        {
+            case ZYDIS_OPERAND_TYPE_MEMORY:
+            {
+                if(operand.mem.base == ZYDIS_REGISTER_RIP)
+                    return true;
+
+                if (operand.mem.base == ZYDIS_REGISTER_NONE && operand.mem.index == ZYDIS_REGISTER_NONE)
+                    return true;
+
+                break;
+            }
+            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+            {
+                if(operand.imm.is_relative)
+                    return true;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+
+    return false;
+}
+
+std::pair<uint64_t, uint8_t> zydis_helper::calc_relative_rva(zydis_decode& decode, const uint32_t rva, const int8_t operand)
+{
+    const auto& [instruction, operands] = decode;
+
+    uint64_t target_address = rva;
+    if(operand < 0)
+    {
+        for(int i = 0; i < instruction.operand_count; i++)
+        {
+            auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva, &target_address);
+            if(result == ZYAN_STATUS_SUCCESS)
+                return {target_address, i};
+        }
+    }
+    else
+    {
+        auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand], rva, &target_address);
+        if(result == ZYAN_STATUS_SUCCESS)
+            return {target_address, operand};
+    }
+
+    return {target_address, -1};
 }
 
 std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size)

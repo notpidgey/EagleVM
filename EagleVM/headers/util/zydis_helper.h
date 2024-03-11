@@ -58,6 +58,9 @@ namespace zydis_helper
     std::vector<std::string> print(zydis_encoder_request& queue, uint32_t address);
     std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);
 
+	bool has_relative_operand(zydis_decode& decode);
+	std::pair<uint64_t, uint8_t> calc_relative_rva(zydis_decode& decode, uint32_t rva, int8_t operand = -1);
+	
 	zydis_encoder_request enc(zyids_mnemonic mnemonic, auto&&... args)
 	{
 		auto encoder = create_encode_request(mnemonic);

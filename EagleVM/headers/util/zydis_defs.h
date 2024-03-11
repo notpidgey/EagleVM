@@ -23,7 +23,7 @@ typedef ZydisDecodedOperand zydis_decoded_operand;
 #include <functional>
 #include <variant>
 
-typedef std::function<zydis_encoder_request(uint32_t)> recompile_promise;
+typedef std::function<zydis_encoder_request(uint64_t)> recompile_promise;
 typedef std::variant<zydis_encoder_request, recompile_promise> dynamic_instruction;
 
 typedef std::vector<dynamic_instruction> dynamic_instructions_vec;

@@ -266,23 +266,42 @@ int main(int argc, char* argv[])
                         std::printf("\n\t\t[>] vmexit\n");
                     }
 
-                    if(instruction.instruction.mnemonic == ZYDIS_MNEMONIC_CALL)
+                    if(zydis_helper::has_relative_operand(instruction))
                     {
-                        if(instruction.operands[0].imm.is_relative)
+                        auto [target_address, op_i] = zydis_helper::calc_relative_rva(instruction, current_va);
+                        if(op_i == -1)
                         {
-                            container.add([&instruction, block, i](const uint32_t rva)
-                            {
-                                const uint64_t call_target = block->calc_jump_address(i);
-
-                                auto encode_request = zydis_helper::decode_to_encode(instruction);
-                                encode_request.operands[0].imm.u = call_target - rva;
-
-                                return encode_request;
-                            });
+                            // this should not happen
+                            __debugbreak();
                         }
                         else
                         {
-                            container.add(zydis_helper::decode_to_encode(instruction));
+                            container.add([&instruction, target_address, op_i](const uint32_t rva)
+                            {
+                                zydis_encoder_request encode_request = zydis_helper::decode_to_encode(instruction);
+                                auto& op = encode_request.operands[op_i];
+                                switch(op.type)
+                                {
+                                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                                    {
+                                        // needs to handle where mem and base have no registers
+                                        op.mem.displacement = target_address - rva;
+                                        break;
+                                    }
+                                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                                    {
+                                        op.imm.s = target_address - rva;
+                                        break;
+                                    }
+                                    default:
+                                    {
+                                        __debugbreak();
+                                        break;
+                                    }
+                                }
+
+                                return encode_request;
+                            });
                         }
                     }
                     else

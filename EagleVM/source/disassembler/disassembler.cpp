@@ -18,7 +18,8 @@ void segment_disassembler::generate_blocks()
     {
         block_instructions.push_back(inst);
 
-        if (inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
+        if (inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE &&
+            inst.instruction.mnemonic != ZYDIS_MNEMONIC_CALL)
         {
             // end of our block
             basic_block* block = new basic_block();
@@ -44,7 +45,7 @@ void segment_disassembler::generate_blocks()
 
         basic_block* block = new basic_block();
         block->start_rva = block_start_rva;
-        block->end_rva_inc = current_rva + inst.instruction.length;
+        block->end_rva_inc = current_rva;
         block->instructions = block_instructions;
 
         set_block_rvas(block, current_rva);
