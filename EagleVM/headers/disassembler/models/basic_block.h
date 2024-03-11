@@ -22,4 +22,6 @@ public:
     bool is_conditional_jump() const;
     bool is_jump() const;
     bool is_final_block() const;
+
+    uint64_t calc_jump_address(uint8_t instruction_index);
 };

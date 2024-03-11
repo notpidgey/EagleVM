@@ -12,26 +12,18 @@
 
 int main(int argc, char* argv[])
 {
-    // this is definitely a work in progress
-    // also, this is not a true way of generating mba expressions
-    // all this does is use mba rewrites as operators can be rewritten with equivalent expressions
-    // TODO: insertion of identities from "Defeating MBA-based Obfuscation"
-    // mba_gen mba = mba_gen<std::uint64_t>(std::numeric_limits<uint64_t>::digits);
-
-    // std::string result = mba.create_tree(op_plus, 5, 3);
-    // std::cout << "\n[Final] " << result  << std::endl;
-
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
+
     pe_parser parser = pe_parser(executable);
     if (!parser.read_file())
     {
         std::printf("[!] failed to read file: %s\n", executable);
         return EXIT_FAILURE;
     }
+
     std::printf("[+] loaded %s -> %i bytes\n", executable, parser.get_file_size());
 
     int i = 1;
-
     std::vector<PIMAGE_SECTION_HEADER> sections = parser.get_sections();
 
     std::printf("[>] image sections\n");
@@ -222,11 +214,8 @@ int main(int argc, char* argv[])
         }
 
         function_container container;
-        for (auto& block : dasm.blocks)
+        for (basic_block* block : dasm.blocks)
         {
-            // std::string target_comment = std::string("basic_block rva " + block->start_rva);
-            // container.assign_label(code_label::create(target_comment, true));
-
             std::printf("\n\t[>] basic_block rva %i:\n", block->start_rva);
             for (auto instruction : block->instructions)
                 std::printf("\t\tinstruction: %s\n", zydis_helper::instruction_to_string(instruction).c_str());
@@ -277,7 +266,49 @@ int main(int argc, char* argv[])
                         std::printf("\n\t\t[>] vmexit\n");
                     }
 
-                    container.add(zydis_helper::decode_to_encode(instruction));
+                    if(zydis_helper::has_relative_operand(instruction))
+                    {
+                        auto [target_address, op_i] = zydis_helper::calc_relative_rva(instruction, current_va);
+                        if(op_i == -1)
+                        {
+                            // this should not happen
+                            __debugbreak();
+                        }
+                        else
+                        {
+                            container.add([&instruction, target_address, op_i](const uint32_t rva)
+                            {
+                                zydis_encoder_request encode_request = zydis_helper::decode_to_encode(instruction);
+                                auto& op = encode_request.operands[op_i];
+                                switch(op.type)
+                                {
+                                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                                    {
+                                        // needs to handle where mem and base have no registers
+                                        op.mem.displacement = target_address - rva;
+                                        break;
+                                    }
+                                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                                    {
+                                        op.imm.s = target_address - rva;
+                                        break;
+                                    }
+                                    default:
+                                    {
+                                        __debugbreak();
+                                        break;
+                                    }
+                                }
+
+                                return encode_request;
+                            });
+                        }
+                    }
+                    else
+                    {
+                        container.add(zydis_helper::decode_to_encode(instruction));
+                    }
+
                     std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
                 }
 
@@ -466,7 +497,8 @@ int main(int argc, char* argv[])
     debug_comments.append_range(vm_code_sm.generate_comments("eaglevmsandboxprotected.exe"));
     debug_comments.append_range(packer_sm.generate_comments("eaglevmsandboxprotected.exe"));
 
-    std::ofstream comments_file("EagleVMSandboxProtected.dd64");
+    std::string debug_output = std::string(executable) + ".dd64";
+    std::ofstream comments_file(debug_output);
 
     comments_file << "{\"comments\": [";
     for (i = 0; i < debug_comments.size(); i++)
@@ -479,7 +511,7 @@ int main(int argc, char* argv[])
     }
     comments_file << "]}";
 
-    std::printf("[+] generated %llu x64dbg comments -> EagleVMSandboxProtected.dd64\n", debug_comments.size());
+    std::printf("[+] generated %llu x64dbg comments -> %s\n", debug_comments.size(), debug_output.c_str());
 
     return 0;
 }

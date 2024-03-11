@@ -44,35 +44,33 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
             if(seg_code_label)
                 seg_code_label->finalize(current_address);
 
-            instructions_vec requests;
             for (auto& inst : instructions)
             {
-                std::visit([&requests](auto&& arg) {
+                zydis_encoder_request request;
+                std::visit([&request, current_address](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, recompile_promise>)
-                        requests.push_back(arg());
+                        request = arg(current_address);
                     else if constexpr (std::is_same_v<T, zydis_encoder_request>)
-                        requests.push_back(arg);
+                        request = arg;
                 }, inst);
-            }
 
-            // zydis does not really have a way of checking the length of an encoded instruction without encoding it
-            // so we are going to just encode and check the size... sorry
-            current_address += zydis_helper::encode_queue_absolute(requests, current_address).size();
+                current_address += zydis_helper::compile_absolute(request, 0).size();
+            }
         }
     }
 
     std::vector<uint8_t> compiled_section(current_address - section_address, 0);
     auto it = compiled_section.begin();
 
-    current_address = 0;
+    current_address = section_address;
     for (auto& [code_label, sec_function] : section_functions)
     {
         const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
         current_address += align;
 
-        if(code_label && !valid_label(code_label, current_address, section_address))
-            code_label->finalize(current_address + section_address);
+        if(code_label && !valid_label(code_label, current_address))
+            code_label->finalize(current_address);
 
         std::advance(it, align);
 
@@ -82,35 +80,37 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
             if(seg_code_label && !seg_code_label->is_finalized())
                 __debugbreak();
 
-            if(seg_code_label && !valid_label(seg_code_label, current_address, section_address))
-                seg_code_label->finalize(current_address + section_address);
+            if(seg_code_label && !valid_label(seg_code_label, current_address))
+                seg_code_label->finalize(current_address);
 
-            instructions_vec requests;
+            std::vector<uint8_t> compiled_instructions;
             for (auto& inst : instructions)
             {
-                std::visit([&requests](auto&& arg) {
+                zydis_encoder_request request;
+                std::visit([&request, current_address](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, recompile_promise>)
-                        requests.push_back(arg());
+                        request = arg(current_address);
                     else if constexpr (std::is_same_v<T, zydis_encoder_request>)
-                        requests.push_back(arg);
+                        request = arg;
                 }, inst);
-            }
 
-            std::vector<uint8_t> encoded_instructions = zydis_helper::encode_queue_absolute(requests, current_address);
+                std::vector<uint8_t> compiled = zydis_helper::compile_absolute(request, 0);
+                compiled_instructions.append_range(compiled);
+                current_address += compiled.size();
+            }
 
             // Calculate the position of the iterator before the insert operation
             size_t pos = std::distance(compiled_section.begin(), it);
 
             // Insert the elements
-            compiled_section.insert(it, encoded_instructions.begin(), encoded_instructions.end());
+            compiled_section.insert(it, compiled_instructions.begin(), compiled_instructions.end());
 
             // Restore the iterator after the insert operation
             it = compiled_section.begin();
             std::advance(it, pos);
 
-            current_address += encoded_instructions.size();
-            std::advance(it, encoded_instructions.size());
+            std::advance(it, compiled_instructions.size());
         }
     }
 
@@ -158,10 +158,10 @@ void section_manager::add(code_label* label, function_container& function)
   section_functions.push_back({label, function});
 }
 
-bool section_manager::valid_label(code_label* label, uint32_t current_address, uint32_t section_address)
+bool section_manager::valid_label(code_label* label, uint32_t current_address)
 {
     auto label_address = label->get();
-    if(label_address != current_address + section_address)
+    if(label_address != current_address)
         return false;
 
     return true;
