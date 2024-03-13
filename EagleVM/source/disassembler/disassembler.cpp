@@ -56,7 +56,7 @@ basic_block* segment_dasm::generate_blocks()
             continue;
 
         const auto& [jump_rva, jump_type] = get_jump(block);
-        if(jump_type != jump_inside_segment)
+        if (jump_type != jump_inside_segment)
             continue;
 
         basic_block* new_block = nullptr;
@@ -96,9 +96,16 @@ basic_block* segment_dasm::generate_blocks()
             break;
         }
 
-        if(new_block)
+        if (new_block)
             blocks.push_back(new_block);
     }
+
+
+    std::ranges::sort(blocks,
+        [](const basic_block* a, const basic_block* b)
+        {
+            return a->start_rva < b->start_rva;
+        });
 
     return blocks[0];
 }
@@ -143,7 +150,7 @@ basic_block* segment_dasm::get_block(const uint32_t rva) const
 {
     for (basic_block* block: blocks)
     {
-        if (block->start_rva >= rva && rva < block->end_rva_inc)
+        if (block->start_rva <= rva && rva < block->end_rva_inc)
             return block;
     }
 

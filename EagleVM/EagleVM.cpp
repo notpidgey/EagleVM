@@ -181,8 +181,8 @@ int main(int argc, char* argv[])
         std::printf("\t[>] instruction end: 0x%x\n", rva_inst_end);
         std::printf("\t[>] instruction size: %u\n", rva_inst_end - rva_inst_begin);
 
-        uint8_t* pinst_begin = parser.offset_to_ptr(vm_iat_calls[c].first) + call_size_64;
-        uint8_t* pinst_end = parser.offset_to_ptr(vm_iat_calls[c + 1].first);
+        uint8_t* pinst_begin = parser.rva_to_pointer(rva_inst_begin);
+        uint8_t* pinst_end = parser.rva_to_pointer(rva_inst_end);
         decode_vec instructions = zydis_helper::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
         segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
@@ -194,8 +194,9 @@ int main(int argc, char* argv[])
         vm_code_sm.add(virt.virtualize_segment(&dasm));
 
         // overwrite the original instructions
-        uint32_t delete_size = vm_iat_calls[c + 1].first - vm_iat_calls[c].first + call_size_64;
+        uint32_t delete_size = vm_iat_calls[c + 1].first - vm_iat_calls[c].first;
         va_ran.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), delete_size);
+        va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), call_size_64);
 
         // add vmenter for root block
         va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), virt.get_label(root_block));
