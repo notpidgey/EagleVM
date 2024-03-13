@@ -28,7 +28,7 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
 {
     if(decoded_instruction.instruction.operand_count_visible == 1)
     {
-        int8_t current_disp = 0;
+        int32_t current_disp = 0;
         encode_ctx ctx
         {
             &current_disp,

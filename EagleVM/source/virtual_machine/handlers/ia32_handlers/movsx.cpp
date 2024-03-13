@@ -28,7 +28,7 @@ encode_status ia32_movsx_handler::encode_operand(
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
         call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
 
-        stack_disp += bit64;
+        *stack_disp += bit64;
     }
     else
     {
@@ -55,7 +55,7 @@ encode_status ia32_movsx_handler::encode_operand(
         upscale_temp(container, target_size, current_size);
 
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
-        stack_disp += target_size;
+        *stack_disp += target_size;
     }
 
     return encode_status::success;

@@ -20,7 +20,7 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
 
     container.assign_label(code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
 
-    int8_t current_disp = 0;
+    int32_t current_disp = 0;
     for(uint8_t i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
     {
         encode_status status = encode_status::unsupported;
@@ -106,7 +106,7 @@ encode_status inst_handler_entry::encode_operand(
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
         call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
 
-        stack_disp += bit64;
+        *stack_disp += bit64;
     }
     else
     {
@@ -120,7 +120,7 @@ encode_status inst_handler_entry::encode_operand(
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
         call_vm_handler(container, load_handler->get_vm_handler_va(zydis_helper::get_reg_size(op_reg.value)));
 
-        stack_disp += zydis_helper::get_reg_size(op_reg.value);
+        *stack_disp += zydis_helper::get_reg_size(op_reg.value);
     }
 
     return encode_status::success;
@@ -129,7 +129,7 @@ encode_status inst_handler_entry::encode_operand(
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context)
 {
     auto [stack_disp, orig_rva, index] = context;
-    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
+    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
         return encode_status::unsupported;
 
     const vm_handler_entry* lreg_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
@@ -164,7 +164,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
             {
                 // this is meant to account for any possible pushes we set up
                 // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, stack_disp, 8)));
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8)));
             }
 
             call_vm_handler(container, push_address);
@@ -250,10 +250,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         }
     }
 
-    // by default, this will be dereferenced and we will get the value at the address,
-    reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
-    if(!virtualize_as_address(instruction, index))
+    if(op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
     {
+        // by default, this will be dereferenced and we will get the value at the address,
+        reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
+
         // this means we are working with the second operand
         auto target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
 
@@ -261,11 +262,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size)));
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
-        stack_disp += target_size;
+        *stack_disp += target_size;
     }
     else
     {
-        stack_disp += bit64;
+        *stack_disp += bit64;
     }
 
     return encode_status::success;
@@ -291,6 +292,6 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
     call_vm_handler(container, push_handler->get_handler_va(r_size, 1));
 
-    stack_disp += r_size;
+    *stack_disp += r_size;
     return encode_status::success;
 }

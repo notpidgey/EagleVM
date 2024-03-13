@@ -164,8 +164,8 @@ int main(int argc, char* argv[])
 
     std::printf("\n[>] generating virtualized code...\n\n");
 
-    std::vector<std::pair<uint32_t, uint8_t>> va_nop;
-    std::vector<std::pair<uint32_t, uint8_t>> va_ran;
+    std::vector<std::pair<uint32_t, uint32_t>> va_nop;
+    std::vector<std::pair<uint32_t, uint32_t>> va_ran;
     std::vector<std::pair<uint32_t, code_label*>> va_enters;
 
     section_manager vm_code_sm(true);

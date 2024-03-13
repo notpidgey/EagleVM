@@ -10,7 +10,7 @@ enum class encode_status
 
 struct encode_ctx
 {
-    int8_t* stack_disp;
+    int32_t* stack_disp;
     uint64_t orig_rva;
     uint8_t index;
 };
