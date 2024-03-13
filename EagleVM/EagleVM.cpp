@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
         decode_vec instructions = zydis_helper::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
         segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
-        dasm.generate_blocks();
+        basic_block* root_block = dasm.generate_blocks();
 
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
 
@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
         va_ran.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), delete_size);
 
         // add vmenter for root block
-        va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), virt.get_label(dasm.root_block));
+        va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), virt.get_label(root_block));
     }
 
     std::printf("\n");

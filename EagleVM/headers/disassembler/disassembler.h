@@ -8,7 +8,7 @@ class segment_dasm
 public:
     explicit segment_dasm(const decode_vec& segment, uint32_t binary_rva, uint32_t binary_end);
 
-    void generate_blocks();
+    basic_block* generate_blocks();
 
     std::pair<uint64_t, block_jump_location> get_jump(const basic_block* block, bool last = false);
     block_jump_location get_jump_location(uint32_t rva) const;
