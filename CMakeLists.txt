@@ -179,3 +179,27 @@ if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVMSandbox)
 endif()
 
+# Target: EagleVMTestsGenerator
+set(EagleVMTestsGenerator_SOURCES
+	"EagleVM.TestsGenerator/main.cpp"
+	cmake.toml
+)
+
+add_executable(EagleVMTestsGenerator)
+
+target_sources(EagleVMTestsGenerator PRIVATE ${EagleVMTestsGenerator_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMTestsGenerator_SOURCES})
+
+target_compile_features(EagleVMTestsGenerator PRIVATE
+	cxx_std_23
+)
+
+target_link_libraries(EagleVMTestsGenerator PRIVATE
+	nlohmann-json
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVMTestsGenerator)
+endif()
+

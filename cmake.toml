@@ -40,4 +40,11 @@ compile-features = ["cxx_std_23"]
 link-options = ["/DEBUG:FULL"]
 link-libraries = ["EagleVMStub"]
 
-# TODO: Tests
+[target.EagleVMTestsGenerator]
+type = "executable"
+sources = [
+    "EagleVM.TestsGenerator/**.cpp",
+    "EagleVM.TestsGenerator/**.hpp"
+]
+link-libraries = ["nlohmann-json"]
+compile-features = ["cxx_std_23"]

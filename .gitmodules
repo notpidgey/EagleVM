@@ -4,3 +4,6 @@
 [submodule "deps/x86_test_data"]
 	path = deps/x86_test_data
 	url = https://github.com/ZehMatt/x86TestData
+[submodule "deps/nlohmann-json"]
+	path = deps/nlohmann-json
+	url = https://github.com/nlohmann/json
