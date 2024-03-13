@@ -75,18 +75,18 @@ basic_block* segment_dasm::generate_blocks()
 
             // for the new_block, we copy all the instructions starting at the far_rva
             uint32_t curr_rva = target_block->start_rva;
-            for (int i = 0; i < target_block->decoded_insts.size();)
+            for (int j = 0; j < target_block->decoded_insts.size();)
             {
-                zydis_decode& inst = target_block->decoded_insts[i];
+                zydis_decode& inst = target_block->decoded_insts[j];
                 if (curr_rva >= jump_rva)
                 {
                     // add to new block, remove from old block
                     split_block->decoded_insts.push_back(inst);
-                    target_block->decoded_insts.erase(target_block->decoded_insts.begin() + i);
+                    target_block->decoded_insts.erase(target_block->decoded_insts.begin() + j);
                 }
                 else
                 {
-                    i++;
+                    j++;
                 }
 
                 curr_rva += inst.instruction.length; // move this line up

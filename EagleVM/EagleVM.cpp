@@ -196,6 +196,8 @@ int main(int argc, char* argv[])
         // overwrite the original instructions
         uint32_t delete_size = vm_iat_calls[c + 1].first - vm_iat_calls[c].first;
         va_ran.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), delete_size);
+
+        // incase jump goes to previous call, set it to nops
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), call_size_64);
 
         // add vmenter for root block
