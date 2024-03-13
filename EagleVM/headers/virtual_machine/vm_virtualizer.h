@@ -27,5 +27,5 @@ private:
     void call_vm_exit(function_container& container, code_label* target);
     void create_vm_jump(zyids_mnemonic mnemonic, function_container &container, code_label* rva_target);
 
-    std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);
+    std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction, uint64_t original_rva);
 };

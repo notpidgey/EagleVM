@@ -1,7 +1,8 @@
 #include "virtual_machine/handlers/handler/inst_handler_entry.h"
 #include "virtual_machine/handlers/handler/vm_handler_entry.h"
 
-std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction)
+std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction,
+    const uint64_t original_rva)
 {
     function_container container = {};
 
@@ -17,30 +18,36 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
         return { false, container };
     }
 
-    // add x64dbg comment
     container.assign_label(code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
 
-    int current_disp = 0;
-    for(int i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
+    int8_t current_disp = 0;
+    for(uint8_t i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
     {
         encode_status status = encode_status::unsupported;
         container.assign_label(code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
+
+        encode_ctx ctx
+        {
+            &current_disp,
+            original_rva,
+            i
+        };
 
         switch(const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
         {
             case ZYDIS_OPERAND_TYPE_UNUSED:
                 break;
             case ZYDIS_OPERAND_TYPE_REGISTER:
-                status = encode_operand(container, decoded_instruction, operand.reg, current_disp, i);
+                status = encode_operand(container, decoded_instruction, operand.reg, ctx);
                 break;
             case ZYDIS_OPERAND_TYPE_MEMORY:
-                status = encode_operand(container, decoded_instruction, operand.mem, current_disp, i);
+                status = encode_operand(container, decoded_instruction, operand.mem, ctx);
                 break;
             case ZYDIS_OPERAND_TYPE_POINTER:
-                status = encode_operand(container, decoded_instruction, operand.ptr, current_disp);
+                status = encode_operand(container, decoded_instruction, operand.ptr, ctx);
                 break;
             case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                status = encode_operand(container, decoded_instruction, operand.imm, current_disp);
+                status = encode_operand(container, decoded_instruction, operand.imm, ctx);
                 break;
         }
 
@@ -80,9 +87,12 @@ void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decod
     call_vm_handler(container, target_handler);
 }
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction,
-                                                 zydis_dreg op_reg, int& stack_disp, int index)
+encode_status inst_handler_entry::encode_operand(
+    function_container& container, const zydis_decode& instruction,
+    zydis_dreg op_reg, encode_ctx& context)
 {
+    auto [stack_disp, orig_rva, index] = context;
+
     // what about cases where we have RSP as the register?
     if(virtualize_as_address(instruction, index))
     {
@@ -116,8 +126,9 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     return encode_status::success;
 }
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index)
+encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context)
 {
+    auto [stack_disp, orig_rva, index] = context;
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
 
@@ -144,15 +155,9 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     //1. begin with loading the base register
     //mov VTEMP, imm
     //jmp VM_LOAD_REG
+    code_label* rip_label;
     {
-        if(op_mem.base != ZYDIS_REGISTER_RSP)
-        {
-            const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
-
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
-            call_vm_handler(container, lreg_address);
-        }
-        else
+        if(op_mem.base == ZYDIS_REGISTER_RSP)
         {
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
             if(stack_disp)
@@ -163,6 +168,20 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
             }
 
             call_vm_handler(container, push_address);
+        }
+        else if(op_mem.base == ZYDIS_REGISTER_RIP)
+        {
+            rip_label = code_label::create("rip: " + std::to_string(orig_rva));
+
+            container.add(rip_label, zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8)));
+            call_vm_handler(container, push_address);
+        }
+        else
+        {
+            const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
+
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
+            call_vm_handler(container, lreg_address);
         }
     }
 
@@ -200,13 +219,35 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         // 3. load the displacement and add
         // we can do this with some trickery using LEA so we dont modify rflags
 
-        // pop current value into VTEMP
-        // lea VTEMP, [VTEMP +- imm]
-        // push
+        if(op_mem.base == ZYDIS_REGISTER_RIP)
+        {
+            // since this is RIP relative we first want to calculate where the original instruction is trying to access
+            auto [target, _] = zydis_helper::calc_relative_rva(instruction, orig_rva, index);
 
-        call_vm_handler(container, pop_address);
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
-        call_vm_handler(container, push_address);
+            // VTEMP = RIP at first operand instruction
+            // target = RIP + constant
+
+            call_vm_handler(container, pop_address);
+            container.add([=](uint64_t)
+            {
+                const uint64_t rip = rip_label->get();
+                const uint64_t constant = target - rip;
+
+                return zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, constant, 8));
+            });
+
+            call_vm_handler(container, push_address);
+        }
+        else
+        {
+            // pop current value into VTEMP
+            // lea VTEMP, [VTEMP +- imm]
+            // push
+
+            call_vm_handler(container, pop_address);
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
+            call_vm_handler(container, push_address);
+        }
     }
 
     // by default, this will be dereferenced and we will get the value at the address,
@@ -230,14 +271,16 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     return encode_status::success;
 }
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr, int& stack_disp)
+encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr, encode_ctx& context)
 {
     // not a supported operand
     return encode_status::unsupported;
 }
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, int& stack_disp)
+encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, encode_ctx& context)
 {
+    auto [stack_disp, orig_rva, index] = context;
+
     auto imm = op_imm.value;
     const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 

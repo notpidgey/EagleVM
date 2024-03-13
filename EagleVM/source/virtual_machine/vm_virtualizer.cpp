@@ -57,7 +57,7 @@ function_container vm_virtualizer::virtualize_block(segment_dasm* dasm, basic_bl
     {
         zydis_decode& instruction = block->decoded_insts[i];
 
-        auto [virt_status, instructions] = translate_to_virtual(instruction);
+        auto [virt_status, instructions] = translate_to_virtual(instruction, current_rva);
         if (virt_status)
         {
             // check if we are already inside of virtual machine to prevent multiple enters
@@ -273,13 +273,14 @@ void vm_virtualizer::create_vm_jump(zyids_mnemonic mnemonic, function_container&
     container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZJMP(rva_target, rel_label))));
 }
 
-std::pair<bool, function_container> vm_virtualizer::translate_to_virtual(const zydis_decode& decoded_instruction)
+std::pair<bool, function_container> vm_virtualizer::translate_to_virtual(const zydis_decode& decoded_instruction,
+    uint64_t original_rva)
 {
     inst_handler_entry* handler = vm_inst_->get_handlers()->inst_handlers[decoded_instruction.instruction.mnemonic];
     if (!handler)
         return {false, {}};
 
-    return handler->translate_to_virtual(decoded_instruction);
+    return handler->translate_to_virtual(decoded_instruction, original_rva);
 }
 
 std::vector<uint8_t> vm_virtualizer::create_padding(const size_t bytes)
