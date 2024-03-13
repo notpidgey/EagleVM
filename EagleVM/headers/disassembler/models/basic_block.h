@@ -10,18 +10,13 @@ class basic_block
 public:
     uint32_t start_rva;
     uint32_t end_rva_inc;
-
-    block_end_reason end_reason = block_end;
-
-    decode_vec instructions;
-    std::vector<std::pair<uint32_t, block_jump_location>> target_rvas;
-    std::vector<basic_block*> target_blocks;
+    decode_vec decoded_insts;
 
     basic_block();
 
+    block_end_reason get_end_reason() const;
+    uint64_t calc_jump_address(uint8_t instruction_index) const;
+
     bool is_conditional_jump() const;
     bool is_jump() const;
-    bool is_final_block() const;
-
-    uint64_t calc_jump_address(uint8_t instruction_index);
 };

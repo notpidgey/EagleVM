@@ -1,7 +1,13 @@
 #include "virtual_machine/handlers/handler/base_handler_entry.h"
 
-base_handler_entry::base_handler_entry(vm_inst_regs* manager, vm_handler_generator* handler_generator)
-    : base_instruction_virtualizer(manager, handler_generator), has_builder_hook(false), is_vm_handler(false) {}
+base_handler_entry::base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
+{
+    hg_ = handler_generator;
+    rm_ = manager;
+
+    has_builder_hook = false;
+    is_vm_handler = false;
+}
 
 function_container base_handler_entry::construct_handler()
 {

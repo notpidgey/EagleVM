@@ -54,8 +54,6 @@ set(EagleVM_SOURCES
 	"EagleVM/source/pe/packer/pe_packer.cpp"
 	"EagleVM/source/pe/pe_generator.cpp"
 	"EagleVM/source/pe/pe_parser.cpp"
-	"EagleVM/source/pe/pe_sections/pe_code_section.cpp"
-	"EagleVM/source/pe/pe_sections/pe_handler_section.cpp"
 	"EagleVM/source/util/section/code_label.cpp"
 	"EagleVM/source/util/section/function_container.cpp"
 	"EagleVM/source/util/section/section_manager.cpp"

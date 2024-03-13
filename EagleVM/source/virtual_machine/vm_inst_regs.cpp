@@ -1,6 +1,11 @@
-#include "virtual_machine/vm_register_manager.h"
-
+#include "virtual_machine/vm_inst_regs.h"
 #include "util/random.h"
+
+vm_inst_regs::vm_inst_regs()
+{
+    reg_stack_order_ = {};
+    reg_vm_order_ = {};
+}
 
 void vm_inst_regs::init_reg_order()
 {
@@ -58,4 +63,12 @@ std::pair<uint32_t, reg_size> vm_inst_regs::get_stack_displacement(const zydis_r
     }
 
     return { found_index * 8, reg_size };
+}
+
+void vm_inst_regs::enumerate(const std::function<void(zydis_register)>& enumerable, bool from_back)
+{
+    if(from_back)
+        std::ranges::for_each(reg_stack_order_, enumerable);
+    else
+        std::for_each(reg_stack_order_.rbegin(), reg_stack_order_.rend(), enumerable);
 }

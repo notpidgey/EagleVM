@@ -1,14 +1,14 @@
 #include "disassembler/disassembler.h"
 
-segment_disassembler::segment_disassembler(const decode_vec& segment, const uint32_t binary_rva,
-                                           const uint32_t binary_end) : root_block(nullptr)
+segment_dasm::segment_dasm(const decode_vec& segment, const uint32_t binary_rva, const uint32_t binary_end)
+    : root_block(nullptr)
 {
     function = segment;
     rva_begin = binary_rva;
     rva_end = binary_end;
 }
 
-void segment_disassembler::generate_blocks()
+void segment_dasm::generate_blocks()
 {
     uint32_t block_start_rva = rva_begin;
     uint32_t current_rva = rva_begin;
@@ -25,10 +25,7 @@ void segment_disassembler::generate_blocks()
             basic_block* block = new basic_block();
             block->start_rva = block_start_rva;
             block->end_rva_inc = current_rva + inst.instruction.length;
-            block->instructions = block_instructions;
-
-            set_block_rvas(block, current_rva);
-            set_end_reason(block);
+            block->decoded_insts = block_instructions;
 
             blocks.push_back(block);
             block_instructions.clear();
@@ -46,10 +43,7 @@ void segment_disassembler::generate_blocks()
         basic_block* block = new basic_block();
         block->start_rva = block_start_rva;
         block->end_rva_inc = current_rva;
-        block->instructions = block_instructions;
-
-        set_block_rvas(block, current_rva);
-        set_end_reason(block);
+        block->decoded_insts = block_instructions;
 
         blocks.push_back(block);
     }
@@ -60,10 +54,11 @@ void segment_disassembler::generate_blocks()
 
     for (const basic_block* block: blocks)
     {
-        if (block->target_rvas.empty())
+        // we only care about jumping blocks
+        if (block->get_end_reason() == block_end)
             continue;
 
-        const auto& [jump_rva, jump_type] = block->target_rvas.back();
+        const auto& [jump_rva, jump_type] = get_jump(block);
         for (basic_block* target_block: blocks)
         {
             // non inclusive is key because we might already be at that block
@@ -76,24 +71,22 @@ void segment_disassembler::generate_blocks()
                 new_block->start_rva = jump_rva;
                 new_block->end_rva_inc = target_block->end_rva_inc;
                 target_block->end_rva_inc = jump_rva;
-                new_block->target_rvas = target_block->target_rvas;
 
-                block_jump_location location = jump_rva > rva_end || jump_rva < rva_begin ? jump_outside_segment : jump_inside_segment;
-                target_block->target_rvas = {{jump_rva, location}};
+                block_jump_location location = jump_rva > rva_end || jump_rva < rva_begin
+                                                   ? jump_outside_segment
+                                                   : jump_inside_segment;
                 target_block->end_rva_inc = jump_rva;
-                new_block->end_reason = target_block->end_reason;
-                target_block->end_reason = block_end;
 
                 // for the new_block, we copy all the instructions starting at the far_rva
                 uint32_t curr_rva = target_block->start_rva;
-                for (int i = 0; i < target_block->instructions.size();)
+                for (int i = 0; i < target_block->decoded_insts.size();)
                 {
-                    zydis_decode& inst = target_block->instructions[i];
+                    zydis_decode& inst = target_block->decoded_insts[i];
                     if (curr_rva >= jump_rva)
                     {
                         // add to new block, remove from old block
-                        new_block->instructions.push_back(inst);
-                        target_block->instructions.erase(target_block->instructions.begin() + i);
+                        new_block->decoded_insts.push_back(inst);
+                        target_block->decoded_insts.erase(target_block->decoded_insts.begin() + i);
                     }
                     else
                     {
@@ -109,70 +102,51 @@ void segment_disassembler::generate_blocks()
     }
 
     blocks.insert(blocks.end(), new_blocks.begin(), new_blocks.end());
+}
 
-    root_block = blocks[0];
-    for (basic_block* block: blocks)
+std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block* block, bool last)
+{
+    const block_end_reason end_reason = block->get_end_reason();
+    switch (end_reason)
     {
-        for (auto& [target_rva, rva_type]: block->target_rvas)
+        case block_end:
         {
-            if (rva_type == jump_outside_segment)
-                continue;
+            return {block->end_rva_inc, get_jump_location(block->end_rva_inc)};
+        }
+        case block_jump || !last:
+        {
+            zydis_decode last_inst = block->decoded_insts.back();
+            const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
-            for (auto& target_block: blocks)
-            {
-                if (target_rva == target_block->start_rva)
-                {
-                    block->target_blocks.push_back(target_block);
-                    break;
-                }
-            }
+            auto [target_rva, _] = zydis_helper::calc_relative_rva(last_inst, last_inst_rva);
+            return {target_rva, get_jump_location(target_rva)};
+        }
+        case block_conditional_jump:
+        {
+            zydis_decode last_inst = block->decoded_insts.back();
+            const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
+
+            auto [target_rva, _] = zydis_helper::calc_relative_rva(last_inst, last_inst_rva);
+            return {target_rva, get_jump_location(target_rva)};
         }
     }
 }
 
-void segment_disassembler::set_end_reason(basic_block* block)
+block_jump_location segment_dasm::get_jump_location(const uint32_t rva) const
 {
-    const auto [instruction, operands] = block->instructions.back();
-    if (instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
-    {
-        zyids_mnemonic mnemonic = instruction.mnemonic;
-        if (mnemonic == ZYDIS_MNEMONIC_JMP)
-        {
-            block->end_reason = block_jump;
-        }
-        else
-        {
-            block->end_reason = block_conditional_jump;
-        }
-    }
-    else
-    {
-        block->end_reason = block_end;
-    }
-}
-
-void segment_disassembler::set_block_rvas(basic_block* block, uint32_t current_rva) const
-{
-    const zydis_decode& inst = block->instructions.back();
-
-    // conditional jumps and regular block ends fall through to the next rva
-    if (inst.instruction.mnemonic != ZYDIS_MNEMONIC_JMP)
-        block->target_rvas.emplace_back(block->end_rva_inc, get_jump_location(block->end_rva_inc));
-
-    if(inst.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
-    {
-        // conditional jumps and jumps can either go somewhere else, or next
-        uint64_t target_address;
-        ZydisCalcAbsoluteAddress(&inst.instruction, &inst.operands[0], current_rva, &target_address);
-
-        block->target_rvas.emplace_back(target_address, get_jump_location(target_address));
-    }
-}
-
-block_jump_location segment_disassembler::get_jump_location(const uint32_t rva) const
-{
-    if(rva >= rva_begin && rva < rva_end)
+    if (rva >= rva_begin && rva < rva_end)
         return jump_inside_segment;
 
     return jump_outside_segment;
+}
+
+basic_block* segment_dasm::get_block(const uint32_t rva) const
+{
+    for (basic_block* block: blocks)
+    {
+        if (block->start_rva >= rva && rva < block->end_rva_inc)
+            return block;
+    }
+
+    return nullptr;
 }

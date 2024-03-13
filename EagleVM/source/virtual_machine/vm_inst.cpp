@@ -1,9 +1,12 @@
 #include "virtual_machine/vm_inst.h"
 
+#include "virtual_machine/handlers/handler/vm_handler_entry.h"
+#include "virtual_machine/handlers/handler/inst_handler_entry.h"
+
 vm_inst::vm_inst()
 {
     rg_ = new vm_inst_regs();
-    hg_ = new vm_inst_handlers();
+    hg_ = new vm_inst_handlers(rg_);
 }
 
 void vm_inst::init_reg_order()

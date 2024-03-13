@@ -6,33 +6,44 @@ basic_block::basic_block()
     end_rva_inc = 0;
 }
 
+block_end_reason basic_block::get_end_reason() const
+{
+    const auto& [inst, _] = decoded_insts.back();
+    if(inst.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && inst.mnemonic != ZYDIS_MNEMONIC_CALL)
+    {
+        // this is either JMP or conditional JMP
+        if(inst.mnemonic == ZYDIS_MNEMONIC_JMP)
+            return block_jump;
+
+        return block_conditional_jump;
+    }
+
+    // this could either be a call or regular block end
+    return block_end;
+}
+
 bool basic_block::is_conditional_jump() const
 {
-    const auto& [instruction, _] = instructions.back();
+    const auto& [instruction, _] = decoded_insts.back();
     return instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && instruction.mnemonic != ZYDIS_MNEMONIC_JMP;
 }
 
 bool basic_block::is_jump() const
 {
-    const auto& [instruction, _] = instructions.back();
+    const auto& [instruction, _] = decoded_insts.back();
     return instruction.meta.branch_type == ZYDIS_MNEMONIC_JMP;
 }
 
-bool basic_block::is_final_block() const
-{
-    return end_reason == block_end;
-}
-
-uint64_t basic_block::calc_jump_address(const uint8_t instruction_index)
+uint64_t basic_block::calc_jump_address(const uint8_t instruction_index) const
 {
     uint64_t current_rva = start_rva;
     for(int i = 0; i < instruction_index; i++)
     {
-        const auto& [instruction, operands] = instructions[i];
+        const auto& [instruction, operands] = decoded_insts[i];
         current_rva += instruction.length;
     }
 
-    const auto& [instruction, operands] = instructions[instruction_index];
+    const auto& [instruction, operands] = decoded_insts[instruction_index];
 
     uint64_t target_address;
     ZydisCalcAbsoluteAddress(&instruction, &operands[0], current_rva, &target_address);

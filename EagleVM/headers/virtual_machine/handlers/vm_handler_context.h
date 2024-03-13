@@ -1,5 +1,6 @@
 #pragma once
-#include "virtual_machine/vm_register_manager.h"
+#include "virtual_machine/vm_inst_regs.h"
+#include "virtual_machine/vm_inst_handlers.h"
 
 class vm_handler_context
 {

@@ -3,9 +3,8 @@
 #include "virtual_machine/handlers/include_ia32.h"
 #include "virtual_machine/handlers/include_vm.h"
 
-vm_inst_handlers::vm_inst_handlers()
-{
-}
+#include "virtual_machine/handlers/handler/inst_handler_entry.h"
+#include "virtual_machine/handlers/handler/vm_handler_entry.h"
 
 vm_inst_handlers::vm_inst_handlers(vm_inst_regs* push_order)
 {

@@ -1,8 +1,6 @@
 #include "virtual_machine/handlers/handler/inst_handler_entry.h"
 #include "virtual_machine/handlers/handler/vm_handler_entry.h"
 
-#include "virtual_machine/handlers/vm_handler_generator.h"
-
 std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction)
 {
     function_container container = {};
@@ -73,7 +71,7 @@ code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands)
 
 bool inst_handler_entry::virtualize_as_address(const zydis_decode& inst, int index)
 {
-    return first_operand_as_ea && index == 0;
+    return false;
 }
 
 void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)

@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/ia32_handlers/add.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void ia32_add_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
     uint64_t size = reg_size;

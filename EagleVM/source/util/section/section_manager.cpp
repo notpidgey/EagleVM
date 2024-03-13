@@ -24,13 +24,13 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
     // if someone would like to, i am open to changes
     // but i am not rewriting this unless i really need to
 
-    if(shuffle_functions)
+    if (shuffle_functions)
         perform_shuffle();
 
     uint32_t current_address = section_address;
 
     // this should take all the functions in the section and connect them to desired labels
-    for (auto& [code_label, sec_function] : section_functions)
+    for (auto& [code_label, sec_function]: section_functions)
     {
         const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
         current_address += align;
@@ -39,15 +39,16 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
             code_label->finalize(current_address);
 
         auto& segments = sec_function.get_segments();
-        for (auto& [seg_code_label, instructions] : segments)
+        for (auto& [seg_code_label, instructions]: segments)
         {
-            if(seg_code_label)
+            if (seg_code_label)
                 seg_code_label->finalize(current_address);
 
-            for (auto& inst : instructions)
+            for (auto& inst: instructions)
             {
                 zydis_encoder_request request;
-                std::visit([&request, current_address](auto&& arg) {
+                std::visit([&request, current_address](auto&& arg)
+                {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, recompile_promise>)
                         request = arg(current_address);
@@ -64,30 +65,31 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
     auto it = compiled_section.begin();
 
     current_address = section_address;
-    for (auto& [code_label, sec_function] : section_functions)
+    for (auto& [code_label, sec_function]: section_functions)
     {
         const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
         current_address += align;
 
-        if(code_label && !valid_label(code_label, current_address))
+        if (code_label && !valid_label(code_label, current_address))
             code_label->finalize(current_address);
 
         std::advance(it, align);
 
         auto& segments = sec_function.get_segments();
-        for (auto& [seg_code_label, instructions] : segments)
+        for (auto& [seg_code_label, instructions]: segments)
         {
-            if(seg_code_label && !seg_code_label->is_finalized())
+            if (seg_code_label && !seg_code_label->is_finalized())
                 __debugbreak();
 
-            if(seg_code_label && !valid_label(seg_code_label, current_address))
+            if (seg_code_label && !valid_label(seg_code_label, current_address))
                 seg_code_label->finalize(current_address);
 
             std::vector<uint8_t> compiled_instructions;
-            for (auto& inst : instructions)
+            for (auto& inst: instructions)
             {
                 zydis_encoder_request request;
-                std::visit([&request, current_address](auto&& arg) {
+                std::visit([&request, current_address](auto&& arg)
+                {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, recompile_promise>)
                         request = arg(current_address);
@@ -134,14 +136,14 @@ std::vector<std::string> section_manager::generate_comments(const std::string& o
     };
 
     std::vector<std::string> json_array;
-    for (auto& [code_label, sec_function] : section_functions)
+    for (auto& [code_label, sec_function]: section_functions)
     {
-        if(code_label && code_label->is_comment())
+        if (code_label && code_label->is_comment())
             json_array.push_back(create_json(code_label));
 
         auto& segments = sec_function.get_segments();
-        for (const auto& seg_code_label : segments | std::views::keys)
-            if(seg_code_label && seg_code_label->is_comment())
+        for (const auto& seg_code_label: segments | std::views::keys)
+            if (seg_code_label && seg_code_label->is_comment())
                 json_array.push_back(create_json(seg_code_label));
     }
 
@@ -150,18 +152,24 @@ std::vector<std::string> section_manager::generate_comments(const std::string& o
 
 void section_manager::add(function_container& function)
 {
-    section_functions.push_back({ nullptr, function });
+    section_functions.push_back({nullptr, function});
+}
+
+void section_manager::add(const std::vector<function_container>& functions)
+{
+    for (int i = 0; i < functions.size(); i++)
+        section_functions.push_back({nullptr, functions[i]});
 }
 
 void section_manager::add(code_label* label, function_container& function)
 {
-  section_functions.push_back({label, function});
+    section_functions.push_back({label, function});
 }
 
 bool section_manager::valid_label(code_label* label, uint32_t current_address)
 {
     auto label_address = label->get();
-    if(label_address != current_address)
+    if (label_address != current_address)
         return false;
 
     return true;

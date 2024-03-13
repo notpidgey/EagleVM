@@ -4,7 +4,7 @@
 class ia32_add_handler final : public inst_handler_entry
 {
 public:
-    ia32_add_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
+    ia32_add_handler(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {

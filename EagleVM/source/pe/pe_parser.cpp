@@ -233,6 +233,11 @@ pe_protected_section pe_parser::offset_to_ptr(uint32_t offset_begin, uint32_t of
     return protect;
 }
 
+uint8_t* pe_parser::offset_to_ptr(uint32_t offset_begin)
+{
+    return &unprotected_pe_[offset_begin];
+}
+
 uint32_t pe_parser::offset_to_rva(const uint32_t offset)
 {
     const auto section = get_section_offset(offset);

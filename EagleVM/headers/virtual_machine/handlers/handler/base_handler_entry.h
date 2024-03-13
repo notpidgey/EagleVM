@@ -7,8 +7,9 @@
 #include "util/zydis_helper.h"
 #include "util/section/function_container.h"
 
-#include "virtual_machine/handlers/vm_handler_generator.h"
-#include "virtual_machine/handlers/vm_handler_context.h"
+#include "virtual_machine/vm_inst_handlers.h"
+#include "virtual_machine/vm_inst_regs.h"
+
 #include "virtual_machine/handlers/models/handler_info.h"
 
 #define VIP         rm_->get_reg(I_VIP)
@@ -36,7 +37,7 @@ class code_label;
 class base_handler_entry
 {
 public:
-    explicit base_handler_entry(vm_inst_regs* manager, vm_handler_generator* handler_generator);
+    explicit base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator);
 
     function_container construct_handler();
     void initialize_labels();
@@ -49,8 +50,12 @@ public:
 protected:
     ~base_handler_entry() = default;
 
+    vm_inst_regs* rm_;
+    vm_inst_handlers* hg_;
+
     bool has_builder_hook;
     bool is_vm_handler;
+
     function_container container;
     std::vector<handler_info> handlers;
 };

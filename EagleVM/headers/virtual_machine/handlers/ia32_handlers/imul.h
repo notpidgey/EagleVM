@@ -4,7 +4,7 @@
 class ia32_imul_handler final : public inst_handler_entry
 {
 public:
-    ia32_imul_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
+    ia32_imul_handler(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {
@@ -17,8 +17,6 @@ public:
             { bit32, 3 },
             { bit16, 3 },
         };
-
-        first_operand_as_ea = false;
     }
 
 private:

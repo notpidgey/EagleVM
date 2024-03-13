@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/ia32_handlers/mul.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void ia32_mul_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
     // TODO: this is just an add handler, mul does not actually support 2 operands like this

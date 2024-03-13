@@ -64,6 +64,7 @@ public:
     void enum_imports(std::function<void(PIMAGE_IMPORT_DESCRIPTOR, PIMAGE_THUNK_DATA, PIMAGE_SECTION_HEADER, int, uint8_t*)> import_proc);
 
     pe_protected_section offset_to_ptr(uint32_t offset_begin, uint32_t offset_end);
+    uint8_t* offset_to_ptr(uint32_t offset_begin);
 
     uint32_t offset_to_rva(uint32_t offset);
     uint32_t rva_to_offset(uint32_t rva);
