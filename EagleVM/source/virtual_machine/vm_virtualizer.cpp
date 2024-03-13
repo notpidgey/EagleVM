@@ -87,36 +87,28 @@ function_container vm_virtualizer::virtualize_block(segment_dasm* dasm, basic_bl
             if (zydis_helper::has_relative_operand(instruction))
             {
                 auto [target_address, op_i] = zydis_helper::calc_relative_rva(instruction, current_rva);
-                if (op_i != -1)
+                container.add([instruction, target_address, op_i](const uint32_t rva)
                 {
-                    container.add([instruction, target_address, op_i](const uint32_t rva)
+                    zydis_encoder_request encode_request = zydis_helper::decode_to_encode(instruction);
+                    auto& op = encode_request.operands[op_i];
+
+                    switch (op.type)
                     {
-                        zydis_encoder_request encode_request = zydis_helper::decode_to_encode(instruction);
-                        auto& op = encode_request.operands[op_i];
-
-                        switch (op.type)
+                        case ZYDIS_OPERAND_TYPE_MEMORY:
                         {
-                            case ZYDIS_OPERAND_TYPE_MEMORY:
-                            {
-                                // needs to handle where mem and base have no registers
-                                op.mem.displacement = target_address - rva;
-                                break;
-                            }
-                            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                            {
-                                op.imm.s = target_address - rva;
-                                break;
-                            }
+                            // needs to handle where mem and base have no registers
+                            op.mem.displacement = target_address - rva;
+                            break;
                         }
+                        case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                        {
+                            op.imm.s = target_address - rva;
+                            break;
+                        }
+                    }
 
-                        return encode_request;
-                    });
-                }
-                else
-                {
-                    // this should not happen
-                    __debugbreak();
-                }
+                    return encode_request;
+                });
             }
             else
             {
@@ -278,11 +270,7 @@ void vm_virtualizer::call_vm_exit(function_container& container, code_label* tar
 void vm_virtualizer::create_vm_jump(zyids_mnemonic mnemonic, function_container& container, code_label* rva_target)
 {
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, [=](uint64_t rva)
-    {
-        auto em = zydis_eimm{ .u = rva_target->get() - rva };
-        return zydis_helper::enc(mnemonic, em) ;
-    });
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZJMP(rva_target, rel_label))));
 }
 
 std::pair<bool, function_container> vm_virtualizer::translate_to_virtual(const zydis_decode& decoded_instruction)
