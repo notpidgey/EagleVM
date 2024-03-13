@@ -21,17 +21,13 @@ void vm_exit_handler::construct_single(function_container& container, reg_size s
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(GR_RSP), ZREG(VREGS)));
 
     //pop r0-r15 to stack
-    std::for_each(PUSHORDER.rbegin(), PUSHORDER.rend(),
-        [&container](short reg)
+    rm_->enumerate([&container](short reg)
         {
             if(reg == ZYDIS_REGISTER_RSP || reg == ZYDIS_REGISTER_RIP)
-            {
                 container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RSP), ZMEMBD(GR_RSP, 8, 8)));
-                return;
-            }
-
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_POP, ZREG(reg)));
-        });
+            else
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_POP, ZREG(reg)));
+        }, true);
 
     //popfq
     {

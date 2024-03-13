@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/ia32_handlers/lea.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void ia32_lea_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     // value we want to move should be located at the top of the stack

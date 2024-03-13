@@ -7,10 +7,7 @@
 #include <fstream>
 
 #include <Windows.h>
-
 #include "pe/pe_parser.h"
-#include "pe/pe_sections/pe_code_section.h"
-#include "pe/pe_sections/pe_handler_section.h"
 
 using generator_section_t = std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>>;
 

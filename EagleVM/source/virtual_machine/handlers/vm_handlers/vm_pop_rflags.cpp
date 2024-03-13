@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/vm_handlers/vm_pop_rflags.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     container.add({

@@ -12,7 +12,7 @@ void vm_enter_handler::construct_single(function_container& container, reg_size 
     }
 
     // push r0-r15 to stack
-    std::ranges::for_each(PUSHORDER,
+    rm_->enumerate(
         [&container](short reg)
         {
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_PUSH, ZREG(reg)));

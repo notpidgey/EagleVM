@@ -1,10 +1,17 @@
 #pragma once
 #include "virtual_machine/handlers/handler/base_handler_entry.h"
+#include "virtual_machine/handlers/handler/vm_handler_entry.h"
+
+enum class encode_status
+{
+    success,
+    unsupported
+};
 
 class inst_handler_entry : public base_handler_entry
 {
 public:
-    inst_handler_entry(vm_register_manager* manager, vm_handler_generator* handler_generator)
+    inst_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : base_handler_entry(manager, handler_generator) { }
 
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction);

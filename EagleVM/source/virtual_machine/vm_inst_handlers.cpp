@@ -1,27 +1,17 @@
-#include "virtual_machine/handlers/vm_handler_generator.h"
+#include "virtual_machine/vm_inst_handlers.h"
 
 #include "virtual_machine/handlers/include_ia32.h"
 #include "virtual_machine/handlers/include_vm.h"
 
-#include "util/section/code_label.h"
+#include "virtual_machine/handlers/handler/inst_handler_entry.h"
+#include "virtual_machine/handlers/handler/vm_handler_entry.h"
 
-#define VIP         rm_->reg_map[I_VIP]
-#define VSP         rm_->reg_map[I_VSP]
-#define VREGS       rm_->reg_map[I_VREGS]
-#define VTEMP       rm_->reg_map[I_VTEMP]
-#define PUSHORDER   rm_->reg_stack_order_
-#define RETURN_EXECUTION(x) x.push_back(zydis_helper::encode<ZYDIS_MNEMONIC_JMP, zydis_ereg>(ZREG(VIP)))
-
-vm_handler_generator::vm_handler_generator()
-{
-}
-
-vm_handler_generator::vm_handler_generator(vm_register_manager* push_order)
+vm_inst_handlers::vm_inst_handlers(vm_inst_regs* push_order)
 {
     rm_ = push_order;
 }
 
-void vm_handler_generator::setup_vm_mapping()
+void vm_inst_handlers::setup_vm_mapping()
 {
     v_handlers[MNEMONIC_VM_ENTER] = new vm_enter_handler(rm_, this);
     v_handlers[MNEMONIC_VM_EXIT] = new vm_exit_handler(rm_, this);
@@ -44,9 +34,4 @@ void vm_handler_generator::setup_vm_mapping()
     inst_handlers[ZYDIS_MNEMONIC_MOV] = new ia32_mov_handler(rm_, this);
     inst_handlers[ZYDIS_MNEMONIC_MOVSX] = new ia32_movsx_handler(rm_, this);
     inst_handlers[ZYDIS_MNEMONIC_LEA] = new ia32_lea_handler(rm_, this);
-}
-
-void vm_handler_generator::setup_enc_constants()
-{
-
 }

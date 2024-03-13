@@ -14,6 +14,7 @@ public:
     void perform_shuffle();
 
     void add(function_container& function);
+    void add(const std::vector<function_container>& functions);
     void add(code_label* label, function_container& function);
 
     bool valid_label(code_label* label, uint32_t current_address);

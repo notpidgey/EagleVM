@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/ia32_handlers/mov.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void ia32_mov_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     // value we want to move should be located at the top of the stack
@@ -20,4 +18,9 @@ void ia32_mov_handler::construct_single(function_container& container, reg_size 
     call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
 
     create_vm_return(container);
+}
+
+bool ia32_mov_handler::virtualize_as_address(const zydis_decode& inst, int index)
+{
+    return index == 0;
 }

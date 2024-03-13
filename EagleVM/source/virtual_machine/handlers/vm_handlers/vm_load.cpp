@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/vm_handlers/vm_load.h"
 
-#include "virtual_machine/vm_generator.h"
-
 /*
     VMLOAD
     Load the value displacement (located in VTEMP) from VREGS onto the stack

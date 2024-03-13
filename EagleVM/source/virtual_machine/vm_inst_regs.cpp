@@ -1,8 +1,13 @@
-#include "virtual_machine/vm_register_manager.h"
-
+#include "virtual_machine/vm_inst_regs.h"
 #include "util/random.h"
 
-void vm_register_manager::init_reg_order()
+vm_inst_regs::vm_inst_regs()
+{
+    reg_stack_order_ = {};
+    reg_vm_order_ = {};
+}
+
+void vm_inst_regs::init_reg_order()
 {
     for(int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
         reg_stack_order_[i - ZYDIS_REGISTER_RAX] = static_cast<zydis_register>(i);
@@ -33,7 +38,7 @@ void vm_register_manager::init_reg_order()
     reg_vm_order_ = access_order;
 }
 
-zydis_register vm_register_manager::get_reg(const uint8_t target) const
+zydis_register vm_inst_regs::get_reg(const uint8_t target) const
 {
     // this would be something like VIP, VSP, VTEMP, etc
     if(target > NUM_OF_VREGS - 1 )
@@ -42,7 +47,7 @@ zydis_register vm_register_manager::get_reg(const uint8_t target) const
     return reg_vm_order_[target];
 }
 
-std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const zydis_register reg) const
+std::pair<uint32_t, reg_size> vm_inst_regs::get_stack_displacement(const zydis_register reg) const
 {
     //determine 64bit version of register
     reg_size reg_size = zydis_helper::get_reg_size(reg);
@@ -58,4 +63,12 @@ std::pair<uint32_t, reg_size> vm_register_manager::get_stack_displacement(const 
     }
 
     return { found_index * 8, reg_size };
+}
+
+void vm_inst_regs::enumerate(const std::function<void(zydis_register)>& enumerable, bool from_back)
+{
+    if(from_back)
+        std::ranges::for_each(reg_stack_order_, enumerable);
+    else
+        std::for_each(reg_stack_order_.rbegin(), reg_stack_order_.rend(), enumerable);
 }

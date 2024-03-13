@@ -4,7 +4,7 @@
 class ia32_movsx_handler final : public inst_handler_entry
 {
 public:
-    ia32_movsx_handler(vm_register_manager* manager, vm_handler_generator* handler_generator)
+    ia32_movsx_handler(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {
@@ -13,14 +13,13 @@ public:
             { bit16, 2 },
             { bit8, 2 },
         };
-
-        first_operand_as_ea = true;
     }
 
 private:
     void construct_single(function_container& container, reg_size size, uint8_t operands) override;
     encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index) override;
     encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index) override;
+    bool virtualize_as_address(const zydis_decode& inst, int index) override;
 
     void upscale_temp(function_container& container, reg_size target, reg_size current);
 };

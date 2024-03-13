@@ -1,7 +1,5 @@
 #include "virtual_machine/handlers/ia32_handlers/movsx.h"
 
-#include "virtual_machine/vm_generator.h"
-
 void ia32_movsx_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
 {
     const inst_handler_entry* mov_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_MOV];
@@ -168,6 +166,11 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
     return encode_status::success;
+}
+
+bool ia32_movsx_handler::virtualize_as_address(const zydis_decode& inst, int index)
+{
+    return index == 0;
 }
 
 void ia32_movsx_handler::upscale_temp(function_container& container, reg_size target_size, reg_size current_size)
