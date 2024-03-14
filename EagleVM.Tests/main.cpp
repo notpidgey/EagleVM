@@ -51,8 +51,10 @@ CONTEXT build_context(nlohmann::json& inputs, CONTEXT& safe_context)
             value = std::stoull(str, nullptr, 16);
             value = _byteswap_uint64(value);
         }
-        
-        if (reg == "rax") {
+
+        if(reg == "rip") {
+            input_context.Rip = value;
+        } else if (reg == "rax") {
             input_context.Rax = value;
         } else if (reg == "rcx") {
             input_context.Rcx = value;
@@ -112,20 +114,22 @@ void print_regs(nlohmann::json& inputs)
     }
 }
 
-bool compare_context(CONTEXT& result, CONTEXT& target)
+bool compare_context(CONTEXT& result, CONTEXT& target, bool flags)
 {
     // this is such a stupid hack but instead of writing 20 if statements im going to do this for now
     constexpr auto reg_size = 16 * 8;
+    auto res_rip = result.Rip == target.Rip;
     auto res_regs = memcmp(&result.Rax, &target.Rax, reg_size);
-    bool res_flags = (target.EFlags & result.EFlags) == target.EFlags;
+    if(!flags)
+        return res_regs == 0 && res_rip;
 
-    // TODO: add RIP check but we dont really care about that
-    return res_regs == 0 && res_flags;
+    bool res_flags = (target.EFlags & result.EFlags) == target.EFlags;
+    return res_regs == 0 && res_flags && res_rip;
 }
 
 int main(int argc, char* argv[])
 {
-    // setbuf(stdout, NULL);
+    setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
 
     auto veh_handle = AddVectoredExceptionHandler(1, shellcode_handler);
@@ -202,13 +206,14 @@ int main(int argc, char* argv[])
             }
 
             // result_context is being set in the exception handler
-            bool success = compare_context(result_context, output_target);
+            bool flags = outputs.contains("flags");
+            bool success = compare_context(result_context, output_target, flags);
             if (!success)
                 std::printf("[!] failed");
             else
                 std::printf("[+] passed");
 
-            RtlZeroMemory(instruction_memory, 0x1000);
+            RtlZeroMemory(instruction_memory, instruction_data.size());
         }
 
         VirtualFree(instruction_memory, 0x1000, MEM_RELEASE);
