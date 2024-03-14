@@ -1,4 +1,5 @@
 #pragma once
+#include <Windows.h>
 #include <vector>
 #include <string>
 
@@ -16,4 +17,5 @@ namespace util
 {
     std::vector<uint8_t> parse_hex(const std::string& hex);
     void print_regs(nlohmann::json& inputs, std::ofstream& stream);
+    uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 };

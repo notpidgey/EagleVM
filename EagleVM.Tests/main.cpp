@@ -10,13 +10,15 @@
 #include "run_container.h"
 
 reg_overwrites build_writes(nlohmann::json& inputs);
-uint32_t compare_context(CONTEXT& result, CONTEXT& target, bool flags);
+uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs, bool flags);
+uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
 int main(int argc, char* argv[])
 {
     // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
-    if (!std::filesystem::exists("x86-tests")) {
+    if (!std::filesystem::exists("x86-tests"))
+    {
         std::filesystem::create_directory("x86-tests");
     }
 
@@ -54,10 +56,8 @@ int main(int argc, char* argv[])
 
             // i dont know what else to do
             // you cannot just use VEH to recover RIP/RSP corruption
-            if(instr.contains("sp"))
-                continue;
-
-            {
+            if (instr.contains("sp"))
+                continue; {
                 outfile << "\n\n[test] " << instr.c_str() << "\n";
                 outfile << "[input]\n";
                 util::print_regs(inputs, outfile);
@@ -75,20 +75,30 @@ int main(int argc, char* argv[])
 
             // result_context is being set in the exception handler
             bool flags = outputs.contains("flags");
-            uint32_t result = compare_context(result_context, output_target, flags);
-            if(result == none)
+            uint32_t result = compare_context(result_context, output_target, outs, flags);
+            if (result == none)
             {
                 outfile << "[+] passed\n";
                 passed++;
             }
             else
             {
-                if(result & register_mismatch)
+                if (result & register_mismatch)
                 {
                     outfile << "[!] register mismatch\n";
+
+                    for(auto [reg, value] : outs)
+                    {
+                        if(reg == "flags" || reg == "rip")
+                            continue;
+
+                        outfile << "  > " << reg << "\n";
+                        outfile << "  target: " << *util::get_value(output_target, reg) << '\n';
+                        outfile << "  out   : " << *util::get_value(result_context, reg) << '\n';
+                    }
                 }
 
-                if(result & flags_mismatch)
+                if (result & flags_mismatch)
                 {
                     outfile << "[!] flags mismatch\n";
 
@@ -111,7 +121,7 @@ int main(int argc, char* argv[])
         std::printf("[>] failed: %i\n", failed);
 
         float success = (static_cast<float>(passed) / (passed + failed)) * 100;
-        std::printf("[>] success: %f\n\n", success);
+        std::printf("[>] success: %f%%\n\n", success);
     }
 
     run_container::destroy_veh();
@@ -124,7 +134,7 @@ reg_overwrites build_writes(nlohmann::json& inputs)
     {
         std::string reg = input.key();
         uint64_t value = 0;
-        if(input.value().is_string())
+        if (input.value().is_string())
         {
             std::string str = input.value();
             value = std::stoull(str, nullptr, 16);
@@ -141,7 +151,7 @@ reg_overwrites build_writes(nlohmann::json& inputs)
     return overwrites;
 }
 
-uint32_t compare_context(CONTEXT& result, CONTEXT& target, bool flags)
+uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs, bool flags)
 {
     uint32_t fail = none;
 
@@ -150,14 +160,25 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, bool flags)
 
     // rip comparison is COOKED there is something really off about the test data
     // auto res_rip = result.Rip == target.Rip;
-    auto res_regs = memcmp(&result.Rax, &target.Rax, reg_size);
-    if(res_regs != 0)
-        fail |= register_mismatch;
+    for(auto& [reg, value] : outs)
+    {
+        if(reg == "rip" || reg == "flags")
+            continue;
 
-    if(flags)
+        uint64_t tar = *util::get_value(target, reg);
+        uint64_t out = *util::get_value(result, reg);
+
+        if(tar != out)
+        {
+            fail |= register_mismatch;
+            break;
+        }
+    }
+
+    if (flags)
     {
         bool res_flags = (result.EFlags & target.EFlags) == target.EFlags;
-        if(!res_flags)
+        if (!res_flags)
             fail |= flags_mismatch;
     }
 

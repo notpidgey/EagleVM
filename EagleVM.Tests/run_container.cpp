@@ -1,5 +1,7 @@
 #include "run_container.h"
 
+#include "util.h"
+
 #pragma optimize("", off)
 std::pair<CONTEXT, CONTEXT> run_container::run()
 {
@@ -81,44 +83,7 @@ CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes
 {
     CONTEXT new_context = safe;
     for (auto& [reg, value]: writes)
-    {
-        if (reg == "rip")
-            new_context.Rip = value;
-        else if (reg == "rax")
-            new_context.Rax = value;
-        else if (reg == "rcx")
-            new_context.Rcx = value;
-        else if (reg == "rdx")
-            new_context.Rdx = value;
-        else if (reg == "rbx")
-            new_context.Rbx = value;
-        else if (reg == "rsi")
-            new_context.Rsi = value;
-        else if (reg == "rdi")
-            new_context.Rdi = value;
-        else if (reg == "rsp")
-            new_context.Rsp = value;
-        else if (reg == "rbp")
-            new_context.Rbp = value;
-        else if (reg == "r8")
-            new_context.R8 = value;
-        else if (reg == "r9")
-            new_context.R9 = value;
-        else if (reg == "r10")
-            new_context.R10 = value;
-        else if (reg == "r11")
-            new_context.R11 = value;
-        else if (reg == "r12")
-            new_context.R12 = value;
-        else if (reg == "r13")
-            new_context.R13 = value;
-        else if (reg == "r14")
-            new_context.R14 = value;
-        else if (reg == "r15")
-            new_context.R15 = value;
-        else if (reg == "flags")
-            new_context.EFlags = value;
-    }
+        *util::get_value(new_context, reg) = value;
 
     return new_context;
 }

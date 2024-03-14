@@ -36,3 +36,44 @@ void util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
         stream << "  " << key << " : 0x" << std::hex << value << "\n";
     }
 }
+
+uint64_t* util::get_value(CONTEXT& new_context, std::string& reg)
+{
+    if (reg == "rip")
+        return &new_context.Rip ;
+    else if (reg == "rax")
+        return &new_context.Rax ;
+    else if (reg == "rcx")
+        return &new_context.Rcx ;
+    else if (reg == "rdx")
+        return &new_context.Rdx ;
+    else if (reg == "rbx")
+        return &new_context.Rbx ;
+    else if (reg == "rsi")
+        return &new_context.Rsi ;
+    else if (reg == "rdi")
+        return &new_context.Rdi ;
+    else if (reg == "rsp")
+        return &new_context.Rsp ;
+    else if (reg == "rbp")
+        return &new_context.Rbp ;
+    else if (reg == "r8")
+        return &new_context.R8 ;
+    else if (reg == "r9")
+        return &new_context.R9 ;
+    else if (reg == "r10")
+        return &new_context.R10 ;
+    else if (reg == "r11")
+        return &new_context.R11 ;
+    else if (reg == "r12")
+        return &new_context.R12 ;
+    else if (reg == "r13")
+        return &new_context.R13 ;
+    else if (reg == "r14")
+        return &new_context.R14 ;
+    else if (reg == "r15")
+        return &new_context.R15 ;
+    else if (reg == "flags")
+        return reinterpret_cast<uint64_t *>(&new_context.EFlags);
+}
+
