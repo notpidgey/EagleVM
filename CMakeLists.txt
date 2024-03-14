@@ -195,7 +195,7 @@ target_compile_features(EagleVMTestsGenerator PRIVATE
 )
 
 target_link_libraries(EagleVMTestsGenerator PRIVATE
-	nlohmann-json
+	nlohmann_json
 )
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
