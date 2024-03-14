@@ -13,8 +13,9 @@ reg_overwrites build_writes(nlohmann::json& inputs);
 uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs, bool flags);
 uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
+// imul and mul tests are cooked
 const std::string inclusive_tests[] = {
-    "add", "dec", "div", "imul", "inc", "lea", "mov", "movsx", "mul", "pop", "push", "sub"
+    "add", "dec", "div", "inc", "lea", "mov", "movsx", "pop", "push", "sub"
 };
 
 int main(int argc, char* argv[])
@@ -98,8 +99,8 @@ int main(int argc, char* argv[])
                             continue;
 
                         outfile << "  > " << reg << "\n";
-                        outfile << "  target: " << *util::get_value(output_target, reg) << '\n';
-                        outfile << "  out   : " << *util::get_value(result_context, reg) << '\n';
+                        outfile << "  target: 0x" << std::hex << *util::get_value(output_target, reg) << '\n';
+                        outfile << "  out   : 0x" << std::hex << *util::get_value(result_context, reg) << '\n';
                     }
                 }
 

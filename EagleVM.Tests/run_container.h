@@ -45,6 +45,7 @@ private:
     reg_overwrites output_writes;
 
     static CONTEXT build_context(const CONTEXT& safe, reg_overwrites& writes);
+    static CONTEXT clear_context(const CONTEXT& safe, reg_overwrites& writes);
 
     inline static PVOID veh_handle;
     inline static std::mutex run_tests_mutex;

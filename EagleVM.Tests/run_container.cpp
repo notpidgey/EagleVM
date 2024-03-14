@@ -33,7 +33,10 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
     {
         test_ran = true;
 
-        input_target = build_context(safe_context, input_writes);
+        // clear registers that will receive writes
+        input_target = clear_context(safe_context, output_writes);
+        input_target = build_context(input_target, input_writes);
+
         output_target = build_context(safe_context, output_writes);
 
         // exception handler will redirect to this RIP
@@ -84,6 +87,15 @@ CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes
     CONTEXT new_context = safe;
     for (auto& [reg, value]: writes)
         *util::get_value(new_context, reg) = value;
+
+    return new_context;
+}
+
+CONTEXT run_container::clear_context(const CONTEXT& safe, reg_overwrites& writes)
+{
+    CONTEXT new_context = safe;
+    for (auto& [reg, value]: writes)
+        *util::get_value(new_context, reg) = 0;
 
     return new_context;
 }
