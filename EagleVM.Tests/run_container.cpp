@@ -90,35 +90,26 @@ CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes
 
 LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
 {
-    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
-        info->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION ||
-        info->ExceptionRecord->ExceptionCode == EXCEPTION_PRIV_INSTRUCTION ||
-        info->ExceptionRecord->ExceptionCode == EXCEPTION_DEBUG_EVENT ||
-        info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
+    uint64_t current_rip = info->ContextRecord->Rip;
+    std::lock_guard lock(run_tests_mutex);
+
+    bool found = false;
+    for (auto& [ranges, val]: run_tests)
     {
-        uint64_t current_rip = info->ContextRecord->Rip;
-
-        std::lock_guard lock(run_tests_mutex);
-
-        bool found = false;
-        for (auto& [ranges, val]: run_tests)
+        auto [low, size] = ranges;
+        if (low <= current_rip && current_rip <= low + size)
         {
-            auto [low, size] = ranges;
-            if (low <= current_rip && current_rip <= low + size)
-            {
-                found = true;
+            found = true;
 
-                val->set_result(info->ContextRecord);
-                *info->ContextRecord = val->get_safe_context();
-                break;
-            }
+            val->set_result(info->ContextRecord);
+            *info->ContextRecord = val->get_safe_context();
+            break;
         }
-
-        if (found)
-            return EXCEPTION_CONTINUE_EXECUTION;
-
-        __debugbreak();
     }
 
+    if (found)
+        return EXCEPTION_CONTINUE_EXECUTION;
+
+    __debugbreak();
     return EXCEPTION_CONTINUE_SEARCH;
 }

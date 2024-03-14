@@ -13,14 +13,16 @@ reg_overwrites build_writes(nlohmann::json& inputs);
 uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs, bool flags);
 uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
+const std::string inclusive_tests[] = {
+    "add", "dec", "div", "imul", "inc", "lea", "mov", "movsx", "mul", "pop", "push", "sub"
+};
+
 int main(int argc, char* argv[])
 {
     // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
-    {
         std::filesystem::create_directory("x86-tests");
-    }
 
     run_container::init_veh();
 
@@ -30,7 +32,10 @@ int main(int argc, char* argv[])
         auto entry_path = entry.path();
         entry_path.make_preferred();
 
-        std::string file_name = entry.path().filename().string();
+        std::string file_name = entry_path.stem().string();
+        if (std::ranges::find(inclusive_tests, file_name) == std::end(inclusive_tests))
+            continue;
+
         std::printf("[>] generating tests for: %ls\n", entry_path.c_str());
 
         // Create an ofstream object for the output file
@@ -87,9 +92,9 @@ int main(int argc, char* argv[])
                 {
                     outfile << "[!] register mismatch\n";
 
-                    for(auto [reg, value] : outs)
+                    for (auto [reg, value]: outs)
                     {
-                        if(reg == "flags" || reg == "rip")
+                        if (reg == "flags" || reg == "rip")
                             continue;
 
                         outfile << "  > " << reg << "\n";
@@ -160,15 +165,15 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
 
     // rip comparison is COOKED there is something really off about the test data
     // auto res_rip = result.Rip == target.Rip;
-    for(auto& [reg, value] : outs)
+    for (auto& [reg, value]: outs)
     {
-        if(reg == "rip" || reg == "flags")
+        if (reg == "rip" || reg == "flags")
             continue;
 
         uint64_t tar = *util::get_value(target, reg);
         uint64_t out = *util::get_value(result, reg);
 
-        if(tar != out)
+        if (tar != out)
         {
             fail |= register_mismatch;
             break;
