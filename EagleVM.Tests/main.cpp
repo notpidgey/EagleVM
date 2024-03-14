@@ -26,9 +26,11 @@ LONG CALLBACK shellcode_handler(EXCEPTION_POINTERS* info)
 {
     if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
     {
-        std::printf("[>] exception occured, reverting context");
+        std::printf("[>] exception occured, reverting context\n");
         result_context = *info->ContextRecord;
         *info->ContextRecord = safe_context;
+
+        return EXCEPTION_CONTINUE_EXECUTION;
     }
 
     return EXCEPTION_CONTINUE_SEARCH;
@@ -40,36 +42,40 @@ CONTEXT build_context(nlohmann::json& inputs, CONTEXT& safe_context)
     for (auto& input: inputs.items())
     {
         std::string reg = input.key();
+        std::string value;
+        if(input.value().is_string())
+            value = input.value();
+        
         if (reg == "rax") {
-            input_context.Rax = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rax = std::stoull(value, nullptr, 16);
         } else if (reg == "rcx") {
-            input_context.Rcx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rcx = std::stoull(value, nullptr, 16);
         } else if (reg == "rdx") {
-            input_context.Rdx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rdx = std::stoull(value, nullptr, 16);
         } else if (reg == "rbx") {
-            input_context.Rbx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rbx = std::stoull(value, nullptr, 16);
         } else if (reg == "rsi") {
-            input_context.Rsi = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rsi = std::stoull(value, nullptr, 16);
         } else if (reg == "rdi") {
-            input_context.Rdi = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rdi = std::stoull(value, nullptr, 16);
         } else if (reg == "rsp") {
-            input_context.Rsp = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rsp = std::stoull(value, nullptr, 16);
         } else if (reg == "rbp") {
-            input_context.Rbp = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.Rbp = std::stoull(value, nullptr, 16);
         } else if (reg == "r8") {
-            input_context.R8 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R8 = std::stoull(value, nullptr, 16);
         } else if (reg == "r10") {
-            input_context.R10 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R10 = std::stoull(value, nullptr, 16);
         } else if (reg == "r11") {
-            input_context.R11 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R11 = std::stoull(value, nullptr, 16);
         } else if (reg == "r12") {
-            input_context.R12 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R12 = std::stoull(value, nullptr, 16);
         } else if (reg == "r13") {
-            input_context.R13 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R13 = std::stoull(value, nullptr, 16);
         } else if (reg == "r14") {
-            input_context.R14 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R14 = std::stoull(value, nullptr, 16);
         } else if (reg == "r15") {
-            input_context.R15 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+            input_context.R15 = std::stoull(value, nullptr, 16);
         } else if (reg == "flags") {
             input_context.EFlags = input.value();
         }
