@@ -24,15 +24,17 @@ std::vector<uint8_t> parse_hex(const std::string& hex)
 
 LONG CALLBACK shellcode_handler(EXCEPTION_POINTERS* info)
 {
-    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_PRIV_INSTRUCTION)
     {
-        std::printf("[>] exception occured, reverting context\n");
         result_context = *info->ContextRecord;
         *info->ContextRecord = safe_context;
 
         return EXCEPTION_CONTINUE_EXECUTION;
     }
 
+    std::printf("unknown exception: %lx", info->ExceptionRecord->ExceptionCode);
     return EXCEPTION_CONTINUE_SEARCH;
 }
 
@@ -88,12 +90,34 @@ CONTEXT build_context(nlohmann::json& inputs, CONTEXT& safe_context)
     return input_context;
 }
 
+void print_regs(nlohmann::json& inputs)
+{
+    for (auto& input: inputs.items())
+    {
+        const std::string& key = input.key();
+        uint64_t value = 0;
+
+        if(key == "flags")
+        {
+            value = input.value();
+        }
+        else
+        {
+            std::string str = input.value();
+            value = std::stoull(str, nullptr, 16);
+            value = _byteswap_uint64(value);
+        }
+
+        std::printf("  %s : 0x%lx\n", key.c_str(), value);
+    }
+}
+
 bool compare_context(CONTEXT& result, CONTEXT& target)
 {
     // this is such a stupid hack but instead of writing 20 if statements im going to do this for now
     constexpr auto reg_size = 16 * 8;
     auto res_regs = memcmp(&result.Rax, &target.Rax, reg_size);
-    bool res_flags = true; //target.EFlags & result.EFlags == target.EFlags;
+    bool res_flags = (target.EFlags & result.EFlags) == target.EFlags;
 
     // TODO: add RIP check but we dont really care about that
     return res_regs == 0 && res_flags;
@@ -101,9 +125,10 @@ bool compare_context(CONTEXT& result, CONTEXT& target)
 
 int main(int argc, char* argv[])
 {
+    // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
 
-    AddVectoredExceptionHandler(1, shellcode_handler);
+    auto veh_handle = AddVectoredExceptionHandler(1, shellcode_handler);
 
     // loop each file that test_data_path contains
     for (const auto& entry: std::filesystem::directory_iterator(test_data_path))
@@ -115,6 +140,19 @@ int main(int argc, char* argv[])
         std::ifstream file(entry.path());
         nlohmann::json data = nlohmann::json::parse(file);
 
+        void* instruction_memory = VirtualAlloc(
+            nullptr,
+            0x1000,
+            MEM_COMMIT | MEM_RESERVE,
+            PAGE_EXECUTE_READWRITE
+        );
+
+        if (instruction_memory == nullptr)
+        {
+            std::printf("[-] failed to allocate memory for shellcode\n");
+            return 1;
+        }
+
         // data now contains an array of objects, enumerate each object
         for (auto& test: data)
         {
@@ -125,26 +163,25 @@ int main(int argc, char* argv[])
             nlohmann::json inputs = test["inputs"];
             nlohmann::json outputs = test["outputs"];
 
+            // i dont know what else to do
+            // you cannot just use VEH to recover RIP/RSP corruption
+            if(instr.contains("sp"))
+                continue;
+
             std::vector<uint8_t> instruction_data = parse_hex(instr_data);
-
-            void* instruction_memory = VirtualAlloc(
-                nullptr,
-                instruction_data.size(),
-                MEM_COMMIT | MEM_RESERVE,
-                PAGE_EXECUTE_READWRITE
-            );
-
-            if (instruction_memory == nullptr)
-            {
-                std::printf("[-] failed to allocate memory for shellcode\n");
-                return 1;
-            }
-
             memcpy(instruction_memory, &instruction_data[0], instruction_data.size());
 
-            bool test_ran = false;
+            std::printf("\n\n[test] %s\n", instr.c_str());
 
+            std::printf("[input]\n");
+            print_regs(inputs);
+
+            std::printf("[output]\n");
+            print_regs(outputs);
+
+            bool test_ran = false;
             RtlCaptureContext(&safe_context);
+
             if(!test_ran)
             {
                 test_ran = true;
@@ -153,19 +190,29 @@ int main(int argc, char* argv[])
                 output_target = build_context(outputs, safe_context);
 
                 // exception handler will redirect to this RIP
+                auto rip_diff = output_target.Rip - input_target.Rip;
                 input_target.Rip = reinterpret_cast<uint64_t>(instruction_memory);
+                output_target.Rip = input_target.Rip + rip_diff;
+
+                auto rsp_diff = output_target.Rsp - input_target.Rsp;
+                input_target.Rsp = safe_context.Rsp;
+                output_target.Rsp = input_target.Rsp + rsp_diff;
+
                 RtlRestoreContext(&input_target, nullptr);
             }
 
             // result_context is being set in the exception handler
-
             bool success = compare_context(result_context, output_target);
             if (!success)
-                std::printf("[-] test failed: %s\n", instr.c_str());
+                std::printf("[!] failed");
             else
-                std::printf("[+] test passed: %s\n", instr.c_str());
+                std::printf("[+] passed");
 
-            VirtualFree(instruction_memory, instruction_data.size(), MEM_RELEASE);
+            RtlZeroMemory(instruction_memory, 0x1000);
         }
+
+        VirtualFree(instruction_memory, 0x1000, MEM_RELEASE);
     }
+
+    RemoveVectoredExceptionHandler(veh_handle);
 }
