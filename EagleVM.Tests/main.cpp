@@ -6,7 +6,7 @@
 
 #include "nlohmann/json.hpp"
 
-CONTEXT run_context, exit_context;
+CONTEXT input_target, output_target;
 CONTEXT safe_context, result_context;
 
 std::vector<uint8_t> parse_hex(const std::string& hex)
@@ -42,40 +42,44 @@ CONTEXT build_context(nlohmann::json& inputs, CONTEXT& safe_context)
     for (auto& input: inputs.items())
     {
         std::string reg = input.key();
-        std::string value;
+        uint64_t value = 0;
         if(input.value().is_string())
-            value = input.value();
+        {
+            std::string str = input.value();
+            value = std::stoull(str, nullptr, 16);
+            value = _byteswap_uint64(value);
+        }
         
         if (reg == "rax") {
-            input_context.Rax = std::stoull(value, nullptr, 16);
+            input_context.Rax = value;
         } else if (reg == "rcx") {
-            input_context.Rcx = std::stoull(value, nullptr, 16);
+            input_context.Rcx = value;
         } else if (reg == "rdx") {
-            input_context.Rdx = std::stoull(value, nullptr, 16);
+            input_context.Rdx = value;
         } else if (reg == "rbx") {
-            input_context.Rbx = std::stoull(value, nullptr, 16);
+            input_context.Rbx = value;
         } else if (reg == "rsi") {
-            input_context.Rsi = std::stoull(value, nullptr, 16);
+            input_context.Rsi = value;
         } else if (reg == "rdi") {
-            input_context.Rdi = std::stoull(value, nullptr, 16);
+            input_context.Rdi = value;
         } else if (reg == "rsp") {
-            input_context.Rsp = std::stoull(value, nullptr, 16);
+            input_context.Rsp = value;
         } else if (reg == "rbp") {
-            input_context.Rbp = std::stoull(value, nullptr, 16);
+            input_context.Rbp = value;
         } else if (reg == "r8") {
-            input_context.R8 = std::stoull(value, nullptr, 16);
+            input_context.R8 = value;
         } else if (reg == "r10") {
-            input_context.R10 = std::stoull(value, nullptr, 16);
+            input_context.R10 = value;
         } else if (reg == "r11") {
-            input_context.R11 = std::stoull(value, nullptr, 16);
+            input_context.R11 = value;
         } else if (reg == "r12") {
-            input_context.R12 = std::stoull(value, nullptr, 16);
+            input_context.R12 = value;
         } else if (reg == "r13") {
-            input_context.R13 = std::stoull(value, nullptr, 16);
+            input_context.R13 = value;
         } else if (reg == "r14") {
-            input_context.R14 = std::stoull(value, nullptr, 16);
+            input_context.R14 = value;
         } else if (reg == "r15") {
-            input_context.R15 = std::stoull(value, nullptr, 16);
+            input_context.R15 = value;
         } else if (reg == "flags") {
             input_context.EFlags = input.value();
         }
@@ -88,10 +92,11 @@ bool compare_context(CONTEXT& result, CONTEXT& target)
 {
     // this is such a stupid hack but instead of writing 20 if statements im going to do this for now
     constexpr auto reg_size = 16 * 8;
-    auto res = memcmp(&result.Rax, &target.Rax, reg_size);
+    auto res_regs = memcmp(&result.Rax, &target.Rax, reg_size);
+    bool res_flags = true; //target.EFlags & result.EFlags == target.EFlags;
 
     // TODO: add RIP check but we dont really care about that
-    return res == 0;
+    return res_regs == 0 && res_flags;
 }
 
 int main(int argc, char* argv[])
@@ -144,20 +149,23 @@ int main(int argc, char* argv[])
             {
                 test_ran = true;
 
-                run_context = build_context(inputs, safe_context);
-                exit_context = build_context(outputs, safe_context);
+                input_target = build_context(inputs, safe_context);
+                output_target = build_context(outputs, safe_context);
 
                 // exception handler will redirect to this RIP
-                run_context.Rip = reinterpret_cast<uint64_t>(instruction_memory);
-                RtlRestoreContext(&run_context, nullptr);
+                input_target.Rip = reinterpret_cast<uint64_t>(instruction_memory);
+                RtlRestoreContext(&input_target, nullptr);
             }
 
-            if (!compare_context(result_context, exit_context))
+            // result_context is being set in the exception handler
+
+            bool success = compare_context(result_context, output_target);
+            if (!success)
                 std::printf("[-] test failed: %s\n", instr.c_str());
             else
                 std::printf("[+] test passed: %s\n", instr.c_str());
 
-            free(instruction_memory);
+            VirtualFree(instruction_memory, instruction_data.size(), MEM_RELEASE);
         }
     }
 }
