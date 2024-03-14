@@ -1,5 +1,7 @@
 #include "util.h"
 
+#include <fstream>
+
 std::vector<uint8_t> util::parse_hex(const std::string& hex)
 {
     std::vector<uint8_t> bytes;
@@ -13,7 +15,7 @@ std::vector<uint8_t> util::parse_hex(const std::string& hex)
     return bytes;
 }
 
-void util::print_regs(nlohmann::json& inputs)
+void util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
 {
     for (auto& input: inputs.items())
     {
@@ -31,6 +33,6 @@ void util::print_regs(nlohmann::json& inputs)
             value = _byteswap_uint64(value);
         }
 
-        std::printf("  %s : 0x%lx\n", key.c_str(), value);
+        stream << "  " << key << " : 0x" << std::hex << value << "\n";
     }
 }

@@ -1,5 +1,6 @@
 #include "run_container.h"
 
+#pragma optimize("", off)
 std::pair<CONTEXT, CONTEXT> run_container::run()
 {
     void* instruction_memory = VirtualAlloc(
@@ -8,6 +9,8 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         MEM_COMMIT | MEM_RESERVE,
         PAGE_EXECUTE_READWRITE
     );
+
+    memset(instruction_memory, 0xCC, 0x1000);
     memcpy(instruction_memory, instructions.data(), instructions.size());
 
     const memory_range mem_range = {
@@ -28,7 +31,6 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
     {
         test_ran = true;
 
-        input_target.EFlags = 0;
         input_target = build_context(safe_context, input_writes);
         output_target = build_context(safe_context, output_writes);
 
@@ -53,6 +55,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
 
     return {result_context, output_target};
 }
+#pragma optimize("", on)
 
 void run_container::set_result(const PCONTEXT result)
 {
@@ -124,7 +127,9 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
 {
     if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
         info->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION ||
-        info->ExceptionRecord->ExceptionCode == EXCEPTION_PRIV_INSTRUCTION)
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_PRIV_INSTRUCTION ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_DEBUG_EVENT ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
     {
         uint64_t current_rip = info->ContextRecord->Rip;
 
