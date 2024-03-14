@@ -6,8 +6,6 @@
 
 #include "nlohmann/json.hpp"
 
-#include "run.h"
-
 CONTEXT run_context, exit_context;
 CONTEXT safe_context, result_context;
 
@@ -32,11 +30,6 @@ LONG CALLBACK shellcode_handler(EXCEPTION_POINTERS* info)
         result_context = *info->ContextRecord;
         *info->ContextRecord = safe_context;
     }
-    else if (info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
-    {
-        std::printf("[>] redirecting to shellcode");
-        info->ContextRecord->Rip = run_context.Rip;
-    }
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -47,57 +40,38 @@ CONTEXT build_context(nlohmann::json& inputs, CONTEXT& safe_context)
     for (auto& input: inputs.items())
     {
         std::string reg = input.key();
-        std::string val = input.value();
-
-        switch (reg)
-        {
-            case "rax":
-                input_context.Rax = std::stoull(val, nullptr, 16);
-                break;
-            case "rcx":
-                input_context.Rcx = std::stoull(val, nullptr, 16);
-                break;
-            case "rdx":
-                input_context.Rdx = std::stoull(val, nullptr, 16);
-                break;
-            case "rbx":
-                input_context.Rbx = std::stoull(val, nullptr, 16);
-                break;
-            case "rsi":
-                input_context.Rsi = std::stoull(val, nullptr, 16);
-                break;
-            case "rdi":
-                input_context.Rdi = std::stoull(val, nullptr, 16);
-                break;
-            case "rsp":
-                input_context.Rsp = std::stoull(val, nullptr, 16);
-                break;
-            case "rbp":
-                input_context.Rbp = std::stoull(val, nullptr, 16);
-                break;
-            case "r8":
-                input_context.R8 = std::stoull(val, nullptr, 16);
-                break;
-            case "r10":
-                input_context.R10 = std::stoull(val, nullptr, 16);
-                break;
-            case "r11":
-                input_context.R11 = std::stoull(val, nullptr, 16);
-                break;
-            case "r12":
-                input_context.R12 = std::stoull(val, nullptr, 16);
-                break;
-            case "r13":
-                input_context.R13 = std::stoull(val, nullptr, 16);
-                break;
-            case "r14":
-                input_context.R14 = std::stoull(val, nullptr, 16);
-                break;
-            case "r15":
-                input_context.R15 = std::stoull(val, nullptr, 16);
-                break;
-            case "flags":
-                input_context.EFlags = std::stoull(val, nullptr, 16);
+        if (reg == "rax") {
+            input_context.Rax = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rcx") {
+            input_context.Rcx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rdx") {
+            input_context.Rdx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rbx") {
+            input_context.Rbx = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rsi") {
+            input_context.Rsi = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rdi") {
+            input_context.Rdi = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rsp") {
+            input_context.Rsp = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "rbp") {
+            input_context.Rbp = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r8") {
+            input_context.R8 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r10") {
+            input_context.R10 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r11") {
+            input_context.R11 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r12") {
+            input_context.R12 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r13") {
+            input_context.R13 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r14") {
+            input_context.R14 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "r15") {
+            input_context.R15 = std::stoull(static_cast<std::string>(input.value()), nullptr, 16);
+        } else if (reg == "flags") {
+            input_context.EFlags = input.value();
         }
     }
 
@@ -169,10 +143,7 @@ int main(int argc, char* argv[])
 
                 // exception handler will redirect to this RIP
                 run_context.Rip = reinterpret_cast<uint64_t>(instruction_memory);
-
-                // we should get an exception which will return us back to before the if statement
-                // this exception will happen because after RIP is advanced, its out of executable memory
-                run_shellcode(&instruction_data[0], &run_context);
+                RtlRestoreContext(&run_context, nullptr);
             }
 
             if (!compare_context(result_context, exit_context))
