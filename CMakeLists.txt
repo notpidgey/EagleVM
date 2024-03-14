@@ -187,6 +187,10 @@ endif()
 # Target: EagleVMTests
 set(EagleVMTests_SOURCES
 	"EagleVM.Tests/main.cpp"
+	"EagleVM.Tests/run_container.cpp"
+	"EagleVM.Tests/util.cpp"
+	"EagleVM.Tests/run_container.h"
+	"EagleVM.Tests/util.h"
 	cmake.toml
 )
 

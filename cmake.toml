@@ -45,7 +45,7 @@ link-libraries = ["EagleVMStub"]
 type = "executable"
 sources = [
     "EagleVM.Tests/**.cpp",
-    "EagleVM.Tests/**.hpp",
+    "EagleVM.Tests/**.h",
     "EagleVM.Tests/**.asm"
 ]
 compile-features = ["cxx_std_23"]

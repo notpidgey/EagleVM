@@ -1,0 +1,152 @@
+#include "run_container.h"
+
+std::pair<CONTEXT, CONTEXT> run_container::run()
+{
+    void* instruction_memory = VirtualAlloc(
+        nullptr,
+        0x1000,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+
+    const memory_range mem_range = {
+        reinterpret_cast<uint64_t>(instruction_memory),
+        static_cast<uint16_t>(0x1000)
+    };
+    {
+        std::lock_guard lock(run_tests_mutex);
+        run_tests[mem_range] = this;
+    }
+
+    CONTEXT output_target;
+
+    bool test_ran = false;
+    RtlCaptureContext(&safe_context);
+
+    if (!test_ran)
+    {
+        test_ran = true;
+
+        CONTEXT input_target = build_context(safe_context, input_writes);
+        output_target = build_context(safe_context, output_writes);
+
+        // exception handler will redirect to this RIP
+        uint64_t rip_diff = output_target.Rip - input_target.Rip;
+        input_target.Rip = reinterpret_cast<uint64_t>(instruction_memory);
+        output_target.Rip = input_target.Rip + rip_diff;
+
+        uint64_t rsp_diff = output_target.Rsp - input_target.Rsp;
+        input_target.Rsp = safe_context.Rsp;
+        output_target.Rsp = input_target.Rsp + rsp_diff;
+
+        RtlRestoreContext(&input_target, nullptr);
+    }
+
+    {
+        std::lock_guard lock(run_tests_mutex);
+
+        VirtualFree(instruction_memory, 0x1000, MEM_RELEASE);
+        run_tests.erase(mem_range);
+    }
+
+    return {result_context, output_target};
+}
+
+void run_container::set_result(const PCONTEXT result)
+{
+    result_context = *result;
+}
+
+CONTEXT run_container::get_safe_context()
+{
+    return safe_context;
+}
+
+void run_container::init_veh()
+{
+    veh_handle = AddVectoredExceptionHandler(1, veh_handler);
+}
+
+void run_container::destroy_veh()
+{
+    RemoveVectoredExceptionHandler(veh_handler);
+}
+
+CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes)
+{
+    CONTEXT new_context = safe;
+    for (auto& [reg, value]: writes)
+    {
+        if (reg == "rip")
+            new_context.Rip = value;
+        else if (reg == "rax")
+            new_context.Rax = value;
+        else if (reg == "rcx")
+            new_context.Rcx = value;
+        else if (reg == "rdx")
+            new_context.Rdx = value;
+        else if (reg == "rbx")
+            new_context.Rbx = value;
+        else if (reg == "rsi")
+            new_context.Rsi = value;
+        else if (reg == "rdi")
+            new_context.Rdi = value;
+        else if (reg == "rsp")
+            new_context.Rsp = value;
+        else if (reg == "rbp")
+            new_context.Rbp = value;
+        else if (reg == "r8")
+            new_context.R8 = value;
+        else if (reg == "r9")
+            new_context.R9 = value;
+        else if (reg == "r10")
+            new_context.R10 = value;
+        else if (reg == "r11")
+            new_context.R11 = value;
+        else if (reg == "r12")
+            new_context.R12 = value;
+        else if (reg == "r13")
+            new_context.R13 = value;
+        else if (reg == "r14")
+            new_context.R14 = value;
+        else if (reg == "r15")
+            new_context.R15 = value;
+        else if (reg == "flags")
+            new_context.EFlags = value;
+    }
+
+    return new_context;
+}
+
+LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
+{
+    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION ||
+        info->ExceptionRecord->ExceptionCode == EXCEPTION_PRIV_INSTRUCTION)
+    {
+        uint64_t current_rip = info->ContextRecord->Rip;
+
+        std::lock_guard lock(run_tests_mutex);
+
+        bool found = false;
+        for (auto& [ranges, val]: run_tests)
+        {
+            auto [low, size] = ranges;
+            if (low <= current_rip && current_rip <= low + size)
+            {
+                found = true;
+
+                val->set_result(info->ContextRecord);
+                *info->ContextRecord = val->get_safe_context();
+                break;
+            }
+        }
+
+        if (found)
+            return EXCEPTION_CONTINUE_EXECUTION;
+
+        __debugbreak();
+    }
+
+    return EXCEPTION_CONTINUE_SEARCH;
+}
