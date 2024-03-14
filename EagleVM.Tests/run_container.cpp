@@ -8,6 +8,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         MEM_COMMIT | MEM_RESERVE,
         PAGE_EXECUTE_READWRITE
     );
+    memcpy(instruction_memory, instructions.data(), instructions.size());
 
     const memory_range mem_range = {
         reinterpret_cast<uint64_t>(instruction_memory),
@@ -18,7 +19,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         run_tests[mem_range] = this;
     }
 
-    CONTEXT output_target;
+    CONTEXT output_target, input_target;
 
     bool test_ran = false;
     RtlCaptureContext(&safe_context);
@@ -27,15 +28,16 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
     {
         test_ran = true;
 
-        CONTEXT input_target = build_context(safe_context, input_writes);
+        input_target.EFlags = 0;
+        input_target = build_context(safe_context, input_writes);
         output_target = build_context(safe_context, output_writes);
 
         // exception handler will redirect to this RIP
-        uint64_t rip_diff = output_target.Rip - input_target.Rip;
+        int64_t rip_diff = output_target.Rip - input_target.Rip;
         input_target.Rip = reinterpret_cast<uint64_t>(instruction_memory);
         output_target.Rip = input_target.Rip + rip_diff;
 
-        uint64_t rsp_diff = output_target.Rsp - input_target.Rsp;
+        int64_t rsp_diff = output_target.Rsp - input_target.Rsp;
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 

@@ -23,6 +23,9 @@ public:
         instructions = data;
         input_writes = input;
         output_writes = output;
+
+        result_context = {};
+        safe_context = {};
     }
 
     std::pair<CONTEXT, CONTEXT> run();
