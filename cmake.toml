@@ -1,5 +1,6 @@
 [project]
 name = "EagleVM"
+languages = ["C", "CXX", "ASM_MASM"]
 
 [options]
 BUILD_TESTS = false
@@ -40,4 +41,12 @@ compile-features = ["cxx_std_23"]
 link-options = ["/DEBUG:FULL"]
 link-libraries = ["EagleVMStub"]
 
-# TODO: Tests
+[target.EagleVMTests]
+type = "executable"
+sources = [
+    "EagleVM.Tests/**.cpp",
+    "EagleVM.Tests/**.h",
+    "EagleVM.Tests/**.asm"
+]
+compile-features = ["cxx_std_23"]
+link-libraries = ["nlohmann_json", "Zydis"]

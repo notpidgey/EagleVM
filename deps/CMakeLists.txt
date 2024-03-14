@@ -20,6 +20,16 @@ endif()
 add_subdirectory(zydis)
 set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
 
+# Subdirectory: nlohmann-json
+set(CMKR_CMAKE_FOLDER ${CMAKE_FOLDER})
+if(CMAKE_FOLDER)
+	set(CMAKE_FOLDER "${CMAKE_FOLDER}/nlohmann-json")
+else()
+	set(CMAKE_FOLDER nlohmann-json)
+endif()
+add_subdirectory(nlohmann-json)
+set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
+
 # Target: bigint
 add_library(bigint INTERFACE)
 

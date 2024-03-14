@@ -10,8 +10,10 @@ void ia32_movsx_handler::construct_single(function_container& container, reg_siz
     create_vm_return(container);
 }
 
-encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, int& stack_disp, int index)
+encode_status ia32_movsx_handler::encode_operand(
+    function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, encode_ctx& context)
 {
+    auto [stack_disp, orig_rva, index] = context;
     if(index == 0)
     {
         // destination register
@@ -26,7 +28,7 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
         call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
 
-        stack_disp += bit64;
+        *stack_disp += bit64;
     }
     else
     {
@@ -53,14 +55,15 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         upscale_temp(container, target_size, current_size);
 
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
-        stack_disp += target_size;
+        *stack_disp += target_size;
     }
 
     return encode_status::success;
 }
 
-encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, int& stack_disp, int index)
+encode_status ia32_movsx_handler::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context)
 {
+    auto [stack_disp, orig_rva, index] = context;
     if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
 

@@ -88,12 +88,12 @@ void pe_generator::add_section(const IMAGE_SECTION_HEADER section_header)
     // section_headers.push_back(section_header);
 }
 
-void pe_generator::add_ignores(const std::vector<std::pair<uint32_t, uint8_t>>& ignore)
+void pe_generator::add_ignores(const std::vector<std::pair<uint32_t, uint32_t>>& ignore)
 {
     va_ignore = ignore;
 }
 
-void pe_generator::add_randoms(const std::vector<std::pair<uint32_t, uint8_t>>& random)
+void pe_generator::add_randoms(const std::vector<std::pair<uint32_t, uint32_t>>& random)
 {
     va_random = random;
 }

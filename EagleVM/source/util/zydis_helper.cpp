@@ -299,7 +299,7 @@ bool zydis_helper::has_relative_operand(zydis_decode& decode)
     return false;
 }
 
-std::pair<uint64_t, uint8_t> zydis_helper::calc_relative_rva(zydis_decode& decode, const uint32_t rva, const int8_t operand)
+std::pair<uint64_t, uint8_t> zydis_helper::calc_relative_rva(const zydis_decode& decode, const uint32_t rva, const int8_t operand)
 {
     const auto& [instruction, operands] = decode;
 

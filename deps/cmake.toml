@@ -4,6 +4,8 @@ ZYDIS_BUILD_EXAMPLES = false
 
 [subdir.zydis]
 
+[subdir.nlohmann-json]
+
 [target.bigint]
 type = "interface"
 include-directories = ["bigint"]

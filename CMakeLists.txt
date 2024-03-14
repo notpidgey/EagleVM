@@ -27,7 +27,12 @@ endif()
 # Options
 option(BUILD_TESTS "" OFF)
 
-project(EagleVM)
+project(EagleVM
+	LANGUAGES
+		C
+		CXX
+		ASM_MASM
+)
 
 # Subdirectory: deps
 set(CMKR_CMAKE_FOLDER ${CMAKE_FOLDER})
@@ -177,5 +182,34 @@ target_link_options(EagleVMSandbox PRIVATE
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)
 	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVMSandbox)
+endif()
+
+# Target: EagleVMTests
+set(EagleVMTests_SOURCES
+	"EagleVM.Tests/main.cpp"
+	"EagleVM.Tests/run_container.cpp"
+	"EagleVM.Tests/util.cpp"
+	"EagleVM.Tests/run_container.h"
+	"EagleVM.Tests/util.h"
+	cmake.toml
+)
+
+add_executable(EagleVMTests)
+
+target_sources(EagleVMTests PRIVATE ${EagleVMTests_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMTests_SOURCES})
+
+target_compile_features(EagleVMTests PRIVATE
+	cxx_std_23
+)
+
+target_link_libraries(EagleVMTests PRIVATE
+	nlohmann_json
+	Zydis
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVMTests)
 endif()
 
