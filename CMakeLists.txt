@@ -46,51 +46,7 @@ set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
 
 # Target: EagleVM
 set(EagleVM_SOURCES
-	"EagleVM/EagleVM.cpp"
-	"EagleVM/source/disassembler/disassembler.cpp"
-	"EagleVM/source/disassembler/models/basic_block.cpp"
-	"EagleVM/source/obfuscation/mba/math/mba_math.cpp"
-	"EagleVM/source/obfuscation/mba/mba.cpp"
-	"EagleVM/source/obfuscation/mba/mba_gen.cpp"
-	"EagleVM/source/obfuscation/mba/variable/mba_const.cpp"
-	"EagleVM/source/obfuscation/mba/variable/mba_exp.cpp"
-	"EagleVM/source/obfuscation/mba/variable/mba_var.cpp"
-	"EagleVM/source/obfuscation/mba/variable/mba_xy.cpp"
-	"EagleVM/source/pe/packer/pe_packer.cpp"
-	"EagleVM/source/pe/pe_generator.cpp"
-	"EagleVM/source/pe/pe_parser.cpp"
-	"EagleVM/source/util/section/code_label.cpp"
-	"EagleVM/source/util/section/function_container.cpp"
-	"EagleVM/source/util/section/section_manager.cpp"
-	"EagleVM/source/util/util.cpp"
-	"EagleVM/source/util/zydis_helper.cpp"
-	"EagleVM/source/virtual_machine/handlers/handlers/base_handler_entry.cpp"
-	"EagleVM/source/virtual_machine/handlers/handlers/inst_handler_entry.cpp"
-	"EagleVM/source/virtual_machine/handlers/handlers/vm_handler_entry.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/add.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/dec.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/div.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/imul.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/inc.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/lea.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/mov.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/movsx.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/mul.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/pop.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/push.cpp"
-	"EagleVM/source/virtual_machine/handlers/ia32_handlers/sub.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handler_context.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_enter.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_exit.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_load.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_pop_rflags.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_push_rflags.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_store.cpp"
-	"EagleVM/source/virtual_machine/handlers/vm_handlers/vm_trash_rflags.cpp"
-	"EagleVM/source/virtual_machine/vm_inst.cpp"
-	"EagleVM/source/virtual_machine/vm_inst_handlers.cpp"
-	"EagleVM/source/virtual_machine/vm_inst_regs.cpp"
-	"EagleVM/source/virtual_machine/vm_virtualizer.cpp"
+	"EagleVM/source/EagleVM.cpp"
 	cmake.toml
 )
 
@@ -103,8 +59,79 @@ target_compile_features(EagleVM PRIVATE
 	cxx_std_23
 )
 
+target_include_directories(EagleVM PRIVATE
+	"EagleVM/headers"
+)
+
+target_link_libraries(EagleVM PRIVATE
+	EagleVMCore
+)
+
+get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
+if(NOT CMKR_VS_STARTUP_PROJECT)
+	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVM)
+endif()
+
+# Target: EagleVMCore
+set(EagleVMCore_SOURCES
+	"EagleVM.Core/source/disassembler/disassembler.cpp"
+	"EagleVM.Core/source/disassembler/models/basic_block.cpp"
+	"EagleVM.Core/source/obfuscation/mba/math/mba_math.cpp"
+	"EagleVM.Core/source/obfuscation/mba/mba.cpp"
+	"EagleVM.Core/source/obfuscation/mba/mba_gen.cpp"
+	"EagleVM.Core/source/obfuscation/mba/variable/mba_const.cpp"
+	"EagleVM.Core/source/obfuscation/mba/variable/mba_exp.cpp"
+	"EagleVM.Core/source/obfuscation/mba/variable/mba_var.cpp"
+	"EagleVM.Core/source/obfuscation/mba/variable/mba_xy.cpp"
+	"EagleVM.Core/source/pe/packer/pe_packer.cpp"
+	"EagleVM.Core/source/pe/pe_generator.cpp"
+	"EagleVM.Core/source/pe/pe_parser.cpp"
+	"EagleVM.Core/source/util/section/code_label.cpp"
+	"EagleVM.Core/source/util/section/function_container.cpp"
+	"EagleVM.Core/source/util/section/section_manager.cpp"
+	"EagleVM.Core/source/util/util.cpp"
+	"EagleVM.Core/source/util/zydis_helper.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/handlers/base_handler_entry.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/handlers/inst_handler_entry.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/handlers/vm_handler_entry.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/add.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/dec.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/div.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/imul.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/inc.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/lea.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/mov.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/movsx.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/mul.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/pop.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/push.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/sub.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handler_context.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_enter.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_exit.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_load.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_pop_rflags.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_push_rflags.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_store.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/vm_handlers/vm_trash_rflags.cpp"
+	"EagleVM.Core/source/virtual_machine/vm_inst.cpp"
+	"EagleVM.Core/source/virtual_machine/vm_inst_handlers.cpp"
+	"EagleVM.Core/source/virtual_machine/vm_inst_regs.cpp"
+	"EagleVM.Core/source/virtual_machine/vm_virtualizer.cpp"
+	cmake.toml
+)
+
+add_library(EagleVMCore)
+
+target_sources(EagleVMCore PRIVATE ${EagleVMCore_SOURCES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMCore_SOURCES})
+
+target_compile_features(EagleVMCore PUBLIC
+	cxx_std_23
+)
+
 if(MSVC) # msvc
-	target_compile_options(EagleVM PRIVATE
+	target_compile_options(EagleVMCore PUBLIC
 		"/MP"
 		"/permissive-"
 		"/sdl"
@@ -116,24 +143,19 @@ if(MSVC) # msvc
 	)
 endif()
 
-target_include_directories(EagleVM PRIVATE
-	"EagleVM/headers"
+target_include_directories(EagleVMCore PUBLIC
+	"EagleVM.Core/headers"
 )
 
-target_link_libraries(EagleVM PRIVATE
+target_link_libraries(EagleVMCore PUBLIC
 	Zydis
 	bigint
 )
 
 if(MSVC) # msvc
-	target_link_options(EagleVM PRIVATE
+	target_link_options(EagleVMCore PUBLIC
 		"/INCREMENTAL:NO"
 	)
-endif()
-
-get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
-if(NOT CMKR_VS_STARTUP_PROJECT)
-	set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT EagleVM)
 endif()
 
 # Target: EagleVMStub
@@ -186,11 +208,11 @@ endif()
 
 # Target: EagleVMTests
 set(EagleVMTests_SOURCES
-	"EagleVM.Tests/main.cpp"
-	"EagleVM.Tests/run_container.cpp"
-	"EagleVM.Tests/util.cpp"
-	"EagleVM.Tests/run_container.h"
-	"EagleVM.Tests/util.h"
+	"EagleVM.Tests/source/main.cpp"
+	"EagleVM.Tests/source/run_container.cpp"
+	"EagleVM.Tests/source/util.cpp"
+	"EagleVM.Tests/headers/run_container.h"
+	"EagleVM.Tests/headers/util.h"
 	cmake.toml
 )
 
@@ -201,6 +223,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EagleVMTests_SOURCES})
 
 target_compile_features(EagleVMTests PRIVATE
 	cxx_std_23
+)
+
+target_include_directories(EagleVMTests PRIVATE
+	"EagleVM.Tests/headers"
 )
 
 target_link_libraries(EagleVMTests PRIVATE
