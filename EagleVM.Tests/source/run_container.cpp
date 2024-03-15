@@ -35,7 +35,8 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         RtlRestoreContext(&input_target, nullptr);
     }
 
-    free_run_area();
+    if(clear_run_area)
+        free_run_area();
 
     return {result_context, output_target};
 }
@@ -82,6 +83,13 @@ memory_range run_container::create_run_area(const uint16_t size)
     }
 
     return mem_range;
+}
+
+void run_container::set_run_area(uint64_t address, uint16_t size, bool clear)
+{
+    run_area = reinterpret_cast<void*>(address);
+    run_area_size = size;
+    clear_run_area = clear;
 }
 
 void run_container::free_run_area()

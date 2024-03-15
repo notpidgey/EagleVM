@@ -24,8 +24,18 @@ const std::string inclusive_tests[] = {
     "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub"
 };
 
+#pragma section(".handlers", read, write)
+__declspec(allocate(".handlers")) char handler_buffer[0x1000 * 10];
+
+#pragma section(".run_section", read, write)
+__declspec(allocate(".run_section")) char run_buffer[0x1000];
+
 int main(int argc, char* argv[])
 {
+    // give .handlers and .run_section execute permissions
+    VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
+    VirtualProtect(run_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
+
     // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
@@ -37,15 +47,12 @@ int main(int argc, char* argv[])
     vm_inst.init_reg_order();
 
     section_manager section = vm_inst.generate_vm_handlers(false);
-    void* handler_memory = VirtualAlloc(
-        nullptr,
-        0x1000 * 10,
-        MEM_COMMIT | MEM_RESERVE,
-        PAGE_EXECUTE_READWRITE
-    );
 
-    encoded_vec vmhandle_data = section.compile_section(reinterpret_cast<uint64_t>(handler_memory));
-    memcpy(handler_memory, vmhandle_data.data(), vmhandle_data.size());
+    uint64_t rva = reinterpret_cast<uint64_t>(&handler_buffer) - reinterpret_cast<uint64_t>(&__ImageBase);
+    encoded_vec vmhandle_data = section.compile_section(rva);
+
+    assert(sizeof(handler_buffer) >= vmhandle_data.size());
+    memcpy(&handler_buffer[0], vmhandle_data.data(), vmhandle_data.size());
 
     run_container::init_veh();
 
@@ -109,11 +116,13 @@ int main(int argc, char* argv[])
                 section_manager vm_code_sm(false);
                 vm_code_sm.add(virt.virtualize_segment(&dasm));
 
-                constexpr uint16_t run_area = 0x1000;
-                auto [begin, _] = container.create_run_area(run_area);
+                container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);
 
-                encoded_vec virtualized_instruction = vm_code_sm.compile_section(begin);
-                assert(run_area >= virtualized_instruction.size());
+                uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) -
+                    reinterpret_cast<uint64_t>(&__ImageBase);
+
+                encoded_vec virtualized_instruction = vm_code_sm.compile_section(instruction_rva);
+                assert(sizeof(run_buffer) >= virtualized_instruction.size());
 
                 container.set_instruction_data(virtualized_instruction);
             }

@@ -44,6 +44,7 @@ public:
     CONTEXT get_safe_context();
 
     memory_range create_run_area(uint16_t size = 0x1000);
+    void set_run_area(uint64_t address, uint16_t size, bool clear);
     void free_run_area();
 
     void* get_run_area();
@@ -56,6 +57,7 @@ private:
 
     void* run_area = nullptr;
     uint16_t run_area_size = 0;
+    bool clear_run_area = true;
 
     CONTEXT result_context{};
     CONTEXT safe_context{};
