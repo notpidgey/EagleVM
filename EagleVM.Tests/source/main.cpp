@@ -33,6 +33,10 @@ __declspec(allocate(".run_section")) char run_buffer[0x1000];
 int main(int argc, char* argv[])
 {
     // give .handlers and .run_section execute permissions
+    // the fact that i have to do this is so extremely cooked
+    // i mean its literally DOOMED
+    // the virtualizer doesnt allow displacement sizes larger than run time addresses
+    // so all i can do is create a section 🤣
     VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
     VirtualProtect(run_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
 
