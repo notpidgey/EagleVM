@@ -29,7 +29,7 @@ int64_t code_label::get()
     return virtual_address;
 }
 
-void code_label::finalize(uint32_t va)
+void code_label::finalize(const uint64_t va)
 {
     finalized = true;
     virtual_address = va;

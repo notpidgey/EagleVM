@@ -11,7 +11,7 @@ public:
     static code_label* create();
 
     int64_t get();
-    void finalize(uint32_t virtual_address);
+    void finalize(uint64_t virtual_address);
 
     bool is_finalized();
     bool is_comment();
@@ -20,7 +20,7 @@ public:
 
 private:
     std::string name;
-    uint32_t virtual_address;
+    uint64_t virtual_address;
 
     bool finalized;
     bool debug_comment;
