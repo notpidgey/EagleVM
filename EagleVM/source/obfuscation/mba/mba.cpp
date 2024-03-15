@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <random>
 
-#include <bigint.hpp>
-
 #define u_var_op(...) std::make_unique<mba_var_exp>(__VA_ARGS__)
 #define u_var_xy(...) std::make_unique<mba_var_xy>(__VA_ARGS__)
 #define u_var_const(x, y) std::make_unique<mba_var_const<x>>(y)
