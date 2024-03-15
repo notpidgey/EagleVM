@@ -6,9 +6,6 @@
 */
 void vm_load_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
 {
-    uint64_t size = reg_size;
-    dynamic_instructions_vec handle_instructions;
-
     const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
     auto target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);
 
