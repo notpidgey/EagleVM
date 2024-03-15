@@ -18,6 +18,16 @@ sources = [
     "EagleVM/**.hpp"
 ]
 compile-features = ["cxx_std_23"]
+link-libraries = ["EagleVMCore"]
+
+[target.EagleVMCore]
+type = "library"
+include-directories = ["EagleVM.Core/headers"]
+sources = [
+    "EagleVM.Core/**.cpp",
+    "EagleVM.Core/**.hpp"
+]
+compile-features = ["cxx_std_23"]
 link-libraries = ["Zydis", "bigint"]
 msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W3", "/Zc:inline", "/Zc:wchar_t", "$<$<CONFIG:Debug>:/FC;/JMC>", "$<$<NOT:$<CONFIG:Debug>>:/Gy;/O1;/Os>"]
 msvc.link-options = ["/INCREMENTAL:NO"]
@@ -44,9 +54,9 @@ link-libraries = ["EagleVMStub"]
 [target.EagleVMTests]
 type = "executable"
 sources = [
-    "EagleVM.Tests/**.cpp",
-    "EagleVM.Tests/**.h",
-    "EagleVM.Tests/**.asm"
+    "EagleVM.Tests/source/**.cpp",
+    "EagleVM.Tests/headers/**.h",
 ]
+include-directories = ["EagleVM.Tests/headers"]
 compile-features = ["cxx_std_23"]
 link-libraries = ["nlohmann_json", "Zydis"]
