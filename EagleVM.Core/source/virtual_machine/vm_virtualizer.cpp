@@ -114,8 +114,6 @@ function_container vm_virtualizer::virtualize_block(segment_dasm* dasm, basic_bl
             {
                 container.add(zydis_helper::decode_to_encode(instruction));
             }
-
-            std::printf("\t\t\t%s\n", zydis_helper::instruction_to_string(instruction).c_str());
         }
 
         current_rva += instruction.instruction.length;
