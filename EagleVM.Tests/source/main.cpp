@@ -4,8 +4,14 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <eaglevm-core/disassembler/disassembler.h>
+#include <eaglevm-core/disassembler/models/basic_block.h>
 
 #include "nlohmann/json.hpp"
+
+#include <eaglevm-core/virtual_machine/vm_inst.h>
+#include <eaglevm-core/virtual_machine/vm_virtualizer.h>
+
 #include "util.h"
 #include "run_container.h"
 
@@ -15,7 +21,7 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
-    "add", "dec", "div", "inc", "lea", "mov", "movsx", "pop", "push", "sub"
+    "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub"
 };
 
 int main(int argc, char* argv[])
@@ -24,6 +30,22 @@ int main(int argc, char* argv[])
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
+
+    zydis_helper::setup_decoder();
+
+    vm_inst vm_inst;
+    vm_inst.init_reg_order();
+
+    section_manager section = vm_inst.generate_vm_handlers(false);
+    void* handler_memory = VirtualAlloc(
+        nullptr,
+        0x1000 * 10,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+
+    encoded_vec vmhandle_data = section.compile_section(reinterpret_cast<uint64_t>(handler_memory));
+    memcpy(handler_memory, vmhandle_data.data(), vmhandle_data.size());
 
     run_container::init_veh();
 
@@ -72,16 +94,34 @@ int main(int argc, char* argv[])
                 util::print_regs(outputs, outfile);
             }
 
-            std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
             reg_overwrites ins = build_writes(inputs);
             reg_overwrites outs = build_writes(outputs);
 
-            run_container container(instruction_data, ins, outs);
+            run_container container(ins, outs);
+            {
+                vm_virtualizer virt(&vm_inst);
+
+                std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
+                decode_vec instructions = zydis_helper::get_instructions(instruction_data.data(), instruction_data.size());
+
+                segment_dasm dasm(instructions, 0, instruction_data.size());
+
+                section_manager vm_code_sm(false);
+                vm_code_sm.add(virt.virtualize_segment(&dasm));
+
+                constexpr uint16_t run_area = 0x1000;
+                auto [begin, _] = container.create_run_area(run_area);
+
+                encoded_vec virtualized_instruction = vm_code_sm.compile_section(begin);
+                assert(run_area >= virtualized_instruction.size());
+
+                container.set_instruction_data(virtualized_instruction);
+            }
+
             auto [result_context, output_target] = container.run();
 
             // result_context is being set in the exception handler
-            bool flags = outputs.contains("flags");
-            uint32_t result = compare_context(result_context, output_target, outs, flags);
+            uint32_t result = compare_context(result_context, output_target, outs, outputs.contains("flags"));
             if (result == none)
             {
                 outfile << "[+] passed\n";

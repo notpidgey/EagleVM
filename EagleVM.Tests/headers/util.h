@@ -5,6 +5,8 @@
 
 #include "nlohmann/json.hpp"
 
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+
 enum comparison_fail
 {
     none = 0b0,
