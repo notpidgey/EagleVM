@@ -230,6 +230,7 @@ target_include_directories(EagleVMTests PRIVATE
 )
 
 target_link_libraries(EagleVMTests PRIVATE
+	EagleVMCore
 	nlohmann_json
 	Zydis
 )

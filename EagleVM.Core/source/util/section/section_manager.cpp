@@ -18,6 +18,7 @@ section_manager::section_manager(bool shuffle)
 
 encoded_vec section_manager::compile_section(const uint64_t section_address)
 {
+    assert(section_address % 16 == 0 && "Section address must be aligned to 16 bytes");
     // i know there are better way to do this without using a variant vector (its disgusting)
     // or recompiling all the instructions 2x
     // but it is the easiest, and this is an open source project
@@ -61,7 +62,9 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
         }
     }
 
-    std::vector<uint8_t> compiled_section(current_address - section_address, 0);
+    std::vector<uint8_t> compiled_section;
+    compiled_section.reserve(current_address - section_address);
+
     auto it = compiled_section.begin();
 
     current_address = section_address;
@@ -73,7 +76,8 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
         if (code_label && !valid_label(code_label, current_address))
             code_label->finalize(current_address);
 
-        std::advance(it, align);
+        if(align)
+            compiled_section.insert(compiled_section.end(), align, 0);
 
         auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions]: segments)
@@ -84,7 +88,6 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
             if (seg_code_label && !valid_label(seg_code_label, current_address))
                 seg_code_label->finalize(current_address);
 
-            std::vector<uint8_t> compiled_instructions;
             for (auto& inst: instructions)
             {
                 zydis_encoder_request request;
@@ -98,21 +101,9 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
                 }, inst);
 
                 std::vector<uint8_t> compiled = zydis_helper::compile_absolute(request, 0);
-                compiled_instructions.append_range(compiled);
+                compiled_section.append_range(compiled);
                 current_address += compiled.size();
             }
-
-            // Calculate the position of the iterator before the insert operation
-            size_t pos = std::distance(compiled_section.begin(), it);
-
-            // Insert the elements
-            compiled_section.insert(it, compiled_instructions.begin(), compiled_instructions.end());
-
-            // Restore the iterator after the insert operation
-            it = compiled_section.begin();
-            std::advance(it, pos);
-
-            std::advance(it, compiled_instructions.size());
         }
     }
 

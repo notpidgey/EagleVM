@@ -59,4 +59,4 @@ sources = [
 ]
 include-directories = ["EagleVM.Tests/headers"]
 compile-features = ["cxx_std_23"]
-link-libraries = ["nlohmann_json", "Zydis"]
+link-libraries = ["EagleVMCore", "nlohmann_json", "Zydis"]

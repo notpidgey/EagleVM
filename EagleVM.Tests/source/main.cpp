@@ -4,8 +4,14 @@
 #include <fstream>
 #include <filesystem>
 #include <vector>
+#include <eaglevm-core/disassembler/disassembler.h>
+#include <eaglevm-core/disassembler/models/basic_block.h>
 
 #include "nlohmann/json.hpp"
+
+#include <eaglevm-core/virtual_machine/vm_inst.h>
+#include <eaglevm-core/virtual_machine/vm_virtualizer.h>
+
 #include "util.h"
 #include "run_container.h"
 
@@ -15,17 +21,48 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
-    "add", "dec", "div", "inc", "lea", "mov", "movsx", "pop", "push", "sub"
+    "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub"
 };
+
+#pragma section(".handlers", execute)
+__declspec(allocate(".handlers")) unsigned char handler_buffer[0x1000 * 10] = { 0xCC };
+
+#pragma section(".run_section", execute)
+__declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { 0xCC };
 
 int main(int argc, char* argv[])
 {
+    // give .handlers and .run_section execute permissions
+    // the fact that i have to do this is so extremely cooked
+    // i mean its literally DOOMED
+    // the virtualizer doesnt allow displacement sizes larger than run time addresses
+    // so all i can do is create a section 🤣
+    DWORD old_protect;
+    VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
+    VirtualProtect(run_buffer, sizeof(run_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
+
+    memset(handler_buffer, 0xCC, sizeof(handler_buffer));
+    memset(run_buffer, 0xCC, sizeof(run_buffer));
+
     // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
-    run_container::init_veh();
+    zydis_helper::setup_decoder();
+
+    vm_inst vm_inst;
+    vm_inst.init_reg_order();
+
+    section_manager section = vm_inst.generate_vm_handlers(false);
+
+    uint64_t rva = reinterpret_cast<uint64_t>(&handler_buffer) - reinterpret_cast<uint64_t>(&__ImageBase);
+    encoded_vec vmhandle_data = section.compile_section(rva);
+
+    assert(sizeof(handler_buffer) >= vmhandle_data.size());
+    memcpy(&handler_buffer[0], vmhandle_data.data(), vmhandle_data.size());
+
+    // run_container::init_veh();
 
     // loop each file that test_data_path contains
     for (const auto& entry: std::filesystem::directory_iterator(test_data_path))
@@ -72,16 +109,40 @@ int main(int argc, char* argv[])
                 util::print_regs(outputs, outfile);
             }
 
-            std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
             reg_overwrites ins = build_writes(inputs);
             reg_overwrites outs = build_writes(outputs);
 
-            run_container container(instruction_data, ins, outs);
+            run_container container(ins, outs);
+            {
+                vm_virtualizer virt(&vm_inst);
+
+                std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
+                decode_vec instructions = zydis_helper::get_instructions(instruction_data.data(), instruction_data.size());
+
+                segment_dasm dasm(instructions, 0, instruction_data.size());
+                dasm.generate_blocks();
+
+                section_manager vm_code_sm(false);
+                vm_code_sm.add(virt.virtualize_segment(&dasm));
+
+                container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);
+                uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) -
+                    reinterpret_cast<uint64_t>(&__ImageBase);
+
+                encoded_vec virtualized_instruction = vm_code_sm.compile_section(instruction_rva);
+                virtualized_instruction.erase(virtualized_instruction.end() - 5, virtualized_instruction.end());
+                virtualized_instruction.push_back(0x0F);
+                virtualized_instruction.push_back(0x01);
+                virtualized_instruction.push_back(0xC1);
+
+                assert(sizeof(run_buffer) >= virtualized_instruction.size());
+                container.set_instruction_data(virtualized_instruction);
+            }
+
             auto [result_context, output_target] = container.run();
 
             // result_context is being set in the exception handler
-            bool flags = outputs.contains("flags");
-            uint32_t result = compare_context(result_context, output_target, outs, flags);
+            uint32_t result = compare_context(result_context, output_target, outs, outputs.contains("flags"));
             if (result == none)
             {
                 outfile << "[+] passed\n";
