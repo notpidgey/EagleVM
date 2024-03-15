@@ -16,7 +16,7 @@ section_manager::section_manager(bool shuffle)
     shuffle_functions = shuffle;
 }
 
-encoded_vec section_manager::compile_section(const uint32_t section_address)
+encoded_vec section_manager::compile_section(const uint64_t section_address)
 {
     // i know there are better way to do this without using a variant vector (its disgusting)
     // or recompiling all the instructions 2x
@@ -27,7 +27,7 @@ encoded_vec section_manager::compile_section(const uint32_t section_address)
     if (shuffle_functions)
         perform_shuffle();
 
-    uint32_t current_address = section_address;
+    uint64_t current_address = section_address;
 
     // this should take all the functions in the section and connect them to desired labels
     for (auto& [code_label, sec_function]: section_functions)
@@ -152,21 +152,21 @@ std::vector<std::string> section_manager::generate_comments(const std::string& o
 
 void section_manager::add(function_container& function)
 {
-    section_functions.push_back({nullptr, function});
+    section_functions.emplace_back(nullptr, function);
 }
 
 void section_manager::add(const std::vector<function_container>& functions)
 {
-    for (int i = 0; i < functions.size(); i++)
-        section_functions.push_back({nullptr, functions[i]});
+    for (const auto& function: functions)
+        section_functions.emplace_back(nullptr, function);
 }
 
 void section_manager::add(code_label* label, function_container& function)
 {
-    section_functions.push_back({label, function});
+    section_functions.emplace_back(label, function);
 }
 
-bool section_manager::valid_label(code_label* label, uint32_t current_address)
+bool section_manager::valid_label(code_label* label, uint64_t current_address)
 {
     auto label_address = label->get();
     if (label_address != current_address)
