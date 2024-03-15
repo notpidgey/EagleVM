@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     assert(sizeof(handler_buffer) >= vmhandle_data.size());
     memcpy(&handler_buffer[0], vmhandle_data.data(), vmhandle_data.size());
 
-    // run_container::init_veh();
+    run_container::init_veh();
 
     // loop each file that test_data_path contains
     for (const auto& entry: std::filesystem::directory_iterator(test_data_path))

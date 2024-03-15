@@ -35,7 +35,6 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
-        init_veh();
         RtlRestoreContext(&input_target, nullptr);
     }
 
