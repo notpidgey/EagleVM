@@ -6,7 +6,7 @@
 #include <vector>
 
 typedef std::vector<std::pair<std::string, uint64_t>> reg_overwrites;
-typedef std::pair<uint64_t, uint16_t> memory_range;
+typedef std::pair<uint64_t, uint32_t> memory_range;
 
 struct memory_range_hash {
     std::size_t operator()(const memory_range& mr) const {
@@ -43,8 +43,8 @@ public:
     void set_result(PCONTEXT result);
     CONTEXT get_safe_context();
 
-    memory_range create_run_area(uint16_t size = 0x1000);
-    void set_run_area(uint64_t address, uint16_t size, bool clear);
+    memory_range create_run_area(uint32_t size = 0x1000);
+    void set_run_area(uint64_t address, uint32_t size, bool clear);
     void free_run_area();
 
     void* get_run_area();

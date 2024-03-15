@@ -24,11 +24,11 @@ const std::string inclusive_tests[] = {
     "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub"
 };
 
-#pragma section(".handlers", read, write)
-__declspec(allocate(".handlers")) char handler_buffer[0x1000 * 10];
+#pragma section(".handlers", execute)
+__declspec(allocate(".handlers")) unsigned char handler_buffer[0x1000 * 10] = { 0xCC };
 
-#pragma section(".run_section", read, write)
-__declspec(allocate(".run_section")) char run_buffer[0x1000];
+#pragma section(".run_section", execute)
+__declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { 0xCC };
 
 int main(int argc, char* argv[])
 {
@@ -37,8 +37,12 @@ int main(int argc, char* argv[])
     // i mean its literally DOOMED
     // the virtualizer doesnt allow displacement sizes larger than run time addresses
     // so all i can do is create a section 🤣
-    VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
-    VirtualProtect(run_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, nullptr);
+    DWORD old_protect;
+    VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
+    VirtualProtect(run_buffer, sizeof(run_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
+
+    memset(handler_buffer, 0xCC, sizeof(handler_buffer));
+    memset(run_buffer, 0xCC, sizeof(run_buffer));
 
     // setbuf(stdout, NULL);
     auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
@@ -58,7 +62,7 @@ int main(int argc, char* argv[])
     assert(sizeof(handler_buffer) >= vmhandle_data.size());
     memcpy(&handler_buffer[0], vmhandle_data.data(), vmhandle_data.size());
 
-    run_container::init_veh();
+    // run_container::init_veh();
 
     // loop each file that test_data_path contains
     for (const auto& entry: std::filesystem::directory_iterator(test_data_path))
@@ -116,18 +120,22 @@ int main(int argc, char* argv[])
                 decode_vec instructions = zydis_helper::get_instructions(instruction_data.data(), instruction_data.size());
 
                 segment_dasm dasm(instructions, 0, instruction_data.size());
+                dasm.generate_blocks();
 
                 section_manager vm_code_sm(false);
                 vm_code_sm.add(virt.virtualize_segment(&dasm));
 
                 container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);
-
                 uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) -
                     reinterpret_cast<uint64_t>(&__ImageBase);
 
                 encoded_vec virtualized_instruction = vm_code_sm.compile_section(instruction_rva);
-                assert(sizeof(run_buffer) >= virtualized_instruction.size());
+                virtualized_instruction.erase(virtualized_instruction.end() - 5, virtualized_instruction.end());
+                virtualized_instruction.push_back(0x0F);
+                virtualized_instruction.push_back(0x01);
+                virtualized_instruction.push_back(0xC1);
 
+                assert(sizeof(run_buffer) >= virtualized_instruction.size());
                 container.set_instruction_data(virtualized_instruction);
             }
 

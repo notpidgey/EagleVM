@@ -1,5 +1,7 @@
 #include "run_container.h"
 
+#include <intrin.h>
+
 #include "util.h"
 
 #pragma optimize("", off)
@@ -8,6 +10,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
     if(!run_area)
         create_run_area();
 
+    memcpy(run_area, instructions.data(), instructions.size());
     CONTEXT output_target, input_target;
 
     bool test_ran = false;
@@ -32,11 +35,14 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
+        init_veh();
         RtlRestoreContext(&input_target, nullptr);
     }
 
     if(clear_run_area)
         free_run_area();
+    else
+        memset(run_area, 0xCC, run_area_size);
 
     return {result_context, output_target};
 }
@@ -57,7 +63,7 @@ CONTEXT run_container::get_safe_context()
     return safe_context;
 }
 
-memory_range run_container::create_run_area(const uint16_t size)
+memory_range run_container::create_run_area(const uint32_t size)
 {
     if(run_area)
         free_run_area();
@@ -71,7 +77,6 @@ memory_range run_container::create_run_area(const uint16_t size)
     );
 
     memset(run_area, 0xCC, run_area_size);
-    memcpy(run_area, instructions.data(), instructions.size());
 
     const memory_range mem_range = {
         reinterpret_cast<uint64_t>(run_area),
@@ -85,11 +90,20 @@ memory_range run_container::create_run_area(const uint16_t size)
     return mem_range;
 }
 
-void run_container::set_run_area(uint64_t address, uint16_t size, bool clear)
+void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
 {
     run_area = reinterpret_cast<void*>(address);
     run_area_size = size;
     clear_run_area = clear;
+
+    const memory_range mem_range = {
+        reinterpret_cast<uint64_t>(run_area),
+        run_area_size
+    };
+    {
+        std::lock_guard lock(run_tests_mutex);
+        run_tests[mem_range] = this;
+    }
 }
 
 void run_container::free_run_area()
@@ -165,6 +179,5 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
     if (found)
         return EXCEPTION_CONTINUE_EXECUTION;
 
-    __debugbreak();
     return EXCEPTION_CONTINUE_SEARCH;
 }
