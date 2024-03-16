@@ -164,7 +164,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
             {
                 // this is meant to account for any possible pushes we set up
                 // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, -*stack_disp, 8)));
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8)));
             }
 
             call_vm_handler(container, push_address);
