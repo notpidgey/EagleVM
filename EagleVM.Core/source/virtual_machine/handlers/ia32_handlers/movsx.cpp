@@ -191,10 +191,6 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     // for movsx this is always going to be the second operand
     // this means that we want to get the value and pop it
     call_vm_handler(container, pop_address);
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
-        ZREG(zydis_helper::get_bit_version(VTEMP, mem_size)),
-        ZMEMBD(VTEMP, 0, mem_size)
-    ));
     upscale_temp(container, target_size, mem_size);
     call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
