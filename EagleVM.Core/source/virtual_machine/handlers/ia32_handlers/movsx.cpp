@@ -90,25 +90,33 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     //1. begin with loading the base register
     //mov VTEMP, imm
     //jmp VM_LOAD_REG
+    code_label* rip_label;
     {
-        if(op_mem.base != ZYDIS_REGISTER_RSP)
+        if(op_mem.base == ZYDIS_REGISTER_RSP)
+        {
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
+            if(*stack_disp)
+            {
+                // this is meant to account for any possible pushes we set up
+                // if we now access VSP, its not going to be what it was before we called this function
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, -*stack_disp, 8)));
+            }
+
+            call_vm_handler(container, push_address);
+        }
+        else if(op_mem.base == ZYDIS_REGISTER_RIP)
+        {
+            rip_label = code_label::create("rip: " + std::to_string(orig_rva));
+
+            container.add(rip_label, zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8)));
+            call_vm_handler(container, push_address);
+        }
+        else
         {
             const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
 
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
             call_vm_handler(container, lreg_address);
-        }
-        else
-        {
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
-            if(stack_disp)
-            {
-                // this is meant to account for any possible pushes we set up
-                // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, stack_disp, 8)));
-            }
-
-            call_vm_handler(container, push_address);
         }
     }
 
@@ -146,13 +154,35 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         // 3. load the displacement and add
         // we can do this with some trickery using LEA so we dont modify rflags
 
-        // pop current value into VTEMP
-        // lea VTEMP, [VTEMP +- imm]
-        // push
+        if(op_mem.base == ZYDIS_REGISTER_RIP)
+        {
+            // since this is RIP relative we first want to calculate where the original instruction is trying to access
+            auto [target, _] = zydis_helper::calc_relative_rva(instruction, orig_rva, index);
 
-        call_vm_handler(container, pop_address);
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
-        call_vm_handler(container, push_address);
+            // VTEMP = RIP at first operand instruction
+            // target = RIP + constant
+
+            call_vm_handler(container, pop_address);
+            container.add([=](uint64_t)
+            {
+                const uint64_t rip = rip_label->get();
+                const uint64_t constant = target - rip;
+
+                return zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, constant, 8));
+            });
+
+            call_vm_handler(container, push_address);
+        }
+        else
+        {
+            // pop current value into VTEMP
+            // lea VTEMP, [VTEMP +- imm]
+            // push
+
+            call_vm_handler(container, pop_address);
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
+            call_vm_handler(container, push_address);
+        }
     }
 
     reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
@@ -161,10 +191,6 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     // for movsx this is always going to be the second operand
     // this means that we want to get the value and pop it
     call_vm_handler(container, pop_address);
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
-        ZREG(zydis_helper::get_bit_version(VTEMP, mem_size)),
-        ZMEMBD(VTEMP, 0, mem_size)
-    ));
     upscale_temp(container, target_size, mem_size);
     call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
