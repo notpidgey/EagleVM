@@ -37,7 +37,7 @@ public:
         safe_context = {};
     }
 
-    std::pair<CONTEXT, CONTEXT> run();
+    std::pair<CONTEXT, CONTEXT> run(bool bp = false);
 
     void set_instruction_data(const std::vector<uint8_t>& data);
     void set_result(PCONTEXT result);
@@ -45,6 +45,7 @@ public:
 
     memory_range create_run_area(uint32_t size = 0x1000);
     void set_run_area(uint64_t address, uint32_t size, bool clear);
+
     void free_run_area();
 
     void* get_run_area();
@@ -64,6 +65,10 @@ private:
 
     reg_overwrites input_writes;
     reg_overwrites output_writes;
+
+    memory_range get_range();
+    void add_veh();
+    void remove_veh();
 
     static CONTEXT build_context(const CONTEXT& safe, reg_overwrites& writes);
     static CONTEXT clear_context(const CONTEXT& safe, reg_overwrites& writes);

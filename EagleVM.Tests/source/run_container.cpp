@@ -5,9 +5,9 @@
 #include "util.h"
 
 #pragma optimize("", off)
-std::pair<CONTEXT, CONTEXT> run_container::run()
+std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
 {
-    if(!run_area)
+    if (!run_area)
         create_run_area();
 
     memcpy(run_area, instructions.data(), instructions.size());
@@ -35,10 +35,18 @@ std::pair<CONTEXT, CONTEXT> run_container::run()
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
+        if(bp)
+        {
+            __debugbreak();
+        }
+
+        add_veh();
         RtlRestoreContext(&input_target, nullptr);
     }
 
-    if(clear_run_area)
+    remove_veh();
+
+    if (clear_run_area)
         free_run_area();
     else
         memset(run_area, 0xCC, run_area_size);
@@ -64,7 +72,7 @@ CONTEXT run_container::get_safe_context()
 
 memory_range run_container::create_run_area(const uint32_t size)
 {
-    if(run_area)
+    if (run_area)
         free_run_area();
 
     run_area_size = size;
@@ -76,48 +84,41 @@ memory_range run_container::create_run_area(const uint32_t size)
     );
 
     memset(run_area, 0xCC, run_area_size);
-
-    const memory_range mem_range = {
-        reinterpret_cast<uint64_t>(run_area),
-        run_area_size
-    };
-    {
-        std::lock_guard lock(run_tests_mutex);
-        run_tests[mem_range] = this;
-    }
-
-    return mem_range;
+    return get_range();
 }
 
 void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
 {
-    run_area = reinterpret_cast<void*>(address);
+    run_area = reinterpret_cast<void *>(address);
     run_area_size = size;
     clear_run_area = clear;
+}
 
-    const memory_range mem_range = {
+memory_range run_container::get_range()
+{
+    return {
         reinterpret_cast<uint64_t>(run_area),
         run_area_size
     };
-    {
-        std::lock_guard lock(run_tests_mutex);
-        run_tests[mem_range] = this;
-    }
+}
+
+void run_container::add_veh()
+{
+    std::lock_guard lock(run_tests_mutex);
+    run_tests[get_range()] = this;
+}
+
+void run_container::remove_veh()
+{
+    std::lock_guard lock(run_tests_mutex);
+    run_tests.erase(get_range());
 }
 
 void run_container::free_run_area()
 {
-    const memory_range mem_range = {
-        reinterpret_cast<uint64_t>(run_area),
-        run_area_size
-    };
+    remove_veh();
 
-    {
-        std::lock_guard lock(run_tests_mutex);
-
-        VirtualFree(run_area, 0x1000, MEM_RELEASE);
-        run_tests.erase(mem_range);
-    }
+    VirtualFree(run_area, 0x1000, MEM_RELEASE);
 
     run_area = nullptr;
     run_area_size = 0;
@@ -175,8 +176,6 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
         }
     }
 
-    if (found)
-        return EXCEPTION_CONTINUE_EXECUTION;
-
-    return EXCEPTION_CONTINUE_SEARCH;
+    assert(found == true, "Failed to handle exception, RIP out of bounds");
+    return EXCEPTION_CONTINUE_EXECUTION;
 }

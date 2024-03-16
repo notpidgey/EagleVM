@@ -100,7 +100,13 @@ int main(int argc, char* argv[])
             // i dont know what else to do
             // you cannot just use VEH to recover RIP/RSP corruption
             if (instr.contains("sp"))
-                continue; {
+                continue;
+
+            bool bp = false;
+            if(test.contains("bp"))
+                bp = test["bp"];
+
+            {
                 outfile << "\n\n[test] " << instr.c_str() << "\n";
                 outfile << "[input]\n";
                 util::print_regs(inputs, outfile);
@@ -139,10 +145,16 @@ int main(int argc, char* argv[])
                 container.set_instruction_data(virtualized_instruction);
             }
 
-            auto [result_context, output_target] = container.run();
+            auto [result_context, output_target] = container.run(bp);
 
             // result_context is being set in the exception handler
-            uint32_t result = compare_context(result_context, output_target, outs, outputs.contains("flags"));
+            const uint32_t result = compare_context(
+                result_context,
+                output_target,
+                outs,
+                outputs.contains("flags")
+            );
+
             if (result == none)
             {
                 outfile << "[+] passed\n";
