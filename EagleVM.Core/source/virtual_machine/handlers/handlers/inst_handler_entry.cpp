@@ -96,7 +96,7 @@ encode_status inst_handler_entry::encode_operand(
     // what about cases where we have RSP as the register?
     if(virtualize_as_address(instruction, index))
     {
-        const auto [displacement, size] = rm_->get_stack_displacement(TO64(op_reg.value));
+        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // this means we want to put the address of of the target register at the top of the stack
@@ -160,11 +160,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         if(op_mem.base == ZYDIS_REGISTER_RSP)
         {
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
-            if(stack_disp)
+            if(*stack_disp)
             {
                 // this is meant to account for any possible pushes we set up
                 // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8)));
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, -*stack_disp, 8)));
             }
 
             call_vm_handler(container, push_address);
@@ -250,7 +250,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         }
     }
 
-    if(op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
+    if(op_mem.type == ZYDIS_MEMOP_TYPE_AGEN || virtualize_as_address(instruction, index))
+    {
+        *stack_disp += bit64;
+    }
+    else
     {
         // by default, this will be dereferenced and we will get the value at the address,
         reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
@@ -263,10 +267,6 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
         *stack_disp += target_size;
-    }
-    else
-    {
-        *stack_disp += bit64;
     }
 
     return encode_status::success;
