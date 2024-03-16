@@ -9,10 +9,21 @@ void vm_store_handler::construct_single(function_container& container, reg_size 
     // mov [VTEMP2], VTEMP          ; move value into register location
 
     auto target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);
+    if(reg_size == bit32)
+    {
+        // we have to clear upper 32 bits of target register here
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-    call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, bit64), ZIMMS(0)));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+    }
+    else
+    {
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
+        call_vm_handler(container, pop_handler->get_handler_va(reg_size, 1));
+        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+    }
 
     create_vm_return(container);
 }
