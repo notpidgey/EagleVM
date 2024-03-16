@@ -112,14 +112,17 @@ basic_block* segment_dasm::generate_blocks()
 
 std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block* block, bool last)
 {
-    const block_end_reason end_reason = block->get_end_reason();
+    block_end_reason end_reason = block->get_end_reason();
+    if(last)
+        end_reason = block_end;
+
     switch (end_reason)
     {
         case block_end:
         {
             return {block->end_rva_inc, get_jump_location(block->end_rva_inc)};
         }
-        case block_jump || !last:
+        case block_jump:
         {
             zydis_decode last_inst = block->decoded_insts.back();
             const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
