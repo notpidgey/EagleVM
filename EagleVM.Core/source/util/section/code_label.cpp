@@ -40,9 +40,19 @@ bool code_label::is_finalized()
     return finalized;
 }
 
+void code_label::set_comment(bool comment)
+{
+    debug_comment = comment;
+}
+
 bool code_label::is_comment()
 {
     return debug_comment;
+}
+
+void code_label::set_name(const std::string& value)
+{
+    name = value;
 }
 
 std::string code_label::get_name()

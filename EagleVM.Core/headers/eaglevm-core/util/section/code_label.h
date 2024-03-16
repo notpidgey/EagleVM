@@ -14,8 +14,11 @@ public:
     void finalize(uint64_t virtual_address);
 
     bool is_finalized();
+
+    void set_comment(bool comment);
     bool is_comment();
 
+    void set_name(const std::string& value);
     std::string get_name();
 
 private:

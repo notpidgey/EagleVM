@@ -8,9 +8,6 @@ public:
         : inst_handler_entry(manager, handler_generator)
     {
         handlers = {
-            { bit64, 2 },
-            { bit32, 2 },
-            { bit16, 2 },
         };
     };
 
