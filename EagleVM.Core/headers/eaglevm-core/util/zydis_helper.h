@@ -32,6 +32,7 @@ namespace zydis_helper
 {
 	void setup_decoder();
 	zydis_register get_bit_version(zydis_register zy_register, reg_size requested_size);
+	bool is_upper_8(zydis_register zy_register);
 	reg_size get_reg_size(zydis_register zy_register);
     char reg_size_to_string(reg_size reg_size);
 
