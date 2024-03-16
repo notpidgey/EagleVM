@@ -50,6 +50,15 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
     return zy_register;
 }
 
+bool zydis_helper::is_upper_8(zydis_register zy_register)
+{
+    // includes ah, bh, ch, dh
+    if(zy_register >= ZYDIS_REGISTER_AH && zy_register <= ZYDIS_REGISTER_BH)
+        return true;
+
+    return false;
+}
+
 reg_size zydis_helper::get_reg_size(const zydis_register zy_register)
 {
     const uint16_t bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
