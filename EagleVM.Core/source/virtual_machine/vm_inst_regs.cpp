@@ -54,9 +54,11 @@ std::pair<uint32_t, reg_size> vm_inst_regs::get_stack_displacement(const zydis_r
     zydis_register bit64_reg = zydis_helper::get_bit_version(reg, bit64);
 
     int found_index = 0;
-    for(int i = 0; i < reg_stack_order_.size(); i++)
+    const auto reg_count = reg_stack_order_.size();
+
+    for(int i = 0; i < reg_count; i++)
     {
-        if(bit64_reg == reg_stack_order_[15 - i])
+        if(bit64_reg == reg_stack_order_[i])
         {
             found_index = i;
             break;
