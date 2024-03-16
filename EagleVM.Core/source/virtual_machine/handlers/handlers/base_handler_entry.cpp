@@ -13,11 +13,13 @@ function_container base_handler_entry::construct_handler()
 {
     std::ranges::for_each(handlers, [this](handler_info& info)
     {
-        container.assign_label(info.target_label);
-        construct_single(container, info.instruction_width, info.operand_count);
-
         const char size = zydis_helper::reg_size_to_string(info.instruction_width);
-        std::printf("%3c %-17s %-10zi\n", size, typeid(*this).name(), container.size());
+
+        container.assign_label(info.target_label);
+        info.target_label->set_name(size + std::string(typeid(*this).name()));
+        info.target_label->set_comment(true);
+
+        construct_single(container, info.instruction_width, info.operand_count);
     });
 
     std::printf("\n");
