@@ -116,8 +116,6 @@ void run_container::remove_veh()
 
 void run_container::free_run_area()
 {
-    remove_veh();
-
     VirtualFree(run_area, 0x1000, MEM_RELEASE);
 
     run_area = nullptr;
@@ -159,7 +157,7 @@ CONTEXT run_container::clear_context(const CONTEXT& safe, reg_overwrites& writes
 
 LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
 {
-    uint64_t current_rip = info->ContextRecord->Rip;
+    const uint64_t current_rip = info->ContextRecord->Rip;
     std::lock_guard lock(run_tests_mutex);
 
     bool found = false;
@@ -176,6 +174,14 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
         }
     }
 
-    assert(found == true, "Failed to handle exception, RIP out of bounds");
-    return EXCEPTION_CONTINUE_EXECUTION;
+    if(found)
+        return EXCEPTION_CONTINUE_EXECUTION;
+
+    if(info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
+    {
+        info->ContextRecord->Rip += 1;
+        return EXCEPTION_CONTINUE_EXECUTION;
+    }
+
+    return EXCEPTION_CONTINUE_SEARCH;
 }
