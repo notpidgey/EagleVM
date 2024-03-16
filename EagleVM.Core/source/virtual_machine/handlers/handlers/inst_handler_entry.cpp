@@ -129,7 +129,7 @@ encode_status inst_handler_entry::encode_operand(
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context)
 {
     auto [stack_disp, orig_rva, index] = context;
-    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
+    if(op_mem.type != ZYDIS_MEMOP_TYPE_MEM)
         return encode_status::unsupported;
 
     const vm_handler_entry* lreg_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
