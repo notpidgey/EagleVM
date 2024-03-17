@@ -20,6 +20,28 @@ void ia32_mov_handler::construct_single(function_container& container, reg_size 
     create_vm_return(container);
 }
 
+void ia32_mov_handler::finalize_translate_to_virtual(
+    const zydis_decode& decoded_instruction, function_container& container)
+{
+    auto op = decoded_instruction.operands[0];
+    if(op.type == ZYDIS_OPERAND_TYPE_REGISTER)
+    {
+        const zydis_register reg = op.reg.value;
+        const reg_size reg_size = zydis_helper::get_reg_size(reg);
+
+        if(reg_size == bit32)
+        {
+            // clear the upper 32 bits of the operand before mov happens
+            const auto [displacement, size] = rm_->get_stack_displacement(reg);
+
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP, 0, 8), ZIMMS(0)));
+        }
+    }
+
+    inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+}
+
 bool ia32_mov_handler::virtualize_as_address(const zydis_decode& inst, int index)
 {
     return index == 0;
