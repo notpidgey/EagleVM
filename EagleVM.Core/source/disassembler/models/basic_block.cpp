@@ -31,7 +31,7 @@ bool basic_block::is_conditional_jump() const
 bool basic_block::is_jump() const
 {
     const auto& [instruction, _] = decoded_insts.back();
-    return instruction.meta.branch_type == ZYDIS_MNEMONIC_JMP;
+    return instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && instruction.mnemonic == ZYDIS_MNEMONIC_JMP;
 }
 
 uint64_t basic_block::calc_jump_address(const uint8_t instruction_index) const

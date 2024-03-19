@@ -7,6 +7,8 @@ base_handler_entry::base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* 
 
     has_builder_hook = false;
     is_vm_handler = false;
+
+    handler_container = function_container();
 }
 
 function_container base_handler_entry::construct_handler()
@@ -15,16 +17,16 @@ function_container base_handler_entry::construct_handler()
     {
         const char size = zydis_helper::reg_size_to_string(info.instruction_width);
 
-        container.assign_label(info.target_label);
+        handler_container.assign_label(info.target_label);
         info.target_label->set_name(size + std::string(typeid(*this).name()));
         info.target_label->set_comment(true);
 
-        construct_single(container, info.instruction_width, info.operand_count);
+        construct_single(handler_container, info.instruction_width, info.operand_count);
     });
 
     std::printf("\n");
 
-    return container;
+    return handler_container;
 }
 
 void base_handler_entry::initialize_labels()

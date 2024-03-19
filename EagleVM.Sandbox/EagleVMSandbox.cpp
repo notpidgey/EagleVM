@@ -6,11 +6,12 @@
 
 int main(int argc, char* argv[])
 {
+    fnEagleVMBegin();
+
     std::string key;
     std::cout << "license key: ";
     std::cin >> key;
 
-    fnEagleVMBegin();
 
     if (key == "1798263718265567865") {
         std::cout << "correct key";

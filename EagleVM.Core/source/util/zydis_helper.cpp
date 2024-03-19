@@ -226,7 +226,7 @@ std::vector<uint8_t> zydis_helper::compile_queue(std::vector<ZydisEncoderRequest
     return data;
 }
 
-std::vector<uint8_t> zydis_helper::compile_queue_absolute(std::vector<zydis_encoder_request>& queue, uint32_t address)
+std::vector<uint8_t> zydis_helper::compile_queue_absolute(std::vector<zydis_encoder_request>& queue)
 {
     std::vector<uint8_t> data;
 

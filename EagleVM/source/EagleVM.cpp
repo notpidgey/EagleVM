@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 
     std::printf("[+] created random constants\n\n");
 
-    std::printf("[>] generating vm handlers at %04X...\n", (uint32_t)data_section.VirtualAddress);
+    std::printf("[>] generating vm handlers at %04X...\n", static_cast<uint32_t>(data_section.VirtualAddress));
 
     section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);

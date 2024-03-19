@@ -33,8 +33,7 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
     // this should take all the functions in the section and connect them to desired labels
     for (auto& [code_label, sec_function]: section_functions)
     {
-        const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
-        current_address += align;
+        current_address += 16;
 
         if (code_label)
             code_label->finalize(current_address);
@@ -62,6 +61,8 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
         }
     }
 
+RECOMPILE:
+
     std::vector<uint8_t> compiled_section;
     compiled_section.reserve(current_address - section_address);
 
@@ -70,23 +71,33 @@ encoded_vec section_manager::compile_section(const uint64_t section_address)
     current_address = section_address;
     for (auto& [code_label, sec_function]: section_functions)
     {
-        const uint8_t align = current_address % 16 == 0 ? 0 : 16 - (current_address % 16);
-        current_address += align;
+        compiled_section.insert(compiled_section.end(), 16, 0);
+        current_address += 16;
 
-        if (code_label && !valid_label(code_label, current_address))
+        if(code_label)
+        {
+            if(code_label->get() != current_address)
+            {
+                code_label->finalize(current_address);
+                goto RECOMPILE;
+            }
+
             code_label->finalize(current_address);
-
-        if(align)
-            compiled_section.insert(compiled_section.end(), align, 0);
+        }
 
         auto& segments = sec_function.get_segments();
         for (auto& [seg_code_label, instructions]: segments)
         {
-            if (seg_code_label && !seg_code_label->is_finalized())
-                __debugbreak();
+            if(seg_code_label)
+            {
+                if(seg_code_label->get() != current_address)
+                {
+                    seg_code_label->finalize(current_address);
+                    goto RECOMPILE;
+                }
 
-            if (seg_code_label && !valid_label(seg_code_label, current_address))
                 seg_code_label->finalize(current_address);
+            }
 
             for (auto& inst: instructions)
             {

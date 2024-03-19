@@ -1,6 +1,6 @@
 #include "eaglevm-core/disassembler/disassembler.h"
 
-segment_dasm::segment_dasm(const decode_vec& segment, const uint32_t binary_rva, const uint32_t binary_end)
+segment_dasm::segment_dasm(const decode_vec& segment, const uint64_t binary_rva, const uint64_t binary_end)
     : root_block(nullptr)
 {
     function = segment;
@@ -10,8 +10,8 @@ segment_dasm::segment_dasm(const decode_vec& segment, const uint32_t binary_rva,
 
 basic_block* segment_dasm::generate_blocks()
 {
-    uint32_t block_start_rva = rva_begin;
-    uint32_t current_rva = rva_begin;
+    uint64_t block_start_rva = rva_begin;
+    uint64_t current_rva = rva_begin;
 
     decode_vec block_instructions;
     for (auto& inst: function)
@@ -74,7 +74,7 @@ basic_block* segment_dasm::generate_blocks()
             target_block->end_rva_inc = jump_rva;
 
             // for the new_block, we copy all the instructions starting at the far_rva
-            uint32_t curr_rva = target_block->start_rva;
+            uint64_t curr_rva = target_block->start_rva;
             for (int j = 0; j < target_block->decoded_insts.size();)
             {
                 zydis_decode& inst = target_block->decoded_insts[j];
@@ -139,9 +139,11 @@ std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_bloc
             return {target_rva, get_jump_location(target_rva)};
         }
     }
+
+    return {0, jump_unknown};
 }
 
-block_jump_location segment_dasm::get_jump_location(const uint32_t rva) const
+block_jump_location segment_dasm::get_jump_location(const uint64_t rva) const
 {
     if (rva >= rva_begin && rva < rva_end)
         return jump_inside_segment;
@@ -149,7 +151,7 @@ block_jump_location segment_dasm::get_jump_location(const uint32_t rva) const
     return jump_outside_segment;
 }
 
-basic_block* segment_dasm::get_block(const uint32_t rva) const
+basic_block* segment_dasm::get_block(const uint64_t rva) const
 {
     for (basic_block* block: blocks)
     {
