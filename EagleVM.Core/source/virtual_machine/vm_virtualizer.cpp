@@ -271,10 +271,7 @@ void vm_virtualizer::call_vm_exit(function_container& container, code_label* tar
 void vm_virtualizer::create_vm_jump(zyids_mnemonic mnemonic, function_container& container, code_label* rva_target)
 {
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, [=](uint64_t rva)
-    {
-        return zydis_helper::enc(mnemonic, zydis_eimm{ .s = rva_target->get() - rel_label->get() }) ;
-    });
+    container.add(rel_label, RECOMPILE(zydis_helper::enc(mnemonic, ZJMP(rva_target, rel_label))));
 }
 
 std::pair<bool, function_container> vm_virtualizer::translate_to_virtual(const zydis_decode& decoded_instruction,
