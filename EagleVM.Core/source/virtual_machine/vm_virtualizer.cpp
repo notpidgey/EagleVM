@@ -46,7 +46,7 @@ function_container vm_virtualizer::virtualize_block(segment_dasm* dasm, basic_bl
     function_container container{};
     container.assign_label(block_labels_[block]);
 
-    uint32_t current_rva = block->start_rva;
+    uint64_t current_rva = block->start_rva;
     bool current_vm = false;
 
     int skip = 0;

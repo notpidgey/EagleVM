@@ -54,7 +54,7 @@ namespace zydis_helper
 	std::vector<uint8_t> compile_absolute(zydis_encoder_request& request, uint32_t address);
 
 	std::vector<uint8_t> compile_queue(std::vector<zydis_encoder_request>& queue);
-    std::vector<uint8_t> compile_queue_absolute(std::vector<zydis_encoder_request>& queue, uint32_t address);
+    std::vector<uint8_t> compile_queue_absolute(std::vector<zydis_encoder_request>& queue);
 
     std::vector<std::string> print(zydis_encoder_request& queue, uint32_t address);
     std::vector<std::string> print_queue(std::vector<zydis_encoder_request>& queue, uint32_t address);

@@ -56,6 +56,6 @@ protected:
     bool has_builder_hook;
     bool is_vm_handler;
 
-    function_container container;
+    function_container handler_container;
     std::vector<handler_info> handlers;
 };

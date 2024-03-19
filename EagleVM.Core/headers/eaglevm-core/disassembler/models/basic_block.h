@@ -8,8 +8,8 @@
 class basic_block
 {
 public:
-    uint32_t start_rva;
-    uint32_t end_rva_inc;
+    uint64_t start_rva;
+    uint64_t end_rva_inc;
     decode_vec decoded_insts;
 
     basic_block();

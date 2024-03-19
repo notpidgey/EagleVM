@@ -12,7 +12,7 @@ void pe_packer::set_overlay(bool overlay)
 
 std::pair<uint32_t, uint32_t> pe_packer::insert_pdb(encoded_vec& encoded_vec)
 {
-    uint32_t address = encoded_vec.size();
+    size_t address = encoded_vec.size();
 
     code_view_pdb pdb{};
     pdb.signature[0] = 'R';
