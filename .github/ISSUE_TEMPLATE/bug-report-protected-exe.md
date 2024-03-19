@@ -15,7 +15,7 @@ labels: 'bug-protected'
 assignees: ''
 ---
 
-* Describe the bug**
+**Describe the bug**
 What is the bug?
 If an exception occurs, showing where exactly the exception occurs helps the process.
 If you have any hints about why the problem occurs, please provide them as well.
