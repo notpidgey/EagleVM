@@ -26,9 +26,8 @@ std::vector<function_container> vm_virtualizer::virtualize_segment(segment_dasm*
 {
     for (basic_block* block: dasm->blocks)
     {
-        std::string block_name = "block:" + std::to_string(block->start_rva);;
-        code_label* block_label = code_label::create(block_name);
-        block_labels_[block] = block_label;
+        std::string block_name = "block:" + std::to_string(block->start_rva);
+        block_labels_[block] = code_label::create(block_name);
     }
 
     std::vector<function_container> virtualized_blocks;
@@ -104,6 +103,10 @@ function_container vm_virtualizer::virtualize_block(segment_dasm* dasm, basic_bl
                         {
                             op.imm.s = target_address - rva;
                             break;
+                        }
+                        default:
+                        {
+                            __debugbreak();
                         }
                     }
 
@@ -268,7 +271,10 @@ void vm_virtualizer::call_vm_exit(function_container& container, code_label* tar
 void vm_virtualizer::create_vm_jump(zyids_mnemonic mnemonic, function_container& container, code_label* rva_target)
 {
     code_label* rel_label = code_label::create("call_vm_enter_rel");
-    container.add(rel_label, RECOMPILE(zydis_helper::enc(mnemonic, ZJMP(rva_target, rel_label))));
+    container.add(rel_label, [=](uint64_t rva)
+    {
+        return zydis_helper::enc(mnemonic, zydis_eimm{ .s = rva_target->get() - rel_label->get() }) ;
+    });
 }
 
 std::pair<bool, function_container> vm_virtualizer::translate_to_virtual(const zydis_decode& decoded_instruction,
