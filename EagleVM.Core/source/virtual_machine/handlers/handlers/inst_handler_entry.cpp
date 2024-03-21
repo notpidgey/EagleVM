@@ -99,13 +99,13 @@ encode_status inst_handler_entry::encode_operand(
     // in the future this might change, but for now it will stay like this
 
     const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_REGISTER, index);
-    if(action | action_address)
+    if(action & action_address)
         load_reg_address(container, op_reg, context);
 
-    if(action | action_reg_offset)
+    if(action & action_reg_offset)
         load_reg_offset(container, op_reg, context);
 
-    if(action | action_value)
+    if(action & action_value)
         load_reg_value(container, op_reg, context);
 
     return encode_status::success;
@@ -240,11 +240,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     // for now it will kind of just be an assumption
 
     const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_MEMORY, index);
-    if(action | action_address || op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
+    if(action & action_address || op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
     {
         *stack_disp += bit64;
     }
-    else if (action | action_value)
+    else if (action & action_value)
     {
         // by default, this will be dereferenced and we will get the value at the address,
         const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
@@ -320,7 +320,7 @@ void inst_handler_entry::load_reg_offset(function_container& container, zydis_dr
     // mov VTEMP, DISPLACEMENT
     // push
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZIMMS(displacement)));
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
     call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
 
     *stack_disp += bit64;
