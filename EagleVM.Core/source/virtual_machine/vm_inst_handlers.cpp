@@ -34,4 +34,5 @@ void vm_inst_handlers::setup_vm_mapping()
     inst_handlers[ZYDIS_MNEMONIC_MOV] = new ia32_mov_handler(rm_, this);
     inst_handlers[ZYDIS_MNEMONIC_MOVSX] = new ia32_movsx_handler(rm_, this);
     inst_handlers[ZYDIS_MNEMONIC_LEA] = new ia32_lea_handler(rm_, this);
+    inst_handlers[ZYDIS_MNEMONIC_CMP] = new ia32_cmp_handler(rm_, this);
 }
