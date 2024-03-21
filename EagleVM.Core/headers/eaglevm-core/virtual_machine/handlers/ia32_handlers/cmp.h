@@ -18,4 +18,7 @@ public:
 private:
     void construct_single(function_container& container, reg_size size, uint8_t operands) override;
     void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container) override;
+    encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, encode_ctx& context) override;
+
+    void upscale_temp(function_container& container, reg_size target_size, reg_size current_size);
 };
