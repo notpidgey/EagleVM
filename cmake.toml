@@ -15,7 +15,7 @@ type = "executable"
 include-directories = ["EagleVM/headers"]
 sources = [
     "EagleVM/**.cpp",
-    "EagleVM/**.hpp"
+    "EagleVM/**.h"
 ]
 compile-features = ["cxx_std_23"]
 link-libraries = ["EagleVMCore"]
@@ -25,7 +25,7 @@ type = "library"
 include-directories = ["EagleVM.Core/headers"]
 sources = [
     "EagleVM.Core/**.cpp",
-    "EagleVM.Core/**.hpp"
+    "EagleVM.Core/**.h"
 ]
 compile-features = ["cxx_std_23"]
 link-libraries = ["Zydis", "bigint"]
@@ -37,7 +37,7 @@ type = "shared"
 include-directories = ["EagleVM.Stub/Headers"]
 sources = [
     "EagleVM.Stub/**.cpp",
-    "EagleVM.Stub/**.hpp"
+    "EagleVM.Stub/**.h"
 ]
 compile-features = ["cxx_std_23"]
 
@@ -45,7 +45,7 @@ compile-features = ["cxx_std_23"]
 type = "executable"
 sources = [
     "EagleVM.Sandbox/**.cpp",
-    "EagleVM.Sandbox/**.hpp"
+    "EagleVM.Sandbox/**.h"
 ]
 compile-features = ["cxx_std_23"]
 link-options = ["/DEBUG:FULL"]

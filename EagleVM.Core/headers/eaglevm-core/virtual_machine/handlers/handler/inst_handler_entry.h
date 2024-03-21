@@ -2,6 +2,8 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/base_handler_entry.h"
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
+#include "eaglevm-core/virtual_machine/models/vm_op_action.h"
+
 enum class encode_status
 {
     success,
@@ -24,7 +26,7 @@ public:
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction, uint64_t original_rva);
     code_label* get_handler_va(reg_size width, uint8_t operands) const;
 
-    virtual bool virtualize_as_address(const zydis_decode& inst, int index);
+    virtual vm_op_action get_virtualize_action(const zydis_decode& inst, int index);
 
 protected:
     virtual encode_status encode_operand(
@@ -37,4 +39,7 @@ protected:
         function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, encode_ctx& context);
 
     virtual void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container);
+
+    void load_reg_address(function_container& container, zydis_dreg reg, encode_ctx& context);
+    void load_reg_value(function_container& container, zydis_dreg reg, encode_ctx& context);
 };

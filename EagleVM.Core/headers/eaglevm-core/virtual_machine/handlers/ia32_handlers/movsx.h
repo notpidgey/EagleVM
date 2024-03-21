@@ -19,7 +19,7 @@ private:
     encode_status encode_operand(
         function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, encode_ctx& context) override;
     encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context) override;
-    bool virtualize_as_address(const zydis_decode& inst, int index) override;
+    vm_op_action get_virtualize_action(const zydis_decode& inst, int index) override;
 
     void upscale_temp(function_container& container, reg_size target, reg_size current);
 };

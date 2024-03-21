@@ -26,7 +26,10 @@ void ia32_dec_handler::finalize_translate_to_virtual(const zydis_decode& decoded
     call_vm_handler(container, store_handler->get_vm_handler_va(bit64));
 }
 
-bool ia32_dec_handler::virtualize_as_address(const zydis_decode& inst, int index)
+vm_op_action ia32_dec_handler::get_virtualize_action(const zydis_decode& inst, int index)
 {
-    return index == 0;
+    if(index == 0)
+        return vm_op_action::action_address;
+
+    return inst_handler_entry::get_virtualize_action(inst, index);
 }

@@ -13,5 +13,5 @@ public:
 
 private:
     void construct_single(function_container& container, reg_size size, uint8_t operands) override;
-    bool virtualize_as_address(const zydis_decode& inst, int index) override;
+    vm_op_action get_virtualize_action(const zydis_decode& inst, int index) override;
 };

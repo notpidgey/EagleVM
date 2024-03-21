@@ -197,9 +197,12 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     return encode_status::success;
 }
 
-bool ia32_movsx_handler::virtualize_as_address(const zydis_decode& inst, int index)
+vm_op_action ia32_movsx_handler::get_virtualize_action(const zydis_decode& inst, int index)
 {
-    return index == 0;
+    if(index == 0)
+        return vm_op_action::action_address;
+
+    return inst_handler_entry::get_virtualize_action(inst, index);
 }
 
 void ia32_movsx_handler::upscale_temp(function_container& container, reg_size target_size, reg_size current_size)

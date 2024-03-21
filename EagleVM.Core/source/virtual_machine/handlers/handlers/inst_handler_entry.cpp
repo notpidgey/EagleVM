@@ -76,9 +76,9 @@ code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands)
     return nullptr;
 }
 
-bool inst_handler_entry::virtualize_as_address(const zydis_decode& inst, int index)
+vm_op_action inst_handler_entry::get_virtualize_action(const zydis_decode& inst, int index)
 {
-    return false;
+    return vm_op_action::action_value;
 }
 
 void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)
@@ -93,34 +93,35 @@ encode_status inst_handler_entry::encode_operand(
 {
     auto [stack_disp, orig_rva, index] = context;
 
-    // what about cases where we have RSP as the register?
-    if(virtualize_as_address(instruction, index))
+    // TODO: what about cases where we have RSP as the register?
+
+    const vm_op_action action = get_virtualize_action(instruction, index);
+    if(action == vm_op_action::action_address)
     {
-        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
-        const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
-
-        // this means we want to put the address of of the target register at the top of the stack
-        // mov VTEMP, VREGS + DISPLACEMENT
-        // push
-
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
-        call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
-
-        *stack_disp += bit64;
+        load_reg_address(container, op_reg, context);
+    }
+    else if(action == vm_op_action::action_value)
+    {
+        load_reg_value(container, op_reg, context);
+    }
+    else if(action == vm_op_action::action_both_va)
+    {
+        // value and then address below it
+        load_reg_value(container, op_reg, context);
+        load_reg_address(container, op_reg, context);
+    }
+    else if(action == vm_op_action::action_both_av)
+    {
+        // address and then value below it
+        load_reg_address(container, op_reg, context);
+        load_reg_value(container, op_reg, context);
     }
     else
     {
-        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
-        const vm_handler_entry* load_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
+        // this should not happen
+        __debugbreak();
 
-        // this routine will load the register value to the top of the VSTACK
-        // mov VTEMP, -8
-        // call VM_LOAD_REG
-
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
-        call_vm_handler(container, load_handler->get_vm_handler_va(zydis_helper::get_reg_size(op_reg.value)));
-
-        *stack_disp += zydis_helper::get_reg_size(op_reg.value);
+        return encode_status::unsupported;
     }
 
     return encode_status::success;
@@ -250,23 +251,31 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         }
     }
 
-    if(op_mem.type == ZYDIS_MEMOP_TYPE_AGEN || virtualize_as_address(instruction, index))
+    const vm_op_action action = get_virtualize_action(instruction, index);
+    if(action == vm_op_action::action_address || op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
     {
         *stack_disp += bit64;
     }
-    else
+    else if (action == vm_op_action::action_value)
     {
         // by default, this will be dereferenced and we will get the value at the address,
-        reg_size target_size = reg_size(instruction.instruction.operand_width / 8);
+        const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
         // this means we are working with the second operand
-        auto target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
+        const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
 
         call_vm_handler(container, pop_address);
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size)));
         call_vm_handler(container, push_handler->get_handler_va(target_size, 1));
 
         *stack_disp += target_size;
+    }
+    else
+    {
+        // too lazy to implement rest for now, but this shouldnt happen
+        __debugbreak();
+
+        return encode_status::unsupported;
     }
 
     return encode_status::success;
@@ -294,4 +303,38 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
     *stack_disp += r_size;
     return encode_status::success;
+}
+
+void inst_handler_entry::load_reg_address(function_container& container, zydis_dreg op_reg, encode_ctx& context)
+{
+    auto [stack_disp, orig_rva, index] = context;
+
+    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+    const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
+
+    // this means we want to put the address of of the target register at the top of the stack
+    // mov VTEMP, VREGS + DISPLACEMENT
+    // push
+
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
+    call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
+
+    *stack_disp += bit64;
+}
+
+void inst_handler_entry::load_reg_value(function_container& container, zydis_dreg op_reg, encode_ctx& context)
+{
+    auto [stack_disp, orig_rva, index] = context;
+
+    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+    const vm_handler_entry* load_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
+
+    // this routine will load the register value to the top of the VSTACK
+    // mov VTEMP, -8
+    // call VM_LOAD_REG
+
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
+    call_vm_handler(container, load_handler->get_vm_handler_va(zydis_helper::get_reg_size(op_reg.value)));
+
+    *stack_disp += zydis_helper::get_reg_size(op_reg.value);
 }

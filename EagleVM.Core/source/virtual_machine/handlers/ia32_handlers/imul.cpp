@@ -104,7 +104,7 @@ void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decode
     }
 }
 
-bool ia32_imul_handler::virtualize_as_address(const zydis_decode& inst, int index)
+vm_op_action ia32_imul_handler::get_virtualize_action(const zydis_decode& inst, int index)
 {
     /*
      *  https://www.felixcloutier.com/x86/imul
@@ -114,7 +114,7 @@ bool ia32_imul_handler::virtualize_as_address(const zydis_decode& inst, int inde
      */
 
     if(index == 0 && inst.instruction.operand_count_visible == 3)
-        return true;
+        return vm_op_action::action_address;
 
-    return false;
+    return inst_handler_entry::get_virtualize_action(inst, index);
 }
