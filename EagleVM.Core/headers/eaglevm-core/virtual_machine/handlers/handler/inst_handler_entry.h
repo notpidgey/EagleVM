@@ -26,7 +26,7 @@ public:
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction, uint64_t original_rva);
     code_label* get_handler_va(reg_size width, uint8_t operands) const;
 
-    virtual vm_op_action get_virtualize_action(const zydis_decode& inst, int index);
+    virtual int get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index);
 
 protected:
     virtual encode_status encode_operand(
@@ -41,5 +41,6 @@ protected:
     virtual void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container);
 
     void load_reg_address(function_container& container, zydis_dreg reg, encode_ctx& context);
+    void load_reg_offset(function_container& container, zydis_dreg reg, encode_ctx& context);
     void load_reg_value(function_container& container, zydis_dreg reg, encode_ctx& context);
 };

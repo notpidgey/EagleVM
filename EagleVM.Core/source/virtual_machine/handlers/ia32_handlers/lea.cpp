@@ -19,7 +19,7 @@ void ia32_lea_handler::construct_single(function_container& container, reg_size 
     create_vm_return(container);
 }
 
-vm_op_action ia32_lea_handler::get_virtualize_action(const zydis_decode& inst, int index)
+int ia32_lea_handler::get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index)
 {
     return vm_op_action::action_address;
 }

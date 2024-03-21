@@ -13,5 +13,6 @@ public:
 
 private:
     void construct_single(function_container& container, reg_size size, uint8_t operands) override;
-    vm_op_action get_virtualize_action(const zydis_decode& inst, int index) override;
+
+    int get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index) override;
 };
