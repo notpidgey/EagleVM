@@ -21,7 +21,7 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
-    "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub"
+    "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub", "cmp"
 };
 
 #pragma section(".handlers", execute)
