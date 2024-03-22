@@ -23,4 +23,5 @@ private:
     int get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index) override;
 
     void upscale_temp(function_container& container, reg_size target, reg_size current);
+    void finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container);
 };
