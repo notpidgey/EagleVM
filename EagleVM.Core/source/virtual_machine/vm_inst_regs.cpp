@@ -69,7 +69,7 @@ std::pair<uint32_t, reg_size> vm_inst_regs::get_stack_displacement(const zydis_r
     if(reg_size == bit8)
     {
         if(zydis_helper::is_upper_8(reg))
-            offset += 1;
+            offset = 1;
     }
 
     return { found_index * 8 + offset, reg_size };

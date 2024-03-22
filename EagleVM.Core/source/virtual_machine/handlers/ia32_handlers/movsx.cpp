@@ -197,9 +197,12 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     return encode_status::success;
 }
 
-bool ia32_movsx_handler::virtualize_as_address(const zydis_decode& inst, int index)
+int ia32_movsx_handler::get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index)
 {
-    return index == 0;
+    if(index == 0)
+        return vm_op_action::action_address;
+
+    return inst_handler_entry::get_op_action(inst, op_type, index);
 }
 
 void ia32_movsx_handler::upscale_temp(function_container& container, reg_size target_size, reg_size current_size)
@@ -241,4 +244,26 @@ void ia32_movsx_handler::upscale_temp(function_container& container, reg_size ta
         ZREG(zydis_helper::get_bit_version(VTEMP, target_size)),
         ZREG(zydis_helper::get_bit_version(GR_RAX, target_size))
     ));
+}
+
+void ia32_movsx_handler::finalize_translate_to_virtual(
+    const zydis_decode& decoded_instruction, function_container& container)
+{
+    auto op = decoded_instruction.operands[0];
+    if(op.type == ZYDIS_OPERAND_TYPE_REGISTER)
+    {
+        const zydis_register reg = op.reg.value;
+        const reg_size reg_size = zydis_helper::get_reg_size(reg);
+
+        if(reg_size == bit32)
+        {
+            // clear the upper 32 bits of the operand before mov happens
+            const auto [displacement, size] = rm_->get_stack_displacement(reg);
+
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
+            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP, 0, 8), ZIMMS(0)));
+        }
+    }
+
+    inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 }

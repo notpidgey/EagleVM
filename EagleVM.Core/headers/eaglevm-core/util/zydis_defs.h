@@ -6,6 +6,7 @@
 typedef ZydisRegister zydis_register;
 typedef ZydisMnemonic zyids_mnemonic;
 
+typedef ZydisOperandType zyids_operand_t;
 typedef ZydisDecodedOperandImm_ zydis_dimm;
 typedef ZydisDecodedOperandMem_ zydis_dmem;
 typedef ZydisDecodedOperandPtr_ zydis_dptr;

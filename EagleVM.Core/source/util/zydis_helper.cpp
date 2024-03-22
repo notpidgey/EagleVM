@@ -15,25 +15,26 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
             return zy_register;
         case bit64:
             index = zy_register - ZYDIS_REGISTER_RAX;
-        break;
+            break;
         case bit32:
             index = zy_register - ZYDIS_REGISTER_EAX;
-        break;
+            break;
         case bit16:
             index = zy_register - ZYDIS_REGISTER_AX;
-        break;
+            break;
         case bit8:
-            if (zy_register >= ZYDIS_REGISTER_SPL)
+            if (zy_register >= ZYDIS_REGISTER_AH && zy_register <= ZYDIS_REGISTER_BH)
+                index = zy_register - ZYDIS_REGISTER_AH;
+            else if (zy_register >= ZYDIS_REGISTER_SPL)
                 index = zy_register - ZYDIS_REGISTER_SPL + 4;
             else
                 index = zy_register - ZYDIS_REGISTER_AL;
-        break;
     }
 
     switch (requested_size)
     {
         case unsupported:
-            break;
+            return zy_register;
         case bit64:
             return static_cast<zydis_register>(ZYDIS_REGISTER_RAX + index);
         case bit32:
@@ -41,10 +42,7 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
         case bit16:
             return static_cast<zydis_register>(ZYDIS_REGISTER_AX + index);
         case bit8:
-            if (index >= 4)
-                return static_cast<zydis_register>(ZYDIS_REGISTER_SPL + index - 4);
-            else
-                return static_cast<zydis_register>(ZYDIS_REGISTER_AL + index);
+            return static_cast<zydis_register>(ZYDIS_REGISTER_AL + index);
     }
 
     return zy_register;
@@ -53,7 +51,7 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
 bool zydis_helper::is_upper_8(zydis_register zy_register)
 {
     // includes ah, bh, ch, dh
-    if(zy_register >= ZYDIS_REGISTER_AH && zy_register <= ZYDIS_REGISTER_BH)
+    if (zy_register >= ZYDIS_REGISTER_AH && zy_register <= ZYDIS_REGISTER_BH)
         return true;
 
     return false;
@@ -87,7 +85,7 @@ std::vector<uint8_t> zydis_helper::encode_request(ZydisEncoderRequest& request)
     std::vector<uint8_t> instruction(ZYDIS_MAX_INSTRUCTION_LENGTH);
     ZyanUSize encoded_length = sizeof(uint8_t) * ZYDIS_MAX_INSTRUCTION_LENGTH;
     ZyanStatus status = ZydisEncoderEncodeInstruction(&request, instruction.data(), &encoded_length);
-    if(!ZYAN_SUCCESS(status))
+    if (!ZYAN_SUCCESS(status))
     {
         __debugbreak();
     }
@@ -111,7 +109,7 @@ zydis_encoder_request zydis_helper::decode_to_encode(const zydis_decode& decode)
 {
     zydis_encoder_request encode_request;
     ZydisEncoderDecodedInstructionToEncoderRequest(&decode.instruction, decode.operands,
-            decode.instruction.operand_count_visible, &encode_request);
+        decode.instruction.operand_count_visible, &encode_request);
 
     return encode_request;
 }
@@ -181,7 +179,7 @@ std::vector<uint8_t> zydis_helper::compile(zydis_encoder_request& request)
     ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
     const ZyanStatus result = ZydisEncoderEncodeInstruction(&request, instruction_data.data(), &encoded_length);
-    if(!ZYAN_SUCCESS(result))
+    if (!ZYAN_SUCCESS(result))
     {
         __debugbreak();
     }
@@ -196,7 +194,7 @@ std::vector<uint8_t> zydis_helper::compile_absolute(zydis_encoder_request& reque
     ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
     const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&request, instruction_data.data(), &encoded_length, address);
-    if(!ZYAN_SUCCESS(result))
+    if (!ZYAN_SUCCESS(result))
     {
         __debugbreak();
     }
@@ -214,7 +212,7 @@ std::vector<uint8_t> zydis_helper::compile_queue(std::vector<ZydisEncoderRequest
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
         const ZyanStatus result = ZydisEncoderEncodeInstruction(&i, instruction_data.data(), &encoded_length);
-        if(!ZYAN_SUCCESS(result))
+        if (!ZYAN_SUCCESS(result))
         {
             __debugbreak();
         }
@@ -237,7 +235,7 @@ std::vector<uint8_t> zydis_helper::compile_queue_absolute(std::vector<zydis_enco
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
         const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&i, instruction_data.data(), &encoded_length, current_rva);
-        if(!ZYAN_SUCCESS(result))
+        if (!ZYAN_SUCCESS(result))
         {
             __debugbreak();
         }
@@ -277,14 +275,14 @@ std::vector<std::string> zydis_helper::print_queue(std::vector<zydis_encoder_req
 bool zydis_helper::has_relative_operand(zydis_decode& decode)
 {
     const auto& [instruction, operands] = decode;
-    for(int i = 0; i < instruction.operand_count; i++)
+    for (int i = 0; i < instruction.operand_count; i++)
     {
         const zydis_decoded_operand& operand = operands[i];
-        switch(operand.type)
+        switch (operand.type)
         {
             case ZYDIS_OPERAND_TYPE_MEMORY:
             {
-                if(operand.mem.base == ZYDIS_REGISTER_RIP)
+                if (operand.mem.base == ZYDIS_REGISTER_RIP)
                     return true;
 
                 if (operand.mem.base == ZYDIS_REGISTER_NONE && operand.mem.index == ZYDIS_REGISTER_NONE)
@@ -294,7 +292,7 @@ bool zydis_helper::has_relative_operand(zydis_decode& decode)
             }
             case ZYDIS_OPERAND_TYPE_IMMEDIATE:
             {
-                if(operand.imm.is_relative)
+                if (operand.imm.is_relative)
                     return true;
                 break;
             }
@@ -313,19 +311,19 @@ std::pair<uint64_t, uint8_t> zydis_helper::calc_relative_rva(const zydis_decode&
     const auto& [instruction, operands] = decode;
 
     uint64_t target_address = rva;
-    if(operand < 0)
+    if (operand < 0)
     {
-        for(int i = 0; i < instruction.operand_count; i++)
+        for (int i = 0; i < instruction.operand_count; i++)
         {
             auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva, &target_address);
-            if(result == ZYAN_STATUS_SUCCESS)
+            if (result == ZYAN_STATUS_SUCCESS)
                 return {target_address, i};
         }
     }
     else
     {
         auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand], rva, &target_address);
-        if(result == ZYAN_STATUS_SUCCESS)
+        if (result == ZYAN_STATUS_SUCCESS)
             return {target_address, operand};
     }
 
@@ -339,7 +337,8 @@ std::vector<zydis_decode> zydis_helper::get_instructions(void* data, size_t size
     ZyanUSize offset = 0;
     zydis_decode decoded_instruction{};
 
-    while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &decoded_instruction.instruction, decoded_instruction.operands)))
+    while (ZYAN_SUCCESS(
+        ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset, &decoded_instruction.instruction, decoded_instruction.operands)))
     {
         decode_data.push_back(decoded_instruction);
         offset += decoded_instruction.instruction.length;
