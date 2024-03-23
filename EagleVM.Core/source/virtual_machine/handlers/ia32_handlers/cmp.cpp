@@ -24,9 +24,13 @@ void ia32_cmp_handler::construct_single(function_container& container, reg_size 
 
 void ia32_cmp_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
+    const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_LOAD];
+    call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
+
     inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
 
-    const vm_handler_entry* rflag_handler = hg_->v_handlers[MNEMONIC_VM_POP_RFLAGS];
+    // accept changes to rflags
+    const vm_handler_entry* rflag_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_ACCEPT];
     call_vm_handler(container, rflag_handler->get_vm_handler_va(bit64));
 }
 
