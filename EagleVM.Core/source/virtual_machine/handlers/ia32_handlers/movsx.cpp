@@ -70,9 +70,6 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
     const vm_handler_entry* lreg_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
     const auto lreg_address = lreg_handler->get_vm_handler_va(bit64);
 
-    const vm_handler_entry* trash_handler = hg_->v_handlers[MNEMONIC_VM_TRASH_RFLAGS];
-    const auto trash_address = trash_handler->get_vm_handler_va(bit64);
-
     const inst_handler_entry* mul_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_IMUL];
     const auto mul_address = mul_handler->get_handler_va(bit64, 2);
 
@@ -140,13 +137,11 @@ encode_status ia32_movsx_handler::encode_operand(function_container& container, 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale)));
         call_vm_handler(container, push_address);
         call_vm_handler(container, mul_address);
-        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         call_vm_handler(container, add_address);
-        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.disp.has_displacement)

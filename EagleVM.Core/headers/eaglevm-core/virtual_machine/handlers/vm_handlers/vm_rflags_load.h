@@ -1,10 +1,10 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
-class vm_pop_rflags_handler : public vm_handler_entry
+class vm_rflags_load_handler : public vm_handler_entry
 {
 public:
-    vm_pop_rflags_handler(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
+    vm_rflags_load_handler(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : vm_handler_entry(manager, handler_generator)
     {
         handlers = {
