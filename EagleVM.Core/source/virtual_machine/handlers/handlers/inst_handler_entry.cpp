@@ -59,12 +59,12 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
     return { true, container };
 }
 
-code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands) const
+code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
 {
-    auto it = std::ranges::find_if(handlers,
-        [width, operands](const handler_info& h)
+    const auto it = std::ranges::find_if(handlers,
+        [width, operands, override](const handler_info& h)
         {
-            if(h.instruction_width == width && h.operand_count == operands)
+            if(h.instruction_width == width && h.operand_count == operands && h.override == override)
                 return true;
 
             return false;

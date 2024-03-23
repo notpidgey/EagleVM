@@ -157,6 +157,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/include_ia32.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/include_vm.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/models/handler_info.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/models/handler_override.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/vm_handlers/vm_enter.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/vm_handlers/vm_exit.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/handlers/vm_handlers/vm_load.h"

@@ -24,7 +24,7 @@ public:
         : base_handler_entry(manager, handler_generator) { }
 
     virtual std::pair<bool, function_container> translate_to_virtual(const zydis_decode& decoded_instruction, uint64_t original_rva);
-    code_label* get_handler_va(reg_size width, uint8_t operands) const;
+    code_label* get_handler_va(reg_size width, uint8_t operands, handler_override override = ho_default) const;
 
     virtual int get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index);
 

@@ -11,6 +11,7 @@
 #include "eaglevm-core/virtual_machine/vm_inst_regs.h"
 
 #include "eaglevm-core/virtual_machine/handlers/models/handler_info.h"
+#include "eaglevm-core/virtual_machine/handlers/models/handler_override.h"
 
 #define VIP         rm_->get_reg(I_VIP)
 #define VSP         rm_->get_reg(I_VSP)

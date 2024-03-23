@@ -6,6 +6,7 @@ struct handler_info
 {
     reg_size instruction_width = bit64;
     uint8_t operand_count = 2;
+    uint8_t override = 0;
 
     code_label* target_label = nullptr;
 };
