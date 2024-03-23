@@ -42,7 +42,12 @@ zydis_register zydis_helper::get_bit_version(zydis_register zy_register, reg_siz
         case bit16:
             return static_cast<zydis_register>(ZYDIS_REGISTER_AX + index);
         case bit8:
-            return static_cast<zydis_register>(ZYDIS_REGISTER_AL + index);
+        {
+            if(index <= 3)
+                return static_cast<zydis_register>(ZYDIS_REGISTER_AL + index);
+
+            return static_cast<zydis_register>(ZYDIS_REGISTER_SPL + index - 4);
+        }
     }
 
     return zy_register;
