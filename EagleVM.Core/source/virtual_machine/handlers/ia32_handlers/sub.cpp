@@ -42,7 +42,7 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // pop VTEMP, this will contain the VREGS offset we will write to
-        call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
+        call_vm_handler(container, pop_handler->get_handler_va(bit32, 1));
 
         // at this current state:
         // VTEMP: VREGS offset

@@ -321,7 +321,7 @@ void inst_handler_entry::load_reg_offset(function_container& container, zydis_dr
     // push
 
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
-    call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
+    call_vm_handler(container, push_handler->get_handler_va(bit32, 1)); // always 32 bit bececause its an imm
 
     *stack_disp += bit64;
 }
