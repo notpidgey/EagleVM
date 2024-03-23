@@ -273,14 +273,10 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 {
     auto [stack_disp, orig_rva, index] = context;
 
-    auto imm = op_imm.value;
     const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
     const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
-
-    const auto desired_temp_reg = zydis_helper::get_bit_version(VTEMP, r_size);
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(desired_temp_reg), ZIMMU(imm.u)));
-
+    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u)));
     call_vm_handler(container, push_handler->get_handler_va(r_size, 1));
 
     *stack_disp += r_size;

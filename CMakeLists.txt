@@ -95,6 +95,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/handlers/handlers/inst_handler_entry.cpp"
 	"EagleVM.Core/source/virtual_machine/handlers/handlers/vm_handler_entry.cpp"
 	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/add.cpp"
+	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/cmp.cpp"
 	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/dec.cpp"
 	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/div.cpp"
 	"EagleVM.Core/source/virtual_machine/handlers/ia32_handlers/imul.cpp"
@@ -233,6 +234,7 @@ target_include_directories(EagleVMStub PUBLIC
 # Target: EagleVMSandbox
 set(EagleVMSandbox_SOURCES
 	"EagleVM.Sandbox/EagleVMSandbox.cpp"
+	"EagleVM.Sandbox/xorstr.hpp"
 	cmake.toml
 )
 

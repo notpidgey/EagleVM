@@ -11,3 +11,4 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/pop.h"
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/push.h"
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/lea.h"
+#include "eaglevm-core/virtual_machine/handlers/ia32_handlers/cmp.h"
