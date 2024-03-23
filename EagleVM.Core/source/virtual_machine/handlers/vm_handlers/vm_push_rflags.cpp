@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/vm_handlers/vm_push_rflags.h"
 
-void vm_push_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void vm_push_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     // TODO: there is a potential issue with this because even if we choose to ignore the rflags after whatever vm handler called this,
     // what happens to the rlags we modified? wont this hinder execution?

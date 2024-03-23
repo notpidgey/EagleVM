@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/sub.h"
 
-void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
+void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
 {
     uint64_t size = reg_size;
 

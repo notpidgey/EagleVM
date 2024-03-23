@@ -1,6 +1,6 @@
 #pragma once
 
-enum handler_override : uint8_t
+enum handler_override
 {
     ho_default = 0,
 

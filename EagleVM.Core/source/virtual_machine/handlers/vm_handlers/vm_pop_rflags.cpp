@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/vm_handlers/vm_pop_rflags.h"
 
-void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void vm_pop_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     container.add({
         zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(GR_RSP)),

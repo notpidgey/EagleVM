@@ -21,7 +21,7 @@ function_container base_handler_entry::construct_handler()
         info.target_label->set_name(size + std::string(typeid(*this).name()));
         info.target_label->set_comment(true);
 
-        construct_single(handler_container, info.instruction_width, info.operand_count);
+        construct_single(handler_container, info.instruction_width, info.operand_count, info.override);
     });
 
     std::printf("\n");

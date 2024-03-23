@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/vm_handlers/vm_trash_rflags.h"
 
-void vm_trash_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void vm_trash_rflags_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     if(size == bit64)
     {

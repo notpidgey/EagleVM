@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/add.h"
 
-void ia32_add_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void ia32_add_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_PUSH_RFLAGS];
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];

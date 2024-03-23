@@ -4,7 +4,7 @@
     VMLOAD
     Load the value displacement (located in VTEMP) from VREGS onto the stack
 */
-void vm_load_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
+void vm_load_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
 {
     const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
     auto target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);

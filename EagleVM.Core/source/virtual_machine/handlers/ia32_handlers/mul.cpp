@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/mul.h"
 
-void ia32_mul_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
+void ia32_mul_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
 {
     // TODO: this is just an add handler, mul does not actually support 2 operands like this
     // we need to implement the actual mul instruction which pops AX from stack

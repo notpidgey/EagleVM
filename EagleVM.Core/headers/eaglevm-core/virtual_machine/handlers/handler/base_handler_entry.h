@@ -46,7 +46,7 @@ public:
     void create_vm_return(function_container& container);
     void call_vm_handler(function_container& container, code_label* jump_label);
 
-    virtual void construct_single(function_container& container, reg_size size, uint8_t operands) = 0;
+    virtual void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override) = 0;
 
 protected:
     ~base_handler_entry() = default;

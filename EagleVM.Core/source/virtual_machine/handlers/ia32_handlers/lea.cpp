@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/lea.h"
 
-void ia32_lea_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void ia32_lea_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     // value we want to move should be located at the top of the stack
     // the address we want to move TO should be located right below it
