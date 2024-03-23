@@ -13,7 +13,7 @@ base_handler_entry::base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* 
 
 function_container base_handler_entry::construct_handler()
 {
-    std::ranges::for_each(handlers, [this](handler_info& info)
+    std::ranges::for_each(handlers, [this](const handler_info& info)
     {
         const char size = zydis_helper::reg_size_to_string(info.instruction_width);
 
@@ -21,10 +21,8 @@ function_container base_handler_entry::construct_handler()
         info.target_label->set_name(size + std::string(typeid(*this).name()));
         info.target_label->set_comment(true);
 
-        construct_single(handler_container, info.instruction_width, info.operand_count);
+        construct_single(handler_container, info.instruction_width, info.operand_count, info.override);
     });
-
-    std::printf("\n");
 
     return handler_container;
 }

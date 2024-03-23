@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/push.h"
 
-void ia32_push_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
+void ia32_push_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
 {
     int64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;

@@ -8,5 +8,5 @@ public:
     vm_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
         : base_handler_entry(manager, handler_generator) { }
 
-    code_label* get_vm_handler_va(reg_size width) const;
+    code_label* get_vm_handler_va(reg_size width, handler_override override = ho_default) const;
 };

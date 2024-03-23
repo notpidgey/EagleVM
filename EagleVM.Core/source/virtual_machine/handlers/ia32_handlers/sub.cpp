@@ -1,12 +1,10 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/sub.h"
 
-void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands)
+void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
 {
     uint64_t size = reg_size;
 
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
-    const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_PUSH_RFLAGS];
-
     const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);
 
     // pop VTEMP
@@ -15,20 +13,23 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
     // sub qword ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(VSP, 0, size), ZREG(target_temp)));
 
-    // push rflags                      ; push rflags in case we want to accept these changes
-    call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
-
     create_vm_return(container);
 }
 
 void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
 {
-    const reg_size target_size = static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8);
-    inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+    {
+        const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_LOAD];
+        call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
 
-    // accept changes to rflags
-    const vm_handler_entry* rflag_handler = hg_->v_handlers[MNEMONIC_VM_POP_RFLAGS];
-    call_vm_handler(container, rflag_handler->get_vm_handler_va(bit64));
+        inst_handler_entry::finalize_translate_to_virtual(decoded_instruction, container);
+
+        // accept changes to rflags
+        const vm_handler_entry* rflag_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_ACCEPT];
+        call_vm_handler(container, rflag_handler->get_vm_handler_va(bit64));
+    }
+
+    const reg_size target_size = static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8);
 
     // pop VTEMP2, this will contain the value which we will write
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
@@ -42,7 +43,7 @@ void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
 
         // pop VTEMP, this will contain the VREGS offset we will write to
-        call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
+        call_vm_handler(container, pop_handler->get_handler_va(bit32, 1));
 
         // at this current state:
         // VTEMP: VREGS offset

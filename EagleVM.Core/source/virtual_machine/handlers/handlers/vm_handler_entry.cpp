@@ -1,11 +1,11 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
-code_label* vm_handler_entry::get_vm_handler_va(reg_size width) const
+code_label* vm_handler_entry::get_vm_handler_va(reg_size width, handler_override override) const
 {
-    auto it = std::ranges::find_if(handlers,
-        [width](const handler_info& h)
+    const auto it = std::ranges::find_if(handlers,
+        [width, override](const handler_info& h)
         {
-            if(h.instruction_width == width)
+            if(h.instruction_width == width && h.override == override)
                 return true;
 
             return false;

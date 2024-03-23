@@ -59,12 +59,12 @@ std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(con
     return { true, container };
 }
 
-code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands) const
+code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
 {
-    auto it = std::ranges::find_if(handlers,
-        [width, operands](const handler_info& h)
+    const auto it = std::ranges::find_if(handlers,
+        [width, operands, override](const handler_info& h)
         {
-            if(h.instruction_width == width && h.operand_count == operands)
+            if(h.instruction_width == width && h.operand_count == operands && h.override == override)
                 return true;
 
             return false;
@@ -119,9 +119,6 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 
     const vm_handler_entry* lreg_handler = hg_->v_handlers[MNEMONIC_VM_LOAD_REG];
     const auto lreg_address = lreg_handler->get_vm_handler_va(bit64);
-
-    const vm_handler_entry* trash_handler = hg_->v_handlers[MNEMONIC_VM_TRASH_RFLAGS];
-    const auto trash_address = trash_handler->get_vm_handler_va(bit64);
 
     const inst_handler_entry* mul_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_IMUL];
     const auto mul_address = mul_handler->get_handler_va(bit64, 2);
@@ -190,13 +187,11 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale)));
         call_vm_handler(container, push_address);
         call_vm_handler(container, mul_address);
-        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.index != ZYDIS_REGISTER_NONE)
     {
         call_vm_handler(container, add_address);
-        call_vm_handler(container, trash_address);
     }
 
     if(op_mem.disp.has_displacement)
@@ -317,7 +312,7 @@ void inst_handler_entry::load_reg_offset(function_container& container, zydis_dr
     // push
 
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
-    call_vm_handler(container, push_handler->get_handler_va(bit64, 1)); // always 64 bit because its an address
+    call_vm_handler(container, push_handler->get_handler_va(bit32, 1)); // always 32 bit bececause its an imm
 
     *stack_disp += bit64;
 }
