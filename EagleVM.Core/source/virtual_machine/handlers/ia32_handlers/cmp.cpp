@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/cmp.h"
 
-void ia32_cmp_handler::construct_single(function_container& container, reg_size size, uint8_t operands)
+void ia32_cmp_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
 
