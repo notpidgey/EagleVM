@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/imul.h"
 
-void ia32_imul_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
+void ia32_imul_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
     const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
@@ -19,7 +19,8 @@ void ia32_imul_handler::construct_single(function_container& container, reg_size
 
     call_vm_handler(container, push_handler->get_handler_va(reg_size, 1));
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }
 
 void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)

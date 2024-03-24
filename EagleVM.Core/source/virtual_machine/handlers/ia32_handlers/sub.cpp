@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/sub.h"
 
-void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
+void ia32_sub_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
 {
     uint64_t size = reg_size;
 
@@ -13,7 +13,8 @@ void ia32_sub_handler::construct_single(function_container& container, reg_size 
     // sub qword ptr [VSP], VTEMP       ; subtracts topmost value from 2nd top most value
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(VSP, 0, size), ZREG(target_temp)));
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }
 
 void ia32_sub_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)

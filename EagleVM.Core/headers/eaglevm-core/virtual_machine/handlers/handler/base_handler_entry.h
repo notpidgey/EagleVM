@@ -46,7 +46,7 @@ public:
     void create_vm_return(function_container& container);
     void call_vm_handler(function_container& container, code_label* jump_label);
 
-    virtual void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override) = 0;
+    virtual void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined) = 0;
 
 protected:
     ~base_handler_entry() = default;
@@ -59,4 +59,7 @@ protected:
 
     function_container handler_container;
     std::vector<handler_info> handlers;
+
+    void call_virtual_handler(function_container& container, int handler_id, reg_size size, bool inlined);
+    void call_instruction_handler(function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined);
 };

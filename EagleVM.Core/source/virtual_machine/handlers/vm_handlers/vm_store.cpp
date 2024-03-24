@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/vm_handlers/vm_store.h"
 
-void vm_store_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
+void vm_store_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
 
@@ -25,5 +25,6 @@ void vm_store_handler::construct_single(function_container& container, reg_size 
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
     }
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }

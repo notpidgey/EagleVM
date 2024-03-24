@@ -1,6 +1,7 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/add.h"
 
-void ia32_add_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
+void ia32_add_handler::construct_single(function_container& container, const reg_size size, uint8_t operands, handler_override override,
+    const bool inlined)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
     const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, size);
@@ -12,7 +13,8 @@ void ia32_add_handler::construct_single(function_container& container, reg_size 
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZMEMBD(VSP, 0, size), ZREG(target_temp)));
 
     // return
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }
 
 void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
@@ -36,7 +38,7 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP2), ZREG(VTEMP)));
 
     const zyids_operand_t op_type = decoded_instruction.operands[0].type;
-    if(op_type == ZYDIS_OPERAND_TYPE_REGISTER)
+    if (op_type == ZYDIS_OPERAND_TYPE_REGISTER)
     {
         const vm_handler_entry* store_handler = hg_->v_handlers[MNEMONIC_VM_STORE_REG];
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
@@ -68,7 +70,7 @@ void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded
         // TODO: all of this can be fixed by having a variant handler for STORE/POP which store in different VTEMP values
         // get_vm_handler_va needs to have an override to get a different kind of variant handler for optimization
     }
-    else if(op_type == ZYDIS_OPERAND_TYPE_MEMORY)
+    else if (op_type == ZYDIS_OPERAND_TYPE_MEMORY)
     {
         // pop VTEMP, this will contain the address we will write to
         call_vm_handler(container, pop_handler->get_handler_va(bit64, 1));
@@ -89,9 +91,9 @@ int ia32_add_handler::get_op_action(const zydis_decode& inst, const zyids_operan
     // we do this because add handler only takes values, but we want to write it
     // if its a memory operand, the action should load value and address
     // if its a register operand, the action should load value and offset
-    if(index == 0)
+    if (index == 0)
     {
-        switch(op_type)
+        switch (op_type)
         {
             case ZYDIS_OPERAND_TYPE_REGISTER:
                 return action_value | action_reg_offset;

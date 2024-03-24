@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/movsx.h"
 
-void ia32_movsx_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override)
+void ia32_movsx_handler::construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
 {
     const inst_handler_entry* mov_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_MOV];
 

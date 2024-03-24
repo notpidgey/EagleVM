@@ -15,7 +15,7 @@ public:
     }
 
 private:
-    void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override) override;
+    void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined = false) override;
     encode_status encode_operand(
         function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, encode_ctx& context) override;
     encode_status encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem, encode_ctx& context) override;

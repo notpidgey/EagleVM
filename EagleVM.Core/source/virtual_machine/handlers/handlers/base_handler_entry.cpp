@@ -1,4 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/base_handler_entry.h"
+#include "eaglevm-core/virtual_machine/handlers/handler/inst_handler_entry.h"
+#include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
 base_handler_entry::base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator)
 {
@@ -21,7 +23,7 @@ function_container base_handler_entry::construct_handler()
         info.target_label->set_name(size + std::string(typeid(*this).name()));
         info.target_label->set_comment(true);
 
-        construct_single(handler_container, info.instruction_width, info.operand_count, info.override);
+        construct_single(handler_container, info.instruction_width, info.operand_count, info.override, false);
     });
 
     return handler_container;
@@ -70,3 +72,32 @@ void base_handler_entry::call_vm_handler(function_container& container, code_lab
     container.assign_label(retun_label);
 }
 
+void base_handler_entry::call_virtual_handler(function_container& container, int handler_id, reg_size size, bool inlined)
+{
+    vm_handler_entry* target_handler = hg_->v_handlers[handler_id];
+    if (target_handler == nullptr)
+    {
+        __debugbreak();
+        return;
+    }
+
+    if (inlined)
+        target_handler->construct_single(container, size, 0, ho_default, true);
+    else
+        call_vm_handler(container, target_handler->get_vm_handler_va(size));
+}
+
+void base_handler_entry::call_instruction_handler(function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined)
+{
+    inst_handler_entry* target_handler = hg_->inst_handlers[handler_id];
+    if (target_handler == nullptr)
+    {
+        __debugbreak();
+        return;
+    }
+
+    if (inlined)
+        target_handler->construct_single(container, size, operands, ho_default, true);
+    else
+        call_vm_handler(container, target_handler->get_handler_va(size, operands));
+}

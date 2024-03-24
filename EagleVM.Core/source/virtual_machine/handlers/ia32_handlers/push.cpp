@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/push.h"
 
-void ia32_push_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
+void ia32_push_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
 {
     int64_t size = reg_size;
     dynamic_instructions_vec handle_instructions;
@@ -14,5 +14,6 @@ void ia32_push_handler::construct_single(function_container& container, reg_size
         zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VSP, 0, size), ZREG(target_temp))
     });
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }

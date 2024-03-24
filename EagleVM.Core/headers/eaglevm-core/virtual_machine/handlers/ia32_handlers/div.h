@@ -15,5 +15,5 @@ public:
     };
 
 private:
-    void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override) override;
+    void construct_single(function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined = false) override;
 };

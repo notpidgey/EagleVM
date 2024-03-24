@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/handlers/ia32_handlers/inc.h"
 
-void ia32_inc_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override)
+void ia32_inc_handler::construct_single(function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
 {
     const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
 
@@ -10,7 +10,8 @@ void ia32_inc_handler::construct_single(function_container& container, reg_size 
     //inc [VTEMP]                   ; inc popped value
     container.add(zydis_helper::enc(ZYDIS_MNEMONIC_INC, ZMEMBD(VTEMP, 0, reg_size)));
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }
 
 void ia32_inc_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, function_container& container)
