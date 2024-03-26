@@ -11,7 +11,6 @@
 
 template <typename T>
 mba_gen<T>::mba_gen(uint8_t size)
-{
     // this has so much potential to be expanded
     // you can add your own truths, build your own truths, randomize truths per operator etc
 
@@ -300,17 +299,62 @@ mba_gen<T>::mba_gen(uint8_t size)
 
     // zero truths
     {
-        // (X ^ Y) ^ (X ^ Y)
-
-        // (X + Y) & 0
-
-        // (X | Y) ^ (X | Y)
-
-        // (X & Y) ^ (X & Y)
-
-        // (X & ~X)
-
-        // (X ^ X)
+        // (X ^ Y) ^ (X ^ Y) = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_xor);
+            zero_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_xor);
+            zero_truth.operation = op_xor;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
+    
+        // (X + Y) & 0 = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_plus);
+            zero_truth.operation = op_and;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
+    
+        // (X | Y) ^ (X | Y) = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or);
+            zero_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_or);
+            zero_truth.operation = op_xor;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
+    
+        // (X & Y) ^ (X & Y) = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
+            zero_truth.vars[1] = u_var_op(u_var_xy(var_x), u_var_xy(var_y), op_and);
+            zero_truth.operation = op_xor;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
+    
+        // (X & ~X) = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_x, mod_not), op_and);
+            zero_truth.operation = op_none;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
+    
+        // (X ^ X) = 0
+        {
+            mba_var_exp zero_truth{};
+            zero_truth.vars[0] = u_var_op(u_var_xy(var_x), u_var_xy(var_x), op_xor);
+            zero_truth.operation = op_none;
+    
+            mba_simple_truth.push_back({ zero_truth, u_var_const(T, 0) });
+        }
     }
 }
 
