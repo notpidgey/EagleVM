@@ -1,4 +1,5 @@
 #pragma once
+
 #include "eaglevm-core/obfuscation/mba/variable/mba_var.h"
 #include "eaglevm-core/obfuscation/mba/variable/mba_const.h"
 #include "eaglevm-core/obfuscation/mba/variable/mba_exp.h"
@@ -25,4 +26,6 @@ private:
     void bottom_expand_variable(std::unique_ptr<mba_var_exp>& exp);
     void bottom_insert_identity(std::unique_ptr<mba_var_exp>& exp);
     void expand_constants(std::unique_ptr<mba_var_exp>& exp);
+    void top_expand(std::unique_ptr<mba_var_exp>& exp);
+    void random_expand(std::unique_ptr<mba_var_exp>& exp);
 };
