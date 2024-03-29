@@ -88,10 +88,7 @@ void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decod
     const reg_size size = static_cast<reg_size>(decoded.instruction.operand_width / 8);
     const int operand_count = decoded.instruction.operand_count_visible;
 
-    if (is_inlined)
-        call_instruction_handler(container, decoded.instruction.mnemonic, size, operand_count, true);
-    else
-        call_vm_handler(container, get_handler_va(size,operand_count));
+    call_instruction_handler(container, decoded.instruction.mnemonic, size, operand_count, is_inlined);
 }
 
 encode_status inst_handler_entry::encode_operand(
