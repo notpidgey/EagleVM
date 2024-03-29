@@ -89,15 +89,9 @@ void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decod
     const int operand_count = decoded.instruction.operand_count_visible;
 
     if (is_inlined)
-    {
-        construct_single(container, size, operand_count, ho_default, true);
-        call_instruction_handler(container, ZYDIS_MNEMONIC_ADD, bit64, 2, true);
-    }
+        call_instruction_handler(container, decoded.instruction.mnemonic, size, operand_count, true);
     else
-    {
-        code_label* target_handler = get_handler_va(size,operand_count);
-        call_vm_handler(container, target_handler);
-    }
+        call_vm_handler(container, get_handler_va(size,operand_count));
 }
 
 encode_status inst_handler_entry::encode_operand(
