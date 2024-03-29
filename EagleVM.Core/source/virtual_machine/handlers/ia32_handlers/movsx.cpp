@@ -7,7 +7,8 @@ void ia32_movsx_handler::construct_single(function_container& container, reg_siz
     // we can literally call the mov handler because we upgraded the operand-
     call_vm_handler(container, mov_handler->get_handler_va(size, 2));
 
-    create_vm_return(container);
+    if (!inlined)
+        create_vm_return(container);
 }
 
 encode_status ia32_movsx_handler::encode_operand(
