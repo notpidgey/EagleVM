@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
 std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction,
-        const uint64_t original_rva)
+    const uint64_t original_rva)
 {
     function_container container = {};
 
@@ -116,7 +116,7 @@ encode_status inst_handler_entry::encode_operand(
 }
 
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
-                                                 encode_ctx& context)
+    encode_ctx& context)
 {
     auto [stack_disp, orig_rva, index] = context;
     if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
@@ -254,19 +254,19 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
 }
 
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr,
-                                                 encode_ctx& context)
+    encode_ctx& context)
 {
     // not a supported operand
     return encode_status::unsupported;
 }
 
 encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm,
-                                                 encode_ctx& context)
+    encode_ctx& context)
 {
     auto [stack_disp, orig_rva, index] = context;
     const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
-    push_container(container,ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u));
+    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u));
     call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, r_size, 1, true);
 
     *stack_disp += r_size;

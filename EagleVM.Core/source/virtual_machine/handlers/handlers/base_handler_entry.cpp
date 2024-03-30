@@ -31,7 +31,7 @@ function_container base_handler_entry::construct_handler()
 
 void base_handler_entry::initialize_labels()
 {
-    for(auto& handler : handlers)
+    for (auto& handler : handlers)
         handler.target_label = code_label::create();
 }
 
@@ -53,7 +53,7 @@ void base_handler_entry::create_vm_return(function_container& container)
 
 void base_handler_entry::call_vm_handler(function_container& container, code_label* jump_label)
 {
-    if(!jump_label)
+    if (!jump_label)
         __debugbreak(); // jump_label should never be null
 
     code_label* retun_label = code_label::create();
