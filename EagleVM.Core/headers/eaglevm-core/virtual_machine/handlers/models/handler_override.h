@@ -1,26 +1,29 @@
 #pragma once
 
-enum handler_override
+namespace eagle::virt::handle
 {
-    ho_default = 0,
+    enum handler_override
+    {
+        ho_default = 0,
 
-    /*
-     * vmstore override
-     */
+        /*
+         * vmstore override
+         */
 
-    /*
-     * P1 VTEMP: displacement
-     * P2 STACK: reg value
-     */
-    ho_vmstore_temp_stack = 0,
+        /*
+         * P1 VTEMP: displacement
+         * P2 STACK: reg value
+         */
+        ho_vmstore_temp_stack = 0,
 
-    /*
-     * vmload override
-     */
+        /*
+         * vmload override
+         */
 
-    /*
-     * P1 VTEMP: displacement
-     * RESULT STACK: reg value
-     */
-    ho_vmload_temp_stack = 0,
-};
+        /*
+         * P1 VTEMP: displacement
+         * RESULT STACK: reg value
+         */
+        ho_vmload_temp_stack = 0,
+    };
+}

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <vector>
 #include <eaglevm-core/disassembler/disassembler.h>
-#include <eaglevm-core/disassembler/models/basic_block.h>
+#include <../../EagleVM.Core/headers/eaglevm-core/disassembler/basic_block.h>
 
 #include "nlohmann/json.hpp"
 
@@ -51,10 +51,10 @@ int main(int argc, char* argv[])
 
     zydis_helper::setup_decoder();
 
-    vm_inst vm_inst;
+    eagle::virt::vm_inst vm_inst;
     vm_inst.init_reg_order();
 
-    section_manager section = vm_inst.generate_vm_handlers(false);
+    eagle::asmbl::section_manager section = vm_inst.generate_vm_handlers(false);
 
     uint64_t rva = reinterpret_cast<uint64_t>(&handler_buffer) - reinterpret_cast<uint64_t>(&__ImageBase);
     encoded_vec vmhandle_data = section.compile_section(rva);
@@ -120,15 +120,15 @@ int main(int argc, char* argv[])
 
             run_container container(ins, outs);
             {
-                vm_virtualizer virt(&vm_inst);
+                eagle::virt::vm_virtualizer virt(&vm_inst);
 
                 std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
                 decode_vec instructions = zydis_helper::get_instructions(instruction_data.data(), instruction_data.size());
 
-                segment_dasm dasm(instructions, 0, instruction_data.size());
+                eagle::dasm::segment_dasm dasm(instructions, 0, instruction_data.size());
                 dasm.generate_blocks();
 
-                section_manager vm_code_sm(false);
+                eagle::asmbl::section_manager vm_code_sm(false);
                 vm_code_sm.add(virt.virtualize_segment(&dasm));
 
                 container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);

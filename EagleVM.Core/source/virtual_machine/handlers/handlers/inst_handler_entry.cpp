@@ -1,319 +1,323 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/inst_handler_entry.h"
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
-std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction,
-    const uint64_t original_rva)
+namespace eagle::virt::handle
 {
-    function_container container = {};
-
-    const inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
-    const code_label* target = handler->get_handler_va(
-        static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8),
-        decoded_instruction.instruction.operand_count_visible
-    );
-
-    if (target == nullptr)
+    std::pair<bool, eagle::asmbl::function_container> eagle::virt::handle::inst_handler_entry::translate_to_virtual(
+        const zydis_decode& decoded_instruction,
+        const uint64_t original_rva)
     {
-    INSTRUCTION_NOT_SUPPORTED:
-        return {false, container};
-    }
+        asmbl::function_container container = {};
 
-    container.assign_label(code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
+        const inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
+        const asmbl::code_label* target = handler->get_handler_va(
+            static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8),
+            decoded_instruction.instruction.operand_count_visible
+        );
 
-    int32_t current_disp = 0;
-    for (uint8_t i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
-    {
-        encode_status status = encode_status::unsupported;
-        container.assign_label(code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
-
-        encode_ctx ctx
+        if (target == nullptr)
         {
-            &current_disp,
-            original_rva,
-            i
-        };
-
-        switch (const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
-        {
-            case ZYDIS_OPERAND_TYPE_UNUSED:
-                break;
-            case ZYDIS_OPERAND_TYPE_REGISTER:
-                status = encode_operand(container, decoded_instruction, operand.reg, ctx);
-                break;
-            case ZYDIS_OPERAND_TYPE_MEMORY:
-                status = encode_operand(container, decoded_instruction, operand.mem, ctx);
-                break;
-            case ZYDIS_OPERAND_TYPE_POINTER:
-                status = encode_operand(container, decoded_instruction, operand.ptr, ctx);
-                break;
-            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                status = encode_operand(container, decoded_instruction, operand.imm, ctx);
-                break;
+        INSTRUCTION_NOT_SUPPORTED:
+            return {false, container};
         }
 
-        if (status != encode_status::success)
-            goto INSTRUCTION_NOT_SUPPORTED;
-    }
+        container.assign_label(asmbl::code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
 
-    finalize_translate_to_virtual(decoded_instruction, container);
-    return {true, container};
-}
-
-code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
-{
-    const auto it = std::ranges::find_if(handlers,
-        [width, operands, override](const handler_info& h)
+        int32_t current_disp = 0;
+        for (uint8_t i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
         {
-            if (h.instruction_width == width && h.operand_count == operands && h.override == override)
-                return true;
+            encode_status status = encode_status::unsupported;
+            container.assign_label(asmbl::code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
 
-            return false;
-        });
-
-    if (it != handlers.end())
-        return it->target_label;
-
-    return nullptr;
-}
-
-int inst_handler_entry::get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index)
-{
-    return action_value;
-}
-
-void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, function_container& container)
-{
-    // call yourself
-    constexpr bool is_inlined = true;
-    const reg_size size = static_cast<reg_size>(decoded.instruction.operand_width / 8);
-    const int operand_count = decoded.instruction.operand_count_visible;
-
-    call_instruction_handler(container, decoded.instruction.mnemonic, size, operand_count, is_inlined);
-}
-
-encode_status inst_handler_entry::encode_operand(
-    function_container& container, const zydis_decode& instruction,
-    zydis_dreg op_reg, encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-
-    // TODO: what about cases where we have RSP as the register?
-
-    // we will always want the address/offset right at the bottom of the stack
-    // in the future this might change, but for now it will stay like this
-
-    const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_REGISTER, index);
-    if (action & action_address)
-        load_reg_address(container, op_reg, context);
-
-    if (action & action_reg_offset)
-        load_reg_offset(container, op_reg, context);
-
-    if (action & action_value)
-        load_reg_value(container, op_reg, context);
-
-    return encode_status::success;
-}
-
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
-    encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-    if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
-        return encode_status::unsupported;
-
-    //[base + index * scale + disp]
-
-    //1. begin with loading the base register
-    //mov VTEMP, imm
-    //jmp VM_LOAD_REG
-    code_label* rip_label;
-    {
-        if (op_mem.base == ZYDIS_REGISTER_RSP)
-        {
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
-            if (*stack_disp)
+            encode_ctx ctx
             {
-                // this is meant to account for any possible pushes we set up
-                // if we now access VSP, its not going to be what it was before we called this function
-                push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8));
+                &current_disp,
+                original_rva,
+                i
+            };
+
+            switch (const zydis_decoded_operand& operand = decoded_instruction.operands[i]; operand.type)
+            {
+                case ZYDIS_OPERAND_TYPE_UNUSED:
+                    break;
+                case ZYDIS_OPERAND_TYPE_REGISTER:
+                    status = encode_operand(container, decoded_instruction, operand.reg, ctx);
+                    break;
+                case ZYDIS_OPERAND_TYPE_MEMORY:
+                    status = encode_operand(container, decoded_instruction, operand.mem, ctx);
+                    break;
+                case ZYDIS_OPERAND_TYPE_POINTER:
+                    status = encode_operand(container, decoded_instruction, operand.ptr, ctx);
+                    break;
+                case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                    status = encode_operand(container, decoded_instruction, operand.imm, ctx);
+                    break;
             }
 
-            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            if (status != encode_status::success)
+                goto INSTRUCTION_NOT_SUPPORTED;
         }
-        else if (op_mem.base == ZYDIS_REGISTER_RIP)
-        {
-            rip_label = code_label::create("rip: " + std::to_string(orig_rva));
 
-            push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8));
-            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
-        }
-        else
-        {
-            const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
-
-            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement));
-            call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
-        }
+        finalize_translate_to_virtual(decoded_instruction, container);
+        return {true, container};
     }
 
-    //2. load the index register and multiply by scale
-    //mov VTEMP, imm    ;
-    //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
-    if (op_mem.index != ZYDIS_REGISTER_NONE)
+    asmbl::code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
     {
-        const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
-
-        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement));
-        call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
-    }
-
-    if (op_mem.scale != 0)
-    {
-        //mov VTEMP, imm    ;
-        //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
-        //jmp VM_MUL        ; multiply INDEX * SCALE
-        //vmscratch         ; ignore the rflags we just modified
-        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale));
-        call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
-        call_instruction_handler(container, ZYDIS_MNEMONIC_IMUL, bit64, 2, true);
-    }
-
-    if (op_mem.index != ZYDIS_REGISTER_NONE)
-    {
-        call_instruction_handler(container, ZYDIS_MNEMONIC_ADD, bit64, 2, true);
-    }
-
-    if (op_mem.disp.has_displacement)
-    {
-        // 3. load the displacement and add
-        // we can do this with some trickery using LEA so we dont modify rflags
-
-        if (op_mem.base == ZYDIS_REGISTER_RIP)
-        {
-            // since this is RIP relative we first want to calculate where the original instruction is trying to access
-            auto [target, _] = zydis_helper::calc_relative_rva(instruction, orig_rva, index);
-
-            // VTEMP = RIP at first operand instruction
-            // target = RIP + constant
-
-            call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
-            container.add([=](uint64_t)
+        const auto it = std::ranges::find_if(handlers,
+            [width, operands, override](const handler_info& h)
             {
-                const uint64_t rip = rip_label->get();
-                const uint64_t constant = target - rip;
+                if (h.instruction_width == width && h.operand_count == operands && h.override == override)
+                    return true;
 
-                return zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, constant, 8));
+                return false;
             });
 
+        if (it != handlers.end())
+            return it->target_label;
+
+        return nullptr;
+    }
+
+    int inst_handler_entry::get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index)
+    {
+        return action_value;
+    }
+
+    void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, asmbl::function_container& container)
+    {
+        // call yourself
+        constexpr bool is_inlined = true;
+        const reg_size size = static_cast<reg_size>(decoded.instruction.operand_width / 8);
+        const int operand_count = decoded.instruction.operand_count_visible;
+
+        call_instruction_handler(container, decoded.instruction.mnemonic, size, operand_count, is_inlined);
+    }
+
+    encode_status inst_handler_entry::encode_operand(
+        asmbl::function_container& container, const zydis_decode& instruction,
+        zydis_dreg op_reg, encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+
+        // TODO: what about cases where we have RSP as the register?
+
+        // we will always want the address/offset right at the bottom of the stack
+        // in the future this might change, but for now it will stay like this
+
+        const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_REGISTER, index);
+        if (action & action_address)
+            load_reg_address(container, op_reg, context);
+
+        if (action & action_reg_offset)
+            load_reg_offset(container, op_reg, context);
+
+        if (action & action_value)
+            load_reg_value(container, op_reg, context);
+
+        return encode_status::success;
+    }
+
+    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
+        encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+        if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
+            return encode_status::unsupported;
+
+        //[base + index * scale + disp]
+
+        //1. begin with loading the base register
+        //mov VTEMP, imm
+        //jmp VM_LOAD_REG
+        asmbl::code_label* rip_label;
+        {
+            if (op_mem.base == ZYDIS_REGISTER_RSP)
+            {
+                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZREG(VSP)));
+                if (*stack_disp)
+                {
+                    // this is meant to account for any possible pushes we set up
+                    // if we now access VSP, its not going to be what it was before we called this function
+                    push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8));
+                }
+
+                call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            }
+            else if (op_mem.base == ZYDIS_REGISTER_RIP)
+            {
+                rip_label = asmbl::code_label::create("rip: " + std::to_string(orig_rva));
+
+                push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8));
+                call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            }
+            else
+            {
+                const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
+
+                push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement));
+                call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
+            }
+        }
+
+        //2. load the index register and multiply by scale
+        //mov VTEMP, imm    ;
+        //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
+        if (op_mem.index != ZYDIS_REGISTER_NONE)
+        {
+            const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
+
+            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement));
+            call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
+        }
+
+        if (op_mem.scale != 0)
+        {
+            //mov VTEMP, imm    ;
+            //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
+            //jmp VM_MUL        ; multiply INDEX * SCALE
+            //vmscratch         ; ignore the rflags we just modified
+            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale));
             call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            call_instruction_handler(container, ZYDIS_MNEMONIC_IMUL, bit64, 2, true);
+        }
+
+        if (op_mem.index != ZYDIS_REGISTER_NONE)
+        {
+            call_instruction_handler(container, ZYDIS_MNEMONIC_ADD, bit64, 2, true);
+        }
+
+        if (op_mem.disp.has_displacement)
+        {
+            // 3. load the displacement and add
+            // we can do this with some trickery using LEA so we dont modify rflags
+
+            if (op_mem.base == ZYDIS_REGISTER_RIP)
+            {
+                // since this is RIP relative we first want to calculate where the original instruction is trying to access
+                auto [target, _] = zydis_helper::calc_relative_rva(instruction, orig_rva, index);
+
+                // VTEMP = RIP at first operand instruction
+                // target = RIP + constant
+
+                call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
+                container.add([=](uint64_t)
+                {
+                    const uint64_t rip = rip_label->get();
+                    const uint64_t constant = target - rip;
+
+                    return zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, constant, 8));
+                });
+
+                call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            }
+            else
+            {
+                // pop current value into VTEMP
+                // lea VTEMP, [VTEMP +- imm]
+                // push
+
+                call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
+                push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8));
+                call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            }
+        }
+
+        // for memory operands we will only ever need one kind of action
+        // there has to be a better and cleaner way of doing this, but i have not thought of it yet
+        // for now it will kind of just be an assumption
+
+        const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_MEMORY, index);
+        if (action & action_address || op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
+        {
+            *stack_disp += bit64;
+        }
+        else if (action & action_value)
+        {
+            // by default, this will be dereferenced and we will get the value at the address,
+            const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
+
+            // this means we are working with the second operand
+            const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
+
+            call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
+            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size));
+            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, target_size, 1, true);
+
+            *stack_disp += target_size;
         }
         else
         {
-            // pop current value into VTEMP
-            // lea VTEMP, [VTEMP +- imm]
-            // push
-
-            call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
-            push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8));
-            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
+            // too lazy to implement multiple options for now, but this shouldnt happen
+            __debugbreak();
+            return encode_status::unsupported;
         }
+
+        return encode_status::success;
     }
 
-    // for memory operands we will only ever need one kind of action
-    // there has to be a better and cleaner way of doing this, but i have not thought of it yet
-    // for now it will kind of just be an assumption
-
-    const int action = get_op_action(instruction, ZYDIS_OPERAND_TYPE_MEMORY, index);
-    if (action & action_address || op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
+    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr,
+        encode_ctx& context)
     {
-        *stack_disp += bit64;
-    }
-    else if (action & action_value)
-    {
-        // by default, this will be dereferenced and we will get the value at the address,
-        const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
-
-        // this means we are working with the second operand
-        const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
-
-        call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
-        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size));
-        call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, target_size, 1, true);
-
-        *stack_disp += target_size;
-    }
-    else
-    {
-        // too lazy to implement multiple options for now, but this shouldnt happen
-        __debugbreak();
+        // not a supported operand
         return encode_status::unsupported;
     }
 
-    return encode_status::success;
-}
+    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dimm op_imm,
+        encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+        const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr,
-    encode_ctx& context)
-{
-    // not a supported operand
-    return encode_status::unsupported;
-}
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u));
+        call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, r_size, 1, true);
 
-encode_status inst_handler_entry::encode_operand(function_container& container, const zydis_decode& instruction, zydis_dimm op_imm,
-    encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-    const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
+        *stack_disp += r_size;
+        return encode_status::success;
+    }
 
-    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u));
-    call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, r_size, 1, true);
+    void inst_handler_entry::load_reg_address(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
 
-    *stack_disp += r_size;
-    return encode_status::success;
-}
+        // this means we want to put the address of of the target register at the top of the stack
+        // mov VTEMP, VREGS + DISPLACEMENT
+        // push
 
-void inst_handler_entry::load_reg_address(function_container& container, zydis_dreg op_reg, encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+        push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8));
+        call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true); // always 64 bit because its an address
 
-    // this means we want to put the address of of the target register at the top of the stack
-    // mov VTEMP, VREGS + DISPLACEMENT
-    // push
+        *stack_disp += bit64;
+    }
 
-    push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8));
-    call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true); // always 64 bit because its an address
+    void inst_handler_entry::load_reg_offset(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
 
-    *stack_disp += bit64;
-}
+        // this means we want to put the address of of the target register at the top of the stack
+        // mov VTEMP, DISPLACEMENT
+        // push
 
-void inst_handler_entry::load_reg_offset(function_container& container, zydis_dreg op_reg, encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
+        call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit32, 1, true); // always 32 bit bececause its an imm
 
-    // this means we want to put the address of of the target register at the top of the stack
-    // mov VTEMP, DISPLACEMENT
-    // push
+        *stack_disp += bit64;
+    }
 
-    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
-    call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit32, 1, true); // always 32 bit bececause its an imm
+    void inst_handler_entry::load_reg_value(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    {
+        auto [stack_disp, orig_rva, index] = context;
+        const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
 
-    *stack_disp += bit64;
-}
+        // this routine will load the register value to the top of the VSTACK
+        // mov VTEMP, -8
+        // call VM_LOAD_REG
 
-void inst_handler_entry::load_reg_value(function_container& container, zydis_dreg op_reg, encode_ctx& context)
-{
-    auto [stack_disp, orig_rva, index] = context;
-    const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
+        call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, zydis_helper::get_reg_size(op_reg.value), true);
 
-    // this routine will load the register value to the top of the VSTACK
-    // mov VTEMP, -8
-    // call VM_LOAD_REG
-
-    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
-    call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, zydis_helper::get_reg_size(op_reg.value), true);
-
-    *stack_disp += zydis_helper::get_reg_size(op_reg.value);
+        *stack_disp += zydis_helper::get_reg_size(op_reg.value);
+    }
 }

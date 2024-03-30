@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "eaglevm-core/assembler/section_manager.h"
 #include "eaglevm-core/pe/pe_parser.h"
 #include "eaglevm-core/pe/pe_generator.h"
 #include "eaglevm-core/pe/packer/pe_packer.h"
@@ -13,7 +14,7 @@ int main(int argc, char* argv[])
 {
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
 
-    pe_parser parser = pe_parser(executable);
+    eagle::pe::pe_parser parser = eagle::pe::pe_parser(executable);
     if (!parser.read_file())
     {
         std::printf("[!] failed to read file: %s\n", executable);
@@ -71,7 +72,7 @@ int main(int argc, char* argv[])
     std::printf("\n[>] searching for uses of vm macros...\n");
 
     i = 1;
-    std::vector<std::pair<uint32_t, stub_import>> vm_iat_calls = parser.find_iat_calls();
+    std::vector<std::pair<uint32_t, eagle::pe::stub_import>> vm_iat_calls = parser.find_iat_calls();
     std::printf("%3s %-10s %-10s\n", "", "rva", "vm");
     std::ranges::for_each
     (
@@ -81,13 +82,13 @@ int main(int argc, char* argv[])
             auto [file_offset, stub_import] = call;
             switch (stub_import)
             {
-            case stub_import::vm_begin:
+            case eagle::pe::stub_import::vm_begin:
                 std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
                 break;
-            case stub_import::vm_end:
+            case eagle::pe::stub_import::vm_end:
                 std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_end");
                 break;
-            case stub_import::unknown:
+            case eagle::pe::stub_import::unknown:
                 std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
                 break;
             }
@@ -103,7 +104,7 @@ int main(int argc, char* argv[])
     //blame the user
 
     bool success = true;
-    stub_import previous_call = stub_import::vm_end;
+    eagle::pe::stub_import previous_call = eagle::pe::stub_import::vm_end;
     std::ranges::for_each
     (
         vm_iat_calls.begin(), vm_iat_calls.end(),
@@ -128,7 +129,7 @@ int main(int argc, char* argv[])
     std::printf("[+] successfully verified macro usage\n");
 
     //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
-    pe_generator generator(&parser);
+    eagle::pe::pe_generator generator(&parser);
     generator.load_parser();
 
     IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
@@ -147,7 +148,7 @@ int main(int argc, char* argv[])
 
     last_section = &data_section;
 
-    vm_inst vm_inst;
+    eagle::virt::vm_inst vm_inst;
     vm_inst.init_reg_order();
     std::printf("[+] initialized random registers\n");
 
@@ -155,7 +156,7 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", static_cast<uint32_t>(data_section.VirtualAddress));
 
-    section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
+    eagle::asmbl::section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
 
     data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
@@ -166,9 +167,9 @@ int main(int argc, char* argv[])
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
-    std::vector<std::pair<uint32_t, code_label*>> va_enters;
+    std::vector<std::pair<uint32_t, eagle::asmbl::code_label*>> va_enters;
 
-    section_manager vm_code_sm(true);
+    eagle::asmbl::section_manager vm_code_sm(true);
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -185,12 +186,12 @@ int main(int argc, char* argv[])
         uint8_t* pinst_end = parser.rva_to_pointer(rva_inst_end);
         decode_vec instructions = zydis_helper::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
-        segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
-        basic_block* root_block = dasm.generate_blocks();
+        eagle::dasm::segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
+        eagle::dasm::basic_block* root_block = dasm.generate_blocks();
 
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
 
-        vm_virtualizer virt(&vm_inst);
+        eagle::virt::vm_virtualizer virt(&vm_inst);
         vm_code_sm.add(virt.virtualize_segment(&dasm));
 
         // overwrite the original instructions
@@ -236,10 +237,10 @@ int main(int argc, char* argv[])
     generator.add_inserts(va_inserts);
     generator.bake_modifications();
 
-    pe_packer packer(&generator);
+    eagle::pe::pe_packer packer(&generator);
     packer.set_overlay(false);
 
-    section_manager packer_sm = packer.create_section();
+    eagle::asmbl::section_manager packer_sm = packer.create_section();
 
     auto& [packer_section, packer_bytes] = generator.add_section(".pack");
     packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
@@ -252,7 +253,7 @@ int main(int argc, char* argv[])
     packer_section.NumberOfLinenumbers = 0;
 
     encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.VirtualAddress);
-    auto [packer_pdb_offset, size] = pe_packer::insert_pdb(packer_code_bytes);
+    auto [packer_pdb_offset, size] = eagle::pe::pe_packer::insert_pdb(packer_code_bytes);
 
     packer_section.SizeOfRawData = generator.align_file(packer_code_bytes.size());
     packer_section.Misc.VirtualSize = generator.align_section(packer_code_bytes.size());
