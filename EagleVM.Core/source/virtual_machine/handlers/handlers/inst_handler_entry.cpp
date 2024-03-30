@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
 std::pair<bool, function_container> inst_handler_entry::translate_to_virtual(const zydis_decode& decoded_instruction,
-                                                                             const uint64_t original_rva)
+        const uint64_t original_rva)
 {
     function_container container = {};
 
@@ -136,7 +136,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
             {
                 // this is meant to account for any possible pushes we set up
                 // if we now access VSP, its not going to be what it was before we called this function
-                container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8)));
+                push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VSP, *stack_disp, 8));
             }
 
             call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
@@ -145,14 +145,14 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         {
             rip_label = code_label::create("rip: " + std::to_string(orig_rva));
 
-            container.add(rip_label, zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8)));
+            push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8));
             call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
         }
         else
         {
             const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
 
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement)));
+            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement));
             call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
         }
     }
@@ -164,7 +164,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     {
         const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
 
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement)));
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement));
         call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
     }
 
@@ -174,7 +174,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
         //jmp VM_MUL        ; multiply INDEX * SCALE
         //vmscratch         ; ignore the rflags we just modified
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale)));
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale));
         call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
         call_instruction_handler(container, ZYDIS_MNEMONIC_IMUL, bit64, 2, true);
     }
@@ -215,7 +215,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
             // push
 
             call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8)));
+            push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VTEMP, op_mem.disp.value, 8));
             call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
         }
     }
@@ -238,7 +238,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
         const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
 
         call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
-        container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size)));
+        push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size));
         call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, target_size, 1, true);
 
         *stack_disp += target_size;
@@ -266,7 +266,7 @@ encode_status inst_handler_entry::encode_operand(function_container& container, 
     auto [stack_disp, orig_rva, index] = context;
     const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u)));
+    push_container(container,ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_imm.value.u));
     call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, r_size, 1, true);
 
     *stack_disp += r_size;
@@ -282,7 +282,7 @@ void inst_handler_entry::load_reg_address(function_container& container, zydis_d
     // mov VTEMP, VREGS + DISPLACEMENT
     // push
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8)));
+    push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(VREGS, displacement, 8));
     call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true); // always 64 bit because its an address
 
     *stack_disp += bit64;
@@ -297,7 +297,7 @@ void inst_handler_entry::load_reg_offset(function_container& container, zydis_dr
     // mov VTEMP, DISPLACEMENT
     // push
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
+    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
     call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit32, 1, true); // always 32 bit bececause its an imm
 
     *stack_disp += bit64;
@@ -312,7 +312,7 @@ void inst_handler_entry::load_reg_value(function_container& container, zydis_dre
     // mov VTEMP, -8
     // call VM_LOAD_REG
 
-    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement)));
+    push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(displacement));
     call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, zydis_helper::get_reg_size(op_reg.value), true);
 
     *stack_disp += zydis_helper::get_reg_size(op_reg.value);

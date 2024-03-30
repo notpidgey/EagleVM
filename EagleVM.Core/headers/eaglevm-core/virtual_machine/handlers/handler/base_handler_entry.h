@@ -62,4 +62,14 @@ protected:
 
     void call_virtual_handler(function_container& container, int handler_id, reg_size size, bool inlined);
     void call_instruction_handler(function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined);
+
+    void push_container(code_label* label, function_container& container, zyids_mnemonic mnemonic, auto&&... args)
+    {
+        container.add(label, zydis_helper::enc(mnemonic, std::forward<decltype(args)>(args)...));
+    }
+
+    void push_container(function_container& container, zyids_mnemonic mnemonic, auto&&... args)
+    {
+        container.add(zydis_helper::enc(mnemonic, std::forward<decltype(args)>(args)...));
+    }
 };
