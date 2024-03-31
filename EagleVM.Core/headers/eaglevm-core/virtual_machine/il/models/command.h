@@ -2,7 +2,7 @@
 
 namespace eagle::il
 {
-    class il_command
+    class command
     {
 
     };

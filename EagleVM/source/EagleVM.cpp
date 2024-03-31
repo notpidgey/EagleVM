@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     std::printf("%3s %-20s %-s\n", "", "source", "import");
     parser.enum_imports(
         [&i](const PIMAGE_IMPORT_DESCRIPTOR import_descriptor, const PIMAGE_THUNK_DATA thunk_data,
-             const PIMAGE_SECTION_HEADER import_section, int, const uint8_t* data_base)
+        const PIMAGE_SECTION_HEADER import_section, int, const uint8_t* data_base)
         {
             const uint8_t* import_section_raw = data_base + import_section->PointerToRawData;
             const char* import_library = reinterpret_cast<const char*>(import_section_raw + (import_descriptor->Name -
@@ -82,15 +82,15 @@ int main(int argc, char* argv[])
             auto [file_offset, stub_import] = call;
             switch (stub_import)
             {
-            case eagle::pe::stub_import::vm_begin:
-                std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
-                break;
-            case eagle::pe::stub_import::vm_end:
-                std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_end");
-                break;
-            case eagle::pe::stub_import::unknown:
-                std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
-                break;
+                case eagle::pe::stub_import::vm_begin:
+                    std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
+                    break;
+                case eagle::pe::stub_import::vm_end:
+                    std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_end");
+                    break;
+                case eagle::pe::stub_import::unknown:
+                    std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
+                    break;
             }
 
             i++;

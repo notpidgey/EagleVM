@@ -37,4 +37,20 @@ namespace eagle::virt
         inst_handlers[ZYDIS_MNEMONIC_LEA] = new handle::ia32_lea_handler(rm_, this);
         inst_handlers[ZYDIS_MNEMONIC_CMP] = new handle::ia32_cmp_handler(rm_, this);
     }
+
+    handle::inst_handler_entry* vm_inst_handlers::get_inst_handler(const int handler)
+    {
+        if(inst_handlers.contains(handler))
+            return inst_handlers[handler];
+
+        return nullptr;
+    }
+
+    handle::vm_handler_entry* vm_inst_handlers::get_vm_handler(const int handler)
+    {
+        if(v_handlers.contains(handler))
+            return v_handlers[handler];
+
+        return nullptr;
+    }
 }
