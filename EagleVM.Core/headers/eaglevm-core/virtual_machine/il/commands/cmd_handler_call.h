@@ -10,13 +10,12 @@ namespace eagle::il
         vm_handler
     };
 
-    class vm_handler_call : public base_command
+    class cmd_handler_call : public base_command
     {
     public:
-        explicit vm_handler_call(const call_type type)
+        explicit cmd_handler_call(const call_type type)
             : base_command(command_type::vm_handler_call), call_type(type)
         {
-
         }
 
     private:

@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/il/il_bb.h"
+#include "eaglevm-core/virtual_machine/il/commands/include.h"
 
 namespace eagle::il
 {
@@ -25,6 +26,22 @@ namespace eagle::il
 
         commands.insert(it, command_ptr);
         return true;
+    }
+
+    bool il_bb::get_inline() const
+    {
+        return inline_next;
+    }
+
+    void il_bb::set_exit(const cmd_exit_ptr& exit)
+    {
+        exit_command = exit;
+        add_command(std::dynamic_pointer_cast<base_command>(exit));
+    }
+
+    void il_bb::set_inline(const bool inline_exit_block)
+    {
+        inline_next = inline_exit_block;
     }
 
     std::vector<base_command_ptr>::iterator il_bb::get_iterator(base_command_ptr command)
