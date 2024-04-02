@@ -12,6 +12,9 @@ namespace eagle::il
         vm_handler_call,
         vm_reg_load,
         vm_reg_store,
+
+        vm_push,
+        vm_pop
     };
 
     inline std::string command_to_string(const command_type cmd)

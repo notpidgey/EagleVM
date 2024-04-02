@@ -3,7 +3,9 @@
 #include <memory>
 #include <utility>
 
-#include "eaglevm-core/virtual_machine/il/commands/models/command_type.h"
+#include "eaglevm-core/virtual_machine/il/commands/models/cmd_type.h"
+#include "eaglevm-core/virtual_machine/il/models/il_reg.h"
+
 #include "eaglevm-core/util/zydis_helper.h"
 
 namespace eagle::il
