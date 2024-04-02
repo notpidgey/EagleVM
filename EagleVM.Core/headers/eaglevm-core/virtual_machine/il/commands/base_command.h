@@ -18,6 +18,10 @@ namespace eagle::il
     SHARED_DEFINE(cmd_exit);
     SHARED_DEFINE(cmd_handler_call);
     SHARED_DEFINE(cmd_param);
+    SHARED_DEFINE(cmd_pop);
+    SHARED_DEFINE(cmd_push);
+    SHARED_DEFINE(cmd_reg_reload);
+    SHARED_DEFINE(cmd_reg_store);
 
     class base_command
     {

@@ -1,5 +1,5 @@
 #include "eaglevm-core/virtual_machine/il/translator/x86/base_x86_translator.h"
-
+#include "eaglevm-core/virtual_machine/il/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_reg_load.h"
 
@@ -89,9 +89,11 @@ namespace eagle::il::translator
         {
             if (op_mem.base == ZYDIS_REGISTER_RSP)
             {
-                auto push = std::make_shared<cmd_reg_push>(reg_vm::vsp, reg_size::b64);
+                cmd_push_ptr push = std::make_shared<cmd_reg_push>(reg_vm::vsp, reg_size::b64);
                 if(stack_displacement)
-                    push.
+                {
+                    // todo: add stack displacement to push
+                }
 
                 block->add_command(push);
             }
@@ -101,10 +103,7 @@ namespace eagle::il::translator
             }
             else
             {
-                const auto [base_displacement, base_size] = rm_->get_stack_displacement(op_mem.base);
-
-                push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(base_displacement));
-                call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
+                block->add_command(std::make_shared<cmd_reg_push>(op_mem.base, reg_size::b64));
             }
         }
 
