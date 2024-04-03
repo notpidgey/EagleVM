@@ -1,19 +1,21 @@
 #include "eaglevm-core/virtual_machine/il/translator/x86/base_x86_translator.h"
 #include "eaglevm-core/virtual_machine/il/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_push.h"
-#include "eaglevm-core/virtual_machine/il/commands/cmd_reg_load.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_context_load.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_handler_call.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_pop.h"
 
 namespace eagle::il::translator
 {
-    base_x86_translator::base_x86_translator(il_bb_ptr block_ptr, zydis_decode decode)
+    base_x86_translator::base_x86_translator(il_bb_ptr block_ptr, asmbl::x86::dec::inst_info decode)
         : block(std::move(block_ptr)), inst(decode.instruction)
     {
         stack_displacement = 0;
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    base_x86_translator::base_x86_translator(zydis_decode decode)
-        : block(std::make_shared<il_bb>()), inst(decode.instruction)
+    base_x86_translator::base_x86_translator(asmbl::x86::dec::inst_info decode)
+        : block(std::make_shared<il_bb>(false)), inst(decode.instruction)
     {
         stack_displacement = 0;
         std::ranges::copy(decode.operands, std::begin(operands));
@@ -21,10 +23,10 @@ namespace eagle::il::translator
 
     bool base_x86_translator::translate_to_il(uint64_t original_rva)
     {
-        for (uint8_t i = 0; i < inst.operand_count_visible; i++)
+        for (uint8_t i = 0; i < inst.; i++)
         {
             translate_status status = translate_status::unsupported;
-            switch (const zydis_decoded_operand& operand = operands[i]; operand.type)
+            switch (const asmbl::x86::dec::operand& operand = operands[i]; operand.type)
             {
                 case ZYDIS_OPERAND_TYPE_UNUSED:
                     break;
@@ -50,12 +52,12 @@ namespace eagle::il::translator
         return true;
     }
 
-    int base_x86_translator::get_op_action(zyids_operand_t op_type, int index)
+    int base_x86_translator::get_op_action(asmbl::x86::operand_t op_type, int index)
     {
         return action_value;
     }
 
-    translate_status base_x86_translator::encode_operand(zydis_dreg op_reg, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(asmbl::x86::dec::op_reg op_reg, uint8_t idx)
     {
         // TODO: what about cases where we have RSP as the register?
 
@@ -75,7 +77,7 @@ namespace eagle::il::translator
         return translate_status::success;
     }
 
-    translate_status base_x86_translator::encode_operand(zydis_dmem op_mem, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(asmbl::x86::dec::op_mem op_mem, uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
@@ -89,8 +91,8 @@ namespace eagle::il::translator
         {
             if (op_mem.base == ZYDIS_REGISTER_RSP)
             {
-                cmd_push_ptr push = std::make_shared<cmd_reg_push>(reg_vm::vsp, reg_size::b64);
-                if(stack_displacement)
+                cmd_vm_push_ptr push = std::make_shared<cmd_vm_push>(reg_vm::vsp, reg_size::b64);
+                if (stack_displacement)
                 {
                     // todo: add stack displacement to push
                 }
@@ -99,11 +101,11 @@ namespace eagle::il::translator
             }
             else if (op_mem.base == ZYDIS_REGISTER_RIP)
             {
-                block->add_command(std::make_shared<cmd_reg_push>(reg_x86::rip, reg_size::b64));
+                block->add_command(std::make_shared<cmd_context_load>(asmbl::x86::rip, asmbl::x86::reg_size::gpr_64));
             }
             else
             {
-                block->add_command(std::make_shared<cmd_reg_push>(op_mem.base, reg_size::b64));
+                block->add_command(std::make_shared<cmd_context_load>(op_mem.base, asmbl::x86::reg_size::gpr_64));
             }
         }
 
@@ -112,10 +114,7 @@ namespace eagle::il::translator
         //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            const auto [index_displacement, index_size] = rm_->get_stack_displacement(op_mem.index);
-
-            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMS(index_displacement));
-            call_virtual_handler(container, MNEMONIC_VM_LOAD_REG, bit64, true);
+            block->add_command(std::make_shared<cmd_context_load>(op_mem.index, reg_size::b64));
         }
 
         if (op_mem.scale != 0)
@@ -123,15 +122,15 @@ namespace eagle::il::translator
             //mov VTEMP, imm    ;
             //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
             //jmp VM_MUL        ; multiply INDEX * SCALE
-            //vmscratch         ; ignore the rflags we just modified
-            push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(VTEMP), ZIMMU(op_mem.scale));
-            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
-            call_instruction_handler(container, ZYDIS_MNEMONIC_IMUL, bit64, 2, true);
+            block->add_command(std::make_shared<cmd_vm_push>(op_mem.scale, reg_size::b64));
+            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
+                asmbl::x86::IMUL, 2, asmbl::x86::reg_size::gpr_64));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            call_instruction_handler(container, ZYDIS_MNEMONIC_ADD, bit64, 2, true);
+            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
+                asmbl::x86::ADD, 2, asmbl::x86::reg_size::gpr_64));
         }
 
         if (op_mem.disp.has_displacement)
@@ -142,7 +141,7 @@ namespace eagle::il::translator
             if (op_mem.base == ZYDIS_REGISTER_RIP)
             {
                 // since this is RIP relative we first want to calculate where the original instruction is trying to access
-                auto [target, _] = zydis_helper::calc_relative_rva(instruction, orig_rva, index);
+                auto [target, _] = asmbl::x86::calc_relative_rva(instruction, orig_rva, index);
 
                 // VTEMP = RIP at first operand instruction
                 // target = RIP + constant
@@ -182,14 +181,14 @@ namespace eagle::il::translator
         else if (action & action_value)
         {
             // by default, this will be dereferenced and we will get the value at the address,
-            const reg_size target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
+            const reg_size target_size = static_cast<reg_size>(inst.operand_width / 8);
 
             // this means we are working with the second operand
-            const zydis_register target_temp = zydis_helper::get_bit_version(VTEMP, target_size);
+            const reg target_temp = get_bit_version(VTEMP, target_size);
 
-            call_instruction_handler(container, ZYDIS_MNEMONIC_POP, bit64, 1, true);
+            block->add_command(std::make_shared<cmd_vm_pop>(reg_vm::vtemp, reg_size::b64));
             push_container(container, ZYDIS_MNEMONIC_MOV, ZREG(target_temp), ZMEMBD(VTEMP, 0, target_size));
-            call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, target_size, 1, true);
+            block->add_command(std::make_shared<cmd_vm_push>(reg_vm::vtemp, reg_size::b64));
 
             stack_displacement += target_size;
         }
@@ -202,13 +201,13 @@ namespace eagle::il::translator
         return translate_status::success;
     }
 
-    translate_status base_x86_translator::encode_operand(zydis_dptr op_ptr, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(asmbl::x86::dec::op_ptr op_ptr, uint8_t idx)
     {
         // not a supported operand
         return translate_status::unsupported;
     }
 
-    translate_status base_x86_translator::encode_operand(zydis_dimm op_imm, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(asmbl::x86::dec::op_imm op_imm, uint8_t idx)
     {
         auto [stack_disp, orig_rva, index] = context;
         const auto r_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
@@ -222,16 +221,15 @@ namespace eagle::il::translator
 
     void eagle::il::translator::base_x86_translator::finalize_translate_to_virtual()
     {
-
     }
 
-    void base_x86_translator::load_reg_address(zydis_dreg reg)
+    void base_x86_translator::load_reg_address(asmbl::x86::dec::op_reg reg)
     {
-        block->add_command(std::make_shared<cmd_reg_load>());
+        block->add_command(std::make_shared<cmd_context_load>());
         stack_displacement += bit64;
     }
 
-    void base_x86_translator::load_reg_offset(zydis_dreg reg)
+    void base_x86_translator::load_reg_offset(asmbl::x86::dec::op_reg reg)
     {
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
 
@@ -245,7 +243,7 @@ namespace eagle::il::translator
         stack_displacement += bit64;
     }
 
-    void base_x86_translator::load_reg_value(zydis_dreg reg)
+    void base_x86_translator::load_reg_value(asmbl::x86::dec::op_reg reg)
     {
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
 

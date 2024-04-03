@@ -3,6 +3,9 @@
 #include <utility>
 
 #include "eaglevm-core/assembler/function_container.h"
+#include "eaglevm-core/assembler/x86/zydis_defs.h"
+#include "eaglevm-core/assembler/x86/zydis_enum.h"
+
 #include "eaglevm-core/virtual_machine/il/il_bb.h"
 
 namespace eagle::il::translator
@@ -31,29 +34,29 @@ namespace eagle::il::translator
     {
     public:
         virtual ~base_x86_translator() = default;
-        explicit base_x86_translator(il_bb_ptr block_ptr, zydis_decode decode);
-        explicit base_x86_translator(zydis_decode decode);
+        explicit base_x86_translator(il_bb_ptr block_ptr, asmbl::x86::dec::inst_info decode);
+        explicit base_x86_translator(asmbl::x86::dec::inst_info decode);
 
         virtual bool translate_to_il(uint64_t original_rva);
-        virtual int get_op_action(zyids_operand_t op_type, int index);
+        virtual int get_op_action(asmbl::x86::operand_t op_type, int index);
 
     protected:
         il_bb_ptr block;
 
-        zydis_decoded_inst inst;
-        zydis_decoded_operand operands[ZYDIS_MAX_OPERAND_COUNT];
+        asmbl::x86::dec::inst inst;
+        asmbl::x86::dec::operand operands[ZYDIS_MAX_OPERAND_COUNT];
 
         uint64_t stack_displacement;
 
-        virtual translate_status encode_operand(zydis_dreg op_reg, uint8_t idx);
-        virtual translate_status encode_operand(zydis_dmem op_mem, uint8_t idx);
-        virtual translate_status encode_operand(zydis_dptr op_ptr, uint8_t idx);
-        virtual translate_status encode_operand(zydis_dimm op_imm, uint8_t idx);
+        virtual translate_status encode_operand(asmbl::x86::dec::op_reg op_reg, uint8_t idx);
+        virtual translate_status encode_operand(asmbl::x86::dec::op_mem op_mem, uint8_t idx);
+        virtual translate_status encode_operand(asmbl::x86::dec::op_ptr op_ptr, uint8_t idx);
+        virtual translate_status encode_operand(asmbl::x86::dec::op_imm op_imm, uint8_t idx);
 
         virtual void finalize_translate_to_virtual();
 
-        void load_reg_address(zydis_dreg reg);
-        void load_reg_offset(zydis_dreg reg);
-        void load_reg_value(zydis_dreg reg);
+        void load_reg_address(asmbl::x86::dec::op_reg reg);
+        void load_reg_offset(asmbl::x86::dec::op_reg reg);
+        void load_reg_value(asmbl::x86::dec::op_reg reg);
     };
 }

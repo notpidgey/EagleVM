@@ -159,12 +159,9 @@ namespace eagle::asmbl::x86
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
-        const ZyanStatus result = ZydisEncoderEncodeInstruction(
-            &request, instruction_data.data(), &encoded_length);
+        const ZyanStatus result = ZydisEncoderEncodeInstruction(&request, instruction_data.data(), &encoded_length);
         if (!ZYAN_SUCCESS(result))
-        {
             __debugbreak();
-        }
 
         instruction_data.resize(encoded_length);
         return instruction_data;
@@ -175,13 +172,10 @@ namespace eagle::asmbl::x86
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
-        const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(
-            &request, instruction_data.data(),
+        const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&request, instruction_data.data(),
             &encoded_length, address);
         if (!ZYAN_SUCCESS(result))
-        {
             __debugbreak();
-        }
 
         instruction_data.resize(encoded_length);
         return instruction_data;
@@ -195,12 +189,9 @@ namespace eagle::asmbl::x86
             std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
             ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;
 
-            const ZyanStatus result = ZydisEncoderEncodeInstruction(
-                &i, instruction_data.data(), &encoded_length);
+            const ZyanStatus result = ZydisEncoderEncodeInstruction(&i, instruction_data.data(), &encoded_length);
             if (!ZYAN_SUCCESS(result))
-            {
                 __debugbreak();
-            }
 
             instruction_data.resize(encoded_length);
             data.insert(data.end(), instruction_data.begin(), instruction_data.end());

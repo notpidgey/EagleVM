@@ -173,7 +173,7 @@ namespace eagle::asmbl::x86
     };
 
     using zyids_mnemonic = ZydisMnemonic;
-    enum class mnemonic
+    enum mnemonic
     {
         INVALID = ZYDIS_MNEMONIC_INVALID,
         AAA = ZYDIS_MNEMONIC_AAA,

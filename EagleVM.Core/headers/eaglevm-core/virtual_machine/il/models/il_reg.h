@@ -2,6 +2,9 @@
 #include <variant>
 #include <string>
 
+#include "eaglevm-core/assembler/x86/zydis_defs.h"
+#include "eaglevm-core/assembler/x86/zydis_enum.h"
+
 namespace eagle::il
 {
     enum class reg_type
@@ -24,107 +27,54 @@ namespace eagle::il
 
     enum class reg_vm
     {
+        none,
         vip,
+        vip_32,
+        vip_16,
+        vip_8,
+
         vsp,
+        vsp_32,
+        vsp_16,
+        vsp_8,
+
         vregs,
+        vregs_32,
+        vregs_16,
+        vregs_8,
+
         vtemp,
+        vtemp_32,
+        vtemp_16,
+        vtemp_8,
+
         vtemp2,
+        vtemp2_32,
+        vtemp2_16,
+        vtemp2_8,
+
         vcs,
+        vcs_32,
+        vcs_16,
+        vcs_8,
+
         vcsret,
-        vbase
-    };
+        vcsret_32,
+        vcsret_16,
+        vcsret_8,
 
-    enum class reg_x86
+        vbase,
+    };
+    enum class size
     {
-        // 8-bit
-        al,
-        cl,
-        dl,
-        bl,
-        ah,
-        ch,
-        dh,
-        bh,
-        spl,
-        bpl,
-        sil,
-        dil,
-        r8b,
-        r9b,
-        r10b,
-        r11b,
-        r12b,
-        r13b,
-        r14b,
-        r15b,
-
-        // 16-bit
-        ax,
-        cx,
-        dx,
-        bx,
-        sp,
-        bp,
-        si,
-        di,
-        r8w,
-        r9w,
-        r10w,
-        r11w,
-        r12w,
-        r13w,
-        r14w,
-        r15w,
-
-        // 32-bit
-        eax,
-        ecx,
-        edx,
-        ebx,
-        esp,
-        ebp,
-        esi,
-        edi,
-        r8d,
-        r9d,
-        r10d,
-        r11d,
-        r12d,
-        r13d,
-        r14d,
-        r15d,
-
-        // 64-bit
-        rax,
-        rcx,
-        rdx,
-        rbx,
-        rsp,
-        rbp,
-        rsi,
-        rdi,
-        r8,
-        r9,
-        r10,
-        r11,
-        r12,
-        r13,
-        r14,
-        r15,
-
-        rip
+        qword,
+        dword,
+        word,
+        byte,
     };
 
-    enum class reg_size
-    {
-        b64,
-        b32,
-        b16,
-        b8h,
-        b8l
-    };
 
-    using reg_v = std::variant<reg_vm, reg_x86>;
+    using reg_v = std::variant<reg_vm, asmbl::x86::reg>;
 
     inline bool is_vm_reg(reg_v reg)
     {
@@ -147,7 +97,7 @@ namespace eagle::il
         std::visit([&result](auto&& arg)
         {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, reg_x86>)
+            if constexpr (std::is_same_v<T, asmbl::x86::reg>)
                 result = true;
             else
                 result = false;
@@ -158,10 +108,10 @@ namespace eagle::il
 
     inline reg_type get_reg_type(const reg_v reg)
     {
-        if(is_x86_reg(reg))
+        if (is_x86_reg(reg))
             return reg_type::x86;
 
-        if(is_vm_reg(reg))
+        if (is_vm_reg(reg))
             return reg_type::vm;
 
         return reg_type::invalid;
