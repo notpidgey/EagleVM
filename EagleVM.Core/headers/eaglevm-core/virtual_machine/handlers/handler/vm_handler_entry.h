@@ -12,6 +12,6 @@ namespace eagle::virt::handle
         {
         }
 
-        asmbl::code_label* get_vm_handler_va(reg_size width, handler_override override = ho_default) const;
+        asmb::code_label* get_vm_handler_va(reg_size width, handler_override override = ho_default) const;
     };
 }

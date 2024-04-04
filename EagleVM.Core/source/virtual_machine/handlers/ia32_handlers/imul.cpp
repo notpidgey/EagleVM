@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_imul_handler::construct_single(asmbl::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
+    void ia32_imul_handler::construct_single(asmb::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
         bool inlined)
     {
         const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
@@ -26,7 +26,7 @@ namespace eagle::virt::handle
             create_vm_return(container);
     }
 
-    void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmbl::function_container& container)
+    void ia32_imul_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmb::function_container& container)
     {
         if (decoded_instruction.instruction.operand_count_visible == 1)
         {

@@ -6,7 +6,7 @@
 */
 namespace eagle::virt::handle
 {
-    void vm_load_handler::construct_single(asmbl::function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
+    void vm_load_handler::construct_single(asmb::function_container& container, reg_size reg_size, uint8_t operands, handler_override override, bool inlined)
     {
         const inst_handler_entry* push_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_PUSH];
         auto target_temp = zydis_helper::get_bit_version(VTEMP, reg_size);

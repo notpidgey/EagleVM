@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/handlers/models/handler_override.h"
 #include "eaglevm-core/util/zydis_helper.h"
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     class code_label;
 }
@@ -15,6 +15,6 @@ namespace eagle::virt::handle
         uint8_t operand_count = 2;
         handler_override override = ho_default;
 
-        asmbl::code_label* target_label = nullptr;
+        asmb::code_label* target_label = nullptr;
     };
 }

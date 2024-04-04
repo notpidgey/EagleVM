@@ -1,7 +1,7 @@
 #pragma once
-#include "eaglevm-core/assembler/function_container.h"
+#include "eaglevm-core/compiler/function_container.h"
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     class code_label;
     class section_manager

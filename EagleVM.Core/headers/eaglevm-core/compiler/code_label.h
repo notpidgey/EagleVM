@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     class code_label
     {

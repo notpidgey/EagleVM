@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_div_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override,
+    void ia32_div_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override,
         bool inlined)
     {
     }

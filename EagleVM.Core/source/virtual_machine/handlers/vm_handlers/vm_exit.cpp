@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void vm_exit_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override,
+    void vm_exit_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override,
         bool inlined)
     {
         // we need to place the target RSP after all the pops
@@ -15,7 +15,7 @@ namespace eagle::virt::handle
 
         // we also need to setup an RIP to return to main program execution
         // we will place that after the RSP
-        asmbl::code_label* rel_label = asmbl::code_label::create();
+        asmb::code_label* rel_label = asmb::code_label::create();
         container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, 8)));
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV, ZMEMBD(VSP, -8, 8), ZREG(VIP)));

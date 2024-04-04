@@ -1,6 +1,6 @@
 #pragma once
 #include "eaglevm-core/pe/pe_generator.h"
-#include "eaglevm-core/assembler/section_manager.h"
+#include "eaglevm-core/compiler/section_manager.h"
 
 namespace eagle::pe
 {
@@ -13,7 +13,7 @@ namespace eagle::pe
         void set_overlay(bool overlay);
         static std::pair<uint32_t, uint32_t> insert_pdb(encoded_vec& encoded_vec);
 
-        asmbl::section_manager create_section();
+        asmb::section_manager create_section();
 
     private:
         pe_generator* generator;

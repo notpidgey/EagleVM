@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/handlers/handler/inst_handler_entry.h"
 #include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
 
-#include "eaglevm-core/assembler/code_label.h"
+#include "eaglevm-core/compiler/code_label.h"
 
 namespace eagle::virt::handle
 {
@@ -14,10 +14,10 @@ namespace eagle::virt::handle
         has_builder_hook = false;
         is_vm_handler = false;
 
-        handler_container = asmbl::function_container();
+        handler_container = asmb::function_container();
     }
 
-    asmbl::function_container base_handler_entry::construct_handler()
+    asmb::function_container base_handler_entry::construct_handler()
     {
         std::ranges::for_each(handlers, [this](const handler_info& info)
         {
@@ -36,10 +36,10 @@ namespace eagle::virt::handle
     void base_handler_entry::initialize_labels()
     {
         for (auto& handler : handlers)
-            handler.target_label = asmbl::code_label::create();
+            handler.target_label = asmb::code_label::create();
     }
 
-    void base_handler_entry::create_vm_return(asmbl::function_container& container)
+    void base_handler_entry::create_vm_return(asmb::function_container& container)
     {
         // now that we use a virtual call stack we must pop the top address
 
@@ -55,12 +55,12 @@ namespace eagle::virt::handle
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(VIP)));
     }
 
-    void base_handler_entry::call_vm_handler(asmbl::function_container& container, asmbl::code_label* jump_label)
+    void base_handler_entry::call_vm_handler(asmb::function_container& container, asmb::code_label* jump_label)
     {
         if (!jump_label)
             __debugbreak(); // jump_label should never be null
 
-        asmbl::code_label* retun_label = asmbl::code_label::create();
+        asmb::code_label* retun_label = asmb::code_label::create();
 
         // lea VCS, [VCS - 8]       ; allocate space for new return address
         // mov [VCS], code_label    ; place return rva on the stack
@@ -76,7 +76,7 @@ namespace eagle::virt::handle
         container.assign_label(retun_label);
     }
 
-    void base_handler_entry::call_virtual_handler(asmbl::function_container& container, int handler_id, reg_size size, bool inlined)
+    void base_handler_entry::call_virtual_handler(asmb::function_container& container, int handler_id, reg_size size, bool inlined)
     {
         vm_handler_entry* target_handler = hg_->v_handlers[handler_id];
         if (target_handler == nullptr)
@@ -91,7 +91,7 @@ namespace eagle::virt::handle
             call_vm_handler(container, target_handler->get_vm_handler_va(size));
     }
 
-    void base_handler_entry::call_instruction_handler(asmbl::function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined)
+    void base_handler_entry::call_instruction_handler(asmb::function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined)
     {
         handle::inst_handler_entry* target_handler = hg_->inst_handlers[handler_id];
         if (target_handler == nullptr)

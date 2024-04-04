@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void vm_enter_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
+    void vm_enter_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
     {
         // TODO: this is a temporary fix before i add stack overrun checks
         // we allocate the registers for the virtual machine 20 pushes after the current stack
@@ -53,7 +53,7 @@ namespace eagle::virt::handle
             });
 
             // lea VIP, [0x14000000]    ; load base
-            asmbl::code_label* rel_label = asmbl::code_label::create();
+            asmb::code_label* rel_label = asmb::code_label::create();
             container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VBASE), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
 
 

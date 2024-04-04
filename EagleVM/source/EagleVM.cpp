@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "eaglevm-core/assembler/section_manager.h"
+#include "eaglevm-core/compiler/section_manager.h"
 #include "eaglevm-core/pe/pe_parser.h"
 #include "eaglevm-core/pe/pe_generator.h"
 #include "eaglevm-core/pe/packer/pe_packer.h"
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
 
     std::printf("[>] generating vm handlers at %04X...\n", static_cast<uint32_t>(data_section.VirtualAddress));
 
-    eagle::asmbl::section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
+    eagle::asmb::section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
     encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
 
     data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
@@ -167,9 +167,9 @@ int main(int argc, char* argv[])
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
-    std::vector<std::pair<uint32_t, eagle::asmbl::code_label*>> va_enters;
+    std::vector<std::pair<uint32_t, eagle::asmb::code_label*>> va_enters;
 
-    eagle::asmbl::section_manager vm_code_sm(true);
+    eagle::asmb::section_manager vm_code_sm(true);
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
     eagle::pe::pe_packer packer(&generator);
     packer.set_overlay(false);
 
-    eagle::asmbl::section_manager packer_sm = packer.create_section();
+    eagle::asmb::section_manager packer_sm = packer.create_section();
 
     auto& [packer_section, packer_bytes] = generator.add_section(".pack");
     packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;

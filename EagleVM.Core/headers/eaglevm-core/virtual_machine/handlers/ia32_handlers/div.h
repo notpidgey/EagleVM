@@ -17,7 +17,7 @@ namespace eagle::virt::handle
         };
 
     private:
-        void construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override,
+        void construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override,
             bool inlined = false) override;
     };
 }

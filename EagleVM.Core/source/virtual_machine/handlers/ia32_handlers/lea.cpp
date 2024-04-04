@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_lea_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
+    void ia32_lea_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
     {
         // value we want to move should be located at the top of the stack
         // the address we want to move TO should be located right below it

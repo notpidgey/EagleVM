@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    asmbl::code_label* vm_handler_entry::get_vm_handler_va(reg_size width, handler_override override) const
+    asmb::code_label* vm_handler_entry::get_vm_handler_va(reg_size width, handler_override override) const
     {
         const auto it = std::ranges::find_if(handlers,
             [width, override](const handler_info& h)

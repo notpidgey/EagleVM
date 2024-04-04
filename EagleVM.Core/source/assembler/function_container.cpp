@@ -1,7 +1,7 @@
-#include "eaglevm-core/assembler/function_container.h"
+#include "eaglevm-core/compiler/function_container.h"
 #include "eaglevm-core/util/zydis_helper.h"
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     function_container::function_container()
     {

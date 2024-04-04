@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void vm_store_handler::construct_single(asmbl::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
+    void vm_store_handler::construct_single(asmb::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
         bool inlined)
     {
         const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];

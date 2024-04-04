@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_cmp_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override,
+    void ia32_cmp_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override,
         bool inlined)
     {
         const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
@@ -23,7 +23,7 @@ namespace eagle::virt::handle
             create_vm_return(container);
     }
 
-    void ia32_cmp_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmbl::function_container& container)
+    void ia32_cmp_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmb::function_container& container)
     {
         const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_LOAD];
         call_vm_handler(container, push_rflags_handler->get_vm_handler_va(bit64));
@@ -36,7 +36,7 @@ namespace eagle::virt::handle
     }
 
     encode_status ia32_cmp_handler::encode_operand(
-        asmbl::function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, encode_ctx& context)
+        asmb::function_container& container, const zydis_decode& instruction, zydis_dimm op_imm, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
         const auto target_size = static_cast<reg_size>(instruction.instruction.operand_width / 8);
@@ -58,7 +58,7 @@ namespace eagle::virt::handle
     }
 
 
-    void ia32_cmp_handler::upscale_temp(asmbl::function_container& container, reg_size target_size, reg_size current_size)
+    void ia32_cmp_handler::upscale_temp(asmb::function_container& container, reg_size target_size, reg_size current_size)
     {
         // mov eax/ax/al, VTEMP
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,

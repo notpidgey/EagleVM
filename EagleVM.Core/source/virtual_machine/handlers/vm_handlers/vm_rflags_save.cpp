@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void vm_rflags_save_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override,
+    void vm_rflags_save_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override,
         bool inlined)
     {
         container.add({

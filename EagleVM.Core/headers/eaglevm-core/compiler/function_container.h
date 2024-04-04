@@ -3,10 +3,10 @@
 #include <variant>
 #include <functional>
 
-#include "eaglevm-core/assembler/code_label.h"
+#include "eaglevm-core/compiler/code_label.h"
 #include "eaglevm-core/util/zydis_defs.h"
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     typedef std::pair<code_label*, std::vector<dynamic_instruction>> function_segment;
     class function_container

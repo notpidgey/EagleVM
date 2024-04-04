@@ -18,9 +18,9 @@ namespace eagle::virt
         rg_->init_reg_order();
     }
 
-    asmbl::section_manager vm_inst::generate_vm_handlers(const bool randomize_handler_position) const
+    asmb::section_manager vm_inst::generate_vm_handlers(const bool randomize_handler_position) const
     {
-        asmbl::section_manager section(randomize_handler_position);
+        asmb::section_manager section(randomize_handler_position);
         hg_->setup_vm_mapping();
 
         for (const auto& handler : hg_->v_handlers | std::views::values)
@@ -31,13 +31,13 @@ namespace eagle::virt
 
         for (const auto& handler : hg_->v_handlers | std::views::values)
         {
-            asmbl::function_container container = handler->construct_handler();
+            asmb::function_container container = handler->construct_handler();
             section.add(container);
         }
 
         for (const auto& handler : hg_->inst_handlers | std::views::values)
         {
-            asmbl::function_container container = handler->construct_handler();
+            asmb::function_container container = handler->construct_handler();
             section.add(container);
         }
 

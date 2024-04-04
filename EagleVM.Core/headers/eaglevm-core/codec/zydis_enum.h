@@ -2,8 +2,10 @@
 #include <Zydis/Register.h>
 #include <Zydis/Mnemonic.h>
 
-namespace eagle::asmbl::x86
+namespace eagle::codec
 {
+    using zydis_register_width = ZydisRegisterWidth;
+
     using zydis_register = ZydisRegister;
     enum reg
     {
@@ -1971,12 +1973,16 @@ namespace eagle::asmbl::x86
     };
 
     using zydis_reg_class = ZydisRegisterClass;
-    enum reg_size
+    enum reg_class
     {
         invalid = ZYDIS_REGCLASS_INVALID,
         gpr_64 = ZYDIS_REGCLASS_GPR64,
         gpr_32 = ZYDIS_REGCLASS_GPR32,
         gpr_16 = ZYDIS_REGCLASS_GPR16,
-        gpr_8 = ZYDIS_REGCLASS_GPR8
+        gpr_8 = ZYDIS_REGCLASS_GPR8,
+        mmx_64 = ZYDIS_REGCLASS_MMX,
+        xmm_128 = ZYDIS_REGCLASS_XMM,
+        ymm_256 = ZYDIS_REGCLASS_YMM,
+        zmm_512 = ZYDIS_REGCLASS_ZMM,
     };
 }

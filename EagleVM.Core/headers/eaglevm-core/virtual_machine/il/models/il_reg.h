@@ -2,8 +2,8 @@
 #include <variant>
 #include <string>
 
-#include "eaglevm-core/assembler/x86/zydis_defs.h"
-#include "eaglevm-core/assembler/x86/zydis_enum.h"
+#include "eaglevm-core/compiler/x86/zydis_defs.h"
+#include "eaglevm-core/compiler/x86/zydis_enum.h"
 
 namespace eagle::il
 {
@@ -74,7 +74,7 @@ namespace eagle::il
     };
 
 
-    using reg_v = std::variant<reg_vm, asmbl::x86::reg>;
+    using reg_v = std::variant<reg_vm, asmb::x86::reg>;
 
     inline bool is_vm_reg(reg_v reg)
     {
@@ -97,7 +97,7 @@ namespace eagle::il
         std::visit([&result](auto&& arg)
         {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, asmbl::x86::reg>)
+            if constexpr (std::is_same_v<T, asmb::x86::reg>)
                 result = true;
             else
                 result = false;

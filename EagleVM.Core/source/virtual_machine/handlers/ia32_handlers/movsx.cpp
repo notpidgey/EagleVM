@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_movsx_handler::construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
+    void ia32_movsx_handler::construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined)
     {
         const inst_handler_entry* mov_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_MOV];
 
@@ -14,7 +14,7 @@ namespace eagle::virt::handle
     }
 
     encode_status ia32_movsx_handler::encode_operand(
-        asmbl::function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, encode_ctx& context)
+        asmb::function_container& container, const zydis_decode& instruction, zydis_dreg op_reg, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
         if (index == 0)
@@ -64,7 +64,7 @@ namespace eagle::virt::handle
         return encode_status::success;
     }
 
-    encode_status ia32_movsx_handler::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
+    encode_status ia32_movsx_handler::encode_operand(asmb::function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
         encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
@@ -76,7 +76,7 @@ namespace eagle::virt::handle
         //1. begin with loading the base register
         //mov VTEMP, imm
         //jmp VM_LOAD_REG
-        asmbl::code_label* rip_label;
+        asmb::code_label* rip_label;
         {
             if (op_mem.base == ZYDIS_REGISTER_RSP)
             {
@@ -92,7 +92,7 @@ namespace eagle::virt::handle
             }
             else if (op_mem.base == ZYDIS_REGISTER_RIP)
             {
-                rip_label = asmbl::code_label::create("rip: " + std::to_string(orig_rva));
+                rip_label = asmb::code_label::create("rip: " + std::to_string(orig_rva));
 
                 container.add(rip_label, zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8)));
                 call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
@@ -189,7 +189,7 @@ namespace eagle::virt::handle
         return inst_handler_entry::get_op_action(inst, op_type, index);
     }
 
-    void ia32_movsx_handler::upscale_temp(asmbl::function_container& container, reg_size target_size, reg_size current_size)
+    void ia32_movsx_handler::upscale_temp(asmb::function_container& container, reg_size target_size, reg_size current_size)
     {
         // mov eax/ax/al, VTEMP
         container.add(zydis_helper::enc(ZYDIS_MNEMONIC_MOV,
@@ -231,7 +231,7 @@ namespace eagle::virt::handle
     }
 
     void ia32_movsx_handler::finalize_translate_to_virtual(
-        const zydis_decode& decoded_instruction, asmbl::function_container& container)
+        const zydis_decode& decoded_instruction, asmb::function_container& container)
     {
         auto op = decoded_instruction.operands[0];
         if (op.type == ZYDIS_OPERAND_TYPE_REGISTER)

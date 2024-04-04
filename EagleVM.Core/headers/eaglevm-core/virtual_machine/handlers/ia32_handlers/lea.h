@@ -18,7 +18,7 @@ namespace eagle::virt::handle
         };
 
     private:
-        void construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined = false) override;
+        void construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined = false) override;
 
         int get_op_action(const zydis_decode& inst, zyids_operand_t op_type, int index) override;
     };

@@ -3,14 +3,14 @@
 
 namespace eagle::virt::handle
 {
-    std::pair<bool, eagle::asmbl::function_container> eagle::virt::handle::inst_handler_entry::translate_to_virtual(
+    std::pair<bool, eagle::asmb::function_container> eagle::virt::handle::inst_handler_entry::translate_to_virtual(
         const zydis_decode& decoded_instruction,
         const uint64_t original_rva)
     {
-        asmbl::function_container container = {};
+        asmb::function_container container = {};
 
         const inst_handler_entry* handler = hg_->inst_handlers[decoded_instruction.instruction.mnemonic];
-        const asmbl::code_label* target = handler->get_handler_va(
+        const asmb::code_label* target = handler->get_handler_va(
             static_cast<reg_size>(decoded_instruction.instruction.operand_width / 8),
             decoded_instruction.instruction.operand_count_visible
         );
@@ -21,13 +21,13 @@ namespace eagle::virt::handle
             return {false, container};
         }
 
-        container.assign_label(asmbl::code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
+        container.assign_label(asmb::code_label::create(zydis_helper::instruction_to_string(decoded_instruction), true));
 
         int32_t current_disp = 0;
         for (uint8_t i = 0; i < decoded_instruction.instruction.operand_count_visible; i++)
         {
             encode_status status = encode_status::unsupported;
-            container.assign_label(asmbl::code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
+            container.assign_label(asmb::code_label::create(zydis_helper::operand_to_string(decoded_instruction, i), true));
 
             encode_ctx ctx
             {
@@ -62,7 +62,7 @@ namespace eagle::virt::handle
         return {true, container};
     }
 
-    asmbl::code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
+    asmb::code_label* inst_handler_entry::get_handler_va(reg_size width, uint8_t operands, handler_override override) const
     {
         const auto it = std::ranges::find_if(handlers,
             [width, operands, override](const handler_info& h)
@@ -84,7 +84,7 @@ namespace eagle::virt::handle
         return action_value;
     }
 
-    void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, asmbl::function_container& container)
+    void inst_handler_entry::finalize_translate_to_virtual(const zydis_decode& decoded, asmb::function_container& container)
     {
         // call yourself
         constexpr bool is_inlined = true;
@@ -95,7 +95,7 @@ namespace eagle::virt::handle
     }
 
     encode_status inst_handler_entry::encode_operand(
-        asmbl::function_container& container, const zydis_decode& instruction,
+        asmb::function_container& container, const zydis_decode& instruction,
         zydis_dreg op_reg, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
@@ -118,7 +118,7 @@ namespace eagle::virt::handle
         return encode_status::success;
     }
 
-    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
+    encode_status inst_handler_entry::encode_operand(asmb::function_container& container, const zydis_decode& instruction, zydis_dmem op_mem,
         encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
@@ -130,7 +130,7 @@ namespace eagle::virt::handle
         //1. begin with loading the base register
         //mov VTEMP, imm
         //jmp VM_LOAD_REG
-        asmbl::code_label* rip_label;
+        asmb::code_label* rip_label;
         {
             if (op_mem.base == ZYDIS_REGISTER_RSP)
             {
@@ -146,7 +146,7 @@ namespace eagle::virt::handle
             }
             else if (op_mem.base == ZYDIS_REGISTER_RIP)
             {
-                rip_label = asmbl::code_label::create("rip: " + std::to_string(orig_rva));
+                rip_label = asmb::code_label::create("rip: " + std::to_string(orig_rva));
 
                 push_container(container, ZYDIS_MNEMONIC_LEA, ZREG(VTEMP), ZMEMBD(IP_RIP, 0, 8));
                 call_instruction_handler(container, ZYDIS_MNEMONIC_PUSH, bit64, 1, true);
@@ -256,14 +256,14 @@ namespace eagle::virt::handle
         return encode_status::success;
     }
 
-    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr,
+    encode_status inst_handler_entry::encode_operand(asmb::function_container& container, const zydis_decode& instruction, zydis_dptr op_ptr,
         encode_ctx& context)
     {
         // not a supported operand
         return encode_status::unsupported;
     }
 
-    encode_status inst_handler_entry::encode_operand(asmbl::function_container& container, const zydis_decode& instruction, zydis_dimm op_imm,
+    encode_status inst_handler_entry::encode_operand(asmb::function_container& container, const zydis_decode& instruction, zydis_dimm op_imm,
         encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
@@ -276,7 +276,7 @@ namespace eagle::virt::handle
         return encode_status::success;
     }
 
-    void inst_handler_entry::load_reg_address(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    void inst_handler_entry::load_reg_address(asmb::function_container& container, zydis_dreg op_reg, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
@@ -291,7 +291,7 @@ namespace eagle::virt::handle
         *stack_disp += bit64;
     }
 
-    void inst_handler_entry::load_reg_offset(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    void inst_handler_entry::load_reg_offset(asmb::function_container& container, zydis_dreg op_reg, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);
@@ -306,7 +306,7 @@ namespace eagle::virt::handle
         *stack_disp += bit64;
     }
 
-    void inst_handler_entry::load_reg_value(asmbl::function_container& container, zydis_dreg op_reg, encode_ctx& context)
+    void inst_handler_entry::load_reg_value(asmb::function_container& container, zydis_dreg op_reg, encode_ctx& context)
     {
         auto [stack_disp, orig_rva, index] = context;
         const auto [displacement, size] = rm_->get_stack_displacement(op_reg.value);

@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_add_handler::construct_single(asmbl::function_container& container, const reg_size size, uint8_t operands, handler_override override,
+    void ia32_add_handler::construct_single(asmb::function_container& container, const reg_size size, uint8_t operands, handler_override override,
         const bool inlined)
     {
         const inst_handler_entry* pop_handler = hg_->inst_handlers[ZYDIS_MNEMONIC_POP];
@@ -19,7 +19,7 @@ namespace eagle::virt::handle
             create_vm_return(container);
     }
 
-    void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmbl::function_container& container)
+    void ia32_add_handler::finalize_translate_to_virtual(const zydis_decode& decoded_instruction, asmb::function_container& container)
     {
         {
             const vm_handler_entry* push_rflags_handler = hg_->v_handlers[MNEMONIC_VM_RFLAGS_LOAD];

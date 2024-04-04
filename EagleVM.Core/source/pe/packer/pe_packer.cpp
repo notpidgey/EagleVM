@@ -2,8 +2,8 @@
 #include "eaglevm-core/pe/models/code_view_pdb.h"
 
 #include "eaglevm-core/util/zydis_helper.h"
-#include "eaglevm-core/assembler/function_container.h"
-#include "eaglevm-core/assembler/section_manager.h"
+#include "eaglevm-core/compiler/function_container.h"
+#include "eaglevm-core/compiler/section_manager.h"
 
 namespace eagle::pe
 {
@@ -42,14 +42,14 @@ namespace eagle::pe
         return {address, pdb_value.size() + sizeof(pdb)};
     }
 
-    asmbl::section_manager pe_packer::create_section()
+    asmb::section_manager pe_packer::create_section()
     {
-        asmbl::section_manager section_manager;
+        asmb::section_manager section_manager;
 
         // apply text overlay
         if (text_overlay)
         {
-            asmbl::function_container container;
+            asmb::function_container container;
 
             std::vector<zydis_encoder_request> target_instructions;
             int current_byte = 0;
@@ -79,7 +79,7 @@ namespace eagle::pe
                 header.Characteristics |= IMAGE_SCN_MEM_WRITE;
                 const uint32_t section_rva = header.VirtualAddress;
 
-                asmbl::code_label* rel_label = asmbl::code_label::create();
+                asmb::code_label* rel_label = asmb::code_label::create();
                 container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
                 container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
 
@@ -108,10 +108,10 @@ namespace eagle::pe
 
         // return to main
         {
-            asmbl::function_container container;
+            asmb::function_container container;
             auto orig_entry = generator->nt_headers.OptionalHeader.AddressOfEntryPoint;
 
-            asmbl::code_label* rel_label = asmbl::code_label::create();
+            asmb::code_label* rel_label = asmb::code_label::create();
             container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
             container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, orig_entry, 8))));
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(GR_RAX)));

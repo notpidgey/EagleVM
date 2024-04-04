@@ -1,6 +1,6 @@
-#include "eaglevm-core/assembler/code_label.h"
+#include "eaglevm-core/compiler/code_label.h"
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     code_label::code_label(const std::string& section_name, const bool comment)
     {

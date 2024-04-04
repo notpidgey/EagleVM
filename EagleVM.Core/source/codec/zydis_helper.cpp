@@ -1,16 +1,15 @@
-#include "eaglevm-core/assembler/x86/zydis_helper.h"
-#include "eaglevm-core/assembler/x86/zydis_defs.h"
+#include "eaglevm-core/codec/zydis_helper.h"
+#include "eaglevm-core/codec/zydis_defs.h"
 
-namespace eagle::asmbl::x86
+namespace eagle::codec
 {
     void setup_decoder()
     {
-        ZydisDecoderInit(&zyids_decoder, ZYDIS_MACHINE_MODE_LONG_64,
-            ZYDIS_STACK_WIDTH_64);
+        ZydisDecoderInit(&zyids_decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64);
         ZydisFormatterInit(&zydis_formatter, ZYDIS_FORMATTER_STYLE_INTEL);
     }
 
-    reg get_bit_version(reg input_reg, const reg_size target_size)
+    reg get_bit_version(reg input_reg, const reg_class target_size)
     {
         const zydis_register zy_register = static_cast<zydis_register>(input_reg);
         const zydis_reg_class zy_reg_class = static_cast<zydis_reg_class>(target_size);
@@ -19,6 +18,36 @@ namespace eagle::asmbl::x86
         zydis_register enc = ZydisRegisterEncode(zy_reg_class, id);
 
         return static_cast<reg>(enc);
+    }
+
+    reg_class get_max_size(reg input_reg)
+    {
+        const zydis_register zy_register = static_cast<zydis_register>(input_reg);
+        const zydis_reg_class zy_reg_class = ZydisRegisterGetClass(zy_register);
+
+        zydis_reg_class class_target;
+        switch (zy_reg_class)
+        {
+            case ZYDIS_REGCLASS_GPR8:
+            case ZYDIS_REGCLASS_GPR16:
+            case ZYDIS_REGCLASS_GPR32:
+            case ZYDIS_REGCLASS_GPR64:
+                class_target = ZYDIS_REGCLASS_GPR64;
+                break;
+            case ZYDIS_REGCLASS_XMM:
+            case ZYDIS_REGCLASS_YMM:
+            case ZYDIS_REGCLASS_ZMM:
+                class_target = ZYDIS_REGCLASS_ZMM;
+                break;
+            default:
+                class_target = ZYDIS_REGCLASS_INVALID;
+                break;
+        }
+
+        // this is really really bad, this should be a complete wrapper around zydis not just bound to restrictions of the virtualizer
+        // will finish later and add limitations along with asserts.
+        assert(class_target != ZYDIS_REGCLASS_INVALID, "Invalid register input size");
+        return static_cast<reg_class>(class_target);
     }
 
     bool is_upper_8(const reg reg)
@@ -35,15 +64,15 @@ namespace eagle::asmbl::x86
         }
     }
 
-    reg_size get_reg_size(const reg reg)
+    reg_class get_reg_size(const reg reg)
     {
-        const zydis_register zy_register = static_cast<zydis_register>(reg);
-        const uint16_t bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
+        const auto zy_register = static_cast<zydis_register>(reg);
+        const auto bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
 
-        return static_cast<reg_size>(bit_size / 8);
+        return static_cast<reg_class>(bit_size);
     }
 
-    char reg_size_to_string(const reg_size reg_size)
+    char reg_size_to_string(const reg_class reg_size)
     {
         switch (reg_size)
         {
@@ -226,7 +255,7 @@ namespace eagle::asmbl::x86
         return data;
     }
 
-    std::vector<std::string> print_queue(std::vector<enc::req>& queue,
+    std::vector<std::string> print_queue(const std::vector<enc::req>& queue,
         uint32_t address)
     {
         std::vector<std::string> data;
@@ -287,18 +316,18 @@ namespace eagle::asmbl::x86
         return false;
     }
 
-    std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode,
+    std::pair<uint64_t, uint8_t> calc_relative_rva(
+        const dec::inst& instruction,
+        const dec::operand* operands,
         const uint32_t rva,
         const int8_t operand)
     {
-        const auto& [instruction, operands] = decode;
-
         uint64_t target_address = rva;
         if (operand < 0)
         {
             for (int i = 0; i < instruction.operand_count; i++)
             {
-                auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva,
+                const auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva,
                     &target_address);
                 if (result == ZYAN_STATUS_SUCCESS)
                     return {target_address, i};
@@ -306,7 +335,7 @@ namespace eagle::asmbl::x86
         }
         else
         {
-            auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand],
+            const auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand],
                 rva, &target_address);
             if (result == ZYAN_STATUS_SUCCESS)
                 return {target_address, operand};
@@ -323,7 +352,7 @@ namespace eagle::asmbl::x86
         dec::inst_info decoded_instruction{};
 
         while (ZYAN_SUCCESS(
-            ZydisDecoderDecodeFull(&zyids_decoder, (char*)data + offset, size - offset
+            ZydisDecoderDecodeFull(&zyids_decoder, static_cast<char*>(data) + offset, size - offset
                 , &decoded_instruction.instruction
                 , decoded_instruction.operands
             )))

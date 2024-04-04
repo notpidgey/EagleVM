@@ -5,7 +5,7 @@
 #include "eaglevm-core/util/util.h"
 #include "eaglevm-core/util/zydis_helper.h"
 
-#include "eaglevm-core/assembler/function_container.h"
+#include "eaglevm-core/compiler/function_container.h"
 
 #include "eaglevm-core/virtual_machine/vm_inst_handlers.h"
 #include "eaglevm-core/virtual_machine/vm_inst_regs.h"
@@ -42,13 +42,13 @@ namespace eagle::virt::handle
     public:
         explicit base_handler_entry(vm_inst_regs* manager, vm_inst_handlers* handler_generator);
 
-        asmbl::function_container construct_handler();
+        asmb::function_container construct_handler();
         void initialize_labels();
 
-        void create_vm_return(asmbl::function_container& container);
-        void call_vm_handler(asmbl::function_container& container, asmbl::code_label* jump_label);
+        void create_vm_return(asmb::function_container& container);
+        void call_vm_handler(asmb::function_container& container, asmb::code_label* jump_label);
 
-        virtual void construct_single(asmbl::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined) = 0;
+        virtual void construct_single(asmb::function_container& container, reg_size size, uint8_t operands, handler_override override, bool inlined) = 0;
 
     protected:
         ~base_handler_entry() = default;
@@ -59,18 +59,18 @@ namespace eagle::virt::handle
         bool has_builder_hook;
         bool is_vm_handler;
 
-        asmbl::function_container handler_container;
+        asmb::function_container handler_container;
         std::vector<handler_info> handlers;
 
-        void call_virtual_handler(asmbl::function_container& container, int handler_id, reg_size size, bool inlined);
-        void call_instruction_handler(asmbl::function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined);
+        void call_virtual_handler(asmb::function_container& container, int handler_id, reg_size size, bool inlined);
+        void call_instruction_handler(asmb::function_container& container, zyids_mnemonic handler_id, reg_size size, int operands, bool inlined);
 
-        void push_container(asmbl::code_label* label, asmbl::function_container& container, zyids_mnemonic mnemonic, auto&&... args)
+        void push_container(asmb::code_label* label, asmb::function_container& container, zyids_mnemonic mnemonic, auto&&... args)
         {
             container.add(label, zydis_helper::enc(mnemonic, std::forward<decltype(args)>(args)...));
         }
 
-        void push_container(asmbl::function_container& container, zyids_mnemonic mnemonic, auto&&... args)
+        void push_container(asmb::function_container& container, zyids_mnemonic mnemonic, auto&&... args)
         {
             container.add(zydis_helper::enc(mnemonic, std::forward<decltype(args)>(args)...));
         }

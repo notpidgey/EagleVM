@@ -1,4 +1,4 @@
-#include "eaglevm-core/assembler/section_manager.h"
+#include "eaglevm-core/compiler/section_manager.h"
 
 #include "eaglevm-core/util/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
@@ -6,7 +6,7 @@
 #include <ranges>
 #include <variant>
 
-namespace eagle::asmbl
+namespace eagle::asmb
 {
     section_manager::section_manager()
     {

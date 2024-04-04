@@ -6,9 +6,9 @@
 #include <Zydis/DecoderTypes.h>
 #include <Zycore/LibC.h>
 
-#include "eaglevm-core/assembler/x86/zydis_enum.h"
+#include "eaglevm-core/codec/zydis_enum.h"
 
-namespace eagle::asmbl::x86
+namespace eagle::codec
 {
     typedef ZydisOperandType operand_t;
     namespace enc

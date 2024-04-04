@@ -2,7 +2,7 @@
 
 namespace eagle::virt::handle
 {
-    void ia32_pop_handler::construct_single(asmbl::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
+    void ia32_pop_handler::construct_single(asmb::function_container& container, reg_size reg_size, uint8_t operands, handler_override override,
         bool inlined)
     {
         uint64_t size = reg_size;

@@ -6,7 +6,7 @@ namespace eagle::il
     class cmd_vm_pop : public base_command
     {
     public:
-        explicit cmd_vm_pop(const reg_vm reg_dest, const reg_size size)
+        explicit cmd_vm_pop(const reg_vm reg_dest, const stack_disp size)
             : base_command(command_type::vm_pop), dest_reg(reg_dest), size(size)
         {
             type = get_reg_type(reg_dest);
@@ -15,6 +15,6 @@ namespace eagle::il
     private:
         reg_vm dest_reg;
         reg_type type;
-        reg_size size;
+        stack_disp size;
     };
 }
