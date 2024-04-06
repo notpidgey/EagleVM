@@ -27,7 +27,13 @@ namespace eagle::codec
     reg get_bit_version(reg input_reg, reg_class target_size);
     bool is_upper_8(reg reg);
 
-    reg_class get_reg_size(reg reg);
+    reg_class get_reg_class(reg reg);
+    reg_class get_reg_class(zydis_register reg);
+
+    reg_size get_reg_size(reg reg);
+    reg_size get_reg_size(zydis_register reg);
+    reg_size get_reg_size(reg_class reg);
+
     char reg_size_to_string(reg_class reg_size);
 
     std::vector<uint8_t> encode_request(enc::req& request);

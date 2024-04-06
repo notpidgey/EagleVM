@@ -13,7 +13,7 @@ namespace eagle::il
         {
         }
 
-        void add_command(const base_command_ptr& command);
+        base_command_ptr add_command(const base_command_ptr& command);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);
 

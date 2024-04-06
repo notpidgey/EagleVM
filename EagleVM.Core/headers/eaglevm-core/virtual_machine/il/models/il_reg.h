@@ -2,8 +2,7 @@
 #include <variant>
 #include <string>
 
-#include "eaglevm-core/compiler/x86/zydis_defs.h"
-#include "eaglevm-core/compiler/x86/zydis_enum.h"
+#include "eaglevm-core/virtual_machine/il/models/il_size.h"
 
 namespace eagle::il
 {
@@ -14,20 +13,10 @@ namespace eagle::il
         vm
     };
 
-    std::string reg_type_to_string(reg_type reg)
-    {
-        switch (reg)
-        {
-            case reg_type::x86:
-                return "x86";
-            case reg_type::vm:
-                return "vm";
-        }
-    }
-
     enum class reg_vm
     {
         none,
+
         vip,
         vip_32,
         vip_16,
@@ -65,6 +54,130 @@ namespace eagle::il
 
         vbase,
     };
+
+    inline reg_vm get_bit_version(const reg_vm vm_reg, const il_size target_size)
+    {
+        // yes i know there is cleaner ways of doing it
+        // idc
+        switch (vm_reg)
+        {
+            case reg_vm::vip:
+            case reg_vm::vip_32:
+            case reg_vm::vip_16:
+            case reg_vm::vip_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vip;
+                    case il_size::bit_32:
+                        return reg_vm::vip_32;
+                    case il_size::bit_16:
+                        return reg_vm::vip_16;
+                    case il_size::bit_8:
+                        return reg_vm::vip_8;
+                }
+            case reg_vm::vsp:
+            case reg_vm::vsp_32:
+            case reg_vm::vsp_16:
+            case reg_vm::vsp_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vsp;
+                    case il_size::bit_32:
+                        return reg_vm::vsp_32;
+                    case il_size::bit_16:
+                        return reg_vm::vsp_16;
+                    case il_size::bit_8:
+                        return reg_vm::vsp_8;
+                }
+            case reg_vm::vregs:
+            case reg_vm::vregs_32:
+            case reg_vm::vregs_16:
+            case reg_vm::vregs_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vregs;
+                    case il_size::bit_32:
+                        return reg_vm::vregs_32;
+                    case il_size::bit_16:
+                        return reg_vm::vregs_16;
+                    case il_size::bit_8:
+                        return reg_vm::vregs_8;
+                }
+            case reg_vm::vtemp:
+            case reg_vm::vtemp_32:
+            case reg_vm::vtemp_16:
+            case reg_vm::vtemp_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vtemp;
+                    case il_size::bit_32:
+                        return reg_vm::vtemp_32;
+                    case il_size::bit_16:
+                        return reg_vm::vtemp_16;
+                    case il_size::bit_8:
+                        return reg_vm::vtemp_8;
+                }
+            case reg_vm::vtemp2:
+            case reg_vm::vtemp2_32:
+            case reg_vm::vtemp2_16:
+            case reg_vm::vtemp2_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vtemp2;
+                    case il_size::bit_32:
+                        return reg_vm::vtemp2_32;
+                    case il_size::bit_16:
+                        return reg_vm::vtemp2_16;
+                    case il_size::bit_8:
+                        return reg_vm::vtemp2_8;
+                }
+            case reg_vm::vcs:
+            case reg_vm::vcs_32:
+            case reg_vm::vcs_16:
+            case reg_vm::vcs_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vcs;
+                    case il_size::bit_32:
+                        return reg_vm::vcs_32;
+                    case il_size::bit_16:
+                        return reg_vm::vcs_16;
+                    case il_size::bit_8:
+                        return reg_vm::vcs_8;
+                }
+            case reg_vm::vcsret:
+            case reg_vm::vcsret_32:
+            case reg_vm::vcsret_16:
+            case reg_vm::vcsret_8:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vcsret;
+                    case il_size::bit_32:
+                        return reg_vm::vcsret_32;
+                    case il_size::bit_16:
+                        return reg_vm::vcsret_16;
+                    case il_size::bit_8:
+                        return reg_vm::vcsret_8;
+                }
+            case reg_vm::vbase:
+                switch (target_size)
+                {
+                    case il_size::bit_64:
+                        return reg_vm::vbase;
+                }
+            case reg_vm::none:
+            default:
+                return reg_vm::none;
+        }
+    }
+
     enum class size
     {
         qword,
@@ -73,8 +186,7 @@ namespace eagle::il
         byte,
     };
 
-
-    using reg_v = std::variant<reg_vm, asmb::x86::reg>;
+    using reg_v = std::variant<reg_vm, codec::reg>;
 
     inline bool is_vm_reg(reg_v reg)
     {

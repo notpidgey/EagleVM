@@ -3,30 +3,15 @@
 
 namespace eagle::il
 {
-    enum il_size
+    enum class il_size
     {
+        bit_512 = 512,
+        bit_256 = 256,
+        bit_128 = 128,
+        bit_64 = 64,
+        bit_32 = 32,
+        bit_16 = 16,
+        bit_8 = 8,
         none = 0,
-        byte = 1,
-        word = 2,
-        dword = 4,
-        qword = 8
     };
-
-    inline il_size size_from_bits(const uint8_t bits)
-    {
-        switch (bits)
-        {
-            case 8:
-                return byte;
-            case 16:
-                return word;
-            case 32:
-                return dword;
-            case 64:
-                return qword;
-            default:
-                // todo implemenet exception throwing
-                return none;
-        }
-    }
 }

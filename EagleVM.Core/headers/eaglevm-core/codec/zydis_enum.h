@@ -1985,4 +1985,16 @@ namespace eagle::codec
         ymm_256 = ZYDIS_REGCLASS_YMM,
         zmm_512 = ZYDIS_REGCLASS_ZMM,
     };
+
+    enum reg_size
+    {
+        empty = 0,
+        bit_512 = 512,
+        bit_256 = 256,
+        bit_128 = 128,
+        bit_64 = 64,
+        bit_32 = 32,
+        bit_16 = 16,
+        bit_8 = 8,
+    };
 }

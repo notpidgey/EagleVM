@@ -17,7 +17,8 @@ namespace eagle::il
     SHARED_DEFINE(cmd_enter);
     SHARED_DEFINE(cmd_exit);
     SHARED_DEFINE(cmd_handler_call);
-    SHARED_DEFINE(cmd_param);
+    SHARED_DEFINE(cmd_mem_read);
+    SHARED_DEFINE(cmd_mem_write);
     SHARED_DEFINE(cmd_vm_pop);
     SHARED_DEFINE(cmd_vm_push);
 
@@ -31,8 +32,6 @@ namespace eagle::il
 
     protected:
         command_type command;
-
-    private:
     };
 
     SHARED_DEFINE(base_command);

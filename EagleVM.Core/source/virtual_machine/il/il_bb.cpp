@@ -3,9 +3,10 @@
 
 namespace eagle::il
 {
-    void il_bb::add_command(const base_command_ptr& command)
+    base_command_ptr il_bb::add_command(const base_command_ptr& command)
     {
         commands.push_back(command);
+        return command;
     }
 
     bool il_bb::insert_after(const base_command_ptr& command_ptr)

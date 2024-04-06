@@ -64,12 +64,53 @@ namespace eagle::codec
         }
     }
 
-    reg_class get_reg_size(const reg reg)
+    reg_class get_reg_class(const reg reg)
     {
         const auto zy_register = static_cast<zydis_register>(reg);
-        const auto bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, zy_register);
+        return get_reg_class(zy_register);
+    }
 
+    reg_class get_reg_class(const zydis_register reg)
+    {
+        const auto bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, reg);
         return static_cast<reg_class>(bit_size);
+    }
+
+    reg_size get_reg_size(const reg reg)
+    {
+        const reg_class reg_class = get_reg_class(reg);
+        return get_reg_size(reg_class);
+    }
+
+    reg_size get_reg_size(const zydis_register reg)
+    {
+        const reg_class reg_class = get_reg_class(reg);
+        return get_reg_size(reg_class);
+    }
+
+    reg_size get_reg_size(const reg_class reg)
+    {
+        switch (reg)
+        {
+            case gpr_64:
+                return reg_size::bit_64;
+            case gpr_32:
+                return reg_size::bit_32;
+            case gpr_16:
+                return reg_size::bit_16;
+            case gpr_8:
+                return reg_size::bit_8;
+            case mmx_64:
+                return reg_size::bit_64;
+            case xmm_128:
+                return reg_size::bit_128;
+            case ymm_256:
+                return reg_size::bit_256;
+            case zmm_512:
+                return reg_size::bit_512;
+            default:
+                return reg_size::empty;
+        }
     }
 
     char reg_size_to_string(const reg_class reg_size)
