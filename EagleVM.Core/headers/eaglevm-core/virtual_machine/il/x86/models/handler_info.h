@@ -6,7 +6,7 @@ namespace eagle::il
 {
     struct handler_info
     {
-        il_size instruction_width = qword;
+        il_size instruction_width = il_size::none;
         uint8_t operand_count = 0;
     };
 

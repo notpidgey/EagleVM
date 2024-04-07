@@ -2,12 +2,12 @@
 #include <tuple>
 #include <utility>
 
-#include "eaglevm-core/compiler/function_container.h"
-#include "eaglevm-core/codec/zydis_defs.h"
-#include "eaglevm-core/codec/zydis_enum.h"
-#include "eaglevm-core/codec/zydis_helper.h"
+#include "../../../compiler/function_container.h"
+#include "../../../codec/zydis_defs.h"
+#include "../../../codec/zydis_enum.h"
+#include "../../../codec/zydis_helper.h"
 
-#include "eaglevm-core/virtual_machine/il/il_bb.h"
+#include "../il_bb.h"
 
 namespace eagle::il::translator
 {
@@ -17,12 +17,12 @@ namespace eagle::il::translator
         unsupported
     };
 
-    class base_x86_translator
+    class base_x86_lifter
     {
     public:
-        virtual ~base_x86_translator() = default;
-        explicit base_x86_translator(il_bb_ptr block_ptr, codec::dec::inst_info decode, uint64_t rva);
-        explicit base_x86_translator(codec::dec::inst_info decode, uint64_t rva);
+        virtual ~base_x86_lifter() = default;
+        explicit base_x86_lifter(il_bb_ptr block_ptr, codec::dec::inst_info decode, uint64_t rva);
+        explicit base_x86_lifter(codec::dec::inst_info decode, uint64_t rva);
 
         virtual bool translate_to_il(uint64_t original_rva);
 

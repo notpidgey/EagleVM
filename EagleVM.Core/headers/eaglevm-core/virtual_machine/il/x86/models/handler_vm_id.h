@@ -2,7 +2,7 @@
 
 namespace eagle::il::handlers
 {
-    enum vm_id
+    enum handler_vm_id
     {
         vm_none = 0,
         vm_enter = 1,

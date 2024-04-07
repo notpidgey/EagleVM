@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/il/translator/x86/base_x86_translator.h"
+#include "eaglevm-core/virtual_machine/il/x86/base_x86_lifter.h"
 
 #include "eaglevm-core/virtual_machine/il/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_push.h"
@@ -10,21 +10,21 @@
 
 namespace eagle::il::translator
 {
-    base_x86_translator::base_x86_translator(il_bb_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
+    base_x86_lifter::base_x86_lifter(il_bb_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
         : block(std::move(block_ptr)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    base_x86_translator::base_x86_translator(codec::dec::inst_info decode, const uint64_t rva)
+    base_x86_lifter::base_x86_lifter(codec::dec::inst_info decode, const uint64_t rva)
         : block(std::make_shared<il_bb>(false)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    bool base_x86_translator::translate_to_il(uint64_t original_rva)
+    bool base_x86_lifter::translate_to_il(uint64_t original_rva)
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
@@ -55,20 +55,15 @@ namespace eagle::il::translator
         return true;
     }
 
-    translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
-        // TODO: what about cases where we have RSP as the register?
-
-        // we will always want the address/offset right at the bottom of the stack
-        // in the future this might change, but for now it will stay like this
-
         const codec::reg_size size = codec::get_reg_size(op_reg.value);
         block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_reg.value), size));
 
         return translate_status::success;
     }
 
-    translate_status base_x86_translator::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
@@ -92,7 +87,7 @@ namespace eagle::il::translator
             {
                 block->add_command(std::make_shared<cmd_vm_push>(stack_displacement, il_size::bit_64));
                 block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                    codec::ADD, 2, codec::reg_class::gpr_64));
+                    codec::m_add, 2, codec::reg_class::gpr_64));
             }
         }
         else
@@ -115,13 +110,13 @@ namespace eagle::il::translator
             //jmp VM_MUL        ; multiply INDEX * SCALE
             block->add_command(std::make_shared<cmd_vm_push>(op_mem.scale, il_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::IMUL, 2, codec::reg_class::gpr_64));
+                codec::m_imul, 2, codec::reg_class::gpr_64));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::ADD, 2, codec::reg_class::gpr_64));
+                codec::m_add, 2, codec::reg_class::gpr_64));
         }
 
         if (op_mem.disp.has_displacement)
@@ -132,7 +127,7 @@ namespace eagle::il::translator
             // subtract displacement value
             block->add_command(std::make_shared<cmd_vm_push>(op_mem.disp.value, il_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::SUB, 2, codec::reg_class::gpr_64));
+                codec::m_sub, 2, codec::reg_class::gpr_64));
         }
 
         // for memory operands we will only ever need one kind of action
@@ -141,7 +136,7 @@ namespace eagle::il::translator
 
         if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
         {
-            stack_displacement += static_cast<uint8_t>(il_size::bit_64);
+            stack_displacement += static_cast<uint16_t>(il_size::bit_64);
         }
         else
         {
@@ -159,13 +154,13 @@ namespace eagle::il::translator
         return translate_status::success;
     }
 
-    translate_status base_x86_translator::encode_operand(codec::dec::op_ptr op_ptr, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_ptr op_ptr, uint8_t idx)
     {
         // not a supported operand
         return translate_status::unsupported;
     }
 
-    translate_status base_x86_translator::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
         const il_size target_size = il_size(inst.operand_width);
         block->add_command(std::make_shared<cmd_vm_push>(op_imm.value.u, target_size));
@@ -174,7 +169,7 @@ namespace eagle::il::translator
         return translate_status::success;
     }
 
-    void base_x86_translator::finalize_translate_to_virtual()
+    void base_x86_lifter::finalize_translate_to_virtual()
     {
     }
 }
