@@ -2,7 +2,7 @@
 
 namespace eagle::il
 {
-    cmd_exit::cmd_exit(const exit_result& result_info, const exit_condition exit_condition)
+    cmd_exit::cmd_exit(const il_exit_result& result_info, const exit_condition exit_condition)
         : base_command(command_type::vm_exit)
     {
         info_size = 1;
@@ -10,7 +10,7 @@ namespace eagle::il
         condition = exit_condition;
     }
 
-    cmd_exit::cmd_exit(const std::vector<exit_result>& result_info, const exit_condition exit_condition)
+    cmd_exit::cmd_exit(const std::vector<il_exit_result>& result_info, const exit_condition exit_condition)
         : base_command(command_type::vm_exit)
     {
         // only 2 exits should exist when a conditional jump exists
@@ -35,13 +35,13 @@ namespace eagle::il
         return condition;
     }
 
-    exit_result cmd_exit::get_condition_default()
+    il_exit_result cmd_exit::get_condition_default()
     {
         // the default condition which is always a fall through to the next bb or jmp will be at the back
         return info.back();
     }
 
-    exit_result cmd_exit::get_condition_special()
+    il_exit_result cmd_exit::get_condition_special()
     {
         return info.front();
     }

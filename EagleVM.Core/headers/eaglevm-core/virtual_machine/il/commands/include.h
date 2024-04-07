@@ -9,4 +9,5 @@
 #include "eaglevm-core/virtual_machine/il/commands/cmd_mem_write.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_pop.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_push.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_x86_exec.h"
 

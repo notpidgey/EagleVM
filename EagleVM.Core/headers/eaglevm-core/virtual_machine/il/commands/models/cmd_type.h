@@ -18,7 +18,8 @@ namespace eagle::il
         vm_mem_read,
         vm_mem_write,
 
-        vm_context_load
+        vm_context_load,
+        vm_exec_x86
     };
 
     std::string command_to_string(command_type cmd);

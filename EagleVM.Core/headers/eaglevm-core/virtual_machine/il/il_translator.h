@@ -1,7 +1,10 @@
 #pragma once
 #include <unordered_map>
 #include "commands/cmd_exit.h"
+
 #include "eaglevm-core/disassembler/basic_block.h"
+#include "eaglevm-core/virtual_machine/il/block.h"
+#include "eaglevm-core/virtual_machine/il/x86/base_handler_gen.h"
 
 namespace eagle::dasm
 {
@@ -15,13 +18,14 @@ namespace eagle::il
     public:
         il_translator(dasm::segment_dasm* seg_dasm);
 
-        std::vector<il_bb_ptr> translate(const std::vector<dasm::basic_block*>& blocks);
-        std::vector<il_bb_ptr> translate(dasm::basic_block* bb);
+        std::vector<block_il_ptr> translate(const std::vector<dasm::basic_block*>& asm_blocks);
+        std::vector<block_il_ptr> translate(dasm::basic_block* bb);
+        std::vector<block_il_ptr> insert_exits(dasm::basic_block* bb, const block_il_ptr& block_base);
 
-        std::vector<il_bb_ptr> optimize(std::vector<il_bb_ptr> blocks);
+        std::vector<block_il_ptr> optimize(std::vector<block_il_ptr> blocks);
 
     private:
         dasm::segment_dasm* dasm;
-        std::unordered_map<dasm::basic_block*, il_bb_ptr> bb_map;
+        std::unordered_map<dasm::basic_block*, block_il_ptr> bb_map;
     };
 }

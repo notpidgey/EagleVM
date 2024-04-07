@@ -10,4 +10,12 @@ namespace eagle::il::handler
             {codec::gpr_16, 2},
         };
     }
+
+    il_insts add::gen_il(const codec::reg_class size, uint8_t operands)
+    {
+        const il_size target_size = static_cast<il_size>(get_reg_size(size));
+        return {
+            std::make_shared<cmd_vm_pop>(reg_vm::vtemp, target_size)
+        };
+    }
 }

@@ -21,6 +21,7 @@ namespace eagle::il
     SHARED_DEFINE(cmd_mem_write);
     SHARED_DEFINE(cmd_vm_pop);
     SHARED_DEFINE(cmd_vm_push);
+    SHARED_DEFINE(cmd_x86_exec);
 
     class base_command
     {
@@ -36,4 +37,5 @@ namespace eagle::il
 
     SHARED_DEFINE(base_command);
     using il_insts = std::vector<base_command_ptr>;
+
 }

@@ -10,4 +10,8 @@ namespace eagle::il::handler
             { codec::gpr_16, 2 },
         };
     }
+
+    il_insts sub::gen_il(codec::reg_class size, uint8_t operands)
+    {
+    }
 }

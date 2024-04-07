@@ -1,7 +1,11 @@
 #pragma once
+#include "eaglevm-core/codec/zydis_defs.h"
+#include "eaglevm-core/codec/zydis_enum.h"
+#include "eaglevm-core/codec/zydis_helper.h"
+
 #include "eaglevm-core/virtual_machine/il/commands/include.h"
 #include "eaglevm-core/virtual_machine/il/commands/base_command.h"
-#include "models/handler_info.h"
+#include "eaglevm-core/virtual_machine/il/x86/models/handler_info.h"
 
 namespace eagle::il::handler
 {

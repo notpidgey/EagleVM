@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <vector>
 #include "eaglevm-core/virtual_machine/il/commands/base_command.h"
 
 namespace eagle::il
@@ -18,24 +19,24 @@ namespace eagle::il
         conditional
     };
 
-    class il_bb;
-    using il_bb_ptr = std::shared_ptr<il_bb>;
+    class block_il;
+    using block_il_ptr = std::shared_ptr<block_il>;
 
     using vmexit_rva = uint64_t;
-    using exit_result = std::variant<vmexit_rva, il_bb_ptr>;
+    using il_exit_result = std::variant<vmexit_rva, block_il_ptr>;
 
     class cmd_exit : public base_command
     {
     public:
-        cmd_exit(const exit_result& result_info, exit_condition exit_condition);
-        cmd_exit(const std::vector<exit_result>& result_info, exit_condition exit_condition);
+        cmd_exit(const il_exit_result& result_info, exit_condition exit_condition);
+        cmd_exit(const std::vector<il_exit_result>& result_info, exit_condition exit_condition);
 
         [[nodiscard]] exit_condition get_condition() const;
-        exit_result get_condition_default();
-        exit_result get_condition_special();
+        il_exit_result get_condition_default();
+        il_exit_result get_condition_special();
 
     private:
-        std::array<exit_result, 2> info;
+        std::array<il_exit_result, 2> info;
         uint8_t info_size;
 
         exit_condition condition;

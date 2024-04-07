@@ -1,15 +1,15 @@
-#include "eaglevm-core/virtual_machine/il/il_bb.h"
+#include "eaglevm-core/virtual_machine/il/block.h"
 #include "eaglevm-core/virtual_machine/il/commands/include.h"
 
 namespace eagle::il
 {
-    base_command_ptr il_bb::add_command(const base_command_ptr& command)
+    base_command_ptr block_il::add_command(const base_command_ptr& command)
     {
         commands.push_back(command);
         return command;
     }
 
-    bool il_bb::insert_after(const base_command_ptr& command_ptr)
+    bool block_il::insert_after(const base_command_ptr& command_ptr)
     {
         const auto it = get_iterator(command_ptr);
         if (it == commands.end())
@@ -19,7 +19,7 @@ namespace eagle::il
         return true;
     }
 
-    bool il_bb::insert_before(const base_command_ptr& command_ptr)
+    bool block_il::insert_before(const base_command_ptr& command_ptr)
     {
         const auto it = get_iterator(command_ptr);
         if (it == commands.end())
@@ -29,28 +29,21 @@ namespace eagle::il
         return true;
     }
 
-    bool il_bb::get_inline() const
-    {
-        return inline_next;
-    }
-
-    void il_bb::set_exit(const cmd_exit_ptr& exit)
-    {
-        exit_command = exit;
-        add_command(std::dynamic_pointer_cast<base_command>(exit));
-    }
-
-    void il_bb::set_inline(const bool inline_exit_block)
-    {
-        inline_next = inline_exit_block;
-    }
-
-    std::vector<base_command_ptr>::iterator il_bb::get_iterator(base_command_ptr command)
+    std::vector<base_command_ptr>::iterator block_il::get_iterator(base_command_ptr command)
     {
         return std::ranges::find_if(commands,
             [&command](const base_command_ptr& command_ptr)
             {
                 return command_ptr == command;
             });
+    }
+
+    void block_il::set_exit(const cmd_exit_ptr& exit_result)
+    {
+        if(exit != nullptr)
+            commands.pop_back();
+
+        exit = exit_result;
+        commands.push_back(exit_result);
     }
 }

@@ -10,7 +10,7 @@
 
 namespace eagle::il::translator
 {
-    base_x86_lifter::base_x86_lifter(il_bb_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
+    base_x86_lifter::base_x86_lifter(block_il_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
         : block(std::move(block_ptr)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
@@ -18,7 +18,7 @@ namespace eagle::il::translator
     }
 
     base_x86_lifter::base_x86_lifter(codec::dec::inst_info decode, const uint64_t rva)
-        : block(std::make_shared<il_bb>(false)), orig_rva(rva), inst(decode.instruction)
+        : block(std::make_shared<block_il>(false)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
