@@ -2,7 +2,7 @@
 
 namespace eagle::il
 {
-    class il_bb {
-
+    class il_bb
+    {
     };
-    }
+}

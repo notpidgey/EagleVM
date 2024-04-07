@@ -1,6 +1,6 @@
 #pragma once
 
-namespace eagle::il::handlers
+namespace eagle::il::handler
 {
     enum handler_vm_id
     {

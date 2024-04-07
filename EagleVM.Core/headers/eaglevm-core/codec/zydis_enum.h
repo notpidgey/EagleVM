@@ -1975,7 +1975,6 @@ namespace eagle::codec
     };
 
     using zydis_reg_class = ZydisRegisterClass;
-
     enum reg_class
     {
         invalid = ZYDIS_REGCLASS_INVALID,
