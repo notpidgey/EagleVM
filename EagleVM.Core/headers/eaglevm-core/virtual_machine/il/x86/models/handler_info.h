@@ -7,7 +7,7 @@ namespace eagle::il
 {
     struct handler_info
     {
-        codec::reg_class instruction_width = codec::reg_class::invalid;
+        codec::reg_class operand_width = codec::reg_class::invalid;
         uint8_t operand_count = 0;
     };
 

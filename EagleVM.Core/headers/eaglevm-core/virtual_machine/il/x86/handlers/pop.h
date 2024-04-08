@@ -7,6 +7,14 @@ namespace eagle::il::handler
     {
     public:
         pop();
-        il_insts gen_il(codec::reg_class size, uint8_t operands) override;
+        il_insts gen_handler(codec::reg_class size, uint8_t operands) override;
+    };
+}
+
+namespace eagle::il::lifter
+{
+    class pop : public base_x86_lifter
+    {
+
     };
 }

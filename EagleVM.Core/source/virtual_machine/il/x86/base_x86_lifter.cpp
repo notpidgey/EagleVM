@@ -8,7 +8,7 @@
 #include "eaglevm-core/virtual_machine/il/commands/cmd_pop.h"
 #include "eaglevm-core/virtual_machine/il/models/il_size.h"
 
-namespace eagle::il::translator
+namespace eagle::il::lifter
 {
     base_x86_lifter::base_x86_lifter(block_il_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
         : block(std::move(block_ptr)), orig_rva(rva), inst(decode.instruction)

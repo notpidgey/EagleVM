@@ -11,7 +11,7 @@ namespace eagle::il::handler
         };
     }
 
-    il_insts add::gen_il(const codec::reg_class size, uint8_t operands)
+    il_insts add::gen_handler(const codec::reg_class size, uint8_t operands)
     {
         const il_size target_size = static_cast<il_size>(get_reg_size(size));
         return {

@@ -17,7 +17,8 @@ namespace eagle::il::handler
             entries = {};
         }
 
-        virtual il_insts gen_il(codec::reg_class size, uint8_t operands) = 0;
+        virtual il_insts gen_handler(codec::reg_class size, uint8_t operands) = 0;
+        bool is_instruction_supported(codec::reg_class operand_width, uint8_t operands);
 
     protected:
         ~base_handler_gen() = default;
