@@ -16,6 +16,6 @@ namespace eagle::il::lifter
 {
     class inc : public base_x86_lifter
     {
-
+        void finalize_translate_to_virtual() override;
     };
 }
