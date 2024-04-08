@@ -21,6 +21,9 @@ namespace eagle::il
     SHARED_DEFINE(cmd_mem_write);
     SHARED_DEFINE(cmd_vm_pop);
     SHARED_DEFINE(cmd_vm_push);
+    SHARED_DEFINE(cmd_rflags_load);
+    SHARED_DEFINE(cmd_rflags_store);
+    SHARED_DEFINE(cmd_sx);
     SHARED_DEFINE(cmd_x86_exec);
 
     class base_command

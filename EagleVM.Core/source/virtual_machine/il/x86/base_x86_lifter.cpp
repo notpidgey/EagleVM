@@ -63,7 +63,7 @@ namespace eagle::il::lifter
         return translate_status::success;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
@@ -160,10 +160,10 @@ namespace eagle::il::lifter
         return translate_status::unsupported;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_imm op_mem, uint8_t idx)
     {
         const il_size target_size = il_size(inst.operand_width);
-        block->add_command(std::make_shared<cmd_vm_push>(op_imm.value.u, target_size));
+        block->add_command(std::make_shared<cmd_vm_push>(op_mem.value.u, target_size));
 
         stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
@@ -171,5 +171,11 @@ namespace eagle::il::lifter
 
     void base_x86_lifter::finalize_translate_to_virtual()
     {
+    }
+
+    il_size base_x86_lifter::get_op_width() const
+    {
+        uint8_t width = inst.operand_width;
+        return static_cast<il_size>(width);
     }
 }

@@ -31,5 +31,4 @@ namespace eagle::il
 
         std::vector<base_command_ptr>::iterator get_iterator(base_command_ptr command);
     };
-
 }
