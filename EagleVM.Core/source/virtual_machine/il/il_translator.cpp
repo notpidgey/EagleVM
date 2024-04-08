@@ -1,8 +1,11 @@
 #include "eaglevm-core/virtual_machine/il/il_translator.h"
-#include "eaglevm-core/virtual_machine/il/block.h"
+
 #include "eaglevm-core/virtual_machine/il/commands/include.h"
+#include "eaglevm-core/virtual_machine/il/block.h"
 
 #include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/codec/zydis_helper.h"
+#include "eaglevm-core/virtual_machine/il/x86/handler_data.h"
 
 namespace eagle::il
 {
@@ -32,6 +35,8 @@ namespace eagle::il
         if (bb->decoded_insts.empty())
             return {};
 
+        block_il_ptr body = bb_map[bb];
+
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
         const dasm::block_end_reason end_reason = bb->get_end_reason();
@@ -40,8 +45,18 @@ namespace eagle::il
         for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
         {
             // use il x86 translator to translate the instruction to il
-            codec::dec::inst_info inst = bb->decoded_insts[i];
+            auto& [inst, ops] = bb->decoded_insts[i];
 
+            codec::mnemonic mnemonic = codec::mnemonic(inst.mnemonic);
+            if(!instruction_handlers.contains(mnemonic))
+            {
+                // this mnemonic cannot be virtualized
+            }
+            else
+            {
+                std::shared_ptr<handler::base_handler_gen> handler = instruction_handlers[mnemonic];
+                ops[0].type
+            }
         }
 
         // the reason for having these 3 blocks is

@@ -1,5 +1,5 @@
 #pragma once
-#include "eaglevm-core/util/zydis_defs.h"
+#include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/compiler/code_label.h"
 
 #include "models/block_end_reason.h"
@@ -12,7 +12,7 @@ namespace eagle::dasm
     public:
         uint64_t start_rva;
         uint64_t end_rva_inc;
-        decode_vec decoded_insts;
+        codec::decode_vec decoded_insts;
 
         basic_block();
 
