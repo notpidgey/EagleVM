@@ -55,6 +55,11 @@ namespace eagle::il::lifter
         return true;
     }
 
+    bool base_x86_lifter::virtualize_as_address(codec::dec::operand operand, const uint8_t idx)
+    {
+        return idx == 0;
+    }
+
     translate_status base_x86_lifter::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
         const codec::reg_size size = codec::get_reg_size(op_reg.value);
@@ -134,7 +139,7 @@ namespace eagle::il::lifter
         // there has to be a better and cleaner way of doing this, but i have not thought of it yet
         // for now it will kind of just be an assumption
 
-        if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
+        if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN || virtualize_as_address(operands[idx], idx))
         {
             stack_displacement += static_cast<uint16_t>(il_size::bit_64);
         }

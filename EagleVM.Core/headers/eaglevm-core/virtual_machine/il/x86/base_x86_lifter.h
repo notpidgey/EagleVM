@@ -24,6 +24,7 @@ namespace eagle::il::lifter
         explicit base_x86_lifter(codec::dec::inst_info decode, uint64_t rva);
 
         virtual bool translate_to_il(uint64_t original_rva);
+        virtual bool virtualize_as_address(codec::dec::operand operand, uint8_t idx);
 
     protected:
         block_il_ptr block;

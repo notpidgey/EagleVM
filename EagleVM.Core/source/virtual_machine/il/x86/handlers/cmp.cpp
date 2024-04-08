@@ -1,5 +1,8 @@
 #include "eaglevm-core/virtual_machine/il/x86/handlers/cmp.h"
 
+#include "eaglevm-core/virtual_machine/il/commands/cmd_rflags_load.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_rflags_store.h"
+
 namespace eagle::il::handler
 {
     cmp::cmp()
@@ -19,10 +22,17 @@ namespace eagle::il::handler
 
 namespace eagle::il::lifter
 {
-    translate_status cmp::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
+    void cmp::finalize_translate_to_virtual()
+    {
+        block->add_command(std::make_shared<cmd_rflags_load>());
+        base_x86_lifter::finalize_translate_to_virtual();
+        block->add_command(std::make_shared<cmd_rflags_store>());
+    }
+
+    translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
         il_size target_size = get_op_width();
-        block->add_command(std::make_shared<cmd_vm_push>(op_mem.value.u, target_size));
+        block->add_command(std::make_shared<cmd_vm_push>(op_imm.value.u, target_size));
 
         const codec::dec::operand first_op = operands[0];
         const bool is_register = first_op.type == ZYDIS_OPERAND_TYPE_REGISTER;

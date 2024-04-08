@@ -16,6 +16,7 @@ namespace eagle::il::lifter
 {
     class cmp : public base_x86_lifter
     {
-        translate_status encode_operand(codec::dec::op_mem op_mem, uint8_t idx) override;
+        void finalize_translate_to_virtual() override;
+        translate_status encode_operand(codec::dec::op_imm op_imm, uint8_t idx) override;
     };
 }

@@ -16,5 +16,6 @@ namespace eagle::il::lifter
 {
     class dec : public base_x86_lifter
     {
+        void finalize_translate_to_virtual() override;
     };
 }
