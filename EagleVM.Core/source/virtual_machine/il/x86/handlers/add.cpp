@@ -16,9 +16,23 @@ namespace eagle::il::handler
 
     il_insts add::gen_handler(const codec::reg_class size, uint8_t operands)
     {
+        // the way this is done is far slower than it used to be
+        // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
+        // in addition, it gives room for mapping x86 context into random places as well
+
         const il_size target_size = static_cast<il_size>(get_reg_size(size));
+        const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
+        const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
+
+        // TODO: this needs to be marked as rflags sensitive
         return {
-            std::make_shared<cmd_vm_pop>(reg_vm::vtemp, target_size)
+            // there should be some kind of indication that we dont care what temp registers we pop into
+            // create some kind of parameter holder which will tell the x86 code gen that we will assign this register to this random temp and this to other temp
+            // todo: to this ^ maybe? or have it automatically happen by some obfuscation pass
+            std::make_shared<cmd_vm_pop>(vtemp, target_size),
+            std::make_shared<cmd_vm_pop>(vtemp2, target_size),
+            std::make_shared<cmd_x86_dynamic>(codec::m_add, vtemp, vtemp2),
+            std::make_shared<cmd_vm_push>(vtemp, target_size)
         };
     }
 }

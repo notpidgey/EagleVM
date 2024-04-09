@@ -16,6 +16,8 @@ namespace eagle::il::lifter
 {
     class lea : public base_x86_lifter
     {
-
+        bool virtualize_as_address(codec::dec::operand operand, uint8_t idx) override;
+        void finalize_translate_to_virtual() override;
+        bool skip(uint8_t idx) override;
     };
 }

@@ -20,6 +20,7 @@ namespace eagle::il
 
         vm_context_load,
         vm_exec_x86,
+        vm_exec_dynamic_x86,
         vm_rflags_load,
         vm_rflags_store,
 

@@ -198,6 +198,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/cmd_rflags_load.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/cmd_rflags_store.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/cmd_sx.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/cmd_x86_dynamic.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/cmd_x86_exec.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/include.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/commands/models/cmd_modifier.h"

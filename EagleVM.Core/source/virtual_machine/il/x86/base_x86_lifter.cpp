@@ -28,6 +28,9 @@ namespace eagle::il::lifter
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
+            if (skip())
+                continue;
+
             translate_status status = translate_status::unsupported;
             switch (const codec::dec::operand& operand = operands[i]; operand.type)
             {
@@ -82,9 +85,7 @@ namespace eagle::il::lifter
         }
 
         // [base + index * scale + disp]
-        // 1. begin with loading the base register
-        // mov VTEMP, imm
-        // jmp VM_LOAD_REG
+        // 1. loading the base register
         if (op_mem.base == ZYDIS_REGISTER_RSP)
         {
             block->add_command(std::make_shared<cmd_vm_push>(reg_vm::vsp, il_size::bit_64));
@@ -110,9 +111,6 @@ namespace eagle::il::lifter
 
         if (op_mem.scale != 0)
         {
-            //mov VTEMP, imm    ;
-            //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
-            //jmp VM_MUL        ; multiply INDEX * SCALE
             block->add_command(std::make_shared<cmd_vm_push>(op_mem.scale, il_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
                 codec::m_imul, 2, codec::reg_class::gpr_64));
@@ -176,6 +174,11 @@ namespace eagle::il::lifter
 
     void base_x86_lifter::finalize_translate_to_virtual()
     {
+    }
+
+    bool base_x86_lifter::skip(const uint8_t idx)
+    {
+        return false;
     }
 
     il_size base_x86_lifter::get_op_width() const

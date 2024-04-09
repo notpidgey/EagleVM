@@ -11,4 +11,5 @@
 #include "eaglevm-core/virtual_machine/il/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_sx.h"
 #include "eaglevm-core/virtual_machine/il/commands/cmd_x86_exec.h"
+#include "eaglevm-core/virtual_machine/il/commands/cmd_x86_dynamic.h"
 

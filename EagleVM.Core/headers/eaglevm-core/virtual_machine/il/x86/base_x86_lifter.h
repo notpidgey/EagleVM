@@ -41,6 +41,7 @@ namespace eagle::il::lifter
         virtual translate_status encode_operand(codec::dec::op_imm op_mem, uint8_t idx);
 
         virtual void finalize_translate_to_virtual();
+        virtual bool skip(uint8_t idx);
 
         il_size get_op_width() const;
     };

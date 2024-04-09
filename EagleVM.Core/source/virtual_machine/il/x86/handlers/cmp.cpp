@@ -15,8 +15,18 @@ namespace eagle::il::handler
         };
     }
 
-    il_insts cmp::gen_handler(codec::reg_class size, uint8_t operands)
+    il_insts cmp::gen_handler(const codec::reg_class size, uint8_t operands)
     {
+        const il_size target_size = static_cast<il_size>(get_reg_size(size));
+        const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
+        const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
+
+        return {
+            std::make_shared<cmd_vm_pop>(vtemp, target_size),
+            std::make_shared<cmd_vm_pop>(vtemp2, target_size),
+            std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp, vtemp2),
+            std::make_shared<cmd_vm_push>(vtemp, target_size)
+        };
     }
 }
 
