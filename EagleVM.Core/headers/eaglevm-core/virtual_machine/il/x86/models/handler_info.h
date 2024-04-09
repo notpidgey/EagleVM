@@ -9,6 +9,8 @@ namespace eagle::il
     {
         codec::reg_class operand_width = codec::reg_class::invalid;
         uint8_t operand_count = 0;
+
+        bool inlined = false;
     };
 
     using handler_entries = std::vector<handler_info>;

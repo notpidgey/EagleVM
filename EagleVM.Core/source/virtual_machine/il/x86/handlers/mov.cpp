@@ -5,9 +5,9 @@ namespace eagle::il::handler
     mov::mov()
     {
         entries = {
-            { codec::gpr_64, 1 },
-            { codec::gpr_32, 1 },
-            { codec::gpr_16, 1 },
+            { codec::gpr_64, 1, true },
+            { codec::gpr_32, 1, true },
+            { codec::gpr_16, 1, true },
         };
     }
 
