@@ -125,6 +125,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/imul.cpp"
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/inc.cpp"
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/lea.cpp"
+	"EagleVM.Core/source/virtual_machine/il/x86/handlers/mov.cpp"
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/movsx.cpp"
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/pop.cpp"
 	"EagleVM.Core/source/virtual_machine/il/x86/handlers/push.cpp"

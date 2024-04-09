@@ -16,6 +16,6 @@ namespace eagle::il::lifter
 {
     class movsx : public base_x86_lifter
     {
-
+        translate_status encode_operand(codec::dec::op_mem op_mem, uint8_t idx) override;
     };
 }

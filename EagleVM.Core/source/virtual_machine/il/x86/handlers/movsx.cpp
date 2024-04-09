@@ -15,3 +15,8 @@ namespace eagle::il::handler
     {
     }
 }
+
+eagle::il::lifter::translate_status eagle::il::lifter::movsx::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
+{
+    return base_x86_lifter::encode_operand(op_mem, idx);
+}
