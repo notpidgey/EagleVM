@@ -8,14 +8,17 @@ namespace eagle::il::handler
     imul::imul()
     {
         entries = {
-            { codec::gpr_64, 2 },
-            { codec::gpr_32, 2 },
-            { codec::gpr_16, 2 },
+            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } },
+            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } },
+            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } },
 
-            // its 3 operands but we handle in finalize_translate_to_virtual
-            { codec::gpr_64, 3 },
-            { codec::gpr_32, 3 },
-            { codec::gpr_16, 3 },
+            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } },
+            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } },
+            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } },
+
+            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } },
+            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } },
+            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_32 } },
         };
     }
 

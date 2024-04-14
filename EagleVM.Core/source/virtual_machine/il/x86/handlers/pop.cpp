@@ -5,10 +5,10 @@ namespace eagle::il::handler
     pop::pop()
     {
         entries = {
-            { codec::gpr_64, 1 },
-            { codec::gpr_32, 1 },
-            { codec::gpr_16, 1 },
-            { codec::gpr_8, 1 },
+            { { codec::op_none, codec::bit_8 } },
+            { { codec::op_none, codec::bit_16 } },
+            { { codec::op_none, codec::bit_32 } },
+            { { codec::op_none, codec::bit_64 } }
         };
     }
 

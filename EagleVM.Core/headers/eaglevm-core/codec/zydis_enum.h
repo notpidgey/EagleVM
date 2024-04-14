@@ -1988,6 +1988,15 @@ namespace eagle::codec
         zmm_512 = ZYDIS_REGCLASS_ZMM,
     };
 
+    enum op_type
+    {
+        op_none = ZYDIS_OPERAND_TYPE_UNUSED,
+        op_reg = ZYDIS_OPERAND_TYPE_REGISTER,
+        op_mem = ZYDIS_OPERAND_TYPE_MEMORY,
+        op_ptr = ZYDIS_OPERAND_TYPE_POINTER,
+        op_imm = ZYDIS_OPERAND_TYPE_IMMEDIATE,
+    };
+
     enum reg_size
     {
         empty = 0,

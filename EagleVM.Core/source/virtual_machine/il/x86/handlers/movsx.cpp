@@ -5,9 +5,12 @@ namespace eagle::il::handler
     movsx::movsx()
     {
         entries = {
-            { codec::gpr_64, 2, true },
-            { codec::gpr_32, 2, true },
-            { codec::gpr_16, 2, true },
+            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } },
+            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } },
+            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } },
+
+            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_16 } },
+            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } },
         };
     }
 

@@ -223,6 +223,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/handlers/push.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/handlers/sub.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/models/handler_info.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/models/handler_op.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/models/handler_vm_id.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/il/x86/models/lift_action.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_defs.h"

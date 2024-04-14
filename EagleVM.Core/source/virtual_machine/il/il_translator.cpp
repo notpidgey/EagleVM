@@ -33,7 +33,7 @@ namespace eagle::il
     std::vector<block_il_ptr> il_translator::translate(dasm::basic_block* bb)
     {
         if (bb->decoded_insts.empty())
-            return {};
+            return { };
 
         block_il_ptr body = bb_map[bb];
 
@@ -45,17 +45,36 @@ namespace eagle::il
         for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
         {
             // use il x86 translator to translate the instruction to il
-            auto& [inst, ops] = bb->decoded_insts[i];
+            auto decoded_inst = bb->decoded_insts[i];
+            auto& [inst, ops] = decoded_inst;
+
+            bool is_valid_handler = false;
 
             codec::mnemonic mnemonic = codec::mnemonic(inst.mnemonic);
-            if(!instruction_handlers.contains(mnemonic))
+            if (instruction_handlers.contains(mnemonic))
             {
-                // this mnemonic cannot be virtualized
+                const std::shared_ptr<handler::base_handler_gen> handler = instruction_handlers[mnemonic];
+
+                std::vector<handler_op> operands;
+                for (int j = 0; j < inst.operand_count_visible; j++)
+                {
+                    operands.push_back({
+                        static_cast<codec::op_type>(ops[i].type),
+                        static_cast<codec::reg_size>(ops[i].size)
+                    });
+                }
+
+                is_valid_handler = handler->get_handler(operands);
+            }
+
+            if (!is_valid_handler)
+            {
+                body->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
             }
             else
             {
-                std::shared_ptr<handler::base_handler_gen> handler = instruction_handlers[mnemonic];
-                ops[0].type
+                ops.
+
             }
         }
 
@@ -63,7 +82,7 @@ namespace eagle::il
         // entry_block -> block_body -> exit_block
         // if we join another block which is still inside the vm
 
-        return {block_body};
+        return { block_body };
     }
 
     std::vector<block_il_ptr> il_translator::insert_exits(dasm::basic_block* bb, const block_il_ptr& block_base)
@@ -93,7 +112,7 @@ namespace eagle::il
             case dasm::block_conditional_jump:
             {
                 // we will have two jump results (first, last)
-                std::vector<il_exit_result> results = {};
+                std::vector<il_exit_result> results = { };
                 {
                     auto [target, type] = dasm->get_jump(bb);
                     if (type == dasm::jump_outside_segment)
@@ -121,6 +140,6 @@ namespace eagle::il
         // for every block, we want to check the block that is being jumped to
         // we want to see if vmenter is ever being used for that block
         // if its not, it can be optimized out and vmexits for blocks that jump to it can be removed as well
-        return {};
+        return { };
     }
 }

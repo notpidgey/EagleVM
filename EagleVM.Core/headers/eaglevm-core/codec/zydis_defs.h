@@ -10,7 +10,6 @@
 
 namespace eagle::codec
 {
-    typedef ZydisOperandType operand_t;
     namespace enc
     {
         typedef ZydisEncoderRequest req;

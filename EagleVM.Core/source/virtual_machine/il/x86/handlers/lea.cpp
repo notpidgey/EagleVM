@@ -5,9 +5,14 @@ namespace eagle::il::handler
     lea::lea()
     {
         entries = {
-            { codec::gpr_64, 1 },
-            { codec::gpr_32, 1 },
-            { codec::gpr_16, 1 },
+            { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_32 } },
+            { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_64 } },
+
+            { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_32 } },
+            { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_64 } },
+
+            { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_32 } },
+            { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_64 } },
         };
     }
 
