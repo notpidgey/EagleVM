@@ -9,6 +9,11 @@ namespace eagle::il
         return command;
     }
 
+    void block_il::copy_from(const block_il_ptr& other)
+    {
+        commands.append_range(other->commands);
+    }
+
     bool block_il::insert_after(const base_command_ptr& command_ptr)
     {
         const auto it = get_iterator(command_ptr);

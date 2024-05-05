@@ -2,11 +2,12 @@
 
 namespace eagle::il::handler
 {
-    bool base_handler_gen::get_handler(const std::vector<handler_op>& target_operands) const
+    handler_info_ptr base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
     {
         const auto target_operands_len = target_operands.size();
-        for (const auto& accepted_ops : entries)
+        for (const handler_info_ptr& entry : handlers)
         {
+            op_entries accepted_ops = entry->entries;
             if (accepted_ops.size() != target_operands.size())
                 continue;
 
@@ -29,9 +30,9 @@ namespace eagle::il::handler
             }
 
             if (is_match)
-                return true;
+                return entry;
         }
 
-        return false;
+        return nullptr;
     }
 }

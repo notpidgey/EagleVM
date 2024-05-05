@@ -8,5 +8,8 @@
 namespace eagle::il
 {
     extern std::unordered_map<codec::mnemonic, std::shared_ptr<handler::base_handler_gen>> instruction_handlers;
-    handler_info find_handler(std::vector<handler_op> operand_sizes);
+    extern std::unordered_map<
+        codec::mnemonic,
+        std::function<std::shared_ptr<lifter::base_x86_lifter>(codec::dec::inst_info, uint64_t)>
+    > instruction_lifters;
 }

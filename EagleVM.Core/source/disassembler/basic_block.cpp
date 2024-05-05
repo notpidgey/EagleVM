@@ -36,16 +36,22 @@ namespace eagle::dasm
         return instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && instruction.mnemonic == ZYDIS_MNEMONIC_JMP;
     }
 
-    uint64_t basic_block::calc_jump_address(const uint8_t instruction_index) const
+    uint64_t basic_block::get_index_rva(const uint32_t index) const
     {
         uint64_t current_rva = start_rva;
-        for(int i = 0; i < instruction_index; i++)
+        for(int i = 0; i < index; i++)
         {
             const auto& [instruction, operands] = decoded_insts[i];
             current_rva += instruction.length;
         }
 
-        const auto& [instruction, operands] = decoded_insts[instruction_index];
+        return current_rva;
+    }
+
+    uint64_t basic_block::calc_jump_address(const uint32_t index) const
+    {
+        const uint64_t current_rva = get_index_rva(index);
+        const auto& [instruction, operands] = decoded_insts[index];
 
         uint64_t target_address;
         ZydisCalcAbsoluteAddress(&instruction, &operands[0], current_rva, &target_address);

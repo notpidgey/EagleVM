@@ -13,19 +13,23 @@
 
 namespace eagle::il::handler
 {
+    using handler_info_ptr = std::shared_ptr<handler_info>;
     class base_handler_gen
     {
     public:
         base_handler_gen()
         {
-            entries = {};
+            handlers = {};
         }
 
         virtual il_insts gen_handler(codec::reg_class size, uint8_t operands) = 0;
-        bool get_handler(const std::vector<handler_op>& target_operands) const;
+        [[nodiscard]] handler_info_ptr get_operand_handler(const std::vector<handler_op>& target_operands) const;
 
     protected:
         ~base_handler_gen() = default;
-        handler_entries entries;
+        std::vector<handler_info_ptr> handlers;
     };
+
+    using base_handler_gen_ptr = std::shared_ptr<base_handler_gen>;
+    using gen_info_pair = std::pair<base_handler_gen_ptr, handler_info_ptr>;
 }

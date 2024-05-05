@@ -10,13 +10,6 @@
 
 namespace eagle::il::lifter
 {
-    base_x86_lifter::base_x86_lifter(block_il_ptr block_ptr, codec::dec::inst_info decode, const uint64_t rva)
-        : block(std::move(block_ptr)), orig_rva(rva), inst(decode.instruction)
-    {
-        inst = decode.instruction;
-        std::ranges::copy(decode.operands, std::begin(operands));
-    }
-
     base_x86_lifter::base_x86_lifter(codec::dec::inst_info decode, const uint64_t rva)
         : block(std::make_shared<block_il>(false)), orig_rva(rva), inst(decode.instruction)
     {
@@ -28,7 +21,7 @@ namespace eagle::il::lifter
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
-            if (skip())
+            if (skip(i))
                 continue;
 
             translate_status status = translate_status::unsupported;
@@ -58,6 +51,16 @@ namespace eagle::il::lifter
         return true;
     }
 
+    block_il_ptr base_x86_lifter::get_block()
+    {
+        return block;
+    }
+
+    void base_x86_lifter::finalize_translate_to_virtual()
+    {
+        block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::mnemonic(inst.mnemonic),))
+    }
+
     bool base_x86_lifter::virtualize_as_address(codec::dec::operand operand, const uint8_t idx)
     {
         return idx == 0;
@@ -66,12 +69,12 @@ namespace eagle::il::lifter
     translate_status base_x86_lifter::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
         const codec::reg_size size = codec::get_reg_size(op_reg.value);
-        block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_reg.value), size));
+        block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_reg.value), size));
 
         return translate_status::success;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
+    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
@@ -98,7 +101,7 @@ namespace eagle::il::lifter
         }
         else
         {
-            block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_mem.base), il_size::bit_64));
+            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.base), il_size::bit_64));
         }
 
         //2. load the index register and multiply by scale
@@ -106,7 +109,7 @@ namespace eagle::il::lifter
         //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_mem.index), il_size::bit_64));
+            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.index), il_size::bit_64));
         }
 
         if (op_mem.scale != 0)
@@ -144,7 +147,7 @@ namespace eagle::il::lifter
         else
         {
             // by default, this will be dereferenced and we will get the value at the address,
-            const il_size target_size = il_size(inst.operand_width);
+            const il_size target_size = static_cast<il_size>(inst.operand_width);
             const reg_vm target_temp = get_bit_version(reg_vm::vtemp, target_size);
 
             block->add_command(std::make_shared<cmd_vm_pop>(reg_vm::vtemp, il_size::bit_64));
@@ -165,15 +168,11 @@ namespace eagle::il::lifter
 
     translate_status base_x86_lifter::encode_operand(codec::dec::op_imm op_mem, uint8_t idx)
     {
-        const il_size target_size = il_size(inst.operand_width);
+        const il_size target_size = static_cast<il_size>(inst.operand_width);
         block->add_command(std::make_shared<cmd_vm_push>(op_mem.value.u, target_size));
 
         stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
-    }
-
-    void base_x86_lifter::finalize_translate_to_virtual()
-    {
     }
 
     bool base_x86_lifter::skip(const uint8_t idx)

@@ -7,5 +7,9 @@
 
 namespace eagle::il
 {
-    using handler_entries = std::vector<std::vector<handler_op>>;
+    using op_entries = std::vector<handler_op>;
+    struct handler_info
+    {
+        op_entries entries;
+    };
 }

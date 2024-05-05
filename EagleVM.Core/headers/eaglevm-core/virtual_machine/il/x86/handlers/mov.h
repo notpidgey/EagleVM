@@ -16,6 +16,6 @@ namespace eagle::il::lifter
 {
     class mov : public base_x86_lifter
     {
-
+        using base_x86_lifter::base_x86_lifter;
     };
 }

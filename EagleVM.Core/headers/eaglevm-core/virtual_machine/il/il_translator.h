@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 #include <unordered_map>
 #include "commands/cmd_exit.h"
 
@@ -19,13 +20,15 @@ namespace eagle::il
         il_translator(dasm::segment_dasm* seg_dasm);
 
         std::vector<block_il_ptr> translate(const std::vector<dasm::basic_block*>& asm_blocks);
-        std::vector<block_il_ptr> translate(dasm::basic_block* bb);
+        block_il_ptr translate_block(dasm::basic_block* bb);
         std::vector<block_il_ptr> insert_exits(dasm::basic_block* bb, const block_il_ptr& block_base);
 
         std::vector<block_il_ptr> optimize(std::vector<block_il_ptr> blocks);
 
     private:
         dasm::segment_dasm* dasm;
+
+        std::set<handler::gen_info_pair> handler_refs;
         std::unordered_map<dasm::basic_block*, block_il_ptr> bb_map;
     };
 }

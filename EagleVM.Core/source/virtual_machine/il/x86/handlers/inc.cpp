@@ -28,9 +28,12 @@ namespace eagle::il::handler
     }
 }
 
-void eagle::il::lifter::inc::finalize_translate_to_virtual()
+namespace eagle::il::lifter
 {
-    block->add_command(std::make_shared<cmd_rflags_load>());
-    base_x86_lifter::finalize_translate_to_virtual();
-    block->add_command(std::make_shared<cmd_rflags_store>());
+    void inc::finalize_translate_to_virtual()
+    {
+        block->add_command(std::make_shared<cmd_rflags_load>());
+        base_x86_lifter::finalize_translate_to_virtual();
+        block->add_command(std::make_shared<cmd_rflags_store>());
+    }
 }

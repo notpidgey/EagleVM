@@ -23,19 +23,22 @@ namespace eagle::il
         std::vector<block_il_ptr> translated_blocks;
         for (dasm::basic_block* block : asm_blocks)
         {
-            const std::vector<block_il_ptr> translated_block = translate(block);
-            translated_blocks.append_range(translated_block);
+            block_il_ptr translated_block = translate_block(block);
+            translated_blocks.push_back(translated_block);
         }
 
         return translated_blocks;
     }
 
-    std::vector<block_il_ptr> il_translator::translate(dasm::basic_block* bb)
+    block_il_ptr il_translator::translate_block(dasm::basic_block* bb)
     {
         if (bb->decoded_insts.empty())
             return { };
 
-        block_il_ptr body = bb_map[bb];
+        // todo: separate into 3 blocks (enter, body, exit)
+        // so that ot her blocks can just jump to body rather exit and reenter the vm
+        
+        const block_il_ptr body = bb_map[bb];
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -48,41 +51,109 @@ namespace eagle::il
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            bool is_valid_handler = false;
+            std::vector<handler_op> il_operands;
+            handler::base_handler_gen_ptr handler_gen = nullptr;
+            handler::handler_info_ptr target_handler = nullptr;
 
-            codec::mnemonic mnemonic = codec::mnemonic(inst.mnemonic);
+            codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
             if (instruction_handlers.contains(mnemonic))
             {
-                const std::shared_ptr<handler::base_handler_gen> handler = instruction_handlers[mnemonic];
+                // first we verify if there is even a valid handler for this inustruction
+                // we do this by checking the handler generator for this specific handler
+                handler_gen = instruction_handlers[mnemonic];
 
-                std::vector<handler_op> operands;
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
-                    operands.push_back({
+                    il_operands.push_back({
                         static_cast<codec::op_type>(ops[i].type),
                         static_cast<codec::reg_size>(ops[i].size)
                     });
                 }
 
-                is_valid_handler = handler->get_handler(operands);
+                target_handler = handler_gen->get_operand_handler(il_operands);
             }
 
-            if (!is_valid_handler)
+            bool translate_sucess = target_handler != nullptr;
+            if (target_handler)
             {
+                // we know that a valid handler exists for this instruction
+                // this means that we can bring it into the base x86 lifter
+
+                // keep track of used handlers
+                handler::gen_info_pair info_pair = { handler_gen, target_handler };
+                if (!handler_refs.contains(info_pair))
+                    handler_refs.emplace(info_pair);
+
+                // now we need to find a lifter
+                const uint64_t current_rva = bb->get_index_rva(i);
+
+                auto create_lifter = instruction_lifters[mnemonic];
+                const std::shared_ptr<lifter::base_x86_lifter> lifter = create_lifter(decoded_inst, current_rva);
+
+                translate_sucess = lifter->translate_to_il(current_rva);
+                if (translate_sucess)
+                {
+                    // append basic block
+                    block_il_ptr result_block = lifter->get_block();
+
+                    // TODO: add way to scatter blocks instead of appending them to a single block
+                    // this should probably be done post gen though
+                    body->copy_from(result_block);
+                }
+            }
+
+            if (!translate_sucess)
+            {
+                // handler does not exist
+                // we need to execute the original instruction
                 body->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
-            }
-            else
-            {
-                ops.
-
             }
         }
 
-        // the reason for having these 3 blocks is
-        // entry_block -> block_body -> exit_block
-        // if we join another block which is still inside the vm
+        std::vector<il_exit_result> exits;
+        exit_condition condition = exit_condition::none;
 
-        return { block_body };
+        switch (end_reason)
+        {
+            case dasm::block_jump:
+            case dasm::block_end:
+            {
+                auto [target, type] = dasm->get_jump(bb);
+                if (type == dasm::jump_outside_segment)
+                    exits.push_back(target);
+                else
+                    exits.push_back(bb_map[dasm->get_block(target)]);
+
+                condition = exit_condition::jump;
+                break;
+            }
+            case dasm::block_conditional_jump:
+            {
+                // case 1 - condition succeed
+                {
+                    auto [target, type] = dasm->get_jump(bb);
+                    if (type == dasm::jump_outside_segment)
+                        exits.push_back(target);
+                    else
+                        exits.push_back(bb_map[dasm->get_block(target)]);
+                }
+
+                // case 2 - fall through
+                {
+                    auto [target, type] = dasm->get_jump(bb, true);
+                    if (type == dasm::jump_outside_segment)
+                        exits.push_back(target);
+                    else
+                        exits.push_back(bb_map[dasm->get_block(target)]);
+                }
+
+                condition = exit_condition::conditional;
+                break;
+            }
+        }
+
+        body->add_command(std::make_shared<cmd_exit>(exits, condition));
+        return body;
     }
 
     std::vector<block_il_ptr> il_translator::insert_exits(dasm::basic_block* bb, const block_il_ptr& block_base)

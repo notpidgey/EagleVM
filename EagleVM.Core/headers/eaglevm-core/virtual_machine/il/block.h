@@ -18,9 +18,11 @@ namespace eagle::il
         }
 
         base_command_ptr add_command(const base_command_ptr& command);
+        void copy_from(const block_il_ptr& other);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);
         void set_exit(const cmd_exit_ptr& exit_result);
+
 
     private:
         std::vector<base_command_ptr> commands;
