@@ -14,21 +14,38 @@ namespace eagle::dasm
 
 namespace eagle::il
 {
+    class ir_preopt_block;
+    using ir_preopt_block_ptr = std::shared_ptr<ir_preopt_block>;
+
     class ir_translator
     {
     public:
         ir_translator(dasm::segment_dasm* seg_dasm);
 
-        std::vector<block_il_ptr> translate(const std::vector<dasm::basic_block*>& asm_blocks);
-        block_il_ptr translate_block(dasm::basic_block* bb);
-        std::vector<block_il_ptr> insert_exits(dasm::basic_block* bb, const block_il_ptr& block_base);
+        std::vector<ir_preopt_block_ptr> translate();
 
-        std::vector<block_il_ptr> optimize(std::vector<block_il_ptr> blocks);
+        std::vector<block_il_ptr> get_optimized();
+        std::vector<block_il_ptr> get_unoptimized();
 
     private:
         dasm::segment_dasm* dasm;
+        std::unordered_map<dasm::basic_block*, ir_preopt_block_ptr> bb_map;
 
-        std::set<handler::gen_info_pair> handler_refs;
-        std::unordered_map<dasm::basic_block*, block_il_ptr> bb_map;
+        ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
+    };
+
+    class ir_preopt_block
+    {
+    public:
+        void init();
+
+        block_il_ptr get_entry();
+        std::vector<block_il_ptr>& get_body();
+
+        void add_body(const block_il_ptr& block);
+
+    private:
+        block_il_ptr entry;
+        std::vector<block_il_ptr> body;
     };
 }

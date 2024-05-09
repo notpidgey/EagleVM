@@ -23,12 +23,12 @@ namespace eagle::il
         bool insert_before(const base_command_ptr& command_ptr);
         void set_exit(const cmd_exit_ptr& exit_result);
 
+        uint16_t get_command_count() const;
 
     private:
         std::vector<base_command_ptr> commands;
         cmd_exit_ptr exit;
 
-        uint8_t exit_nodes_count = 0;
         bool flag_aware = false;
 
         std::vector<base_command_ptr>::iterator get_iterator(base_command_ptr command);

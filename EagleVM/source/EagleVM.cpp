@@ -9,6 +9,9 @@
 #include "eaglevm-core/obfuscation/mba/mba.h"
 #include "eaglevm-core/virtual_machine/vm_inst.h"
 #include "eaglevm-core/virtual_machine/vm_virtualizer.h"
+#include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+
+using namespace eagle;
 
 int main(int argc, char* argv[])
 {
@@ -184,15 +187,24 @@ int main(int argc, char* argv[])
 
         uint8_t* pinst_begin = parser.rva_to_pointer(rva_inst_begin);
         uint8_t* pinst_end = parser.rva_to_pointer(rva_inst_end);
-        decode_vec instructions = zydis_helper::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
-        eagle::dasm::segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
-        eagle::dasm::basic_block* root_block = dasm.generate_blocks();
+        {
+            codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
-        std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+            dasm::segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
+            dasm.generate_blocks();
 
-        eagle::virt::vm_virtualizer virt(&vm_inst);
-        vm_code_sm.add(virt.virtualize_segment(&dasm));
+            std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+
+            il::ir_translator ir_trans(&dasm);
+            std::vector<il::block_vm_il_ptr> res = ir_trans.translate();
+            // ir_trans.optimize(res);
+
+            // for every block_vm_il_ptr, we want to create a unique vm
+
+            virt::vm_virtualizer virt(&vm_inst);
+            vm_code_sm.add(virt.virtualize_segment(&dasm));
+        }
 
         // overwrite the original instructions
         uint32_t delete_size = vm_iat_calls[c + 1].first - vm_iat_calls[c].first;

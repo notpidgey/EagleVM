@@ -12,6 +12,9 @@ namespace eagle::il
     void block_il::copy_from(const block_il_ptr& other)
     {
         commands.append_range(other->commands);
+
+        flag_aware = other->flag_aware;
+        exit = other->exit;
     }
 
     bool block_il::insert_after(const base_command_ptr& command_ptr)
@@ -50,5 +53,10 @@ namespace eagle::il
 
         exit = exit_result;
         commands.push_back(exit_result);
+    }
+
+    uint16_t block_il::get_command_count() const
+    {
+        return commands.size();
     }
 }
