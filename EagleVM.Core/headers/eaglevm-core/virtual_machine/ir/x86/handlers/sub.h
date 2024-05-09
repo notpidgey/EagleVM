@@ -1,6 +1,6 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
-#include "eaglevm-core/virtual_machine/ir/x86/base_x86_lifter.h"
+#include "eaglevm-core/virtual_machine/ir/x86/base_x86_translator.h"
 
 namespace eagle::il::handler
 {
@@ -14,8 +14,8 @@ namespace eagle::il::handler
 
 namespace eagle::il::lifter
 {
-    class sub : public base_x86_lifter
+    class sub : public base_x86_translator
     {
-        using base_x86_lifter::base_x86_lifter;
+        using base_x86_translator::base_x86_translator;
     };
 }

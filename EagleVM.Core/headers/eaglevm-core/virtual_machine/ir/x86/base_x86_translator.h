@@ -16,11 +16,11 @@ namespace eagle::il::lifter
         unsupported
     };
 
-    class base_x86_lifter
+    class base_x86_translator
     {
     public:
-        virtual ~base_x86_lifter() = default;
-        explicit base_x86_lifter(codec::dec::inst_info decode, uint64_t rva);
+        virtual ~base_x86_translator() = default;
+        explicit base_x86_translator(codec::dec::inst_info decode, uint64_t rva);
 
         virtual bool translate_to_il(uint64_t original_rva);
         block_il_ptr get_block();

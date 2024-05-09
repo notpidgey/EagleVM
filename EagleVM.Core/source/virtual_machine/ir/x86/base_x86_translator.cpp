@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/ir/x86/base_x86_lifter.h"
+#include "eaglevm-core/virtual_machine/ir/x86/base_x86_translator.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
@@ -10,14 +10,14 @@
 
 namespace eagle::il::lifter
 {
-    base_x86_lifter::base_x86_lifter(codec::dec::inst_info decode, const uint64_t rva)
+    base_x86_translator::base_x86_translator(codec::dec::inst_info decode, const uint64_t rva)
         : block(std::make_shared<block_il>(false)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    bool base_x86_lifter::translate_to_il(uint64_t original_rva)
+    bool base_x86_translator::translate_to_il(uint64_t original_rva)
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
@@ -51,22 +51,22 @@ namespace eagle::il::lifter
         return true;
     }
 
-    block_il_ptr base_x86_lifter::get_block()
+    block_il_ptr base_x86_translator::get_block()
     {
         return block;
     }
 
-    void base_x86_lifter::finalize_translate_to_virtual()
+    void base_x86_translator::finalize_translate_to_virtual()
     {
         block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::mnemonic(inst.mnemonic),))
     }
 
-    bool base_x86_lifter::virtualize_as_address(codec::dec::operand operand, const uint8_t idx)
+    bool base_x86_translator::virtualize_as_address(codec::dec::operand operand, const uint8_t idx)
     {
         return idx == 0;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
         const codec::reg_size size = codec::get_reg_size(op_reg.value);
         block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_reg.value), size));
@@ -74,7 +74,7 @@ namespace eagle::il::lifter
         return translate_status::success;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
+    translate_status base_x86_translator::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
@@ -160,13 +160,13 @@ namespace eagle::il::lifter
         return translate_status::success;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_ptr op_ptr, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(codec::dec::op_ptr op_ptr, uint8_t idx)
     {
         // not a supported operand
         return translate_status::unsupported;
     }
 
-    translate_status base_x86_lifter::encode_operand(codec::dec::op_imm op_mem, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(codec::dec::op_imm op_mem, uint8_t idx)
     {
         const il_size target_size = static_cast<il_size>(inst.operand_width);
         block->add_command(std::make_shared<cmd_vm_push>(op_mem.value.u, target_size));
@@ -175,12 +175,12 @@ namespace eagle::il::lifter
         return translate_status::success;
     }
 
-    bool base_x86_lifter::skip(const uint8_t idx)
+    bool base_x86_translator::skip(const uint8_t idx)
     {
         return false;
     }
 
-    il_size base_x86_lifter::get_op_width() const
+    il_size base_x86_translator::get_op_width() const
     {
         uint8_t width = inst.operand_width;
         return static_cast<il_size>(width);

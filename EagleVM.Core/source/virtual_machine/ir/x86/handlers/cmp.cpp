@@ -35,7 +35,7 @@ namespace eagle::il::lifter
     void cmp::finalize_translate_to_virtual()
     {
         block->add_command(std::make_shared<cmd_rflags_load>());
-        base_x86_lifter::finalize_translate_to_virtual();
+        base_x86_translator::finalize_translate_to_virtual();
         block->add_command(std::make_shared<cmd_rflags_store>());
     }
 

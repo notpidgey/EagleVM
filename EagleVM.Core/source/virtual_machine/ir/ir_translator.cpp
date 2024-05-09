@@ -89,7 +89,7 @@ namespace eagle::il
                 const uint64_t current_rva = bb->get_index_rva(i);
 
                 auto create_lifter = instruction_lifters[mnemonic];
-                const std::shared_ptr<lifter::base_x86_lifter> lifter = create_lifter(decoded_inst, current_rva);
+                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
 
                 translate_sucess = lifter->translate_to_il(current_rva);
                 if (translate_sucess)

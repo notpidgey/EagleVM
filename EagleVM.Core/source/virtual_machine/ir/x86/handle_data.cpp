@@ -22,7 +22,7 @@ namespace eagle::il
 
     std::unordered_map<
         codec::mnemonic,
-        std::function<std::shared_ptr<lifter::base_x86_lifter>(codec::dec::inst_info, uint64_t)>
+        std::function<std::shared_ptr<lifter::base_x86_translator>(codec::dec::inst_info, uint64_t)>
     >
     instruction_lifters =
     {
