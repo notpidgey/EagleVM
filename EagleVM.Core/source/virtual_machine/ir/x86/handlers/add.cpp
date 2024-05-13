@@ -15,7 +15,7 @@ namespace eagle::il::handler
         };
     }
 
-    il_insts add::gen_handler(const codec::reg_class size, uint8_t operands)
+    ir_insts add::gen_handler(const codec::reg_class size, uint8_t operands)
     {
         // the way this is done is far slower than it used to be
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored

@@ -21,9 +21,9 @@ namespace eagle::il
         void copy_from(const block_il_ptr& other);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);
-        void set_exit(const cmd_exit_ptr& exit_result);
 
-        uint16_t get_command_count() const;
+        base_command_ptr get_command(size_t i);
+        size_t get_command_count() const;
 
     private:
         std::vector<base_command_ptr> commands;
@@ -34,3 +34,4 @@ namespace eagle::il
         std::vector<base_command_ptr>::iterator get_iterator(base_command_ptr command);
     };
 }
+

@@ -197,10 +197,18 @@ int main(int argc, char* argv[])
             std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
 
             il::ir_translator ir_trans(&dasm);
-            std::vector<il::block_vm_il_ptr> res = ir_trans.translate();
-            // ir_trans.optimize(res);
 
-            // for every block_vm_il_ptr, we want to create a unique vm
+            il::ir_preopt_block_vec preopt = ir_trans.translate();
+            size_t unique_vm_count = preopt.size();
+
+            for (il::ir_preopt_block_ptr& block : preopt)
+            {
+                il::block_il_ptr entry_block = block->get_entry();
+                il::cmd_vm_enter_ptr vm_enter = std::static_pointer_cast<il::cmd_vm_enter>(entry_block->get_command(0));
+                vm_enter->
+
+                std::vector<il::ir_vm_x86_block> body = block->get_body();
+            }
 
             virt::vm_virtualizer virt(&vm_inst);
             vm_code_sm.add(virt.virtualize_segment(&dasm));

@@ -14,27 +14,27 @@ namespace eagle::il
         dasm = seg_dasm;
     }
 
-    std::vector<block_vm_il_ptr> ir_translator::translate()
+    std::vector<ir_preopt_block_ptr> ir_translator::translate()
     {
         // we want to initialzie the entire map with bb translates
         for (dasm::basic_block* block : dasm->blocks)
         {
-            const block_vm_il_ptr vm_il = std::make_shared<ir_preopt_block>();
+            const ir_preopt_block_ptr vm_il = std::make_shared<ir_preopt_block>();
             vm_il->init();
 
             bb_map[block] = vm_il;
         }
 
-        std::vector<block_vm_il_ptr> result;
+        std::vector<ir_preopt_block_ptr> result;
         for (dasm::basic_block* block : dasm->blocks)
             result.push_back(translate_block(block));
 
         return result;
     }
 
-    block_vm_il_ptr ir_translator::translate_block(dasm::basic_block* bb)
+    ir_preopt_block_ptr ir_translator::translate_block(dasm::basic_block* bb)
     {
-        block_vm_il_ptr block_info = bb_map[bb];
+        ir_preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
             return block_info;
 
@@ -42,12 +42,12 @@ namespace eagle::il
         // entry
         //
         const block_il_ptr entry = block_info->get_entry();
-        entry->add_command(std::make_shared<cmd_enter>());
+        entry->add_command(std::make_shared<cmd_vm_enter>());
 
         //
         // body
         //
-        bool current_vm_block = true;
+        bool is_vm_block = true;
         block_il_ptr current_block = std::make_shared<block_il>(false);
 
         // we calculate skips here because a basic block might end with a jump
@@ -103,15 +103,17 @@ namespace eagle::il
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
-                    if (!current_vm_block)
+                    if (!is_vm_block)
                     {
                         // the current block is a x86 block
                         const block_il_ptr previous = current_block;
-                        block_info->add_body(current_block);
+                        block_info->add_body(current_block, false);
 
                         current_block = std::make_shared<block_il>(false);
-                        previous->set_exit(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
-                        current_vm_block = true;
+                        current_block->add_command(std::make_shared<cmd_vm_enter>());
+
+                        previous->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+                        is_vm_block = true;
                     }
 
                     current_block->copy_from(result_block);
@@ -120,21 +122,22 @@ namespace eagle::il
 
             if (!translate_sucess)
             {
-                if (current_vm_block)
+                if (is_vm_block)
                 {
                     if (current_block->get_command_count() == 0)
                     {
-                        current_vm_block = false;
+                        is_vm_block = false;
                     }
                     else
                     {
                         // the current block is a vm block
                         const block_il_ptr previous = current_block;
-                        block_info->add_body(current_block);
+                        block_info->add_body(current_block, true);
 
                         current_block = std::make_shared<block_il>(true);
-                        previous->set_exit(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
-                        current_vm_block = false;
+                        previous->add_command(std::make_shared<cmd_vm_exit>());
+                        previous->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+                        is_vm_block = false;
                     }
                 }
 
@@ -145,6 +148,18 @@ namespace eagle::il
                 current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
             }
         }
+
+        // make sure to add a vmexit
+        if(is_vm_block)
+        {
+            current_block->add_command(std::make_shared<cmd_vm_exit>());
+        }
+
+        // jump to exiting block
+        const block_il_ptr exit = block_info->get_exit();
+        exit->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+
+        block_info->add_body(current_block, is_vm_block);
 
         //
         // exit
@@ -191,18 +206,17 @@ namespace eagle::il
             }
         }
 
-        current_block->set_exit(std::make_shared<cmd_exit>(exits, condition));
-        block_info->add_body(current_block);
-
+        exit->add_command(std::make_shared<cmd_exit>(exits, condition));
         return block_info;
     }
 
     std::vector<block_il_ptr> ir_translator::get_optimized()
     {
-        // the idea of this function is that we want to walk every block
-        // for every block, we want to check the block that is being jumped to
-        // we want to see if vmenter is ever being used for that block
-        // if its not, it can be optimized out and vmexits for blocks that jump to it can be removed as well
+        // remove vm enter block if every reference to vm enter block uses the same vm
+
+        // remove vm exit block if every branching block uses the same vm
+
+        // merge blocks together
     }
 
     std::vector<block_il_ptr> ir_translator::get_unoptimized()
@@ -226,6 +240,7 @@ namespace eagle::il
     void ir_preopt_block::init()
     {
         entry = std::make_shared<block_il>();
+        exit = std::make_shared<block_il>();
     }
 
     block_il_ptr ir_preopt_block::get_entry()
@@ -233,13 +248,19 @@ namespace eagle::il
         return entry;
     }
 
-    std::vector<block_il_ptr>& ir_preopt_block::get_body()
+    std::vector<ir_vm_x86_block> ir_preopt_block::get_body()
     {
         return body;
     }
 
-    void ir_preopt_block::add_body(const block_il_ptr& block)
+    block_il_ptr ir_preopt_block::get_exit()
     {
-        body.push_back(block);
+        return exit;
+    }
+
+    void ir_preopt_block::add_body(const block_il_ptr& block, bool is_vm)
+    {
+        const ir_vm_x86_block pair = { block, is_vm };
+        body.push_back(pair);
     }
 }

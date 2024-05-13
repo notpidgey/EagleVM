@@ -16,6 +16,7 @@ namespace eagle::il
 {
     class ir_preopt_block;
     using ir_preopt_block_ptr = std::shared_ptr<ir_preopt_block>;
+    using ir_preopt_block_vec = std::vector<ir_preopt_block_ptr>;
 
     class ir_translator
     {
@@ -34,18 +35,22 @@ namespace eagle::il
         ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
     };
 
+    using ir_vm_x86_block = std::pair<block_il_ptr, bool>;
+
     class ir_preopt_block
     {
     public:
         void init();
 
         block_il_ptr get_entry();
-        std::vector<block_il_ptr>& get_body();
+        std::vector<ir_vm_x86_block> get_body();
+        block_il_ptr get_exit();
 
-        void add_body(const block_il_ptr& block);
+        void add_body(const block_il_ptr& block, bool is_vm);
 
     private:
         block_il_ptr entry;
-        std::vector<block_il_ptr> body;
+        std::vector<ir_vm_x86_block> body;
+        block_il_ptr exit;
     };
 }

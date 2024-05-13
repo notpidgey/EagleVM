@@ -25,6 +25,7 @@ namespace eagle::il
         vm_rflags_store,
 
         vm_sx,
+        vm_branch,
     };
 
     std::string command_to_string(command_type cmd);

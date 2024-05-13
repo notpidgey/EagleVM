@@ -8,7 +8,7 @@ namespace eagle::il::handler
     {
     public:
         lea();
-        il_insts gen_handler(codec::reg_class size, uint8_t operands) override;
+        ir_insts gen_handler(codec::reg_class size, uint8_t operands) override;
     };
 }
 

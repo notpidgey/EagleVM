@@ -3,7 +3,7 @@
 namespace eagle::il
 {
     cmd_exit::cmd_exit(const il_exit_result& result_info, const exit_condition exit_condition)
-        : base_command(command_type::vm_exit)
+        : base_command(command_type::vm_branch)
     {
         info_size = 1;
         info[0] = result_info;
@@ -11,7 +11,7 @@ namespace eagle::il
     }
 
     cmd_exit::cmd_exit(const std::vector<il_exit_result>& result_info, const exit_condition exit_condition)
-        : base_command(command_type::vm_exit)
+        : base_command(command_type::vm_branch)
     {
         // only 2 exits should exist when a conditional jump exists
         // otherwise we construc

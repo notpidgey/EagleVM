@@ -12,7 +12,7 @@ namespace eagle::il::handler
         };
     }
 
-    il_insts mov::gen_handler(codec::reg_class size, uint8_t operands)
+    ir_insts mov::gen_handler(codec::reg_class size, uint8_t operands)
     {
     }
 }

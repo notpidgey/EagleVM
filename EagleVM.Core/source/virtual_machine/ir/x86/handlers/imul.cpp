@@ -22,7 +22,7 @@ namespace eagle::il::handler
         };
     }
 
-    il_insts imul::gen_handler(const codec::reg_class size, uint8_t operands)
+    ir_insts imul::gen_handler(const codec::reg_class size, uint8_t operands)
     {
         const il_size target_size = static_cast<il_size>(get_reg_size(size));
         const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);

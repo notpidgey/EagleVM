@@ -5,6 +5,12 @@ namespace eagle::il
 {
     base_command_ptr block_il::add_command(const base_command_ptr& command)
     {
+        if(command->get_command_type() == command_type::vm_branch)
+        {
+            assert(exit == nullptr, "cannot have two exiting commands");
+            exit = std::static_pointer_cast<cmd_exit>(command);
+        }
+
         commands.push_back(command);
         return command;
     }
@@ -37,6 +43,12 @@ namespace eagle::il
         return true;
     }
 
+    base_command_ptr block_il::get_command(const size_t i)
+    {
+        assert(i < commands.size(), "index beyond vector size");
+        return commands[i];
+    }
+
     std::vector<base_command_ptr>::iterator block_il::get_iterator(base_command_ptr command)
     {
         return std::ranges::find_if(commands,
@@ -46,16 +58,7 @@ namespace eagle::il
             });
     }
 
-    void block_il::set_exit(const cmd_exit_ptr& exit_result)
-    {
-        if(exit != nullptr)
-            commands.pop_back();
-
-        exit = exit_result;
-        commands.push_back(exit_result);
-    }
-
-    uint16_t block_il::get_command_count() const
+    size_t block_il::get_command_count() const
     {
         return commands.size();
     }

@@ -3,10 +3,10 @@
 
 namespace eagle::il
 {
-    class cmd_enter : public base_command
+    class cmd_vm_enter : public base_command
     {
     public:
-        explicit cmd_enter()
+        explicit cmd_vm_enter()
             : base_command(command_type::vm_enter)
         {
         }
