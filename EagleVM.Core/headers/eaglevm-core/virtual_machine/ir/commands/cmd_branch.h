@@ -25,11 +25,11 @@ namespace eagle::il
     using vmexit_rva = uint64_t;
     using il_exit_result = std::variant<vmexit_rva, block_il_ptr>;
 
-    class cmd_exit : public base_command
+    class cmd_branch : public base_command
     {
     public:
-        cmd_exit(const il_exit_result& result_info, exit_condition exit_condition);
-        cmd_exit(const std::vector<il_exit_result>& result_info, exit_condition exit_condition);
+        cmd_branch(const il_exit_result& result_info, exit_condition exit_condition);
+        cmd_branch(const std::vector<il_exit_result>& result_info, exit_condition exit_condition);
 
         [[nodiscard]] exit_condition get_condition() const;
         il_exit_result get_condition_default();

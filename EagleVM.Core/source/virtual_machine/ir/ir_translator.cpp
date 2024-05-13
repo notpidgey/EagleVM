@@ -112,7 +112,7 @@ namespace eagle::il
                         current_block = std::make_shared<block_il>(false);
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
 
-                        previous->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
                         is_vm_block = true;
                     }
 
@@ -136,7 +136,7 @@ namespace eagle::il
 
                         current_block = std::make_shared<block_il>(true);
                         previous->add_command(std::make_shared<cmd_vm_exit>());
-                        previous->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
                         is_vm_block = false;
                     }
                 }
@@ -157,7 +157,7 @@ namespace eagle::il
 
         // jump to exiting block
         const block_il_ptr exit = block_info->get_exit();
-        exit->add_command(std::make_shared<cmd_exit>(current_block, exit_condition::jump));
+        exit->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
 
         block_info->add_body(current_block, is_vm_block);
 
@@ -206,7 +206,7 @@ namespace eagle::il
             }
         }
 
-        exit->add_command(std::make_shared<cmd_exit>(exits, condition));
+        exit->add_command(std::make_shared<cmd_branch>(exits, condition));
         return block_info;
     }
 

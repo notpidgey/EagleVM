@@ -30,10 +30,10 @@ namespace eagle::il::handler
             // there should be some kind of indication that we dont care what temp registers we pop into
             // create some kind of parameter holder which will tell the x86 code gen that we will assign this register to this random temp and this to other temp
             // todo: to this ^ maybe? or have it automatically happen by some obfuscation pass
-            std::make_shared<cmd_vm_pop>(vtemp, target_size),
-            std::make_shared<cmd_vm_pop>(vtemp2, target_size),
+            std::make_shared<cmd_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
             std::make_shared<cmd_x86_dynamic>(codec::m_add, vtemp, vtemp2),
-            std::make_shared<cmd_vm_push>(vtemp, target_size)
+            std::make_shared<cmd_push>(vtemp, target_size)
         };
     }
 }

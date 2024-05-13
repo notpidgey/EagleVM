@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_exit.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 
 namespace eagle::il

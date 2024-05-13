@@ -26,7 +26,7 @@ namespace eagle::il::lifter
         if (op_mem.base == ZYDIS_REGISTER_RIP)
         {
             auto [target, _] = codec::calc_relative_rva(inst, operands, orig_rva, idx);
-            block->add_command(std::make_shared<cmd_vm_push>(target, il_size::bit_64, true));
+            block->add_command(std::make_shared<cmd_push>(target, il_size::bit_64, true));
 
             return translate_status::success;
         }
@@ -37,10 +37,10 @@ namespace eagle::il::lifter
         // jmp VM_LOAD_REG
         if (op_mem.base == ZYDIS_REGISTER_RSP)
         {
-            block->add_command(std::make_shared<cmd_vm_push>(reg_vm::vsp, il_size::bit_64));
+            block->add_command(std::make_shared<cmd_push>(reg_vm::vsp, il_size::bit_64));
             if (stack_displacement)
             {
-                block->add_command(std::make_shared<cmd_vm_push>(stack_displacement, il_size::bit_64));
+                block->add_command(std::make_shared<cmd_push>(stack_displacement, il_size::bit_64));
                 block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
                     codec::m_add, 2, codec::reg_class::gpr_64));
             }
@@ -63,7 +63,7 @@ namespace eagle::il::lifter
             //mov VTEMP, imm    ;
             //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
             //jmp VM_MUL        ; multiply INDEX * SCALE
-            block->add_command(std::make_shared<cmd_vm_push>(op_mem.scale, il_size::bit_64));
+            block->add_command(std::make_shared<cmd_push>(op_mem.scale, il_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
                 codec::m_imul, 2, codec::reg_class::gpr_64));
         }
@@ -80,7 +80,7 @@ namespace eagle::il::lifter
             // we can do this with some trickery using LEA so we dont modify rflags
 
             // subtract displacement value
-            block->add_command(std::make_shared<cmd_vm_push>(op_mem.disp.value, il_size::bit_64));
+            block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, il_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
                 codec::m_sub, 2, codec::reg_class::gpr_64));
         }
@@ -99,9 +99,9 @@ namespace eagle::il::lifter
             const il_size target_size = il_size(inst.operand_width);
             const reg_vm target_temp = get_bit_version(reg_vm::vtemp, target_size);
 
-            block->add_command(std::make_shared<cmd_vm_pop>(reg_vm::vtemp, il_size::bit_64));
+            block->add_command(std::make_shared<cmd_pop>(reg_vm::vtemp, il_size::bit_64));
             block->add_command(std::make_shared<cmd_mem_read>(reg_vm::vtemp, il_size::bit_64));
-            block->add_command(std::make_shared<cmd_vm_push>(target_temp, target_size));
+            block->add_command(std::make_shared<cmd_push>(target_temp, target_size));
 
             stack_displacement += static_cast<uint16_t>(target_size);
         }

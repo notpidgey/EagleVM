@@ -21,9 +21,9 @@ namespace eagle::il::handler
         const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
 
         return {
-            std::make_shared<cmd_vm_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp, target_size),
             std::make_shared<cmd_x86_dynamic>(codec::m_dec, vtemp),
-            std::make_shared<cmd_vm_push>(vtemp, target_size)
+            std::make_shared<cmd_push>(vtemp, target_size)
         };
     }
 }

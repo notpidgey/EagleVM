@@ -7,8 +7,8 @@
 
 #include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/obfuscation/mba/mba.h"
-#include "eaglevm-core/virtual_machine/vm_inst.h"
-#include "eaglevm-core/virtual_machine/vm_virtualizer.h"
+#include "../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_inst.h"
+#include "../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_virtualizer.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
 using namespace eagle;

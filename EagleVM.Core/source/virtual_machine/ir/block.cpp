@@ -8,7 +8,7 @@ namespace eagle::il
         if(command->get_command_type() == command_type::vm_branch)
         {
             assert(exit == nullptr, "cannot have two exiting commands");
-            exit = std::static_pointer_cast<cmd_exit>(command);
+            exit = std::static_pointer_cast<cmd_branch>(command);
         }
 
         commands.push_back(command);

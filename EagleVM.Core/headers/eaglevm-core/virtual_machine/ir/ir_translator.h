@@ -1,7 +1,7 @@
 #pragma once
 #include <set>
 #include <unordered_map>
-#include "commands/cmd_exit.h"
+#include "commands/cmd_branch.h"
 
 #include "eaglevm-core/disassembler/basic_block.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"

@@ -20,13 +20,14 @@ namespace eagle::il
     SHARED_DEFINE(cmd_handler_call);
     SHARED_DEFINE(cmd_mem_read);
     SHARED_DEFINE(cmd_mem_write);
-    SHARED_DEFINE(cmd_vm_pop);
-    SHARED_DEFINE(cmd_vm_push);
+    SHARED_DEFINE(cmd_pop);
+    SHARED_DEFINE(cmd_push);
     SHARED_DEFINE(cmd_rflags_load);
     SHARED_DEFINE(cmd_rflags_store);
     SHARED_DEFINE(cmd_sx);
+    SHARED_DEFINE(cmd_x86_dynamic);
     SHARED_DEFINE(cmd_x86_exec);
-    SHARED_DEFINE(cmd_exit);
+    SHARED_DEFINE(cmd_branch);
 
     class base_command
     {

@@ -9,8 +9,8 @@
 
 #include "nlohmann/json.hpp"
 
-#include <eaglevm-core/virtual_machine/vm_inst.h>
-#include <eaglevm-core/virtual_machine/vm_virtualizer.h>
+#include <../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_inst.h>
+#include <../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_virtualizer.h>
 
 #include "util.h"
 #include "run_container.h"

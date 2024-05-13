@@ -47,16 +47,18 @@ namespace eagle::codec
     typedef std::vector<dec::inst_info> decode_vec;
 }
 
-#define ZREG(x)			    eagle::asmbl::x86::op_reg{ (ZydisRegister)x, 0 }
-#define ZIMMU(x)		    eagle::asmbl::x86::op_imm{ .u = x }
-#define ZIMMS(x)		    eagle::asmbl::x86::op_imm{ .s = x }
+#define ZREG(x)			    eagle::codec::enc::op_reg{ (ZydisRegister)x, 0 }
+#define ZIMMU(x)		    eagle::codec::enc::op_imm{ .u = x }
+#define ZIMMS(x)		    eagle::codec::enc::op_imm{ .s = x }
 
 // Z BYTES MEM[REG(X) + Y]
-#define ZMEMBD(x, y, z)	    eagle::asmbl::x86::op_mem{ (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
+#define ZMEMBD(x, y, z)	    eagle::codec::enc::op_mem{ (ZydisRegister)x, (ZydisRegister)0, 0, (ZyanI64)y, (ZyanU16)z }
 
 // A BYTES MEM[REG(X) + (REG(Y) * Z)]
-#define ZMEMBI(x, y, z, a)	eagle::asmbl::x86::op_mem{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
+#define ZMEMBI(x, y, z, a)	eagle::codec::enc::op_mem{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
 
 #define RECOMPILE(...) [=](uint64_t rva) { return __VA_ARGS__ ; }
-#define ZLABEL(x) ZIMMS(int32_t(x->get()))
-#define ZJMP(x, y) ZIMMS(x->get() - y->get())
+#define ZLABEL(x) ZIMMS(int32_t(x->get_address()))
+
+#define ZJMP(x, y) ZIMMU(x->get_address() - y->get_address())
+#define ZJMPR(x) ZIMMU(x->get_address() - rva)

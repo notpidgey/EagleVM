@@ -22,10 +22,10 @@ namespace eagle::il::handler
         const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
 
         return {
-            std::make_shared<cmd_vm_pop>(vtemp, target_size),
-            std::make_shared<cmd_vm_pop>(vtemp2, target_size),
+            std::make_shared<cmd_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
             std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp, vtemp2),
-            std::make_shared<cmd_vm_push>(vtemp, target_size)
+            std::make_shared<cmd_push>(vtemp, target_size)
         };
     }
 }
@@ -42,7 +42,7 @@ namespace eagle::il::lifter
     translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
         il_size target_size = get_op_width();
-        block->add_command(std::make_shared<cmd_vm_push>(op_imm.value.u, target_size));
+        block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
 
         const codec::dec::operand first_op = operands[0];
         const bool is_register = first_op.type == ZYDIS_OPERAND_TYPE_REGISTER;

@@ -1,14 +1,8 @@
-#include "eaglevm-core/virtual_machine/vm_inst_handlers.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/vm_inst_handlers.h"
 
-#include "eaglevm-core/virtual_machine/handlers/include_ia32.h"
-#include "eaglevm-core/virtual_machine/handlers/include_vm.h"
-
-#include "eaglevm-core/virtual_machine/handlers/handler/inst_handler_entry.h"
-#include "eaglevm-core/virtual_machine/handlers/handler/vm_handler_entry.h"
-
-namespace eagle::virt
+namespace eagle::virt::pidg
 {
-    vm_inst_handlers::vm_inst_handlers(vm_inst_regs* push_order)
+    vm_inst_handlers::vm_inst_handlers(vm_inst_regs_ptr push_order)
     {
         rm_ = push_order;
     }

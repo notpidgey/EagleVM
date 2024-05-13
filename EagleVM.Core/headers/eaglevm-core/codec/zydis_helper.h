@@ -60,7 +60,7 @@ namespace eagle::codec
     bool has_relative_operand(dec::inst_info& decode);
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst& instruction, const dec::operand* operands, uint32_t rva, int8_t operand = -1);
 
-    enc::req enc(mnemonic mnemonic, auto&&... args)
+    enc::req encode(mnemonic mnemonic, auto&&... args)
     {
         auto encoder = create_encode_request(mnemonic);
         (add_op(encoder, std::forward<decltype(args)>(args)), ...);
