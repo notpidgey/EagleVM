@@ -5,7 +5,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handler_include.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     extern std::unordered_map<codec::mnemonic, std::shared_ptr<handler::base_handler_gen>> instruction_handlers;
     extern std::unordered_map<

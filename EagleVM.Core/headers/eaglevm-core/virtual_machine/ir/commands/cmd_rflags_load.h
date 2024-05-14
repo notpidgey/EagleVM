@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_stack.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     class cmd_rflags_load : public base_command
     {

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace eagle::il
+namespace eagle::ir
 {
     enum class stack_type
     {

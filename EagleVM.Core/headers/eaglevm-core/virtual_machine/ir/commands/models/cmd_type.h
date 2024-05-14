@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace eagle::il
+namespace eagle::ir
 {
     enum class command_type
     {

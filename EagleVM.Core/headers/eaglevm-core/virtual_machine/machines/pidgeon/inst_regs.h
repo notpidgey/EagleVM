@@ -8,13 +8,13 @@
 
 namespace eagle::virt::pidg
 {
-    class vm_inst_regs;
-    using vm_inst_regs_ptr = std::shared_ptr<vm_inst_regs>;
+    class inst_regs;
+    using vm_inst_regs_ptr = std::shared_ptr<inst_regs>;
 
-    class vm_inst_regs
+    class inst_regs
     {
     public:
-        vm_inst_regs();
+        inst_regs();
 
         void init_reg_order();
         codec::zydis_register get_reg(uint8_t target) const;

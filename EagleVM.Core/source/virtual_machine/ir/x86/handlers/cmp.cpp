@@ -3,7 +3,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     cmp::cmp()
     {
@@ -30,7 +30,7 @@ namespace eagle::il::handler
     }
 }
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     void cmp::finalize_translate_to_virtual()
     {

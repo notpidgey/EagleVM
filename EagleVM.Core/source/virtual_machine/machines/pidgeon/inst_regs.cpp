@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/pidgeon/vm_inst_regs.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/inst_regs.h"
 
 #include "eaglevm-core/util/random.h"
 #include "eaglevm-core/codec/zydis_helper.h"
@@ -7,13 +7,13 @@
 
 namespace eagle::virt::pidg
 {
-    vm_inst_regs::vm_inst_regs()
+    inst_regs::inst_regs()
     {
         stack_order = {};
         vm_order = {};
     }
 
-    void vm_inst_regs::init_reg_order()
+    void inst_regs::init_reg_order()
     {
         // todo: find a safer way to do this instead of enumearting enum
         for(int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
@@ -45,7 +45,7 @@ namespace eagle::virt::pidg
         vm_order = access_order;
     }
 
-    codec::zydis_register vm_inst_regs::get_reg(const uint8_t target) const
+    codec::zydis_register inst_regs::get_reg(const uint8_t target) const
     {
         // this would be something like VIP, VSP, VTEMP, etc
         if(target > NUM_OF_VREGS - 1 )
@@ -54,7 +54,7 @@ namespace eagle::virt::pidg
         return vm_order[target];
     }
 
-    std::pair<uint32_t, codec::reg_size> vm_inst_regs::get_stack_displacement(const codec::zydis_register reg) const
+    std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::zydis_register reg) const
     {
         //determine 64bit version of register
         const codec::reg_size reg_size = codec::get_reg_size(reg);
@@ -82,7 +82,7 @@ namespace eagle::virt::pidg
         return { found_index * 8 + offset, reg_size };
     }
 
-    void vm_inst_regs::enumerate(const std::function<void(codec::zydis_register)>& enumerable, const bool from_back)
+    void inst_regs::enumerate(const std::function<void(codec::zydis_register)>& enumerable, const bool from_back)
     {
         if(from_back)
             std::ranges::for_each(stack_order, enumerable);

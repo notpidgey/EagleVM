@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
 
-namespace eagle::il
+namespace eagle::ir
 {
     enum class il_size
     {

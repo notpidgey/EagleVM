@@ -3,7 +3,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     imul::imul()
     {
@@ -37,7 +37,7 @@ namespace eagle::il::handler
     }
 }
 
-void eagle::il::lifter::imul::finalize_translate_to_virtual()
+void eagle::ir::lifter::imul::finalize_translate_to_virtual()
 {
     if (inst.operand_count_visible == 1)
     {

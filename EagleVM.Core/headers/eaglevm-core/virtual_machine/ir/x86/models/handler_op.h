@@ -3,7 +3,7 @@
 
 #include "eaglevm-core/codec/zydis_defs.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     struct handler_op
     {

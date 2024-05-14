@@ -3,12 +3,79 @@
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/models/vm_defs.h"
 
+#include "eaglevm-core/virtual_machine/ir/commands/include.h"
+
 namespace eagle::virt::pidg
 {
     machine::machine()
     {
-        rm_ = std::make_shared<vm_inst_regs>();
-        hg_ = std::make_shared<vm_inst_handlers>(rm_);
+        rm_ = std::make_shared<inst_regs>();
+        hg_ = std::make_shared<inst_handlers>(rm_);
+    }
+
+    std::vector<asmb::code_label_ptr> machine::create_handlers()
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_context_load_ptr cmd)
+    {
+        cmd->
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_context_store_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_branch_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_handler_call_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_mem_read_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_mem_write_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_pop_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_push_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_rflags_load_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_rflags_store_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_sx_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_vm_enter_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_vm_exit_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_x86_dynamic_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_x86_exec_ptr cmd)
+    {
     }
 
     void machine::call_vm_enter(const asmb::code_label_ptr& container, const asmb::code_label_ptr target)

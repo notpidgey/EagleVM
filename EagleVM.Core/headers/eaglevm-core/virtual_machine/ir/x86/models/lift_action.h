@@ -1,6 +1,6 @@
 #pragma once
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     enum op_action
     {

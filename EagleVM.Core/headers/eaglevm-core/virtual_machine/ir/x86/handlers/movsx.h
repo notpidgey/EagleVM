@@ -2,7 +2,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
 #include "eaglevm-core/virtual_machine/ir/x86/base_x86_translator.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     class movsx : public base_handler_gen
     {
@@ -12,7 +12,7 @@ namespace eagle::il::handler
     };
 }
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     class movsx : public base_x86_translator
     {

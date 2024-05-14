@@ -3,7 +3,7 @@
 #define CREATE_LIFTER_GEN(x) [](codec::dec::inst_info decode, const uint64_t rva) \
 { return std::static_pointer_cast<lifter::base_x86_lifter>(std::make_shared<lifter::x>(decode, rva)); }
 
-namespace eagle::il
+namespace eagle::ir
 {
     std::unordered_map<codec::mnemonic, std::shared_ptr<handler::base_handler_gen>> instruction_handlers =
     {

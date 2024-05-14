@@ -3,11 +3,11 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     dec::dec()
     {
-        entries = {
+        handlers = {
             { { codec::op_none, codec::bit_8 } },
             { { codec::op_none, codec::bit_16 } },
             { { codec::op_none, codec::bit_32 } },
@@ -28,7 +28,7 @@ namespace eagle::il::handler
     }
 }
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     void dec::finalize_translate_to_virtual()
     {

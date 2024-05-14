@@ -8,7 +8,7 @@
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     enum class translate_status
     {

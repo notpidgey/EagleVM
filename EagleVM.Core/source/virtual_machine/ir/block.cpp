@@ -1,7 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     base_command_ptr block_il::add_command(const base_command_ptr& command)
     {

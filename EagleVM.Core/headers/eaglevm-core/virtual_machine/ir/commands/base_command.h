@@ -7,7 +7,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
 #include "eaglevm-core/virtual_machine/ir/models/il_reg.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
 #define SHARED_DEFINE(x) \
     class x; \

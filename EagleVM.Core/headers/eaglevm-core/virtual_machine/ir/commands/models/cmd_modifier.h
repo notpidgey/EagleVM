@@ -2,7 +2,7 @@
 #include <variant>
 #include "eaglevm-core/virtual_machine/ir/models/il_reg.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     enum class modifier_type
     {

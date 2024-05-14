@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/lea.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     lea::lea()
     {
@@ -34,7 +34,7 @@ namespace eagle::il::handler
     }
 }
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     bool lea::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
     {

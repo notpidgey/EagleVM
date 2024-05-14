@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/movsx.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     movsx::movsx()
     {
@@ -19,7 +19,7 @@ namespace eagle::il::handler
     }
 }
 
-namespace eagle::il::lifter
+namespace eagle::ir::lifter
 {
     translate_status movsx::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
     {

@@ -12,7 +12,7 @@ namespace eagle::dasm
     class segment_dasm;
 }
 
-namespace eagle::il
+namespace eagle::ir
 {
     class ir_preopt_block;
     using ir_preopt_block_ptr = std::shared_ptr<ir_preopt_block>;

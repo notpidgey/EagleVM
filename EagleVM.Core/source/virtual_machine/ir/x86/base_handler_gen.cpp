@@ -1,13 +1,13 @@
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
-    handler_info_ptr base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
+    std::optional<handler_info>  base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
     {
         const auto target_operands_len = target_operands.size();
-        for (const handler_info_ptr& entry : handlers)
+        for (const auto& entry : handlers)
         {
-            op_entries accepted_ops = entry->entries;
+            op_entries accepted_ops = entry.entries;
             if (accepted_ops.size() != target_operands.size())
                 continue;
 
@@ -33,6 +33,6 @@ namespace eagle::il::handler
                 return entry;
         }
 
-        return nullptr;
+        return std::nullopt;
     }
 }

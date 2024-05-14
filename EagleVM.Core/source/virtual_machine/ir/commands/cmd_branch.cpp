@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     cmd_branch::cmd_branch(const il_exit_result& result_info, const exit_condition exit_condition)
         : base_command(command_type::vm_branch)

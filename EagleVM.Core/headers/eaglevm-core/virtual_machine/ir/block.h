@@ -4,7 +4,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     class block_il;
     using block_il_ptr = std::shared_ptr<block_il>;

@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
 
-std::string eagle::il::command_to_string(const command_type cmd)
+std::string eagle::ir::command_to_string(const command_type cmd)
 {
     switch (cmd)
     {

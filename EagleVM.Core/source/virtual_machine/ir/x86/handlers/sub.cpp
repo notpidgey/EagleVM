@@ -1,6 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/sub.h"
 
-namespace eagle::il::handler
+namespace eagle::ir::handler
 {
     sub::sub()
     {

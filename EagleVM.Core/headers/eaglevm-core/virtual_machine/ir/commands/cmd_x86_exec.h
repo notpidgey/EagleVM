@@ -2,7 +2,7 @@
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     class cmd_x86_exec : public base_command
     {

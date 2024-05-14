@@ -4,7 +4,7 @@
 
 #include "eaglevm-core/virtual_machine/ir/models/il_size.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     enum class reg_type
     {

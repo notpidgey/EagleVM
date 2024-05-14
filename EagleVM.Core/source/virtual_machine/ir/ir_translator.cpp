@@ -7,7 +7,7 @@
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
-namespace eagle::il
+namespace eagle::ir
 {
     ir_translator::ir_translator(dasm::segment_dasm* seg_dasm)
     {
