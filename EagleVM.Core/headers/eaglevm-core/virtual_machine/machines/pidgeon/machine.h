@@ -16,6 +16,10 @@ namespace eagle::virt::pidg
     //     inline_vm_handlers,
     // };
 
+    // i need to do a rule checker
+    // some rules to keep in mind
+    // gpr registers only, no xmm, no avx, nothing like that
+
     class machine final : public base_machine
     {
     public:
@@ -47,6 +51,6 @@ namespace eagle::virt::pidg
         vm_inst_regs_ptr rm_;
         vm_inst_handlers_ptr hg_;
 
-        void call_handler(const asmb::code_container_ptr& code, const asmb::code_container_ptr& target);
+        void call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target);
     };
 }

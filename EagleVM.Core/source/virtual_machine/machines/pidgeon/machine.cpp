@@ -36,40 +36,64 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_mem_read_ptr cmd)
     {
+        // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
+        // todo: inline but also add option to use mov handler
+        ir::il_size target_size = cmd->get_read_size();
+
         // pop address
+        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::il_size::bit_64));
 
         // mov temp, [address]
+        label->add(codec::encode(codec::m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
 
-
+        // push
+        call_handler(label, hg_->get_instruction_handler(codec::m_push, target_size));
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_mem_write_ptr cmd)
     {
-        // pop value
+        // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
+        // todo: il_size should have a reg_size translator somewhere
 
-        // pop address
+        ir::il_size value_size = cmd->get_value_size();
+        ir::il_size write_size = cmd->get_write_size();
 
-        // mov [address], value
+        // pop vtemp2 ; pop address into vtemp2
+        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::il_size::bit_64));
+        label->add(codec::encode(codec::m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
+
+        // pop vtemp ; pop value into vtemp
+        call_handler(label, hg_->get_instruction_handler(codec::m_pop, value_size));
+
+        // mov [vtemp2], vtemp
+        codec::reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(static_cast<codec::reg_size>(value_size)));
+        label->add(encode(codec::m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_pop_ptr cmd)
     {
         // call ia32 handler for pop
+        const asmb::code_label_ptr pop = hg_->get_instruction_handler(codec::m_pop, );
+        call_handler(label, pop);
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_push_ptr cmd)
     {
         // call ia32 handler for push
+        const asmb::code_label_ptr push = hg_->get_instruction_handler(codec::m_push, );
+        call_handler(label, push);
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_rflags_load_ptr cmd)
     {
-        asmb::code_container_ptr vm_rflags_load = hg_->get_rlfags_load();
+        const asmb::code_label_ptr vm_rflags_load = hg_->get_rlfags_load();
+        call_handler(label, vm_rflags_load);
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_rflags_store_ptr cmd)
     {
-        asmb::code_container_ptr vm_rflags_store = hg_->get_rflags_store();
+        const asmb::code_label_ptr vm_rflags_store = hg_->get_rflags_store();
+        call_handler(label, vm_rflags_store);
     }
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_sx_ptr cmd)
@@ -118,7 +142,7 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(const asmb::code_container_ptr label, ir::cmd_vm_enter_ptr cmd)
     {
-        const asmb::code_container_ptr vm_enter = hg_->get_vm_enter();
+        const asmb::code_label_ptr vm_enter = hg_->get_vm_enter();
 
         label->add(RECOMPILE(codec::encode(codec::m_push, ZLABEL(target))));
         label->add(RECOMPILE(codec::encode(codec::m_jmp, ZJMPR(vm_enter))));
@@ -126,7 +150,7 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(const asmb::code_container_ptr label, ir::cmd_vm_exit_ptr cmd)
     {
-        const asmb::code_container_ptr vm_exit = hg_->get_vm_exit();
+        const asmb::code_label_ptr vm_exit = hg_->get_vm_exit();
 
         // mov VCSRET, ZLABEL(target)
         label->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VCSRET), ZLABEL(target))));
@@ -155,15 +179,17 @@ namespace eagle::virt::pidg
         return codec::encode_request(jmp);
     }
 
-    void machine::call_handler(const asmb::code_container_ptr& code, const asmb::code_container_ptr& target)
+    void machine::call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target)
     {
         assert(target != nullptr, "target cannot be an invalid code label");
         assert(code != nullptr, "code cannot be an invalid code label");
 
+        asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
+
         // lea VCS, [VCS - 8]       ; allocate space for new return address
         // mov [VCS], code_label    ; place return rva on the stack
         code->add(codec::encode(codec::m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
-        code->add(RECOMPILE(codec::encode(codec::m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(retun_label))));
+        code->add(RECOMPILE(codec::encode(codec::m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(return_label))));
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
@@ -171,6 +197,7 @@ namespace eagle::virt::pidg
         code->add(codec::encode(codec::m_jmp, ZREG(VIP)));
 
         // execution after VM handler should end up here
-        code->assign_label(retun_label);
+        code->bind(return_label);
+
     }
 }

@@ -1,4 +1,8 @@
 #pragma once
+#include <utility>
+
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_operand_signature.h"
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_handler_signature.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
 namespace eagle::ir
@@ -13,18 +17,24 @@ namespace eagle::ir
     class cmd_handler_call : public base_command
     {
     public:
-        explicit cmd_handler_call(const call_type type, const codec::mnemonic mnemonic,
-            const uint8_t op_count, const codec::reg_class size)
-            : base_command(command_type::vm_handler_call), call_type(type),
-            mnemonic(mnemonic), operand_count(op_count), size(size)
-        {
-        }
+        explicit cmd_handler_call(call_type type, codec::mnemonic mnemonic, x86_operand_sig signature);
+        explicit cmd_handler_call(call_type type, codec::mnemonic mnemonic, ir_handler_sig signataure);
+
+        [[nodiscard]] bool is_operand_sig() const;
+        x86_operand_sig get_x86_signature();
+        ir_handler_sig get_handler_signature();
 
     private:
         call_type call_type = call_type::none;
         codec::mnemonic mnemonic;
 
-        uint8_t operand_count;
-        codec::reg_class size;
+        bool operand_sig_init;
+
+        // operand signature initialized
+        // this will case the ir interpreter to look up a handler by this signature
+        x86_operand_sig operand_sig;
+
+        // handler signature initialized
+        ir_handler_sig handler_sig;
     };
 }

@@ -31,12 +31,12 @@ namespace eagle::virt::pidg
         vm_call_stack = random_callstack_bytes;
     }
 
-    asmb::code_container_ptr inst_handlers::get_vm_enter(const bool reference)
+    asmb::code_label_ptr inst_handlers::get_vm_enter(const bool reference)
     {
         if (reference)
             vm_enter.reference_count++;
 
-        return vm_enter.code;
+        return vm_enter.label;
     }
 
     uint32_t inst_handlers::get_vm_enter_reference() const
@@ -48,12 +48,12 @@ namespace eagle::virt::pidg
     {
     }
 
-    asmb::code_container_ptr inst_handlers::get_vm_exit(const bool reference)
+    asmb::code_label_ptr inst_handlers::get_vm_exit(const bool reference)
     {
         if (reference)
             vm_exit.reference_count++;
 
-        return vm_exit.code;
+        return vm_exit.label;
     }
 
     uint32_t inst_handlers::get_vm_exit_reference() const
@@ -65,12 +65,12 @@ namespace eagle::virt::pidg
     {
     }
 
-    asmb::code_container_ptr inst_handlers::get_rlfags_load(const bool reference)
+    asmb::code_label_ptr inst_handlers::get_rlfags_load(const bool reference)
     {
         if (reference)
             vm_rflags_load.reference_count++;
 
-        return vm_rflags_load.code;
+        return vm_rflags_load.label;
     }
 
     uint32_t inst_handlers::get_rflags_load_reference() const
@@ -82,12 +82,12 @@ namespace eagle::virt::pidg
     {
     }
 
-    asmb::code_container_ptr inst_handlers::get_rflags_store(const bool reference)
+    asmb::code_label_ptr inst_handlers::get_rflags_store(const bool reference)
     {
         if (reference)
             vm_rflags_save.reference_count++;
 
-        return vm_rflags_save.code;
+        return vm_rflags_save.label;
     }
 
     uint32_t inst_handlers::get_rflags_save_reference() const
@@ -97,6 +97,11 @@ namespace eagle::virt::pidg
 
     asmb::code_container_ptr inst_handlers::build_rflags_save()
     {
+    }
+
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(codec::mnemonic mnemonic)
+    {
+
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::get_handlers()

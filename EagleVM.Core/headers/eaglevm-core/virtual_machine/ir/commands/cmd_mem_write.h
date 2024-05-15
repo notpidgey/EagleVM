@@ -7,14 +7,13 @@ namespace eagle::ir
     class cmd_mem_write : public base_command
     {
     public:
-        explicit cmd_mem_write(const reg_vm reg_dest, const reg_vm reg_source, const il_size size)
-            : base_command(command_type::vm_mem_write), dest_reg(reg_dest), source_reg(reg_source), size(size)
-        {
-        }
+        explicit cmd_mem_write(il_size value_size, il_size write_size);
+
+        il_size get_value_size() const;
+        il_size get_write_size() const;
 
     private:
-        reg_vm dest_reg;
-        reg_vm source_reg;
-        il_size size;
+        il_size write_size;
+        il_size value_size;
     };
 }

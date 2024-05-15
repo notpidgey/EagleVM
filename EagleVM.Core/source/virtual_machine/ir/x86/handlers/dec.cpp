@@ -7,11 +7,13 @@ namespace eagle::ir::handler
 {
     dec::dec()
     {
+        // todo: make vector of supported signatures
+        // todo: make vector of handlers to generate
         handlers = {
-            { { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_32 } },
-            { { codec::op_none, codec::bit_64 } },
+            operand_signature{ handler_op{ codec::op_none, codec::bit_8 }, "8" },
+            operand_signature{ handler_op{ codec::op_none, codec::bit_16 }, "16" },
+            operand_signature{ handler_op{ codec::op_none, codec::bit_32 }, "32" },
+            operand_signature{ handler_op{ codec::op_none, codec::bit_64 }, "64" },
         };
     }
 

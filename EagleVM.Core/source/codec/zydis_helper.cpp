@@ -20,6 +20,11 @@ namespace eagle::codec
         return static_cast<reg>(enc);
     }
 
+    reg get_bit_version(zydis_register input_reg, const reg_class target_size)
+    {
+        return get_bit_version(static_cast<reg>(input_reg), target_size);
+    }
+
     reg_class get_max_size(reg input_reg)
     {
         const zydis_register zy_register = static_cast<zydis_register>(input_reg);
@@ -61,6 +66,44 @@ namespace eagle::codec
                 return true;
             default:
                 return false;
+        }
+    }
+
+    reg_class get_gpr_class_from_size(const reg_size size)
+    {
+        switch (size)
+        {
+            case bit_64:
+                 return gpr_64;
+            case bit_32:
+                return gpr_32;
+            case bit_16:
+                return gpr_16;
+            case bit_8:
+                return gpr_8;
+            default:
+            {
+                assert("invalud reg_size for gpr class");
+                return invalid;
+            }
+        }
+    }
+
+    reg_class get_xmm_class_from_size(const reg_size size)
+    {
+        switch(size)
+        {
+            case bit_512:
+                return zmm_512;
+            case bit_256:
+                return ymm_256;
+            case bit_128:
+                return xmm_128;
+            default:
+            {
+                assert("invalud reg_size for xmm class");
+                return invalid;
+            }
         }
     }
 
