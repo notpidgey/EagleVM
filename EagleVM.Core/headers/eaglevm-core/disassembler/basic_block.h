@@ -1,6 +1,6 @@
 #pragma once
 #include "eaglevm-core/codec/zydis_defs.h"
-#include "eaglevm-core/compiler/code_label.h"
+#include "eaglevm-core/compiler/code_container.h"
 
 #include "models/block_end_reason.h"
 #include "models/block_jump_location.h"

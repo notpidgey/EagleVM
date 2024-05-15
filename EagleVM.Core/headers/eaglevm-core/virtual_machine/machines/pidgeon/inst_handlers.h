@@ -1,7 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include "inst_regs.h"
-#include "eaglevm-core/compiler/code_label.h"
+#include "eaglevm-core/compiler/code_container.h"
 
 namespace eagle::virt::pidg
 {
@@ -13,7 +13,7 @@ namespace eagle::virt::pidg
 
     struct tagged_vm_handler
     {
-        asmb::code_label_ptr code = nullptr;
+        asmb::code_container_ptr code = nullptr;
         uint32_t reference_count = 0;
     };
 
@@ -26,23 +26,23 @@ namespace eagle::virt::pidg
 
         void randomize_constants();
 
-        asmb::code_label_ptr get_vm_enter(bool reference = true);
+        asmb::code_container_ptr get_vm_enter(bool reference = true);
         uint32_t get_vm_enter_reference() const;
-        asmb::code_label_ptr build_vm_enter();
+        asmb::code_container_ptr build_vm_enter();
 
-        asmb::code_label_ptr get_vm_exit(bool reference = true);
+        asmb::code_container_ptr get_vm_exit(bool reference = true);
         uint32_t get_vm_exit_reference() const;
-        asmb::code_label_ptr build_vm_exit();
+        asmb::code_container_ptr build_vm_exit();
 
-        asmb::code_label_ptr get_rlfags_load(bool reference = true);
+        asmb::code_container_ptr get_rlfags_load(bool reference = true);
         uint32_t get_rflags_load_reference() const;
-        asmb::code_label_ptr build_rflags_load();
+        asmb::code_container_ptr build_rflags_load();
 
-        asmb::code_label_ptr get_rflags_save(bool reference = true);
+        asmb::code_container_ptr get_rflags_store(bool reference = true);
         uint32_t get_rflags_save_reference() const;
-        asmb::code_label_ptr build_rflags_save();
+        asmb::code_container_ptr build_rflags_save();
 
-        std::vector<asmb::code_label_ptr> get_handlers();
+        std::vector<asmb::code_container_ptr> get_handlers();
 
     private:
         vm_inst_regs_ptr inst_regs;

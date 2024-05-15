@@ -79,7 +79,7 @@ namespace eagle::pe
                 header.Characteristics |= IMAGE_SCN_MEM_WRITE;
                 const uint32_t section_rva = header.VirtualAddress;
 
-                asmb::code_label* rel_label = asmb::code_label::create();
+                asmb::code_container* rel_label = asmb::code_container::create();
                 container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
                 container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
 
@@ -111,7 +111,7 @@ namespace eagle::pe
             asmb::function_container container;
             auto orig_entry = generator->nt_headers.OptionalHeader.AddressOfEntryPoint;
 
-            asmb::code_label* rel_label = asmb::code_label::create();
+            asmb::code_container* rel_label = asmb::code_container::create();
             container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
             container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, orig_entry, 8))));
             container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(GR_RAX)));

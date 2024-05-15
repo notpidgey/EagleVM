@@ -3,11 +3,11 @@
 
 namespace eagle::virt
 {
-    asmb::code_label_ptr base_machine::lift_block(const ir::block_il_ptr& block, bool scatter)
+    asmb::code_container_ptr base_machine::lift_block(const ir::block_il_ptr& block, bool scatter)
     {
         const size_t command_count = block->get_command_count();
 
-        const asmb::code_label_ptr code = asmb::code_label::create("block_begin " + command_count, true);
+        const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + command_count, true);
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->get_command(i);

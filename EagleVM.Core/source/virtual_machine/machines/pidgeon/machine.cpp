@@ -13,101 +13,164 @@ namespace eagle::virt::pidg
         hg_ = std::make_shared<inst_handlers>(rm_);
     }
 
-    std::vector<asmb::code_label_ptr> machine::create_handlers()
+    std::vector<asmb::code_container_ptr> machine::create_handlers()
     {
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_context_load_ptr cmd)
     {
         cmd->
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_context_store_ptr cmd)
     {
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_branch_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_branch_ptr cmd)
     {
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_handler_call_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_handler_call_ptr cmd)
     {
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_mem_read_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_mem_read_ptr cmd)
     {
+        // pop address
+
+        // mov temp, [address]
+
+
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_mem_write_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_mem_write_ptr cmd)
     {
+        // pop value
+
+        // pop address
+
+        // mov [address], value
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_pop_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_pop_ptr cmd)
     {
+        // call ia32 handler for pop
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_push_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_push_ptr cmd)
     {
+        // call ia32 handler for push
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_rflags_load_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_rflags_load_ptr cmd)
     {
+        asmb::code_container_ptr vm_rflags_load = hg_->get_rlfags_load();
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_rflags_store_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_rflags_store_ptr cmd)
     {
+        asmb::code_container_ptr vm_rflags_store = hg_->get_rflags_store();
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_sx_ptr cmd)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_sx_ptr cmd)
     {
+        ir::il_size current_size = cmd->get_current();
+        ir::il_size target_size = cmd->get_target();
+
+        // mov eax/ax/al, VTEMP
+        label->add(encode(codec::m_mov,
+            ZREG(codec::get_bit_version(codec::rax, current_size)),
+            ZREG(codec::get_bit_version(VTEMP, current_size))
+        ));
+
+        // keep upgrading the operand until we get to destination size
+        while(current_size != target_size)
+        {
+            // other sizes should not be possible
+            switch(current_size)
+            {
+                case bit32:
+                {
+                    label->add(encode(codec::m_cdqe));
+                    current_size = bit64;
+                    break;
+                }
+                case bit16:
+                {
+                    label->add(encode(codec::m_cwde));
+                    current_size = bit32;
+                    break;
+                }
+                case bit8:
+                {
+                    label->add(encode(codec::m_cbw));
+                    current_size = bit16;
+                    break;
+                }
+            }
+        }
+
+        label->add(encode(codec::m_mov,
+            ZREG(codec::get_bit_version(VTEMP, target_size)),
+            ZREG(codec::get_bit_version(codec::rax, target_size))
+        ));
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_vm_enter_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr label, ir::cmd_vm_enter_ptr cmd)
     {
+        const asmb::code_container_ptr vm_enter = hg_->get_vm_enter();
+
+        label->add(RECOMPILE(codec::encode(codec::m_push, ZLABEL(target))));
+        label->add(RECOMPILE(codec::encode(codec::m_jmp, ZJMPR(vm_enter))));
     }
 
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_vm_exit_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr label, ir::cmd_vm_exit_ptr cmd)
     {
-    }
-
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_x86_dynamic_ptr cmd)
-    {
-    }
-
-    void machine::handle_cmd(asmb::code_label_ptr label, ir::cmd_x86_exec_ptr cmd)
-    {
-    }
-
-    void machine::call_vm_enter(const asmb::code_label_ptr& container, const asmb::code_label_ptr target)
-    {
-        const handle::vm_handler_entry* vmenter = vm_inst_->get_handlers()->v_handlers[MNEMONIC_VM_ENTER];
-        const auto vmenter_address = vmenter->get_vm_handler_va(bit64);
-
-        container->add(RECOMPILE(codec::encode(codec::m_push, ZLABEL(target))));
-        container->add(RECOMPILE(codec::encode(codec::m_jmp, ZJMPR(vmenter_address))));
-    }
-
-    void machine::call_vm_exit(const asmb::code_label_ptr& container, const asmb::code_label_ptr target)
-    {
-        const handle::vm_handler_entry* vmexit = vm_inst_->get_handlers()->v_handlers[MNEMONIC_VM_EXIT];
-        const auto vmexit_address = vmexit->get_vm_handler_va(bit64);
+        const asmb::code_container_ptr vm_exit = hg_->get_vm_exit();
 
         // mov VCSRET, ZLABEL(target)
-        container->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VCSRET), ZLABEL(target))));
+        label->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VCSRET), ZLABEL(target))));
 
         // lea VRIP, [VBASE + vmexit_address]
-        container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(VIP), ZMEMBD(VBASE, vmexit_address->get(), 8))));
-        container->add(codec::encode(codec::m_jmp, ZREG(VIP)));
+        label->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
+        label->add(encode(codec::m_jmp, ZREG(VIP)));
     }
 
-    void machine::create_vm_jump(const codec::mnemonic mnemonic, const asmb::code_label_ptr& container, const asmb::code_label_ptr& rva_target)
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_x86_dynamic_ptr cmd)
+    {
+    }
+
+    void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_x86_exec_ptr cmd)
+    {
+    }
+
+    void machine::create_vm_jump(const codec::mnemonic mnemonic, const asmb::code_container_ptr& container, const asmb::code_container_ptr& rva_target)
     {
         container->add(RECOMPILE(codec::encode(mnemonic, ZJMPR(rva_target))));
     }
 
-    codec::encoded_vec machine::create_jump(const uint32_t rva, const asmb::code_label_ptr& rva_target)
+    codec::encoded_vec machine::create_jump(const uint32_t rva, const asmb::code_container_ptr& rva_target)
     {
         codec::enc::req jmp = encode(codec::m_jmp, ZIMMU(rva_target->get_address() - rva - 5));
         return codec::encode_request(jmp);
+    }
+
+    void machine::call_handler(const asmb::code_container_ptr& code, const asmb::code_container_ptr& target)
+    {
+        assert(target != nullptr, "target cannot be an invalid code label");
+        assert(code != nullptr, "code cannot be an invalid code label");
+
+        // lea VCS, [VCS - 8]       ; allocate space for new return address
+        // mov [VCS], code_label    ; place return rva on the stack
+        code->add(codec::encode(codec::m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
+        code->add(RECOMPILE(codec::encode(codec::m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(retun_label))));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        code->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), 8))));
+        code->add(codec::encode(codec::m_jmp, ZREG(VIP)));
+
+        // execution after VM handler should end up here
+        code->assign_label(retun_label);
     }
 }

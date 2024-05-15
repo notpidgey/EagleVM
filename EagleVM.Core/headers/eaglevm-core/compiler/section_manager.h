@@ -1,9 +1,9 @@
 #pragma once
-#include "eaglevm-core/compiler/code_label.h"
+#include "eaglevm-core/compiler/code_container.h"
 
 namespace eagle::asmb
 {
-    class code_label;
+    class code_container;
     class section_manager
     {
     public:
@@ -16,7 +16,7 @@ namespace eagle::asmb
         void perform_shuffle();
 
     private:
-        std::vector<code_label_ptr> section_labels;
+        std::vector<code_container_ptr> section_labels;
         bool shuffle_functions = false;
     };
 }

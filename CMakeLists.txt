@@ -75,6 +75,7 @@ endif()
 # Target: EagleVMCore
 set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/codec/zydis_helper.cpp"
+	"EagleVM.Core/source/compiler/code_container.cpp"
 	"EagleVM.Core/source/compiler/code_label.cpp"
 	"EagleVM.Core/source/compiler/section_manager.cpp"
 	"EagleVM.Core/source/disassembler/basic_block.cpp"
@@ -94,6 +95,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_branch.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_context_load.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_context_store.cpp"
+	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_sx.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/models/cmd_type.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/ir_translator.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/x86/base_handler_gen.cpp"
@@ -117,6 +119,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_defs.h"
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_enum.h"
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_helper.h"
+	"EagleVM.Core/headers/eaglevm-core/compiler/code_container.h"
 	"EagleVM.Core/headers/eaglevm-core/compiler/code_label.h"
 	"EagleVM.Core/headers/eaglevm-core/compiler/section_manager.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/basic_block.h"

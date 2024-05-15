@@ -7,10 +7,10 @@ namespace eagle::ir
     class cmd_sx : public base_command
     {
     public:
-        explicit cmd_sx(const il_size to, const il_size from)
-            : base_command(command_type::vm_sx), target(to), current(from)
-        {
-        }
+        explicit cmd_sx(il_size to, il_size from);
+
+        il_size get_target() const;
+        il_size get_current() const;
 
     private:
         il_size target;

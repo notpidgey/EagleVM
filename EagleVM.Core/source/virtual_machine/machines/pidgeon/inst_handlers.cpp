@@ -8,11 +8,11 @@ namespace eagle::virt::pidg
     {
         inst_regs = push_order;
 
-        vm_enter = { asmb::code_label::create("vm_enter"), 0 };
-        vm_exit = { asmb::code_label::create("vm_exit"), 0 };
+        vm_enter = { asmb::code_container::create("vm_enter"), 0 };
+        vm_exit = { asmb::code_container::create("vm_exit"), 0 };
 
-        vm_rflags_load = { asmb::code_label::create("vm_rflags_load"), 0 };
-        vm_rflags_save = { asmb::code_label::create("vm_rflags_save"), 0 };
+        vm_rflags_load = { asmb::code_container::create("vm_rflags_load"), 0 };
+        vm_rflags_save = { asmb::code_container::create("vm_rflags_save"), 0 };
 
         vm_load = { };
         vm_store = { };
@@ -31,7 +31,7 @@ namespace eagle::virt::pidg
         vm_call_stack = random_callstack_bytes;
     }
 
-    asmb::code_label_ptr inst_handlers::get_vm_enter(const bool reference)
+    asmb::code_container_ptr inst_handlers::get_vm_enter(const bool reference)
     {
         if (reference)
             vm_enter.reference_count++;
@@ -44,11 +44,11 @@ namespace eagle::virt::pidg
         return vm_enter.reference_count;
     }
 
-    asmb::code_label_ptr inst_handlers::build_vm_enter()
+    asmb::code_container_ptr inst_handlers::build_vm_enter()
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_vm_exit(const bool reference)
+    asmb::code_container_ptr inst_handlers::get_vm_exit(const bool reference)
     {
         if (reference)
             vm_exit.reference_count++;
@@ -61,11 +61,11 @@ namespace eagle::virt::pidg
         return vm_exit.reference_count;
     }
 
-    asmb::code_label_ptr inst_handlers::build_vm_exit()
+    asmb::code_container_ptr inst_handlers::build_vm_exit()
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_rlfags_load(const bool reference)
+    asmb::code_container_ptr inst_handlers::get_rlfags_load(const bool reference)
     {
         if (reference)
             vm_rflags_load.reference_count++;
@@ -78,11 +78,11 @@ namespace eagle::virt::pidg
         return vm_rflags_load.reference_count;
     }
 
-    asmb::code_label_ptr inst_handlers::build_rflags_load()
+    asmb::code_container_ptr inst_handlers::build_rflags_load()
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_rflags_save(const bool reference)
+    asmb::code_container_ptr inst_handlers::get_rflags_store(const bool reference)
     {
         if (reference)
             vm_rflags_save.reference_count++;
@@ -95,13 +95,13 @@ namespace eagle::virt::pidg
         return vm_rflags_save.reference_count;
     }
 
-    asmb::code_label_ptr inst_handlers::build_rflags_save()
+    asmb::code_container_ptr inst_handlers::build_rflags_save()
     {
     }
 
-    std::vector<asmb::code_label_ptr> inst_handlers::get_handlers()
+    std::vector<asmb::code_container_ptr> inst_handlers::get_handlers()
     {
-        std::vector<asmb::code_label_ptr> handlers;
+        std::vector<asmb::code_container_ptr> handlers;
         if (get_vm_enter_reference())
             handlers.push_back(build_vm_enter());
 

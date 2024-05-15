@@ -33,7 +33,7 @@ namespace eagle::asmb
         uint64_t current_address = section_address;
 
         // this should take all the functions in the section and connect them to desired labels
-        for (code_label_ptr& code_label : section_labels)
+        for (code_container_ptr& code_label : section_labels)
         {
             code_label->set_address(current_address);
 
@@ -62,7 +62,7 @@ namespace eagle::asmb
         auto it = compiled_section.begin();
 
         current_address = section_address;
-        for (const code_label_ptr& code_label : section_labels)
+        for (const code_container_ptr& code_label : section_labels)
         {
             if (code_label->get_address() != current_address)
             {
@@ -96,7 +96,7 @@ namespace eagle::asmb
 
     std::vector<std::string> section_manager::generate_comments(const std::string& output) const
     {
-        const std::function create_json = [output](const code_label_ptr& label)
+        const std::function create_json = [output](const code_container_ptr& label)
         {
             std::stringstream stream;
             stream << "0x" << std::hex << label->get_name();
@@ -112,9 +112,9 @@ namespace eagle::asmb
         };
 
         std::vector<std::string> json_array;
-        for (const code_label_ptr& code_label : section_labels)
+        for (const code_container_ptr& code_label : section_labels)
         {
-            if (code_label->get_is_comment())
+            if (code_label->get_is_named())
                 json_array.push_back(create_json(code_label));
         }
 

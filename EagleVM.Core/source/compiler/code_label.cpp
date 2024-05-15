@@ -17,9 +17,9 @@ namespace eagle::asmb
         return name;
     }
 
-    bool code_label::get_is_comment() const
+    bool code_label::get_is_named() const
     {
-        return comments;
+        return is_named;
     }
 
     uint64_t code_label::get_address() const
@@ -32,51 +32,19 @@ namespace eagle::asmb
         virtual_address = address;
     }
 
-    bool code_label::get_final() const
-    {
-        return virtual_address_final;
-    }
-
-    void code_label::set_final(const bool final)
-    {
-        virtual_address = final;
-    }
-
-    void code_label::add(const codec::dynamic_instruction& instruction)
-    {
-        function_segments.push_back(instruction);
-    }
-
-    void code_label::add(const std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
-    void code_label::add(std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
-    std::vector<codec::dynamic_instruction> code_label::get_instructions() const
-    {
-        return function_segments;
-    }
-
     code_label::code_label()
     {
-        comments = false;
+        is_named = false;
         name = "";
 
         virtual_address = 0;
-        virtual_address_final = false;
     }
 
-    code_label::code_label(const std::string& label_name, bool generate_comments)
+    code_label::code_label(const std::string& label_name, const bool generate_comments)
     {
-        comments = generate_comments;
+        is_named = generate_comments;
         name = label_name;
 
         virtual_address = 0;
-        virtual_address_final = false;
     }
 }
