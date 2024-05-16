@@ -2,7 +2,7 @@
 #include <variant>
 #include <string>
 
-#include "eaglevm-core/virtual_machine/ir/models/il_size.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir
 {
@@ -55,7 +55,7 @@ namespace eagle::ir
         vbase,
     };
 
-    inline reg_vm get_bit_version(const reg_vm vm_reg, const il_size target_size)
+    inline reg_vm get_bit_version(const reg_vm vm_reg, const ir_size target_size)
     {
         // yes i know there is cleaner ways of doing it
         // idc
@@ -67,13 +67,13 @@ namespace eagle::ir
             case reg_vm::vip_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vip;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vip_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vip_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vip_8;
                 }
             case reg_vm::vsp:
@@ -82,13 +82,13 @@ namespace eagle::ir
             case reg_vm::vsp_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vsp;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vsp_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vsp_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vsp_8;
                 }
             case reg_vm::vregs:
@@ -97,13 +97,13 @@ namespace eagle::ir
             case reg_vm::vregs_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vregs;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vregs_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vregs_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vregs_8;
                 }
             case reg_vm::vtemp:
@@ -112,13 +112,13 @@ namespace eagle::ir
             case reg_vm::vtemp_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vtemp;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vtemp_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vtemp_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vtemp_8;
                 }
             case reg_vm::vtemp2:
@@ -127,13 +127,13 @@ namespace eagle::ir
             case reg_vm::vtemp2_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vtemp2;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vtemp2_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vtemp2_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vtemp2_8;
                 }
             case reg_vm::vcs:
@@ -142,13 +142,13 @@ namespace eagle::ir
             case reg_vm::vcs_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vcs;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vcs_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vcs_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vcs_8;
                 }
             case reg_vm::vcsret:
@@ -157,19 +157,19 @@ namespace eagle::ir
             case reg_vm::vcsret_8:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vcsret;
-                    case il_size::bit_32:
+                    case ir_size::bit_32:
                         return reg_vm::vcsret_32;
-                    case il_size::bit_16:
+                    case ir_size::bit_16:
                         return reg_vm::vcsret_16;
-                    case il_size::bit_8:
+                    case ir_size::bit_8:
                         return reg_vm::vcsret_8;
                 }
             case reg_vm::vbase:
                 switch (target_size)
                 {
-                    case il_size::bit_64:
+                    case ir_size::bit_64:
                         return reg_vm::vbase;
                 }
             case reg_vm::none:

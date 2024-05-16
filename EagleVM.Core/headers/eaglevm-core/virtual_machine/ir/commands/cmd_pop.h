@@ -1,4 +1,6 @@
 #pragma once
+#include <utility>
+
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
 namespace eagle::ir
@@ -6,15 +8,13 @@ namespace eagle::ir
     class cmd_pop : public base_command
     {
     public:
-        explicit cmd_pop(const reg_vm reg_dest, const il_size size)
-            : base_command(command_type::vm_pop), dest_reg(reg_dest), size(size)
+        explicit cmd_pop(discrete_store_ptr  reg_dest, const ir_size size)
+            : base_command(command_type::vm_pop), dest_reg(std::move(reg_dest)), size(size)
         {
-            type = get_reg_type(reg_dest);
         }
 
     private:
-        reg_vm dest_reg;
-        reg_type type;
-        il_size size;
+        discrete_store_ptr dest_reg;
+        ir_size size;
     };
 }

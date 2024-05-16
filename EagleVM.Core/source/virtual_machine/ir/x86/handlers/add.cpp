@@ -21,7 +21,7 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
 
-        const il_size target_size = static_cast<il_size>(get_reg_size(size));
+        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
         const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
         const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
 

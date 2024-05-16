@@ -7,11 +7,11 @@ namespace eagle::ir
     class cmd_mem_read : public base_command
     {
     public:
-        explicit cmd_mem_read(il_size size);
+        explicit cmd_mem_read(ir_size size);
 
-        il_size get_read_size() const;
+        ir_size get_read_size() const;
 
     private:
-        il_size size;
+        ir_size size;
     };
 }

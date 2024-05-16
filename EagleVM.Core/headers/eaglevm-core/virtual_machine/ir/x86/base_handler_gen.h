@@ -7,9 +7,12 @@
 
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
-#include "eaglevm-core/virtual_machine/ir/x86/models/operand_signature.h"
 
+#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
+
+#include "eaglevm-core/virtual_machine/ir/x86/models/operand_signature.h"
 #include "eaglevm-core/virtual_machine/ir/x86/models/handler_op.h"
+
 
 namespace eagle::ir::handler
 {
@@ -17,8 +20,8 @@ namespace eagle::ir::handler
     {
     public:
         base_handler_gen()
+            : valid_operands({ })
         {
-            handlers = {};
         }
 
         virtual ir_insts gen_handler(codec::reg_class size, uint8_t operands) = 0;
@@ -26,7 +29,7 @@ namespace eagle::ir::handler
 
     protected:
         ~base_handler_gen() = default;
-        std::vector<operand_signature> handlers;
+        std::vector<operand_signature> valid_operands;
     };
 
     using base_handler_gen_ptr = std::shared_ptr<base_handler_gen>;

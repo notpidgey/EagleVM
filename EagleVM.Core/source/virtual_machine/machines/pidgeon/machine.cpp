@@ -38,10 +38,10 @@ namespace eagle::virt::pidg
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: inline but also add option to use mov handler
-        ir::il_size target_size = cmd->get_read_size();
+        ir::ir_size target_size = cmd->get_read_size();
 
         // pop address
-        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::il_size::bit_64));
+        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::ir_size::bit_64));
 
         // mov temp, [address]
         label->add(codec::encode(codec::m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
@@ -55,11 +55,11 @@ namespace eagle::virt::pidg
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: il_size should have a reg_size translator somewhere
 
-        ir::il_size value_size = cmd->get_value_size();
-        ir::il_size write_size = cmd->get_write_size();
+        ir::ir_size value_size = cmd->get_value_size();
+        ir::ir_size write_size = cmd->get_write_size();
 
         // pop vtemp2 ; pop address into vtemp2
-        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::il_size::bit_64));
+        call_handler(label, hg_->get_instruction_handler(codec::m_pop, ir::ir_size::bit_64));
         label->add(codec::encode(codec::m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
         // pop vtemp ; pop value into vtemp
@@ -98,8 +98,8 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr label, ir::cmd_sx_ptr cmd)
     {
-        ir::il_size current_size = cmd->get_current();
-        ir::il_size target_size = cmd->get_target();
+        ir::ir_size current_size = cmd->get_current();
+        ir::ir_size target_size = cmd->get_target();
 
         // mov eax/ax/al, VTEMP
         label->add(encode(codec::m_mov,

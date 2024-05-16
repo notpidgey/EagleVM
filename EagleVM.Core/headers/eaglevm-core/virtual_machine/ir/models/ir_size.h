@@ -3,7 +3,7 @@
 
 namespace eagle::ir
 {
-    enum class il_size
+    enum class ir_size
     {
         bit_512 = 512,
         bit_256 = 256,

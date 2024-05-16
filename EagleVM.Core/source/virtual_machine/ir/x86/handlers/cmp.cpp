@@ -17,9 +17,10 @@ namespace eagle::ir::handler
 
     ir_insts cmp::gen_handler(const codec::reg_class size, uint8_t operands)
     {
-        const il_size target_size = static_cast<il_size>(get_reg_size(size));
-        const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
-        const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
+        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
+
+        const discrete_store_ptr vtemp = discrete_store::create(target_size);
+        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
@@ -41,7 +42,7 @@ namespace eagle::ir::lifter
 
     translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
-        il_size target_size = get_op_width();
+        ir_size target_size = get_op_width();
         block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
 
         const codec::dec::operand first_op = operands[0];
@@ -54,7 +55,7 @@ namespace eagle::ir::lifter
             // this only happens in two cases
             // 1. REX.W + 3D id	CMP RAX, imm32
             // 2. REX.W + 81 /7 id	CMP r/m64, imm32
-            block->add_command(std::make_shared<cmd_sx>(il_size::bit_64, il_size::bit_32));
+            block->add_command(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
         }
 
         stack_displacement += static_cast<uint8_t>(target_size);

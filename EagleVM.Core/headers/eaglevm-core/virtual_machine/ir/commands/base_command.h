@@ -5,7 +5,8 @@
 #include <vector>
 
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
-#include "eaglevm-core/virtual_machine/ir/models/il_reg.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_reg.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
 
 namespace eagle::ir
 {

@@ -7,13 +7,13 @@ namespace eagle::ir
     class cmd_sx : public base_command
     {
     public:
-        explicit cmd_sx(il_size to, il_size from);
+        explicit cmd_sx(ir_size to, ir_size from);
 
-        il_size get_target() const;
-        il_size get_current() const;
+        ir_size get_target() const;
+        ir_size get_current() const;
 
     private:
-        il_size target;
-        il_size current;
+        ir_size target;
+        ir_size current;
     };
 }

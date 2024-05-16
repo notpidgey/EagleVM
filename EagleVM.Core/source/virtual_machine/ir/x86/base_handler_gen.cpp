@@ -5,7 +5,7 @@ namespace eagle::ir::handler
     std::optional<operand_signature> base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
     {
         const auto target_operands_len = target_operands.size();
-        for (const auto& entry : handlers)
+        for (const auto& entry : valid_operands)
         {
             op_entries accepted_ops = entry.entries;
             if (accepted_ops.size() != target_operands.size())

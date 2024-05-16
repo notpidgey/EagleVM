@@ -2,12 +2,12 @@
 
 namespace eagle::ir
 {
-    cmd_mem_read::cmd_mem_read(const il_size size)
+    cmd_mem_read::cmd_mem_read(const ir_size size)
         : base_command(command_type::vm_mem_read), size(size)
     {
     }
 
-    il_size cmd_mem_read::get_read_size() const
+    ir_size cmd_mem_read::get_read_size() const
     {
         return size;
     }

@@ -1,6 +1,6 @@
 #pragma once
 #include <variant>
-#include "eaglevm-core/virtual_machine/ir/models/il_reg.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_reg.h"
 
 namespace eagle::ir
 {

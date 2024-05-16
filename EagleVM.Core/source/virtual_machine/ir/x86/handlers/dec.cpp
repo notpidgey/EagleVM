@@ -9,7 +9,7 @@ namespace eagle::ir::handler
     {
         // todo: make vector of supported signatures
         // todo: make vector of handlers to generate
-        handlers = {
+        valid_operands = {
             operand_signature{ handler_op{ codec::op_none, codec::bit_8 }, "8" },
             operand_signature{ handler_op{ codec::op_none, codec::bit_16 }, "16" },
             operand_signature{ handler_op{ codec::op_none, codec::bit_32 }, "32" },
@@ -19,8 +19,8 @@ namespace eagle::ir::handler
 
     ir_insts dec::gen_handler(codec::reg_class size, uint8_t operands)
     {
-        const il_size target_size = static_cast<il_size>(get_reg_size(size));
-        const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
+        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
+        const discrete_store_ptr vtemp = discrete_store::create(target_size);
 
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
