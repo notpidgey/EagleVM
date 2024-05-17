@@ -23,7 +23,7 @@ namespace eagle::virt::pidg
     class machine final : public base_machine
     {
     public:
-        machine();
+        machine(bool variant_handlers);
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
@@ -50,6 +50,8 @@ namespace eagle::virt::pidg
     private:
         vm_inst_regs_ptr rm_;
         vm_inst_handlers_ptr hg_;
+
+        bool variant_register_handlers;
 
         void call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target);
     };

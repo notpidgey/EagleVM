@@ -22,8 +22,9 @@ namespace eagle::ir::handler
         // in addition, it gives room for mapping x86 context into random places as well
 
         const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
-        const reg_vm vtemp = get_bit_version(reg_vm::vtemp, target_size);
-        const reg_vm vtemp2 = get_bit_version(reg_vm::vtemp2, target_size);
+
+        const discrete_store_ptr vtemp = discrete_store::create(target_size);
+        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
         // TODO: this needs to be marked as rflags sensitive
         return {

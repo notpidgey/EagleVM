@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir
@@ -9,7 +10,7 @@ namespace eagle::ir
     {
     public:
         explicit discrete_store(const ir_size size)
-            : store_size(size)
+            : store_size(size), final_register(codec::reg::none), finalized(false)
         {
 
         }
@@ -24,8 +25,27 @@ namespace eagle::ir
             return store_size;
         }
 
+        void finalize_register()
+        {
+            finalized = true;
+        }
+
+        [[nodiscard]] bool get_finalized() const
+        {
+            return finalized;
+        }
+
+        [[nodiscard]] codec::reg get_register() const
+        {
+            assert(finalized == true, "invalid retreival of unfinalized register");
+            return final_register;
+        }
+
     private:
         ir_size store_size;
+
+        codec::reg final_register;
+        bool finalized;
     };
 
 }

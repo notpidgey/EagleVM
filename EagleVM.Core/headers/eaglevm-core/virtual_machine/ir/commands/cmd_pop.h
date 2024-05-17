@@ -8,10 +8,10 @@ namespace eagle::ir
     class cmd_pop : public base_command
     {
     public:
-        explicit cmd_pop(discrete_store_ptr  reg_dest, const ir_size size)
-            : base_command(command_type::vm_pop), dest_reg(std::move(reg_dest)), size(size)
-        {
-        }
+        explicit cmd_pop(discrete_store_ptr reg_dest, ir_size size);
+
+        discrete_store_ptr get_destination_reg();
+        ir_size get_size() const;
 
     private:
         discrete_store_ptr dest_reg;

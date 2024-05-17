@@ -18,7 +18,7 @@ namespace eagle::virt::pidg
 
         void init_reg_order();
         codec::zydis_register get_reg(uint8_t target) const;
-        std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::zydis_register reg) const;
+        std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         void enumerate(const std::function<void(codec::zydis_register)>& enumerable, bool from_back = false);
 

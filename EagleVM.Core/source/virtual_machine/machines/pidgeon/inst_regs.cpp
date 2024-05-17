@@ -54,7 +54,7 @@ namespace eagle::virt::pidg
         return vm_order[target];
     }
 
-    std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::zydis_register reg) const
+    std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::reg reg) const
     {
         //determine 64bit version of register
         const codec::reg_size reg_size = codec::get_reg_size(reg);

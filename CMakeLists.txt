@@ -98,6 +98,8 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_handler_call.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_mem_read.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_mem_write.cpp"
+	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_pop.cpp"
+	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_push.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_sx.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/models/cmd_type.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/ir_translator.cpp"
