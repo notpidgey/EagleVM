@@ -11,20 +11,6 @@ namespace eagle::virt::pidg
         using vm_handler_entry_ptr = std::shared_ptr<class vm_handler_entry>;
     }
 
-    struct tagged_vm_handler
-    {
-        asmb::code_container_ptr code;
-        asmb::code_label_ptr label;
-        bool tagged;
-
-        tagged_vm_handler()
-        {
-            code = asmb::code_container::create();
-            label = asmb::code_label::create();
-            tagged = false;
-        }
-    };
-
     using vm_inst_handlers_ptr = std::shared_ptr<class inst_handlers>;
 
     class inst_handlers
@@ -55,6 +41,20 @@ namespace eagle::virt::pidg
         std::vector<asmb::code_container_ptr> build_handlers();
 
     private:
+        struct tagged_vm_handler
+        {
+            asmb::code_container_ptr code;
+            asmb::code_label_ptr label;
+            bool tagged;
+
+            tagged_vm_handler()
+            {
+                code = asmb::code_container::create();
+                label = asmb::code_label::create();
+                tagged = false;
+            }
+        };
+
         vm_inst_regs_ptr inst_regs;
 
         tagged_vm_handler vm_enter;
