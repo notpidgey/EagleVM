@@ -64,16 +64,22 @@ namespace eagle::virt::pidg
             {
                 const ir::il_exit_result jump = cmd->get_condition_default();
                 write_jump(jump, codec::m_jmp);
+
+                break;
             }
             case ir::exit_condition::none:
             {
                 assert("invalid exit condition");
+                break;
             }
             default:
             {
                 // conditional
                 const ir::il_exit_result conditional_jump = cmd->get_condition_special();
                 write_jump(conditional_jump, to_jump_mnemonic(cmd->get_condition()));
+
+                const ir::il_exit_result jump = cmd->get_condition_default();
+                write_jump(jump, codec::m_jmp);
             }
         }
     }
@@ -103,8 +109,8 @@ namespace eagle::virt::pidg
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: il_size should have a reg_size translator somewhere
 
-        ir::ir_size value_size = cmd->get_value_size();
-        ir::ir_size write_size = cmd->get_write_size();
+        const ir::ir_size value_size = cmd->get_value_size();
+        const ir::ir_size write_size = cmd->get_write_size();
 
         // todo: !!!!! change order of these, value is on top
         // pop vtemp2 ; pop address into vtemp2

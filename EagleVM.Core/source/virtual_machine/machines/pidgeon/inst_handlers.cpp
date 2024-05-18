@@ -7,15 +7,6 @@ namespace eagle::virt::pidg
     inst_handlers::inst_handlers(const vm_inst_regs_ptr& push_order)
     {
         inst_regs = push_order;
-
-        vm_enter = { asmb::code_container::create("vm_enter"), nullptr };
-        vm_exit = { asmb::code_container::create("vm_exit"), nullptr };
-
-        vm_rflags_load = { asmb::code_container::create("vm_rflags_load"), nullptr };
-        vm_rflags_save = { asmb::code_container::create("vm_rflags_save"), nullptr };
-
-        vm_load = { };
-        vm_store = { };
     }
 
     void inst_handlers::randomize_constants()
@@ -34,73 +25,68 @@ namespace eagle::virt::pidg
     asmb::code_label_ptr inst_handlers::get_vm_enter(const bool reference)
     {
         if (reference)
-            vm_enter.reference_count++;
+            vm_enter.tagged = true;
 
         return vm_enter.label;
     }
 
-    uint32_t inst_handlers::get_vm_enter_reference() const
-    {
-        return vm_enter.reference_count;
-    }
-
     asmb::code_container_ptr inst_handlers::build_vm_enter()
     {
+        vm_enter.code = asmb::code_container::create();
     }
 
     asmb::code_label_ptr inst_handlers::get_vm_exit(const bool reference)
     {
         if (reference)
-            vm_exit.reference_count++;
+            vm_exit.tagged = true;
 
         return vm_exit.label;
     }
 
-    uint32_t inst_handlers::get_vm_exit_reference() const
-    {
-        return vm_exit.reference_count;
-    }
-
     asmb::code_container_ptr inst_handlers::build_vm_exit()
     {
+        vm_exit.code = asmb::code_container::create();
     }
 
     asmb::code_label_ptr inst_handlers::get_rlfags_load(const bool reference)
     {
         if (reference)
-            vm_rflags_load.reference_count++;
+            vm_rflags_load.tagged = true;
 
         return vm_rflags_load.label;
     }
 
-    uint32_t inst_handlers::get_rflags_load_reference() const
-    {
-        return vm_rflags_load.reference_count;
-    }
-
     asmb::code_container_ptr inst_handlers::build_rflags_load()
     {
+        vm_rflags_load.code = asmb::code_container::create();
     }
 
     asmb::code_label_ptr inst_handlers::get_rflags_store(const bool reference)
     {
         if (reference)
-            vm_rflags_save.reference_count++;
+            vm_rflags_save.tagged = true;
 
         return vm_rflags_save.label;
     }
 
-    uint32_t inst_handlers::get_rflags_save_reference() const
-    {
-        return vm_rflags_save.reference_count;
-    }
-
     asmb::code_container_ptr inst_handlers::build_rflags_save()
     {
+        vm_rflags_save.code = asmb::code_container::create();
     }
 
     asmb::code_label_ptr inst_handlers::get_context_load(codec::reg_size size)
     {
+        switch(size)
+        {
+            case codec::bit_64:
+                break;
+            case codec::bit_32:
+                break;
+            case codec::bit_16:
+                break;
+            case codec::bit_8:
+                break;
+        }
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_load()
@@ -109,6 +95,17 @@ namespace eagle::virt::pidg
 
     asmb::code_label_ptr inst_handlers::get_context_store(codec::reg_size size)
     {
+        switch(size)
+        {
+            case codec::bit_64:
+                break;
+            case codec::bit_32:
+                break;
+            case codec::bit_16:
+                break;
+            case codec::bit_8:
+                break;
+        }
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_store()
@@ -122,17 +119,20 @@ namespace eagle::virt::pidg
     std::vector<asmb::code_container_ptr> inst_handlers::build_handlers()
     {
         std::vector<asmb::code_container_ptr> handlers;
-        if (get_vm_enter_reference())
+        if (vm_enter.tagged)
             handlers.push_back(build_vm_enter());
 
-        if (get_vm_exit_reference())
+        if (vm_exit.tagged)
             handlers.push_back(build_vm_exit());
 
-        if (get_rflags_load_reference())
+        if (vm_rflags_load.tagged)
             handlers.push_back(build_rflags_load());
 
-        if (get_rflags_save_reference())
+        if (vm_rflags_save.tagged)
             handlers.push_back(build_rflags_save());
+
+        handlers.append_range(build_context_load());
+        handlers.append_range(build_context_store());
 
         return handlers;
     }
