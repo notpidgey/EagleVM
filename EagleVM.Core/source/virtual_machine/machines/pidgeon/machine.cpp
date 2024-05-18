@@ -19,7 +19,7 @@ namespace eagle::virt::pidg
         return hg_->build_handlers();
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
     {
         const codec::reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
@@ -28,7 +28,7 @@ namespace eagle::virt::pidg
         call_handler(block, hg_->get_context_load(size));
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
     {
         const codec::reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
@@ -44,9 +44,29 @@ namespace eagle::virt::pidg
             case ir::exit_condition::conditional:
             {
                 ir::il_exit_result conditional_jump = cmd->get_condition_special();
-                std::visit([&]<typename reg_type>(reg_type&& arg)
+                std::visit([&]<typename exit_type>(exit_type&& arg)
                 {
-                    using T = std::decay_t<reg_type>;
+                    using T = std::decay_t<exit_type>;
+                    if constexpr (std::is_same_v<T, ir::vmexit_rva>)
+                    {
+                        const ir::vmexit_rva rva = arg;
+                        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
+                        block->add(encode(codec::, ZREG(VTEMP)));
+                    }
+                    else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
+                    {
+                        const ir::block_il_ptr target = arg;
+                        block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
+                        block->add(encode(codec::, ZREG(VTEMP)));
+                    }
+                }, conditional_jump);
+            }
+            case ir::exit_condition::jump:
+            {
+                ir::il_exit_result jump = cmd->get_condition_default();
+                std::visit([&]<typename exit_type>(exit_type&& arg)
+                {
+                    using T = std::decay_t<exit_type>;
                     if constexpr (std::is_same_v<T, ir::vmexit_rva>)
                     {
                         const ir::vmexit_rva rva = arg;
@@ -55,14 +75,11 @@ namespace eagle::virt::pidg
                     }
                     else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
                     {
-                        const ir::block_il_ptr block = arg;
-                        codec::add_op(request, ZREG(store->get_store_register()));
+                        const ir::block_il_ptr target = arg;
+                        block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
+                        block->add(encode(codec::m_jmp, ZREG(VTEMP)));
                     }
-                }, conditional_jump);
-            }
-            case ir::exit_condition::jump:
-            {
-                ir::il_exit_result jump = cmd->get_condition_default();
+                }, jump);
             }
             case ir::exit_condition::none:
             {
@@ -91,7 +108,7 @@ namespace eagle::virt::pidg
         call_handler(block, hg_->get_instruction_handler(codec::m_push, 1, to_reg_size(target_size)));
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: il_size should have a reg_size translator somewhere
@@ -112,10 +129,9 @@ namespace eagle::virt::pidg
         block->add(encode(codec::m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
     {
-        const ir::discrete_store_ptr reg = cmd->get_destination_reg();
-        if (reg)
+        if (const ir::discrete_store_ptr reg = cmd->get_destination_reg())
         {
             const ir::ir_size pop_size = reg->get_store_size();
 
@@ -143,7 +159,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_push_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_push_ptr cmd)
     {
         // call ia32 handler for push
         switch (cmd->get_push_type())
