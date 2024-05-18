@@ -18,6 +18,11 @@ namespace eagle::ir
         {
         }
 
+        codec::enc::req get_request() const
+        {
+            return request;
+        }
+
     private:
         codec::enc::req request{};
     };

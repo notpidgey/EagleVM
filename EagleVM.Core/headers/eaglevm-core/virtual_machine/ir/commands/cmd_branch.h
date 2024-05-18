@@ -28,17 +28,15 @@ namespace eagle::ir
     class cmd_branch : public base_command
     {
     public:
-        cmd_branch(const il_exit_result& result_info, exit_condition exit_condition);
-        cmd_branch(const std::vector<il_exit_result>& result_info, exit_condition exit_condition);
+        cmd_branch(const il_exit_result& result_info);
+        cmd_branch(const std::vector<il_exit_result>& result_info);
 
         [[nodiscard]] exit_condition get_condition() const;
         il_exit_result get_condition_default();
         il_exit_result get_condition_special();
 
     private:
-        std::array<il_exit_result, 2> info;
-        uint8_t info_size;
-
+        std::vector<il_exit_result> info;
         exit_condition condition;
     };
 }

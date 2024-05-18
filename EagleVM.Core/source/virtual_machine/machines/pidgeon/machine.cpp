@@ -39,6 +39,36 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
     {
+        switch (cmd->get_condition())
+        {
+            case ir::exit_condition::conditional:
+            {
+                ir::il_exit_result conditional_jump = cmd->get_condition_special();
+                std::visit([&]<typename reg_type>(reg_type&& arg)
+                {
+                    using T = std::decay_t<reg_type>;
+                    if constexpr (std::is_same_v<T, ir::vmexit_rva>)
+                    {
+                        const ir::vmexit_rva rva = arg;
+                        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
+                        block->add(encode(codec::m_jmp, ZREG(VTEMP)));
+                    }
+                    else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
+                    {
+                        const ir::block_il_ptr block = arg;
+                        codec::add_op(request, ZREG(store->get_store_register()));
+                    }
+                }, conditional_jump);
+            }
+            case ir::exit_condition::jump:
+            {
+                ir::il_exit_result jump = cmd->get_condition_default();
+            }
+            case ir::exit_condition::none:
+            {
+                assert("invalid exit condition");
+            }
+        }
     }
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
@@ -248,25 +278,37 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd)
     {
+        const codec::mnemonic mnemonic = cmd->get_mnemonic();
+        std::vector<ir::variant_op> operands = cmd->get_operands();
+
+        codec::enc::req request = create_encode_request(mnemonic);
+        for (ir::variant_op& op : operands)
+        {
+            std::visit([&request]<typename reg_type>(reg_type&& arg)
+            {
+                using T = std::decay_t<reg_type>;
+                if constexpr (std::is_same_v<T, ir::reg_vm>)
+                {
+                    const ir::reg_vm vm_reg = arg;
+                    codec::add_op(request, ZREG(vm_reg));
+                }
+                else if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
+                {
+                    const ir::discrete_store_ptr store = arg;
+                    codec::add_op(request, ZREG(store->get_store_register()));
+                }
+            }, op);
+        }
+
+        block->add(request);
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
     {
+        block->add(cmd->get_request());
     }
 
-    void machine::create_vm_jump(const codec::mnemonic mnemonic, const asmb::code_container_ptr& container,
-        const asmb::code_container_ptr& rva_target)
-    {
-        container->add(RECOMPILE(codec::encode(mnemonic, ZJMPR(rva_target))));
-    }
-
-    codec::encoded_vec machine::create_jump(const uint32_t rva, const asmb::code_container_ptr& rva_target)
-    {
-        codec::enc::req jmp = encode(codec::m_jmp, ZIMMU(rva_target->get_address() - rva - 5));
-        return codec::encode_request(jmp);
-    }
-
-    void machine::call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target)
+    void machine::call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const
     {
         assert(target != nullptr, "target cannot be an invalid code label");
         assert(code != nullptr, "code cannot be an invalid code label");
