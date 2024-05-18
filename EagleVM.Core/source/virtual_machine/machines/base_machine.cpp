@@ -112,4 +112,60 @@ namespace eagle::virt
                 return codec::reg_size::empty;
         }
     }
+
+    codec::mnemonic base_machine::to_jump_mnemonic(const ir::exit_condition condition)
+    {
+        switch (condition)
+        {
+            case ir::exit_condition::jb:
+                return codec::m_jb;
+            case ir::exit_condition::jbe:
+                return codec::m_jbe;
+            case ir::exit_condition::jcxz:
+                return codec::m_jcxz;
+            case ir::exit_condition::jecxz:
+                return codec::m_jecxz;
+            case ir::exit_condition::jknzd:
+                return codec::m_jknzd;
+            case ir::exit_condition::jkzd:
+                return codec::m_jkzd;
+            case ir::exit_condition::jl:
+                return codec::m_jl;
+            case ir::exit_condition::jle:
+                return codec::m_jle;
+            case ir::exit_condition::jmp:
+                return codec::m_jmp;
+            case ir::exit_condition::jnb:
+                return codec::m_jnb;
+            case ir::exit_condition::jnbe:
+                return codec::m_jnbe;
+            case ir::exit_condition::jnl:
+                return codec::m_jnl;
+            case ir::exit_condition::jnle:
+                return codec::m_jnle;
+            case ir::exit_condition::jno:
+                return codec::m_jno;
+            case ir::exit_condition::jnp:
+                return codec::m_jnp;
+            case ir::exit_condition::jns:
+                return codec::m_jns;
+            case ir::exit_condition::jnz:
+                return codec::m_jnz;
+            case ir::exit_condition::jo:
+                return codec::m_jo;
+            case ir::exit_condition::jp:
+                return codec::m_jp;
+            case ir::exit_condition::jrcxz:
+                return codec::m_jrcxz;
+            case ir::exit_condition::js:
+                return codec::m_js;
+            case ir::exit_condition::jz:
+                return codec::m_jz;
+            default:
+            {
+                assert("invalid exit condition reached");
+                return codec::m_invalid;
+            }
+        }
+    }
 }

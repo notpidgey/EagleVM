@@ -7,11 +7,10 @@
 
 namespace eagle::virt::pidg
 {
-    machine::machine(const bool variant_handlers)
+    machine::machine()
     {
         rm_ = std::make_shared<inst_regs>();
         hg_ = std::make_shared<inst_handlers>(rm_);
-        variant_register_handlers = variant_handlers;
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()
@@ -61,19 +60,20 @@ namespace eagle::virt::pidg
 
         switch (cmd->get_condition())
         {
-            case ir::exit_condition::conditional:
+            case ir::exit_condition::jmp:
             {
-                ir::il_exit_result conditional_jump = cmd->get_condition_special();
-                write_jump(conditional_jump, cmd->get_condition());
-            }
-            case ir::exit_condition::jump:
-            {
-                ir::il_exit_result jump = cmd->get_condition_default();
+                const ir::il_exit_result jump = cmd->get_condition_default();
                 write_jump(jump, codec::m_jmp);
             }
             case ir::exit_condition::none:
             {
                 assert("invalid exit condition");
+            }
+            default:
+            {
+                // conditional
+                const ir::il_exit_result conditional_jump = cmd->get_condition_special();
+                write_jump(conditional_jump, to_jump_mnemonic(cmd->get_condition()));
             }
         }
     }

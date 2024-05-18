@@ -33,5 +33,6 @@ namespace eagle::virt
     protected:
         ir::ir_size to_ir_size(codec::reg_size reg_size);
         codec::reg_size to_reg_size(ir::ir_size ir_size);
+        codec::mnemonic to_jump_mnemonic(ir::exit_condition condition);
     };
 }

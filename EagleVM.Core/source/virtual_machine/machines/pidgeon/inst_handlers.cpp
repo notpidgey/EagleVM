@@ -8,11 +8,11 @@ namespace eagle::virt::pidg
     {
         inst_regs = push_order;
 
-        vm_enter = { asmb::code_container::create("vm_enter"), 0 };
-        vm_exit = { asmb::code_container::create("vm_exit"), 0 };
+        vm_enter = { asmb::code_container::create("vm_enter"), nullptr };
+        vm_exit = { asmb::code_container::create("vm_exit"), nullptr };
 
-        vm_rflags_load = { asmb::code_container::create("vm_rflags_load"), 0 };
-        vm_rflags_save = { asmb::code_container::create("vm_rflags_save"), 0 };
+        vm_rflags_load = { asmb::code_container::create("vm_rflags_load"), nullptr };
+        vm_rflags_save = { asmb::code_container::create("vm_rflags_save"), nullptr };
 
         vm_load = { };
         vm_store = { };
