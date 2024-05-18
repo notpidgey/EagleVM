@@ -25,8 +25,10 @@ namespace eagle::ir
             return store_size;
         }
 
-        void finalize_register()
+        void finalize_register(const codec::reg destination)
         {
+            assert(finalized == false, "warning: already finalized register");
+            final_register = destination;
             finalized = true;
         }
 
@@ -35,7 +37,7 @@ namespace eagle::ir
             return finalized;
         }
 
-        [[nodiscard]] codec::reg get_register() const
+        [[nodiscard]] codec::reg get_store_register() const
         {
             assert(finalized == true, "invalid retreival of unfinalized register");
             return final_register;

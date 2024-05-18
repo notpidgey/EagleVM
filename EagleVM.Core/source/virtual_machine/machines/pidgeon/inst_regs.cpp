@@ -57,8 +57,8 @@ namespace eagle::virt::pidg
     std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::reg reg) const
     {
         //determine 64bit version of register
-        const codec::reg_size reg_size = codec::get_reg_size(reg);
-        const codec::reg bit64_reg = codec::get_bit_version(static_cast<codec::reg>(reg), codec::reg_class::gpr_64);
+        const codec::reg_size reg_size = get_reg_size(reg);
+        const codec::reg bit64_reg = get_bit_version(reg, codec::reg_class::gpr_64);
 
         int found_index = 0;
         constexpr auto reg_count = stack_order.size();
@@ -75,7 +75,7 @@ namespace eagle::virt::pidg
         int offset = 0;
         if(reg_size == codec::reg_size::bit_8)
         {
-            if(is_upper_8(static_cast<codec::reg>(reg)))
+            if(is_upper_8(reg))
                 offset = 1;
         }
 

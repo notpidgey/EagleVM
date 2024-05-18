@@ -99,12 +99,27 @@ namespace eagle::virt::pidg
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_instruction_handler(codec::mnemonic mnemonic)
+    asmb::code_label_ptr inst_handlers::get_context_load(codec::reg_size size)
     {
-
     }
 
-    std::vector<asmb::code_container_ptr> inst_handlers::get_handlers()
+    std::vector<asmb::code_container_ptr> inst_handlers::build_context_load()
+    {
+    }
+
+    asmb::code_label_ptr inst_handlers::get_context_store(codec::reg_size size)
+    {
+    }
+
+    std::vector<asmb::code_container_ptr> inst_handlers::build_context_store()
+    {
+    }
+
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(codec::mnemonic mnemonic, uint8_t operand_count, codec::reg_size size)
+    {
+    }
+
+    std::vector<asmb::code_container_ptr> inst_handlers::build_handlers()
     {
         std::vector<asmb::code_container_ptr> handlers;
         if (get_vm_enter_reference())

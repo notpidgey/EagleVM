@@ -43,9 +43,14 @@ namespace eagle::virt::pidg
         uint32_t get_rflags_save_reference() const;
         asmb::code_container_ptr build_rflags_save();
 
-        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, );
+        asmb::code_label_ptr get_context_load(codec::reg_size size);
+        std::vector<asmb::code_container_ptr> build_context_load();
 
-        std::vector<asmb::code_container_ptr> get_handlers();
+        asmb::code_label_ptr get_context_store(codec::reg_size size);
+        std::vector<asmb::code_container_ptr> build_context_store();
+
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic,  uint8_t operand_count, codec::reg_size size);
+        std::vector<asmb::code_container_ptr> build_handlers();
 
     private:
         vm_inst_regs_ptr inst_regs;
