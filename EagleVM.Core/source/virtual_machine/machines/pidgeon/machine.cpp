@@ -37,49 +37,39 @@ namespace eagle::virt::pidg
         call_handler(block, hg_->get_context_store(size));
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
     {
+        auto write_jump = [&](ir::il_exit_result jump, codec::mnemonic mnemonic)
+        {
+            std::visit([&]<typename exit_type>(exit_type&& arg)
+            {
+                using T = std::decay_t<exit_type>;
+                if constexpr (std::is_same_v<T, ir::vmexit_rva>)
+                {
+                    const ir::vmexit_rva rva = arg;
+                    block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
+                }
+                else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
+                {
+                    const ir::block_il_ptr target = arg;
+                    block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
+                }
+            }, jump);
+
+            block->add(encode(mnemonic, ZREG(VTEMP)));
+        };
+
         switch (cmd->get_condition())
         {
             case ir::exit_condition::conditional:
             {
                 ir::il_exit_result conditional_jump = cmd->get_condition_special();
-                std::visit([&]<typename exit_type>(exit_type&& arg)
-                {
-                    using T = std::decay_t<exit_type>;
-                    if constexpr (std::is_same_v<T, ir::vmexit_rva>)
-                    {
-                        const ir::vmexit_rva rva = arg;
-                        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
-                        block->add(encode(codec::, ZREG(VTEMP)));
-                    }
-                    else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
-                    {
-                        const ir::block_il_ptr target = arg;
-                        block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
-                        block->add(encode(codec::, ZREG(VTEMP)));
-                    }
-                }, conditional_jump);
+                write_jump(conditional_jump, cmd->get_condition());
             }
             case ir::exit_condition::jump:
             {
                 ir::il_exit_result jump = cmd->get_condition_default();
-                std::visit([&]<typename exit_type>(exit_type&& arg)
-                {
-                    using T = std::decay_t<exit_type>;
-                    if constexpr (std::is_same_v<T, ir::vmexit_rva>)
-                    {
-                        const ir::vmexit_rva rva = arg;
-                        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
-                        block->add(encode(codec::m_jmp, ZREG(VTEMP)));
-                    }
-                    else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
-                    {
-                        const ir::block_il_ptr target = arg;
-                        block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
-                        block->add(encode(codec::m_jmp, ZREG(VTEMP)));
-                    }
-                }, jump);
+                write_jump(jump, codec::m_jmp);
             }
             case ir::exit_condition::none:
             {

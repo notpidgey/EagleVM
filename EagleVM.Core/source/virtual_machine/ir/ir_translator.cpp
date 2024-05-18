@@ -112,7 +112,7 @@ namespace eagle::ir
                         current_block = std::make_shared<block_il>(false);
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
 
-                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
+                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
                         is_vm_block = true;
                     }
 
@@ -136,7 +136,7 @@ namespace eagle::ir
 
                         current_block = std::make_shared<block_il>(true);
                         previous->add_command(std::make_shared<cmd_vm_exit>());
-                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
+                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
                         is_vm_block = false;
                     }
                 }
@@ -150,14 +150,14 @@ namespace eagle::ir
         }
 
         // make sure to add a vmexit
-        if(is_vm_block)
+        if (is_vm_block)
         {
             current_block->add_command(std::make_shared<cmd_vm_exit>());
         }
 
         // jump to exiting block
         const block_il_ptr exit = block_info->get_exit();
-        exit->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jump));
+        exit->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
 
         block_info->add_body(current_block, is_vm_block);
 
@@ -178,7 +178,7 @@ namespace eagle::ir
                 else
                     exits.push_back(bb_map[dasm->get_block(target)]->get_entry());
 
-                condition = exit_condition::jump;
+                condition = exit_condition::jmp;
                 break;
             }
             case dasm::block_conditional_jump:
@@ -201,7 +201,8 @@ namespace eagle::ir
                         exits.push_back(bb_map[dasm->get_block(target)]->get_entry());
                 }
 
-                condition = exit_condition::conditional;
+                const auto& [instruction, _] = bb->decoded_insts.back();
+                condition = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
                 break;
             }
         }
@@ -225,16 +226,72 @@ namespace eagle::ir
         for (auto& [_, vm_block] : bb_map)
         {
             std::vector<block_il_ptr> body = vm_block->get_body();
-            if(body.empty())
+            if (body.empty())
                 continue;
 
-            if(block_il_ptr entry = vm_block->get_entry())
+            if (block_il_ptr entry = vm_block->get_entry())
                 final_blocks.push_back(entry);
 
             final_blocks.append_range(body);
         }
 
         return final_blocks;
+    }
+
+    exit_condition ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
+    {
+        switch (mnemonic)
+        {
+            case codec::m_jb:
+                return exit_condition::jb;
+            case codec::m_jbe:
+                return exit_condition::jbe;
+            case codec::m_jcxz:
+                return exit_condition::jcxz;
+            case codec::m_jecxz:
+                return exit_condition::jecxz;
+            case codec::m_jknzd:
+                return exit_condition::jknzd;
+            case codec::m_jkzd:
+                return exit_condition::jkzd;
+            case codec::m_jl:
+                return exit_condition::jl;
+            case codec::m_jle:
+                return exit_condition::jle;
+            case codec::m_jmp:
+                return exit_condition::jmp;
+            case codec::m_jnb:
+                return exit_condition::jnb;
+            case codec::m_jnbe:
+                return exit_condition::jnbe;
+            case codec::m_jnl:
+                return exit_condition::jnl;
+            case codec::m_jnle:
+                return exit_condition::jnle;
+            case codec::m_jno:
+                return exit_condition::jno;
+            case codec::m_jnp:
+                return exit_condition::jnp;
+            case codec::m_jns:
+                return exit_condition::jns;
+            case codec::m_jnz:
+                return exit_condition::jnz;
+            case codec::m_jo:
+                return exit_condition::jo;
+            case codec::m_jp:
+                return exit_condition::jp;
+            case codec::m_jrcxz:
+                return exit_condition::jrcxz;
+            case codec::m_js:
+                return exit_condition::js;
+            case codec::m_jz:
+                return exit_condition::jz;
+            default:
+            {
+                assert("invalid conditional jump reached");
+                return exit_condition::none;
+            }
+        }
     }
 
     void ir_preopt_block::init()

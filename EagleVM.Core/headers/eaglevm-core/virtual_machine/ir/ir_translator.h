@@ -33,6 +33,7 @@ namespace eagle::ir
         std::unordered_map<dasm::basic_block*, ir_preopt_block_ptr> bb_map;
 
         ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
+        exit_condition get_exit_condition(codec::mnemonic mnemonic);
     };
 
     using ir_vm_x86_block = std::pair<block_il_ptr, bool>;

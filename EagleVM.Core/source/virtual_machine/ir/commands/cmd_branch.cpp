@@ -2,21 +2,18 @@
 
 namespace eagle::ir
 {
-    cmd_branch::cmd_branch(const il_exit_result& result_info)
-        : base_command(command_type::vm_branch), condition(exit_condition::jump)
+    cmd_branch::cmd_branch(const il_exit_result& result_info, const exit_condition condition)
+        : base_command(command_type::vm_branch), condition(condition)
     {
         info.push_back(result_info);
-        condition = exit_condition::jump;
     }
 
-    cmd_branch::cmd_branch(const std::vector<il_exit_result>& result_info)
-        : base_command(command_type::vm_branch)
+    cmd_branch::cmd_branch(const std::vector<il_exit_result>& result_info, const exit_condition condition)
+        : base_command(command_type::vm_branch), condition(condition)
     {
-        assert(result_info.size() == 2, "cannot have a conditional exit with more/less than 2 exits");
-
-        info.push_back(result_info[0]);
-        info.push_back(result_info[1]);
-        condition = exit_condition::conditional;
+        assert(result_info.size() <= 2, "cannot have more than 2 exiting branches");
+        for(auto& exit : result_info)
+            info.push_back(exit);
     }
 
     exit_condition cmd_branch::get_condition() const
