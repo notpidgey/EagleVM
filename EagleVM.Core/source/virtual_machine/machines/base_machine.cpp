@@ -69,9 +69,9 @@ namespace eagle::virt
 
     void base_machine::add_block_context(const std::vector<ir::block_il_ptr>& blocks)
     {
-        for(auto& block : blocks)
+        for (auto& block : blocks)
         {
-            if(block_context.contains(block))
+            if (block_context.contains(block))
                 continue;
 
             block_context[block] = asmb::code_label::create();
@@ -80,10 +80,44 @@ namespace eagle::virt
 
     void base_machine::add_block_context(const ir::block_il_ptr& block)
     {
-        if(block_context.contains(block))
+        if (block_context.contains(block))
             return;
 
         block_context[block] = asmb::code_label::create();
+    }
+
+    void base_machine::add_block_context(const std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>>& blocks)
+    {
+        for (auto& [block, label] : blocks)
+        {
+            if (block_context.contains(block))
+            {
+                assert("attempted to overwrite existing block");
+                continue;
+            }
+
+            block_context[block] = label;
+        }
+    }
+
+    void base_machine::add_block_context(const ir::block_il_ptr& block, const asmb::code_label_ptr& label)
+    {
+        if (block_context.contains(block))
+        {
+            assert("attempted to overwrite existing block");
+            return;
+        }
+
+        block_context[block] = label;
+    }
+
+    std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> base_machine::get_blocks() const
+    {
+        std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> blocks;
+        for (const auto& pair : block_context)
+            blocks.push_back(pair);
+
+        return blocks;
     }
 
     ir::ir_size base_machine::to_ir_size(const codec::reg_size reg_size)
@@ -190,7 +224,7 @@ namespace eagle::virt
 
     asmb::code_label_ptr base_machine::get_block_label(const ir::block_il_ptr& block)
     {
-        if(block_context.contains(block))
+        if (block_context.contains(block))
             return block_context[block];
 
         return nullptr;

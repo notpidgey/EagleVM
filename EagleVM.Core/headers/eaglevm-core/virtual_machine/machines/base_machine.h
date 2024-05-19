@@ -32,6 +32,9 @@ namespace eagle::virt
 
         void add_block_context(const std::vector<ir::block_il_ptr>& blocks);
         void add_block_context(const ir::block_il_ptr& block);
+        void add_block_context(const std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>>& blocks);
+        void add_block_context(const ir::block_il_ptr& block, const asmb::code_label_ptr& label);
+        [[nodiscard]] std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> get_blocks() const;
 
     protected:
         ir::ir_size to_ir_size(codec::reg_size reg_size);
