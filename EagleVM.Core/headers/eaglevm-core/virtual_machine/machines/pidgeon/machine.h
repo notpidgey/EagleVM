@@ -48,6 +48,6 @@ namespace eagle::virt::pidg
         vm_inst_regs_ptr rm_;
         vm_inst_handlers_ptr hg_;
 
-        void call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const;
+
     };
 }

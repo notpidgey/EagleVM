@@ -41,6 +41,9 @@ namespace eagle::virt::pidg
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint8_t operand_count, codec::reg_size size);
         std::vector<asmb::code_container_ptr> build_handlers();
 
+        void call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const;
+        void create_vm_return(const asmb::code_container_ptr& container) const;
+
     private:
         struct tagged_vm_handler
         {
@@ -66,6 +69,8 @@ namespace eagle::virt::pidg
 
         std::array<tagged_vm_handler, 4> vm_load;
         std::array<tagged_vm_handler, 4> vm_store;
+
+        static codec::reg_size load_store_index_size(uint8_t index);
 
         uint16_t vm_overhead;
         uint16_t vm_stack_regs;

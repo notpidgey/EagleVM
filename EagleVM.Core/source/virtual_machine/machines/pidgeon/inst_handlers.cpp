@@ -236,6 +236,19 @@ namespace eagle::virt::pidg
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_load()
     {
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            const tagged_vm_handler& handler = vm_load[i];
+            asmb::code_container_ptr container = handler.code;
+
+            const reg_size reg_size = load_store_index_size(i);
+            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+
+            container->add(encode(m_mov, ZREG(target_temp), ZMEMBI(VREGS, VTEMP, 1, reg_size)));
+            call_vm_handler(container, get_instruction_handler(m_push, 1, reg_size));
+
+            create_vm_return(container);
+        }
     }
 
     asmb::code_label_ptr inst_handlers::get_context_store(const reg_size size)
@@ -284,5 +297,56 @@ namespace eagle::virt::pidg
         handlers.append_range(build_context_store());
 
         return handlers;
+    }
+
+    void inst_handlers::call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const
+    {
+        assert(target != nullptr, "target cannot be an invalid code label");
+        assert(code != nullptr, "code cannot be an invalid code label");
+
+        const asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
+
+        // lea VCS, [VCS - 8]       ; allocate space for new return address
+        // mov [VCS], code_label    ; place return rva on the stack
+        code->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
+        code->add(RECOMPILE(encode(m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(return_label))));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), 8))));
+        code->add(encode(m_jmp, ZREG(VIP)));
+
+        // execution after VM handler should end up here
+        code->bind(return_label);
+    }
+
+    void inst_handlers::create_vm_return(const asmb::code_container_ptr& container) const
+    {
+        // mov VCSRET, [VCS]        ; pop from call stack
+        // lea VCS, [VCS + 8]       ; move up the call stack pointer
+        container->add(encode(m_mov, ZREG(VCSRET), ZMEMBD(VCS, 0, 8)));
+        container->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, 8, 8)));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VBASE, VCSRET, 1, 8)));
+        container->add(encode(m_jmp, ZREG(VIP)));
+    }
+
+    reg_size inst_handlers::load_store_index_size(const uint8_t index)
+    {
+        switch (index)
+        {
+            case 0:
+                return bit_64;
+            case 1:
+                return bit_32;
+            case 2:
+                return bit_16;
+            case 3:
+                return bit_8;
+            default:
+                return empty;
+        }
     }
 }
