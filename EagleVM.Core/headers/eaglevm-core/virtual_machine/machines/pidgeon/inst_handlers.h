@@ -12,11 +12,12 @@ namespace eagle::virt::pidg
     }
 
     using vm_inst_handlers_ptr = std::shared_ptr<class inst_handlers>;
+    using machine_ptr = std::shared_ptr<class machine>;
 
     class inst_handlers
     {
     public:
-        explicit inst_handlers(const vm_inst_regs_ptr& push_order);
+        explicit inst_handlers(machine_ptr  machine, vm_inst_regs_ptr  push_order);
         void randomize_constants();
 
         asmb::code_label_ptr get_vm_enter(bool reference = true);
@@ -55,6 +56,7 @@ namespace eagle::virt::pidg
             }
         };
 
+        machine_ptr machine;
         vm_inst_regs_ptr inst_regs;
 
         tagged_vm_handler vm_enter;
@@ -65,8 +67,8 @@ namespace eagle::virt::pidg
         std::array<tagged_vm_handler, 4> vm_load;
         std::array<tagged_vm_handler, 4> vm_store;
 
-        uint16_t vm_overhead = 8 * 2000;
-        uint16_t vm_stack_regs = 17;
-        uint16_t vm_call_stack = 3;
+        uint16_t vm_overhead;
+        uint16_t vm_stack_regs;
+        uint16_t vm_call_stack;
     };
 }

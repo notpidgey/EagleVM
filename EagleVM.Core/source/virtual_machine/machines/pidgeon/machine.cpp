@@ -5,12 +5,23 @@
 
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 
+#define VIP         rm_->get_reg(I_VIP)
+#define VSP         rm_->get_reg(I_VSP)
+#define VREGS       rm_->get_reg(I_VREGS)
+#define VTEMP       rm_->get_reg(I_VTEMP)
+#define VTEMP2      rm_->get_reg(I_VTEMP2)
+#define VCS         rm_->get_reg(I_VCALLSTACK)
+#define VCSRET      rm_->get_reg(I_VCSRET)
+#define VBASE       rm_->get_reg(I_VBASE)
+
+using namespace eagle::codec;
+
 namespace eagle::virt::pidg
 {
     machine::machine()
     {
         rm_ = std::make_shared<inst_regs>();
-        hg_ = std::make_shared<inst_handlers>(rm_);
+        hg_ = std::make_shared<inst_handlers>(shared_from_this(), rm_);
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()
@@ -20,25 +31,25 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
     {
-        const codec::reg target_reg = cmd->get_reg();
+        const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
 
-        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMU(displacement)));
+        block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(displacement)));
         call_handler(block, hg_->get_context_load(size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
     {
-        const codec::reg target_reg = cmd->get_reg();
+        const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
 
-        block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMU(displacement)));
+        block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(displacement)));
         call_handler(block, hg_->get_context_store(size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
     {
-        auto write_jump = [&](ir::il_exit_result jump, codec::mnemonic mnemonic)
+        auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
         {
             std::visit([&]<typename exit_type>(exit_type&& arg)
             {
@@ -46,12 +57,16 @@ namespace eagle::virt::pidg
                 if constexpr (std::is_same_v<T, ir::vmexit_rva>)
                 {
                     const ir::vmexit_rva rva = arg;
-                    block->add(encode(codec::m_mov, ZREG(VTEMP), ZIMMS(rva)));
+                    block->add(encode(m_mov, ZREG(VTEMP), ZIMMS(rva)));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
                 {
                     const ir::block_il_ptr target = arg;
-                    block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VTEMP), ZIMMS(target->get))));
+
+                    const asmb::code_label_ptr label = get_block_label(target);
+                    assert(label != nullptr, "block contains missing context");
+
+                    block->add(RECOMPILE(encode(m_mov, ZREG(VTEMP), ZIMMS(label->get_address()))));
                 }
             }, jump);
 
@@ -63,7 +78,7 @@ namespace eagle::virt::pidg
             case ir::exit_condition::jmp:
             {
                 const ir::il_exit_result jump = cmd->get_condition_default();
-                write_jump(jump, codec::m_jmp);
+                write_jump(jump, m_jmp);
 
                 break;
             }
@@ -79,7 +94,7 @@ namespace eagle::virt::pidg
                 write_jump(conditional_jump, to_jump_mnemonic(cmd->get_condition()));
 
                 const ir::il_exit_result jump = cmd->get_condition_default();
-                write_jump(jump, codec::m_jmp);
+                write_jump(jump, m_jmp);
             }
         }
     }
@@ -95,13 +110,13 @@ namespace eagle::virt::pidg
         ir::ir_size target_size = cmd->get_read_size();
 
         // pop address
-        call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, codec::reg_size::bit_64));
+        call_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
 
         // mov temp, [address]
-        block->add(encode(codec::m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
+        block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
 
         // push
-        call_handler(block, hg_->get_instruction_handler(codec::m_push, 1, to_reg_size(target_size)));
+        call_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(target_size)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
@@ -114,44 +129,44 @@ namespace eagle::virt::pidg
 
         // todo: !!!!! change order of these, value is on top
         // pop vtemp2 ; pop address into vtemp2
-        call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, codec::reg_size::bit_64));
-        block->add(encode(codec::m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
+        call_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
+        block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
         // pop vtemp ; pop value into vtemp
-        call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, to_reg_size(value_size)));
+        call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
 
         // mov [vtemp2], vtemp
-        codec::reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
-        block->add(encode(codec::m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
+        reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
+        block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
     {
-        if (const ir::discrete_store_ptr reg = cmd->get_destination_reg())
+        if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
-            const ir::ir_size pop_size = reg->get_store_size();
+            const ir::ir_size pop_size = store->get_store_size();
 
             // todo: there needs to be some kind of system for cmd's to contain a do not modify list of discrete_store_ptr
             // movs like this will be destructive
 
             // call ia32 handler for pop
-            call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, to_reg_size(pop_size)));
+            call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
 
             // mov target, vtemp
-            codec::reg target_reg = reg->get_store_register();
+            reg target_reg = store->get_store_register();
 
             // if the target register is VTEMP we do not need to mov
-            if (get_bit_version(target_reg, codec::reg_class::gpr_64) != VTEMP)
+            if (get_bit_version(target_reg, reg_class::gpr_64) != VTEMP)
             {
-                codec::reg target_temp = get_bit_version(VTEMP, get_reg_class(target_reg));
-                block->add(encode(codec::m_mov, target_reg, target_temp));
+                reg target_temp = get_bit_version(VTEMP, get_reg_class(target_reg));
+                block->add(encode(m_mov, target_reg, target_temp));
             }
         }
         else
         {
             // todo: add pops just by changing rsp instead of calling handler
             const ir::ir_size pop_size = cmd->get_size();
-            call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, to_reg_size(pop_size)));
+            call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
         }
     }
 
@@ -162,19 +177,19 @@ namespace eagle::virt::pidg
         {
             case ir::stack_type::vm_register:
             {
-                const ir::discrete_store_ptr reg = cmd->get_value_register();
-                const codec::reg target_reg = reg->get_store_register();
-                const codec::reg_class target_class = get_reg_class(target_reg);
+                const ir::discrete_store_ptr store = cmd->get_value_register();
+                const reg target_reg = store->get_store_register();
+                const reg_class target_class = get_reg_class(target_reg);
 
-                const codec::reg bit_64_reg = get_bit_version(target_reg, codec::gpr_64);
+                const reg bit_64_reg = get_bit_version(target_reg, gpr_64);
                 if (VTEMP != bit_64_reg)
                 {
-                    codec::reg target_temp = get_bit_version(VTEMP, target_class);
-                    block->add(encode(codec::m_mov, ZREG(target_temp), ZREG(target_reg)));
+                    reg target_temp = get_bit_version(VTEMP, target_class);
+                    block->add(encode(m_mov, ZREG(target_temp), ZREG(target_reg)));
                 }
 
-                const codec::reg_size target_size = get_reg_size(target_reg);
-                call_handler(block, hg_->get_instruction_handler(codec::m_push, 1, target_size));
+                const reg_size target_size = get_reg_size(target_reg);
+                call_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
                 break;
             }
             case ir::stack_type::immediate:
@@ -182,11 +197,11 @@ namespace eagle::virt::pidg
                 const uint64_t constant = cmd->get_value_immediate();
                 const ir::ir_size size = cmd->get_value_immediate_size();
 
-                const codec::reg_class target_size = get_gpr_class_from_size(to_reg_size(size));
-                const codec::reg target_temp = get_bit_version(VTEMP, target_size);
+                const reg_class target_size = get_gpr_class_from_size(to_reg_size(size));
+                const reg target_temp = get_bit_version(VTEMP, target_size);
 
-                block->add(encode(codec::m_mov, ZREG(target_temp), ZIMMU(constant)));
-                call_handler(block, hg_->get_instruction_handler(codec::m_push, 1, to_reg_size(size)));
+                block->add(encode(m_mov, ZREG(target_temp), ZIMMU(constant)));
+                call_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(size)));
                 break;
             }
             default:
@@ -212,17 +227,17 @@ namespace eagle::virt::pidg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
     {
         const ir::ir_size ir_current_size = cmd->get_current();
-        codec::reg_size current_size = to_reg_size(ir_current_size);
+        reg_size current_size = to_reg_size(ir_current_size);
 
         const ir::ir_size ir_target_size = cmd->get_target();
-        codec::reg_size target_size = to_reg_size(ir_target_size);
+        reg_size target_size = to_reg_size(ir_target_size);
 
-        call_handler(block, hg_->get_instruction_handler(codec::m_pop, 1, current_size));
+        call_handler(block, hg_->get_instruction_handler(m_pop, 1, current_size));
 
         // mov eax/ax/al, VTEMP
-        block->add(encode(codec::m_mov,
-            ZREG(codec::get_bit_version(codec::rax, codec::get_gpr_class_from_size(current_size))),
-            ZREG(codec::get_bit_version(VTEMP, codec::get_gpr_class_from_size(current_size)))
+        block->add(encode(m_mov,
+            ZREG(get_bit_version(rax, get_gpr_class_from_size(current_size))),
+            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(current_size)))
         ));
 
         // keep upgrading the operand until we get to destination size
@@ -231,22 +246,22 @@ namespace eagle::virt::pidg
             // other sizes should not be possible
             switch (current_size)
             {
-                case codec::reg_size::bit_32:
+                case reg_size::bit_32:
                 {
-                    block->add(encode(codec::m_cdqe));
-                    current_size = codec::reg_size::bit_64;
+                    block->add(encode(m_cdqe));
+                    current_size = reg_size::bit_64;
                     break;
                 }
-                case codec::reg_size::bit_16:
+                case reg_size::bit_16:
                 {
-                    block->add(encode(codec::m_cwde));
-                    current_size = codec::reg_size::bit_32;
+                    block->add(encode(m_cwde));
+                    current_size = reg_size::bit_32;
                     break;
                 }
-                case codec::reg_size::bit_8:
+                case reg_size::bit_8:
                 {
-                    block->add(encode(codec::m_cbw));
-                    current_size = codec::reg_size::bit_16;
+                    block->add(encode(m_cbw));
+                    current_size = reg_size::bit_16;
                     break;
                 }
                 default:
@@ -256,12 +271,12 @@ namespace eagle::virt::pidg
             }
         }
 
-        block->add(encode(codec::m_mov,
-            ZREG(codec::get_bit_version(VTEMP, codec::get_gpr_class_from_size(target_size))),
-            ZREG(codec::get_bit_version(codec::rax, codec::get_gpr_class_from_size(target_size)))
+        block->add(encode(m_mov,
+            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(target_size))),
+            ZREG(get_bit_version(rax, get_gpr_class_from_size(target_size)))
         ));
 
-        call_handler(block, hg_->get_instruction_handler(codec::m_push, 1, target_size));
+        call_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)
@@ -269,8 +284,8 @@ namespace eagle::virt::pidg
         const asmb::code_label_ptr vm_enter = hg_->get_vm_enter();
 
         const asmb::code_label_ptr ret = asmb::code_label::create();
-        block->add(RECOMPILE(codec::encode(codec::m_push, ZLABEL(ret))));
-        block->add(RECOMPILE(codec::encode(codec::m_jmp, ZJMPR(vm_enter))));
+        block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
+        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
         block->bind(ret);
     }
 
@@ -280,20 +295,20 @@ namespace eagle::virt::pidg
 
         // mov VCSRET, ZLABEL(target)
         const asmb::code_label_ptr ret = asmb::code_label::create();
-        block->add(RECOMPILE(codec::encode(codec::m_mov, ZREG(VCSRET), ZLABEL(ret))));
+        block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
 
         // lea VRIP, [VBASE + vmexit_address]
-        block->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
-        block->add(encode(codec::m_jmp, ZREG(VIP)));
+        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
+        block->add(encode(m_jmp, ZREG(VIP)));
         block->bind(ret);
     }
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd)
     {
-        const codec::mnemonic mnemonic = cmd->get_mnemonic();
+        const mnemonic mnemonic = cmd->get_mnemonic();
         std::vector<ir::variant_op> operands = cmd->get_operands();
 
-        codec::enc::req request = create_encode_request(mnemonic);
+        enc::req request = create_encode_request(mnemonic);
         for (ir::variant_op& op : operands)
         {
             std::visit([&request]<typename reg_type>(reg_type&& arg)
@@ -302,12 +317,12 @@ namespace eagle::virt::pidg
                 if constexpr (std::is_same_v<T, ir::reg_vm>)
                 {
                     const ir::reg_vm vm_reg = arg;
-                    codec::add_op(request, ZREG(vm_reg));
+                    add_op(request, ZREG(vm_reg));
                 }
                 else if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr store = arg;
-                    codec::add_op(request, ZREG(store->get_store_register()));
+                    add_op(request, ZREG(store->get_store_register()));
                 }
             }, op);
         }
@@ -329,13 +344,13 @@ namespace eagle::virt::pidg
 
         // lea VCS, [VCS - 8]       ; allocate space for new return address
         // mov [VCS], code_label    ; place return rva on the stack
-        code->add(encode(codec::m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
-        code->add(RECOMPILE(codec::encode(codec::m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(return_label))));
+        code->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
+        code->add(RECOMPILE(encode(m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(return_label))));
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
-        code->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), 8))));
-        code->add(encode(codec::m_jmp, ZREG(VIP)));
+        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), 8))));
+        code->add(encode(m_jmp, ZREG(VIP)));
 
         // execution after VM handler should end up here
         code->bind(return_label);

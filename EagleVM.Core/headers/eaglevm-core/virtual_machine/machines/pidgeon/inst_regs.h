@@ -47,12 +47,3 @@ namespace eagle::virt::pidg
 
 #define MNEMONIC_VM_RFLAGS_ACCEPT 4
 #define MNEMONIC_VM_RFLAGS_LOAD 5
-
-#define VIP         rm_->get_reg(I_VIP)
-#define VSP         rm_->get_reg(I_VSP)
-#define VREGS       rm_->get_reg(I_VREGS)
-#define VTEMP       rm_->get_reg(I_VTEMP)
-#define VTEMP2      rm_->get_reg(I_VTEMP2)
-#define VCS         rm_->get_reg(I_VCALLSTACK)
-#define VCSRET      rm_->get_reg(I_VCSRET)
-#define VBASE       rm_->get_reg(I_VBASE)

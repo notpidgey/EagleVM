@@ -1,12 +1,30 @@
+#include <utility>
+
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 
+#include "eaglevm-core/codec/zydis_defs.h"
+#include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
+
+#define VIP         inst_regs->get_reg(I_VIP)
+#define VSP         inst_regs->get_reg(I_VSP)
+#define VREGS       inst_regs->get_reg(I_VREGS)
+#define VTEMP       inst_regs->get_reg(I_VTEMP)
+#define VTEMP2      inst_regs->get_reg(I_VTEMP2)
+#define VCS         inst_regs->get_reg(I_VCALLSTACK)
+#define VCSRET      inst_regs->get_reg(I_VCSRET)
+#define VBASE       inst_regs->get_reg(I_VBASE)
+
+using namespace eagle::codec;
 
 namespace eagle::virt::pidg
 {
-    inst_handlers::inst_handlers(const vm_inst_regs_ptr& push_order)
+    inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order)
+        : machine(std::move(machine)), inst_regs(std::move(push_order))
     {
-        inst_regs = push_order;
+        vm_overhead = 8 * 2000;
+        vm_stack_regs = 17;
+        vm_call_stack = 3;
     }
 
     void inst_handlers::randomize_constants()
@@ -33,6 +51,67 @@ namespace eagle::virt::pidg
     asmb::code_container_ptr inst_handlers::build_vm_enter()
     {
         vm_enter.code = asmb::code_container::create();
+        vm_enter.code->bind(vm_enter.label);
+
+        asmb::code_container_ptr container = vm_enter.code;
+
+        // TODO: this is a temporary fix before i add stack overrun checks
+        // we allocate the registers for the virtual machine 20 pushes after the current stack
+
+        // reserve VM call stack
+        // reserve VM stack
+        container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -(8 * vm_overhead), 8)));
+
+        // pushfq
+        {
+            container->add(encode(m_pushfq));
+        }
+
+        // push r0-r15 to stack
+        inst_regs->enumerate(
+            [&container](short reg)
+            {
+                container->add(encode(m_push, ZREG(reg)));
+            });
+
+        // mov VSP, rsp         ; begin virtualization by setting VSP to rsp
+        // mov VREGS, VSP       ; set VREGS to currently pushed stack items
+        // mov VCS, VSP         ; set VCALLSTACK to current stack top
+
+        // lea rsp, [rsp + stack_regs + 1] ; this allows us to move the stack pointer in such a way that pushfq overwrite rflags on the stack
+
+        // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead))] ; load the address of where return address is located
+        // mov VTEMP, [VTEMP]   ; load actual value into VTEMP
+        // lea VCS, [VCS - 8]   ; allocate space to place return address
+        // mov [VCS], VTEMP     ; put return address onto call stack
+
+        container->add({
+            encode(m_mov, ZREG(VSP), ZREG(rsp)),
+            encode(m_mov, ZREG(VREGS), ZREG(VSP)),
+            encode(m_mov, ZREG(VCS), ZREG(VSP)),
+
+            encode(m_lea, ZREG(rsp), ZMEMBD(VREGS, 8 * vm_stack_regs, 8)),
+
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
+            encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
+            encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)),
+            encode(m_mov, ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
+        });
+
+        // lea VIP, [0x14000000]    ; load base
+        const asmb::code_label_ptr rel_label = asmb::code_label::create();
+        container->bind(rel_label);
+        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_address(), 8))));
+
+        // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
+        // mov VSP, VTEMP
+        container->add({
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
+            encode(m_mov, ZREG(VSP), ZREG(VTEMP)),
+        });
+
+        create_vm_return(container);
+        return container;
     }
 
     asmb::code_label_ptr inst_handlers::get_vm_exit(const bool reference)
@@ -46,6 +125,48 @@ namespace eagle::virt::pidg
     asmb::code_container_ptr inst_handlers::build_vm_exit()
     {
         vm_exit.code = asmb::code_container::create();
+        vm_exit.code->bind(vm_exit.label);
+
+        asmb::code_container_ptr container = vm_exit.code;
+
+        // we need to place the target RSP after all the pops
+        // lea VTEMP, [VREGS + vm_stack_regs]
+        // mov [VTEMP], VSP
+        container->add({
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VREGS, 8 * vm_stack_regs, 8)),
+            encode(m_mov, ZMEMBD(VTEMP, 0, 8), ZREG(VSP))
+        });
+
+        // we also need to setup an RIP to return to main program execution
+        // we will place that after the RSP
+        const asmb::code_label_ptr rel_label = asmb::code_label::create();
+        container->bind(rel_label);
+        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_address(), 8))));
+        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, 8)));
+        container->add(encode(m_mov, ZMEMBD(VSP, -8, 8), ZREG(VIP)));
+
+        // mov rsp, VREGS
+        container->add(encode(m_mov, ZREG(rsp), ZREG(VREGS)));
+
+        //pop r0-r15 to stack
+        inst_regs->enumerate([&container](auto reg)
+        {
+            if (reg == ZYDIS_REGISTER_RSP || reg == ZYDIS_REGISTER_RIP)
+                container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, 8)));
+            else
+                container->add(encode(m_pop, ZREG(reg)));
+        }, true);
+
+        //popfq
+        {
+            container->add(encode(m_popfq));
+        }
+
+        // the rsp that we setup earlier before popping all the regs
+        container->add(encode(m_pop, ZREG(rsp)));
+        container->add(encode(m_jmp, ZMEMBD(rsp, -8, 8)));
+
+        return vm_exit.code;
     }
 
     asmb::code_label_ptr inst_handlers::get_rlfags_load(const bool reference)
@@ -59,6 +180,16 @@ namespace eagle::virt::pidg
     asmb::code_container_ptr inst_handlers::build_rflags_load()
     {
         vm_rflags_load.code = asmb::code_container::create();
+
+        asmb::code_container_ptr container = vm_rflags_load.code;
+        container->bind(vm_rflags_load.label);
+        container->add({
+            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -8, 8)),
+            encode(m_popfq),
+        });
+
+        create_vm_return(container);
+        return vm_rflags_load.code;
     }
 
     asmb::code_label_ptr inst_handlers::get_rflags_store(const bool reference)
@@ -72,47 +203,65 @@ namespace eagle::virt::pidg
     asmb::code_container_ptr inst_handlers::build_rflags_save()
     {
         vm_rflags_save.code = asmb::code_container::create();
+
+        asmb::code_container_ptr container = vm_rflags_save.code;
+        container->bind(vm_rflags_save.label);
+        container->add({
+            encode(m_pushfq),
+            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, 8)),
+        });
+
+        create_vm_return(container);
+        return vm_rflags_save.code;
     }
 
-    asmb::code_label_ptr inst_handlers::get_context_load(codec::reg_size size)
+    asmb::code_label_ptr inst_handlers::get_context_load(const reg_size size)
     {
-        switch(size)
+        switch (size)
         {
-            case codec::bit_64:
-                break;
-            case codec::bit_32:
-                break;
-            case codec::bit_16:
-                break;
-            case codec::bit_8:
-                break;
+            case bit_64:
+                return vm_load[0].label;
+            case bit_32:
+                return vm_load[1].label;
+            case bit_16:
+                return vm_load[2].label;
+            case bit_8:
+                return vm_load[3].label;
+            default:
+                assert("reached invalid load size");
         }
+
+        return nullptr;
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_load()
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_context_store(codec::reg_size size)
+    asmb::code_label_ptr inst_handlers::get_context_store(const reg_size size)
     {
-        switch(size)
+        switch (size)
         {
-            case codec::bit_64:
-                break;
-            case codec::bit_32:
-                break;
-            case codec::bit_16:
-                break;
-            case codec::bit_8:
-                break;
+            case bit_64:
+                return vm_store[0].label;
+            case bit_32:
+                return vm_store[1].label;
+            case bit_16:
+                return vm_store[2].label;
+            case bit_8:
+                return vm_store[3].label;
+            default:
+                assert("reached invalid store size");
         }
+
+        return nullptr;
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_store()
     {
     }
 
-    asmb::code_label_ptr inst_handlers::get_instruction_handler(codec::mnemonic mnemonic, uint8_t operand_count, codec::reg_size size)
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, uint8_t operand_count, reg_size size)
     {
     }
 

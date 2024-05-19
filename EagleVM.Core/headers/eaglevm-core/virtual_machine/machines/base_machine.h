@@ -30,9 +30,15 @@ namespace eagle::virt
         virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd) = 0;
         virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) = 0;
 
+        void add_block_context(const std::vector<ir::block_il_ptr>& blocks);
+        void add_block_context(const ir::block_il_ptr& block);
+
     protected:
         ir::ir_size to_ir_size(codec::reg_size reg_size);
         codec::reg_size to_reg_size(ir::ir_size ir_size);
         codec::mnemonic to_jump_mnemonic(ir::exit_condition condition);
+
+        std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_context;
+        asmb::code_label_ptr get_block_label(const ir::block_il_ptr& block);
     };
 }

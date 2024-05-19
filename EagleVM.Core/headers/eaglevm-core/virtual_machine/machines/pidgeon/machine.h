@@ -4,12 +4,6 @@
 
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 
-#define _CREATE_VM_OPTION(type, name, def) private: \
-    type name = def; \
-    public: \
-    type get_##name() { return name; } \
-    void set_##name (type val) { name = val; }
-
 namespace eagle::virt::pidg
 {
     // todo: i want to add options for inlining vm handlers such as pop
@@ -27,7 +21,7 @@ namespace eagle::virt::pidg
     // gpr registers only, no xmm, no avx, nothing like that
 
 
-    class machine final : public base_machine
+    class machine final : public base_machine, public std::enable_shared_from_this<machine>
     {
     public:
         machine();
@@ -49,10 +43,6 @@ namespace eagle::virt::pidg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
-
-        _CREATE_VM_OPTION(bool, randomize_stack_regs, false)
-        _CREATE_VM_OPTION(bool, variant_register_handlers, false)
-        _CREATE_VM_OPTION(bool, randomize_temp_registers, false)
 
     private:
         vm_inst_regs_ptr rm_;
