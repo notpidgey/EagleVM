@@ -18,6 +18,8 @@ namespace eagle::ir
         }
 
         base_command_ptr add_command(const base_command_ptr& command);
+        void add_command(const std::vector<base_command_ptr>& command);
+
         void copy_from(const block_il_ptr& other);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);

@@ -35,7 +35,7 @@ namespace eagle::virt::pidg
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
 
         block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(displacement)));
-        hg_->call_handler(block, hg_->get_context_load(size));
+        hg_->call_vm_handler(block, hg_->get_context_load(size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
@@ -44,7 +44,7 @@ namespace eagle::virt::pidg
         auto [displacement, size] = rm_->get_stack_displacement(target_reg);
 
         block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(displacement)));
-        hg_->call_handler(block, hg_->get_context_store(size));
+        hg_->call_vm_handler(block, hg_->get_context_store(size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
@@ -110,13 +110,13 @@ namespace eagle::virt::pidg
         ir::ir_size target_size = cmd->get_read_size();
 
         // pop address
-        hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
 
         // mov temp, [address]
         block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
 
         // push
-        hg_->call_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(target_size)));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(target_size)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
@@ -129,11 +129,11 @@ namespace eagle::virt::pidg
 
         // todo: !!!!! change order of these, value is on top
         // pop vtemp2 ; pop address into vtemp2
-        hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
         block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
         // pop vtemp ; pop value into vtemp
-        hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
 
         // mov [vtemp2], vtemp
         reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
@@ -150,7 +150,7 @@ namespace eagle::virt::pidg
             // movs like this will be destructive
 
             // call ia32 handler for pop
-            hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
+            hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
 
             // mov target, vtemp
             reg target_reg = store->get_store_register();
@@ -166,7 +166,7 @@ namespace eagle::virt::pidg
         {
             // todo: add pops just by changing rsp instead of calling handler
             const ir::ir_size pop_size = cmd->get_size();
-            hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
+            hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, to_reg_size(pop_size)));
         }
     }
 
@@ -189,7 +189,7 @@ namespace eagle::virt::pidg
                 }
 
                 const reg_size target_size = get_reg_size(target_reg);
-                hg_->call_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
+                hg_->call_vm_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
                 break;
             }
             case ir::stack_type::immediate:
@@ -201,7 +201,7 @@ namespace eagle::virt::pidg
                 const reg target_temp = get_bit_version(VTEMP, target_size);
 
                 block->add(encode(m_mov, ZREG(target_temp), ZIMMU(constant)));
-                hg_->call_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(size)));
+                hg_->call_vm_handler(block, hg_->get_instruction_handler(m_push, 1, to_reg_size(size)));
                 break;
             }
             default:
@@ -215,13 +215,13 @@ namespace eagle::virt::pidg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_load_ptr)
     {
         const asmb::code_label_ptr vm_rflags_load = hg_->get_rlfags_load();
-        hg_->call_handler(block, vm_rflags_load);
+        hg_->call_vm_handler(block, vm_rflags_load);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_store_ptr)
     {
         const asmb::code_label_ptr vm_rflags_store = hg_->get_rflags_store();
-        hg_->call_handler(block, vm_rflags_store);
+        hg_->call_vm_handler(block, vm_rflags_store);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
@@ -232,7 +232,7 @@ namespace eagle::virt::pidg
         const ir::ir_size ir_target_size = cmd->get_target();
         reg_size target_size = to_reg_size(ir_target_size);
 
-        hg_->call_handler(block, hg_->get_instruction_handler(m_pop, 1, current_size));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, current_size));
 
         // mov eax/ax/al, VTEMP
         block->add(encode(m_mov,
@@ -246,22 +246,22 @@ namespace eagle::virt::pidg
             // other sizes should not be possible
             switch (current_size)
             {
-                case reg_size::bit_32:
+                case bit_32:
                 {
                     block->add(encode(m_cdqe));
-                    current_size = reg_size::bit_64;
+                    current_size = bit_64;
                     break;
                 }
-                case reg_size::bit_16:
+                case bit_16:
                 {
                     block->add(encode(m_cwde));
-                    current_size = reg_size::bit_32;
+                    current_size = bit_32;
                     break;
                 }
-                case reg_size::bit_8:
+                case bit_8:
                 {
                     block->add(encode(m_cbw));
-                    current_size = reg_size::bit_16;
+                    current_size = bit_16;
                     break;
                 }
                 default:
@@ -276,7 +276,7 @@ namespace eagle::virt::pidg
             ZREG(get_bit_version(rax, get_gpr_class_from_size(target_size)))
         ));
 
-        hg_->call_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_push, 1, target_size));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)

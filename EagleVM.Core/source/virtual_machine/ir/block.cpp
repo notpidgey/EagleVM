@@ -5,7 +5,7 @@ namespace eagle::ir
 {
     base_command_ptr block_il::add_command(const base_command_ptr& command)
     {
-        if(command->get_command_type() == command_type::vm_branch)
+        if(command->get_command_type() == command_type::vm_branch && exit)
         {
             assert(exit == nullptr, "cannot have two exiting commands");
             exit = std::static_pointer_cast<cmd_branch>(command);
@@ -13,6 +13,17 @@ namespace eagle::ir
 
         commands.push_back(command);
         return command;
+    }
+
+    void block_il::add_command(const std::vector<base_command_ptr>& command)
+    {
+        if(command.back()->get_command_type() == command_type::vm_branch && exit)
+        {
+            assert(exit == nullptr, "cannot have two exiting commands");
+            exit = std::static_pointer_cast<cmd_branch>(command.back());
+        }
+
+        commands.append_range(command);
     }
 
     void block_il::copy_from(const block_il_ptr& other)

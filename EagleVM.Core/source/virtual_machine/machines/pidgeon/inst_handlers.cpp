@@ -1,10 +1,12 @@
 #include <utility>
 
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 
 #define VIP         inst_regs->get_reg(I_VIP)
 #define VSP         inst_regs->get_reg(I_VSP)
@@ -181,7 +183,7 @@ namespace eagle::virt::pidg
     {
         vm_rflags_load.code = asmb::code_container::create();
 
-        asmb::code_container_ptr container = vm_rflags_load.code;
+        const asmb::code_container_ptr container = vm_rflags_load.code;
         container->bind(vm_rflags_load.label);
         container->add({
             encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -8, 8)),
@@ -204,7 +206,7 @@ namespace eagle::virt::pidg
     {
         vm_rflags_save.code = asmb::code_container::create();
 
-        asmb::code_container_ptr container = vm_rflags_save.code;
+        const asmb::code_container_ptr container = vm_rflags_save.code;
         container->bind(vm_rflags_save.label);
         container->add({
             encode(m_pushfq),
@@ -236,9 +238,13 @@ namespace eagle::virt::pidg
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_load()
     {
+        std::vector<asmb::code_container_ptr> context_loads;
         for (uint8_t i = 0; i < 4; i++)
         {
             const tagged_vm_handler& handler = vm_load[i];
+            if(!handler.tagged)
+                continue;
+
             asmb::code_container_ptr container = handler.code;
 
             const reg_size reg_size = load_store_index_size(i);
@@ -248,7 +254,11 @@ namespace eagle::virt::pidg
             call_vm_handler(container, get_instruction_handler(m_push, 1, reg_size));
 
             create_vm_return(container);
+
+            context_loads.push_back(container);
         }
+
+        return context_loads;
     }
 
     asmb::code_label_ptr inst_handlers::get_context_store(const reg_size size)
@@ -272,10 +282,74 @@ namespace eagle::virt::pidg
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_context_store()
     {
+        std::vector<asmb::code_container_ptr> context_stores;
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            const tagged_vm_handler& handler = vm_store[i];
+            if(!handler.tagged)
+                continue;
+
+            asmb::code_container_ptr container = handler.code;
+
+            const reg_size reg_size = load_store_index_size(i);
+            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+
+            if(reg_size == bit_32)
+            {
+                // we have to clear upper 32 bits of target register here
+                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
+                call_vm_handler(container, get_instruction_handler(m_pop, 1, reg_size));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, bit_64), ZIMMS(0)));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+            }
+            else
+            {
+                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
+                call_vm_handler(container, get_instruction_handler(m_pop, 1, reg_size));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+            }
+
+            create_vm_return(container);
+
+            context_stores.push_back(container);
+        }
+
+        return context_stores;
     }
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, uint8_t operand_count, reg_size size)
     {
+        std::tuple key = std::tie(mnemonic, operand_count, size);
+        if(tagged_instruction_handlers.contains(key))
+            return tagged_instruction_handlers[key];
+
+        asmb::code_label_ptr label = asmb::code_label::create();
+        tagged_instruction_handlers[key] = label;
+
+        return label;
+    }
+
+    std::vector<asmb::code_container_ptr> inst_handlers::build_instruction_handlers()
+    {
+        std::vector<asmb::code_container_ptr> container;
+        for(const auto& [key, label] : tagged_instruction_handlers)
+        {
+            auto [mnemonic, operand_count, size] = key;
+
+            const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
+            ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size), operand_count);
+
+            ir::block_il_ptr ir_block = std::make_shared<ir::block_il>();
+            ir_block->add_command(handler_ir);
+
+            const asmb::code_container_ptr handler = machine->lift_block(ir_block, false);
+            handler->bind_start(label);
+            create_vm_return(handler);
+
+            container.push_back(handler);
+        }
+
+        return container;
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_handlers()
@@ -296,13 +370,17 @@ namespace eagle::virt::pidg
         handlers.append_range(build_context_load());
         handlers.append_range(build_context_store());
 
+        handlers.append_range(build_instruction_handlers());
+
         return handlers;
     }
 
-    void inst_handlers::call_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const
+    void inst_handlers::call_vm_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const
     {
         assert(target != nullptr, "target cannot be an invalid code label");
         assert(code != nullptr, "code cannot be an invalid code label");
+
+        // todo: on debug verify that the target is a valid handler
 
         const asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
 

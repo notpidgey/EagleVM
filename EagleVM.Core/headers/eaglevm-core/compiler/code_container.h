@@ -24,6 +24,7 @@ namespace eagle::asmb
         void add(const std::vector<codec::dynamic_instruction>& instruction);
         void add(std::vector<codec::dynamic_instruction>& instruction);
 
+        void bind_start(const code_label_ptr& code_label);
         void bind(const code_label_ptr& code_label);
 
         [[nodiscard]] std::vector<inst_label_v> get_instructions() const;

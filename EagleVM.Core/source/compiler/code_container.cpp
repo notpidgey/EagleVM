@@ -37,6 +37,11 @@ namespace eagle::asmb
         function_segments.append_range(instruction);
     }
 
+    void code_container::bind_start(const code_label_ptr& code_label)
+    {
+        function_segments.insert(function_segments.begin(), code_label);
+    }
+
     void code_container::bind(const code_label_ptr& code_label)
     {
         function_segments.emplace_back(code_label);
