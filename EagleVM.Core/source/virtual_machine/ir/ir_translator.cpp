@@ -29,6 +29,34 @@ namespace eagle::ir
         for (dasm::basic_block* block : dasm->blocks)
             result.push_back(translate_block(block));
 
+        //auto similar_seq = [](const std::vector<ir_preopt_block_ptr>& blocks)
+        //    -> std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>>
+        //{
+        //    std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> sequence_map;
+        //    for (const ir_preopt_block_ptr& block : blocks)
+        //    {
+        //        auto body = block->get_body();
+        //        for (int window_size = 2; window_size <= 4; ++window_size)
+        //        {
+        //            for (int i = 0; i <= body.size() - window_size; ++i)
+        //            {
+        //                std::string sequence;
+        //                for (int j = i; j < i + window_size; ++j)
+        //                    sequence += body[j].first->to_string();
+
+        //                sequence_map[sequence].push_back(block);
+        //            }
+        //        }
+        //    }
+
+        //    std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> similar_sequences;
+        //    for (auto& pair : sequence_map)
+        //        if (pair.second.size() > 1)
+        //            similar_sequences.insert(pair);
+
+        //    return similar_sequences;
+        //};
+
         return result;
     }
 
