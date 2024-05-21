@@ -1,15 +1,14 @@
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
-#include "eaglevm-core/virtual_machine/models/vm_defs.h"
-
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 
 #define VIP         rm_->get_reg(I_VIP)
 #define VSP         rm_->get_reg(I_VSP)
 #define VREGS       rm_->get_reg(I_VREGS)
-#define VTEMP       rm_->get_reg(I_VTEMP)
-#define VTEMP2      rm_->get_reg(I_VTEMP2)
+#define VTEMP       rm_->get_reg_temp(0)
+#define VTEMP2      rm_->get_reg_temp(1)
+#define VTEMPX(x)   rm_->get_reg_temp(x)
 #define VCS         rm_->get_reg(I_VCALLSTACK)
 #define VCSRET      rm_->get_reg(I_VCSRET)
 #define VBASE       rm_->get_reg(I_VBASE)
@@ -61,7 +60,7 @@ namespace eagle::virt::pidg
                 }
                 else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
                 {
-                    const ir::block_il_ptr target = arg;
+                    const ir::block_il_ptr& target = arg;
 
                     const asmb::code_label_ptr label = get_block_label(target);
                     assert(label != nullptr, "block contains missing context");
@@ -129,7 +128,7 @@ namespace eagle::virt::pidg
 
         // todo: !!!!! change order of these, value is on top
         // pop vtemp2 ; pop address into vtemp2
-        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, reg_size::bit_64));
+        hg_->call_vm_handler(block, hg_->get_instruction_handler(m_pop, 1, bit_64));
         block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
         // pop vtemp ; pop value into vtemp
@@ -144,6 +143,9 @@ namespace eagle::virt::pidg
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
+            if (!store->get_finalized())
+                assign_discrete_storage({ store });
+
             const ir::ir_size pop_size = store->get_store_size();
 
             // todo: there needs to be some kind of system for cmd's to contain a do not modify list of discrete_store_ptr
@@ -156,7 +158,7 @@ namespace eagle::virt::pidg
             reg target_reg = store->get_store_register();
 
             // if the target register is VTEMP we do not need to mov
-            if (get_bit_version(target_reg, reg_class::gpr_64) != VTEMP)
+            if (get_bit_version(target_reg, gpr_64) != VTEMP)
             {
                 reg target_temp = get_bit_version(VTEMP, get_reg_class(target_reg));
                 block->add(encode(m_mov, target_reg, target_temp));
@@ -178,6 +180,9 @@ namespace eagle::virt::pidg
             case ir::stack_type::vm_register:
             {
                 const ir::discrete_store_ptr store = cmd->get_value_register();
+                if (!store->get_finalized())
+                    assign_discrete_storage({ store });
+
                 const reg target_reg = store->get_store_register();
                 const reg_class target_class = get_reg_class(target_reg);
 
@@ -311,6 +316,19 @@ namespace eagle::virt::pidg
         enc::req request = create_encode_request(mnemonic);
         for (ir::variant_op& op : operands)
         {
+            std::vector<ir::discrete_store_ptr> stores;
+            std::visit([&stores]<typename reg_type>(reg_type&& arg)
+            {
+                if constexpr (std::is_same_v<std::decay_t<reg_type>, ir::discrete_store_ptr>)
+                {
+                    const ir::discrete_store_ptr& store = arg;
+                    if (!store->get_finalized())
+                        stores.push_back(store);
+                }
+            }, op);
+
+            assign_discrete_storage(stores);
+
             std::visit([&request]<typename reg_type>(reg_type&& arg)
             {
                 using T = std::decay_t<reg_type>;
@@ -321,7 +339,7 @@ namespace eagle::virt::pidg
                 }
                 else if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
                 {
-                    const ir::discrete_store_ptr store = arg;
+                    const ir::discrete_store_ptr& store = arg;
                     add_op(request, ZREG(store->get_store_register()));
                 }
             }, op);
@@ -333,5 +351,10 @@ namespace eagle::virt::pidg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
     {
         block->add(cmd->get_request());
+    }
+
+    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores)
+    {
+        const auto temp_required = stores.size();
     }
 }

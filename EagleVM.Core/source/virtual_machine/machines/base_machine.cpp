@@ -3,7 +3,7 @@
 
 namespace eagle::virt
 {
-    asmb::code_container_ptr base_machine::lift_block(const ir::block_il_ptr& block, bool scatter)
+    asmb::code_container_ptr base_machine::lift_block(const ir::block_il_ptr& block)
     {
         const size_t command_count = block->get_command_count();
 

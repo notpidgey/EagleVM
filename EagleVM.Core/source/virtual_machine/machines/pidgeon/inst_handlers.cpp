@@ -11,8 +11,9 @@
 #define VIP         inst_regs->get_reg(I_VIP)
 #define VSP         inst_regs->get_reg(I_VSP)
 #define VREGS       inst_regs->get_reg(I_VREGS)
-#define VTEMP       inst_regs->get_reg(I_VTEMP)
-#define VTEMP2      inst_regs->get_reg(I_VTEMP2)
+#define VTEMP       inst_regs->get_reg_temp(0)
+#define VTEMP2      inst_regs->get_reg_temp(1)
+#define VTEMPX(x)   inst_regs->get_reg_temp(x)
 #define VCS         inst_regs->get_reg(I_VCALLSTACK)
 #define VCSRET      inst_regs->get_reg(I_VCSRET)
 #define VBASE       inst_regs->get_reg(I_VBASE)
@@ -339,10 +340,11 @@ namespace eagle::virt::pidg
             const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
             ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size), operand_count);
 
+            // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
             ir::block_il_ptr ir_block = std::make_shared<ir::block_il>();
             ir_block->add_command(handler_ir);
 
-            const asmb::code_container_ptr handler = machine->lift_block(ir_block, false);
+            const asmb::code_container_ptr handler = machine->lift_block(ir_block);
             handler->bind_start(label);
             create_vm_return(handler);
 

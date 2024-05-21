@@ -14,10 +14,11 @@ namespace eagle::virt::pidg
     class inst_regs
     {
     public:
-        inst_regs();
+        explicit inst_regs(uint8_t temp_count = 2);
 
         void init_reg_order();
         codec::zydis_register get_reg(uint8_t target) const;
+        codec::zydis_register get_reg_temp(uint8_t target) const;
         std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         void enumerate(const std::function<void(codec::zydis_register)>& enumerable, bool from_back = false);
@@ -25,20 +26,20 @@ namespace eagle::virt::pidg
     private:
         std::array<codec::zydis_register, 16> stack_order;
         std::array<codec::zydis_register, 16> vm_order;
+
+        uint8_t temp_variables;
+        uint8_t number_of_vregs;
     };
 }
 
-#define NUM_OF_VREGS 8
+#define NUM_OF_VREGS 6
 #define I_VIP 0
 #define I_VSP 1
 #define I_VREGS 2
 
-#define I_VTEMP 3
-#define I_VTEMP2 4
-
-#define I_VCALLSTACK 5
-#define I_VCSRET 6
-#define I_VBASE 7
+#define I_VCALLSTACK 3
+#define I_VCSRET 4
+#define I_VBASE 5
 
 #define MNEMONIC_VM_ENTER 0
 #define MNEMONIC_VM_EXIT 1

@@ -196,7 +196,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/inst_regs.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
-	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_defs.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_op_action.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_operand_sig.h"
 	cmake.toml

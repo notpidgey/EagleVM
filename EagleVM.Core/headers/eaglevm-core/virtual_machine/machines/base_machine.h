@@ -11,7 +11,7 @@ namespace eagle::virt
     {
     public:
         virtual ~base_machine() = default;
-        virtual asmb::code_container_ptr lift_block(const ir::block_il_ptr& block, bool scatter);
+        virtual asmb::code_container_ptr lift_block(const ir::block_il_ptr& block);
         virtual std::vector<asmb::code_container_ptr> create_handlers() = 0;
 
         virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) = 0;
