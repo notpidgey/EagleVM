@@ -35,22 +35,34 @@ namespace eagle::asmb
         // this should take all the functions in the section and connect them to desired labels
         for (code_container_ptr& code_label : section_labels)
         {
-            code_label->set_address(current_address);
-
-            auto segments = code_label->get_instructions();
-            for(auto& inst : segments)
+            std::vector<inst_label_v> segments = code_label->get_instructions();
+            for (auto& inst : segments)
             {
-                codec::enc::req request;
-                std::visit([&request, current_address](auto&& arg)
+                std::visit([&current_address](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                        request = arg(current_address);
-                    else if constexpr (std::is_same_v<T, codec::enc::req>)
-                        request = arg;
-                }, inst);
+                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
+                    {
+                        codec::dynamic_instruction inst = arg;
 
-                current_address += codec::compile_absolute(request, 0).size();
+                        codec::enc::req request;
+                        std::visit([&request, current_address](auto&& arg)
+                        {
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, codec::recompile_promise>)
+                                request = arg(current_address);
+                            else if constexpr (std::is_same_v<T, codec::enc::req>)
+                                request = arg;
+                        }, inst);
+
+                        current_address += codec::compile_absolute(request, 0).size();
+                    }
+                    else if constexpr (std::is_same_v<T, code_label_ptr>)
+                    {
+                        const code_label_ptr& label = arg;
+                        label->set_address(current_address);
+                    }
+                }, inst);
             }
         }
 
@@ -64,30 +76,48 @@ namespace eagle::asmb
         current_address = section_address;
         for (const code_container_ptr& code_label : section_labels)
         {
-            if (code_label->get_address() != current_address)
-            {
-                code_label->set_address(current_address);
-                goto RECOMPILE;
-            }
-
-            code_label->set_address(current_address);
-
             auto segments = code_label->get_instructions();
-            for(auto& inst : segments)
+            for (auto& inst : segments)
             {
-                codec::enc::req request;
-                std::visit([&request, current_address](auto&& arg)
+                bool force_recompile = false;
+                std::visit([&current_address, &compiled_section, &force_recompile](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                        request = arg(current_address);
-                    else if constexpr (std::is_same_v<T, codec::enc::req>)
-                        request = arg;
+                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
+                    {
+                        codec::dynamic_instruction inst = arg;
+
+                        codec::enc::req request;
+                        std::visit([&request, current_address](auto&& arg)
+                        {
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, codec::recompile_promise>)
+                                request = arg(current_address);
+                            else if constexpr (std::is_same_v<T, codec::enc::req>)
+                                request = arg;
+                        }, inst);
+
+                        std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
+                        compiled_section.append_range(compiled);
+                        current_address += compiled.size();
+                    }
+                    else if constexpr (std::is_same_v<T, code_label_ptr>)
+                    {
+                        const code_label_ptr& label = arg;
+                        if (label->get_address() != current_address)
+                        {
+                            label->set_address(current_address);
+                            force_recompile = true;
+                        }
+                        else
+                        {
+                            label->set_address(current_address);
+                        }
+                    }
                 }, inst);
 
-                std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
-                compiled_section.append_range(compiled);
-                current_address += compiled.size();
+                if (force_recompile)
+                    goto RECOMPILE;
             }
         }
 
