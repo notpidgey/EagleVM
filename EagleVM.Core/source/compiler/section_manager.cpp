@@ -77,7 +77,7 @@ namespace eagle::asmb
         for (const code_container_ptr& code_label : section_labels)
         {
             auto segments = code_label->get_instructions();
-            for (auto& inst : segments)
+            for (inst_label_v& label_code_variant : segments)
             {
                 bool force_recompile = false;
                 std::visit([&current_address, &compiled_section, &force_recompile](auto&& arg)
@@ -85,7 +85,7 @@ namespace eagle::asmb
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
-                        codec::dynamic_instruction inst = arg;
+                        codec::dynamic_instruction dynamic_inst = arg;
 
                         codec::enc::req request;
                         std::visit([&request, current_address](auto&& arg)
@@ -95,7 +95,7 @@ namespace eagle::asmb
                                 request = arg(current_address);
                             else if constexpr (std::is_same_v<T, codec::enc::req>)
                                 request = arg;
-                        }, inst);
+                        }, dynamic_inst);
 
                         std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
                         compiled_section.append_range(compiled);
@@ -114,7 +114,7 @@ namespace eagle::asmb
                             label->set_address(current_address);
                         }
                     }
-                }, inst);
+                }, label_code_variant);
 
                 if (force_recompile)
                     goto RECOMPILE;
