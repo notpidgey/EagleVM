@@ -24,12 +24,14 @@ namespace eagle::ir
         ir_translator(dasm::segment_dasm* seg_dasm);
 
         std::vector<ir_preopt_block_ptr> translate();
+        std::vector<block_il_ptr> optimize();
 
-        std::vector<block_il_ptr> get_optimized();
-        std::vector<block_il_ptr> get_unoptimized();
+        dasm::basic_block* map_basic_block(const ir_preopt_block_ptr& preopt_target);
+        ir_preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
 
     private:
         dasm::segment_dasm* dasm;
+
         std::unordered_map<dasm::basic_block*, ir_preopt_block_ptr> bb_map;
 
         ir_preopt_block_ptr translate_block(dasm::basic_block* bb);

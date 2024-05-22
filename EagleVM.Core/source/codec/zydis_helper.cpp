@@ -428,6 +428,30 @@ namespace eagle::codec
         return {target_address, -1};
     }
 
+    std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode, const uint32_t rva, const int8_t operand)
+    {
+        const auto& [instruction, operands] = decode;
+
+        uint64_t target_address = rva;
+        if (operand < 0)
+        {
+            for (int i = 0; i < instruction.operand_count; i++)
+            {
+                auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva, &target_address);
+                if (result == ZYAN_STATUS_SUCCESS)
+                    return {target_address, i};
+            }
+        }
+        else
+        {
+            auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand], rva, &target_address);
+            if (result == ZYAN_STATUS_SUCCESS)
+                return {target_address, operand};
+        }
+
+        return {target_address, -1};
+    }
+
     std::vector<dec::inst_info> get_instructions(void* data, size_t size)
     {
         std::vector<dec::inst_info> decode_data;

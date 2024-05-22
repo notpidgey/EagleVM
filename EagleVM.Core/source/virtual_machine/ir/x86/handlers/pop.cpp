@@ -4,11 +4,18 @@ namespace eagle::ir::handler
 {
     pop::pop()
     {
-        entries = {
-            { { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_32 } },
-            { { codec::op_none, codec::bit_64 } }
+        valid_operands = {
+            { { { codec::op_none, codec::bit_8 } }, "pop 8" },
+            { { { codec::op_none, codec::bit_16 } }, "pop 16" },
+            { { { codec::op_none, codec::bit_32 } }, "pop 32" },
+            { { { codec::op_none, codec::bit_64 } }, "pop 64" },
+        };
+
+        build_options = {
+            { { ir_size::bit_8 }, "pop 8" },
+            { { ir_size::bit_16 }, "pop 16" },
+            { { ir_size::bit_32 }, "pop 32" },
+            { { ir_size::bit_64 }, "pop 64" },
         };
     }
 

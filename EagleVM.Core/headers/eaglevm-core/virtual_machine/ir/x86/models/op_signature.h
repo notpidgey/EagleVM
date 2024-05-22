@@ -9,7 +9,7 @@
 namespace eagle::ir
 {
     using op_entries = std::vector<handler_op>;
-    struct operand_signature
+    struct op_signature
     {
         op_entries entries;
         std::string handler_id;

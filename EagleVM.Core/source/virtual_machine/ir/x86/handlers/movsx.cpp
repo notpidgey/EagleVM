@@ -5,12 +5,12 @@ namespace eagle::ir::handler
     movsx::movsx()
     {
         entries = {
-            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } } },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } } },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } } },
 
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_16 } } },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } } },
         };
     }
 
@@ -32,9 +32,7 @@ namespace eagle::ir::lifter
         }
 
         // [base + index * scale + disp]
-        // 1. begin with loading the base register
-        // mov VTEMP, imm
-        // jmp VM_LOAD_REG
+        // 1. loading the base register
         if (op_mem.base == ZYDIS_REGISTER_RSP)
         {
             block->add_command(std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64));
@@ -42,12 +40,12 @@ namespace eagle::ir::lifter
             {
                 block->add_command(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
                 block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                    codec::m_add, 2, codec::reg_class::gpr_64));
+                    codec::m_add, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
             }
         }
         else
         {
-            block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_mem.base), ir_size::bit_64));
+            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.base)));
         }
 
         //2. load the index register and multiply by scale
@@ -55,23 +53,20 @@ namespace eagle::ir::lifter
         //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_context_load>(codec::reg(op_mem.index), ir_size::bit_64));
+            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.index)));
         }
 
         if (op_mem.scale != 0)
         {
-            //mov VTEMP, imm    ;
-            //jmp VM_PUSH       ; load value of SCALE to the top of the VSTACK
-            //jmp VM_MUL        ; multiply INDEX * SCALE
             block->add_command(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_imul, 2, codec::reg_class::gpr_64));
+                codec::m_imul, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_add, 2, codec::reg_class::gpr_64));
+                codec::m_add, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
         }
 
         if (op_mem.disp.has_displacement)
@@ -82,7 +77,7 @@ namespace eagle::ir::lifter
             // subtract displacement value
             block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
             block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_sub, 2, codec::reg_class::gpr_64));
+                codec::m_sub, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
         }
 
         // for memory operands we will only ever need one kind of action
@@ -97,7 +92,7 @@ namespace eagle::ir::lifter
         {
             // by default, this will be dereferenced and we will get the value at the address,
             const ir_size target_size = ir_size(inst.operand_width);
-            const reg_vm target_temp = get_bit_version(reg_vm::vtemp, target_size);
+            const reg_vm target_temp = codec::get_bit_version(reg_vm::vtemp, target_size);
 
             block->add_command(std::make_shared<cmd_pop>(reg_vm::vtemp, ir_size::bit_64));
             block->add_command(std::make_shared<cmd_mem_read>(reg_vm::vtemp, ir_size::bit_64));

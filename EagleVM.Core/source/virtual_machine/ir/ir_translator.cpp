@@ -239,7 +239,7 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<block_il_ptr> ir_translator::get_optimized()
+    std::vector<block_il_ptr> ir_translator::optimize()
     {
         // remove vm enter block if every reference to vm enter block uses the same vm
 
@@ -248,22 +248,18 @@ namespace eagle::ir
         // merge blocks together
     }
 
-    std::vector<block_il_ptr> ir_translator::get_unoptimized()
+    dasm::basic_block* ir_translator::map_basic_block(const ir_preopt_block_ptr& preopt_target)
     {
-        std::vector<block_il_ptr> final_blocks;
-        for (auto& [_, vm_block] : bb_map)
-        {
-            std::vector<block_il_ptr> body = vm_block->get_body();
-            if (body.empty())
-                continue;
+        for(auto& [bb, preopt] : bb_map)
+            if(preopt_target == preopt)
+                return bb;
 
-            if (block_il_ptr entry = vm_block->get_entry())
-                final_blocks.push_back(entry);
+        return nullptr;
+    }
 
-            final_blocks.append_range(body);
-        }
-
-        return final_blocks;
+    ir_preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block* basic_block)
+    {
+        return bb_map[basic_block];
     }
 
     exit_condition ir_translator::get_exit_condition(const codec::mnemonic mnemonic)

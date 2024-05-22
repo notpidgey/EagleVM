@@ -12,6 +12,7 @@ namespace eagle::dasm
     public:
         uint64_t start_rva;
         uint64_t end_rva_inc;
+
         codec::decode_vec decoded_insts;
 
         basic_block();

@@ -1,6 +1,6 @@
 #pragma once
 #include "basic_block.h"
-#include "eaglevm-core/util/zydis_helper.h"
+#include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/util.h"
 
 namespace eagle::dasm
@@ -8,7 +8,7 @@ namespace eagle::dasm
     class segment_dasm
     {
     public:
-        explicit segment_dasm(const decode_vec& segment, uint64_t binary_rva, uint64_t binary_end);
+        explicit segment_dasm(const codec::decode_vec&& segment, uint64_t binary_rva, uint64_t binary_end);
 
         basic_block* generate_blocks();
 
@@ -23,6 +23,7 @@ namespace eagle::dasm
     private:
         uint64_t rva_begin;
         uint64_t rva_end;
-        decode_vec function;
+
+        codec::decode_vec function;
     };
 }

@@ -11,10 +11,10 @@ namespace eagle::dasm
     block_end_reason basic_block::get_end_reason() const
     {
         const auto& [inst, _] = decoded_insts.back();
-        if(inst.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && inst.mnemonic != ZYDIS_MNEMONIC_CALL)
+        if (inst.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE && inst.mnemonic != ZYDIS_MNEMONIC_CALL)
         {
             // this is either JMP or conditional JMP
-            if(inst.mnemonic == ZYDIS_MNEMONIC_JMP)
+            if (inst.mnemonic == ZYDIS_MNEMONIC_JMP)
                 return block_jump;
 
             return block_conditional_jump;
@@ -39,7 +39,7 @@ namespace eagle::dasm
     uint64_t basic_block::get_index_rva(const uint32_t index) const
     {
         uint64_t current_rva = start_rva;
-        for(int i = 0; i < index; i++)
+        for (auto i = 0; i < index; i++)
         {
             const auto& [instruction, operands] = decoded_insts[i];
             current_rva += instruction.length;
@@ -59,4 +59,3 @@ namespace eagle::dasm
         return target_address;
     }
 }
-

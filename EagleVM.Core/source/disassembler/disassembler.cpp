@@ -2,10 +2,11 @@
 
 namespace eagle::dasm
 {
-    segment_dasm::segment_dasm(const decode_vec& segment, const uint64_t binary_rva, const uint64_t binary_end)
+    segment_dasm::segment_dasm(const codec::decode_vec&& segment, const uint64_t binary_rva, const uint64_t binary_end)
         : root_block(nullptr)
     {
         function = segment;
+
         rva_begin = binary_rva;
         rva_end = binary_end;
     }
@@ -15,7 +16,7 @@ namespace eagle::dasm
         uint64_t block_start_rva = rva_begin;
         uint64_t current_rva = rva_begin;
 
-        decode_vec block_instructions;
+        codec::decode_vec block_instructions;
         for (auto& inst : function)
         {
             block_instructions.push_back(inst);
@@ -79,7 +80,7 @@ namespace eagle::dasm
                 uint64_t curr_rva = target_block->start_rva;
                 for (int j = 0; j < target_block->decoded_insts.size();)
                 {
-                    zydis_decode& inst = target_block->decoded_insts[j];
+                    codec::dec::inst_info& inst = target_block->decoded_insts[j];
                     if (curr_rva >= jump_rva)
                     {
                         // add to new block, remove from old block
@@ -126,18 +127,18 @@ namespace eagle::dasm
             }
             case block_jump:
             {
-                zydis_decode last_inst = block->decoded_insts.back();
+                auto last_inst = block->decoded_insts.back();
                 const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
-                auto [target_rva, _] = zydis_helper::calc_relative_rva(last_inst, last_inst_rva);
+                auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);
                 return {target_rva, get_jump_location(target_rva)};
             }
             case block_conditional_jump:
             {
-                zydis_decode last_inst = block->decoded_insts.back();
+                auto last_inst = block->decoded_insts.back();
                 const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
-                auto [target_rva, _] = zydis_helper::calc_relative_rva(last_inst, last_inst_rva);
+                auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);
                 return {target_rva, get_jump_location(target_rva)};
             }
         }

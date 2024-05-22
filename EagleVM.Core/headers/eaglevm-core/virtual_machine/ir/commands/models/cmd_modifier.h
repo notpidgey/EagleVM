@@ -1,6 +1,6 @@
 #pragma once
 #include <variant>
-#include "eaglevm-core/virtual_machine/ir/models/ir_reg.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
 
 namespace eagle::ir
 {
@@ -20,12 +20,12 @@ namespace eagle::ir
     };
 
     using modifier_imm = uint64_t;
-    using modifier_value = std::variant<reg_v, modifier_imm>;
+    using modifier_value = std::variant<discrete_store_ptr, modifier_imm>;
 
     class modifier
     {
     public:
-        explicit modifier(reg_v reg, const modifier_op m_op)
+        explicit modifier(discrete_store_ptr reg, const modifier_op m_op)
         {
             op = m_op;
             value = reg;

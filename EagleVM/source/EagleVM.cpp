@@ -6,10 +6,9 @@
 #include "eaglevm-core/pe/packer/pe_packer.h"
 
 #include "eaglevm-core/disassembler/disassembler.h"
-#include "eaglevm-core/obfuscation/mba/mba.h"
-#include "../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_inst.h"
-#include "../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_virtualizer.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 
 using namespace eagle;
 
@@ -75,7 +74,7 @@ int main(int argc, char* argv[])
     std::printf("\n[>] searching for uses of vm macros...\n");
 
     i = 1;
-    std::vector<std::pair<uint32_t, eagle::pe::stub_import>> vm_iat_calls = parser.find_iat_calls();
+    std::vector<std::pair<uint32_t, pe::stub_import>> vm_iat_calls = parser.find_iat_calls();
     std::printf("%3s %-10s %-10s\n", "", "rva", "vm");
     std::ranges::for_each
     (
@@ -85,13 +84,13 @@ int main(int argc, char* argv[])
             auto [file_offset, stub_import] = call;
             switch (stub_import)
             {
-                case eagle::pe::stub_import::vm_begin:
+                case pe::stub_import::vm_begin:
                     std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_begin");
                     break;
-                case eagle::pe::stub_import::vm_end:
+                case pe::stub_import::vm_end:
                     std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "vm_end");
                     break;
-                case eagle::pe::stub_import::unknown:
+                case pe::stub_import::unknown:
                     std::printf("%3i %-10i %-s\n", i, parser.offset_to_rva(file_offset), "?");
                     break;
             }
@@ -107,7 +106,7 @@ int main(int argc, char* argv[])
     //blame the user
 
     bool success = true;
-    eagle::pe::stub_import previous_call = eagle::pe::stub_import::vm_end;
+    pe::stub_import previous_call = pe::stub_import::vm_end;
     std::ranges::for_each
     (
         vm_iat_calls.begin(), vm_iat_calls.end(),
@@ -132,14 +131,14 @@ int main(int argc, char* argv[])
     std::printf("[+] successfully verified macro usage\n");
 
     //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
-    eagle::pe::pe_generator generator(&parser);
+    pe::pe_generator generator(&parser);
     generator.load_parser();
 
     IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
 
     // its not a great idea to split up the virtual machines into a different section than the virtualized code
     // as it will aid reverse engineers in understanding what is happening in the binary
-    auto& [data_section, data_section_bytes] = generator.add_section(".vmdata");
+    auto& [data_section, data_section_bytes] = generator.add_section(".haihallo");
     data_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
     data_section.SizeOfRawData = 0;
     data_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
@@ -151,28 +150,14 @@ int main(int argc, char* argv[])
 
     last_section = &data_section;
 
-    eagle::virt::vm_inst vm_inst;
-    vm_inst.init_reg_order();
-    std::printf("[+] initialized random registers\n");
-
-    std::printf("[+] created random constants\n\n");
-
     std::printf("[>] generating vm handlers at %04X...\n", static_cast<uint32_t>(data_section.VirtualAddress));
-
-    eagle::asmb::section_manager vm_data_sm = vm_inst.generate_vm_handlers(true);
-    encoded_vec vm_handlers_bytes = vm_data_sm.compile_section(data_section.VirtualAddress);
-
-    data_section.SizeOfRawData = generator.align_file(vm_handlers_bytes.size());
-    data_section.Misc.VirtualSize = generator.align_section(vm_handlers_bytes.size());
-    data_section_bytes += vm_handlers_bytes;
-
     std::printf("\n[>] generating virtualized code...\n\n");
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
-    std::vector<std::pair<uint32_t, eagle::asmb::code_container*>> va_enters;
+    std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
-    eagle::asmb::section_manager vm_code_sm(true);
+    asmb::section_manager vm_section(true);
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -188,30 +173,61 @@ int main(int argc, char* argv[])
         uint8_t* pinst_begin = parser.rva_to_pointer(rva_inst_begin);
         uint8_t* pinst_end = parser.rva_to_pointer(rva_inst_end);
 
+        /*
+         * this approach is not a good idea, but its easy to solve
+         * the problem is that this gives us a limited scope of the context
+         * there should be some kind of whole-program context builder because then
+         * we will be able to chain every virtualized code section together.
+         * but this creates sort of a mess which i dont really like
+         */
+
+        codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
+
+        dasm::segment_dasm dasm(std::move(instructions), rva_inst_begin, rva_inst_end);
+        dasm.generate_blocks();
+
+        std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+
+        ir::ir_translator ir_trans(&dasm);
+        ir::ir_preopt_block_vec preopt = ir_trans.translate();
+
+        // if we want, we can do a little optimzation which will rewrite the preopt blocks
+        // ir_trans.optimize();
+
+        // we want the same settings for every machine
+        virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
+        settings->set_temp_count(4);
+        settings->set_randomize_vm_regs(true);
+        settings->set_randomize_stack_regs(true);
+
+        asmb::code_label_ptr entry_point = nullptr;
+        for (ir::ir_preopt_block_ptr& block : preopt)
         {
-            codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
+            // we create a new machine based off of the same settings to make things more annoying
+            // but the same machine could be used :)
+            virt::pidg::machine_ptr machine = std::make_shared<virt::pidg::machine>(settings);
 
-            dasm::segment_dasm dasm(instructions, rva_inst_begin, rva_inst_end);
-            dasm.generate_blocks();
+            ir::block_il_ptr entry_block = block->get_entry();
+            vm_section.add_code_container(machine->lift_block(entry_block));
 
-            std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+            ir::block_il_ptr exit_block = block->get_exit();
+            vm_section.add_code_container(machine->lift_block(exit_block));
 
-            ir::ir_translator ir_trans(&dasm);
-
-            ir::ir_preopt_block_vec preopt = ir_trans.translate();
-            size_t unique_vm_count = preopt.size();
-
-            for (ir::ir_preopt_block_ptr& block : preopt)
+            bool first = true;
+            for (auto& [translated_block, is_vm] : block->get_body())
             {
-                ir::block_il_ptr entry_block = block->get_entry();
-                ir::cmd_vm_enter_ptr vm_enter = std::static_pointer_cast<ir::cmd_vm_enter>(entry_block->get_command(0));
-                vm_enter->
+                asmb::code_container_ptr result_container = machine->lift_block(translated_block);
+                if (first)
+                {
+                    asmb::code_label_ptr entry_mark = asmb::code_label::create();
+                    result_container->bind_start(entry_mark);
 
-                std::vector<ir::ir_vm_x86_block> body = block->get_body();
+                    entry_point = entry_mark;
+                    first = false;
+                }
+
+                vm_section.add_code_container(result_container);
             }
-
-            virt::vm_virtualizer virt(&vm_inst);
-            vm_code_sm.add(virt.virtualize_segment(&dasm));
         }
 
         // overwrite the original instructions
@@ -222,7 +238,7 @@ int main(int argc, char* argv[])
         va_nop.emplace_back(parser.offset_to_rva(vm_iat_calls[c + 1].first), call_size_64);
 
         // add vmenter for root block
-        va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), virt.get_label(root_block));
+        va_enters.emplace_back(parser.offset_to_rva(vm_iat_calls[c].first), entry_point);
     }
 
     std::printf("\n");
@@ -237,78 +253,55 @@ int main(int argc, char* argv[])
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
 
-    encoded_vec vm_code_bytes = vm_code_sm.compile_section(code_section.VirtualAddress);
-    code_section.SizeOfRawData = generator.align_file(vm_code_bytes.size());
-    code_section.Misc.VirtualSize = generator.align_section(vm_code_bytes.size());
-    code_section_bytes += vm_code_bytes;
-
-    last_section = &code_section;
-
     // now that the section is compiled we must:
     // delete the code marked by va_delete
     // create jumps marked by va_enters
 
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for (auto& [enter_va, enter_location] : va_enters)
-        va_inserts.emplace_back(enter_va, vm_virtualizer::create_jump(enter_va, enter_location));
+    {
+        auto jump_request = encode(codec::m_jmp, ZIMMU(enter_location->get_address() - enter_va - 5));
+        va_inserts.emplace_back(enter_va, codec::encode_request(jump_request));
+    }
 
     generator.add_ignores(va_nop);
     generator.add_randoms(va_ran);
     generator.add_inserts(va_inserts);
     generator.bake_modifications();
 
-    eagle::pe::pe_packer packer(&generator);
-    packer.set_overlay(false);
+    // custom entry point
+    {
+        pe::pe_packer packer(&generator);
+        packer.set_overlay(false);
 
-    eagle::asmb::section_manager packer_sm = packer.create_section();
+        asmb::section_manager packer_sm = packer.create_section();
 
-    auto& [packer_section, packer_bytes] = generator.add_section(".pack");
-    packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
-    packer_section.SizeOfRawData = 0;
-    packer_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
-    packer_section.Misc.VirtualSize = generator.align_section(1);
-    packer_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
-    packer_section.PointerToRelocations = 0;
-    packer_section.NumberOfRelocations = 0;
-    packer_section.NumberOfLinenumbers = 0;
+        auto& [packer_section, packer_bytes] = generator.add_section(".pack");
+        packer_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
+        packer_section.SizeOfRawData = 0;
+        packer_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
+        packer_section.Misc.VirtualSize = generator.align_section(1);
+        packer_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_CNT_CODE;
+        packer_section.PointerToRelocations = 0;
+        packer_section.NumberOfRelocations = 0;
+        packer_section.NumberOfLinenumbers = 0;
 
-    encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.VirtualAddress);
-    auto [packer_pdb_offset, size] = eagle::pe::pe_packer::insert_pdb(packer_code_bytes);
+        codec::encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.VirtualAddress);
+        auto [packer_pdb_offset, size] = pe::pe_packer::insert_pdb(packer_code_bytes);
 
-    packer_section.SizeOfRawData = generator.align_file(packer_code_bytes.size());
-    packer_section.Misc.VirtualSize = generator.align_section(packer_code_bytes.size());
-    packer_bytes += packer_code_bytes;
+        packer_section.SizeOfRawData = generator.align_file(packer_code_bytes.size());
+        packer_section.Misc.VirtualSize = generator.align_section(packer_code_bytes.size());
+        packer_bytes += packer_code_bytes;
 
-    generator.add_custom_pdb(
-        packer_section.VirtualAddress + packer_pdb_offset,
-        packer_section.PointerToRawData + packer_pdb_offset,
-        size
-    );
+        generator.add_custom_pdb(
+            packer_section.VirtualAddress + packer_pdb_offset,
+            packer_section.PointerToRawData + packer_pdb_offset,
+            size
+        );
+    }
 
     generator.save_file("EagleVMSandboxProtected.exe");
     std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");
-
-    // please somehow split up this single function this is actually painful
-    std::vector<std::string> debug_comments;
-    debug_comments.append_range(vm_data_sm.generate_comments("eaglevmsandboxprotected.exe"));
-    debug_comments.append_range(vm_code_sm.generate_comments("eaglevmsandboxprotected.exe"));
-    debug_comments.append_range(packer_sm.generate_comments("eaglevmsandboxprotected.exe"));
-
-    std::string debug_output = std::string(executable) + ".dd64";
-    std::ofstream comments_file(debug_output);
-
-    comments_file << "{\"comments\": [";
-    for (i = 0; i < debug_comments.size(); i++)
-    {
-        std::string& comment = debug_comments[i];
-        comments_file << comment;
-
-        if (i != debug_comments.size() - 1)
-            comments_file << ",";
-    }
-    comments_file << "]}";
-
-    std::printf("[+] generated %llu x64dbg comments -> %s\n", debug_comments.size(), debug_output.c_str());
 
     return 0;
 }

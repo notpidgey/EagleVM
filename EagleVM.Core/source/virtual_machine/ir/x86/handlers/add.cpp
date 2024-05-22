@@ -7,11 +7,18 @@ namespace eagle::ir::handler
 {
     add::add()
     {
-        entries = {
-            { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } },
+        valid_operands = {
+            { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "add 8,8" },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "add 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "add 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "add 64,64" },
+        };
+
+        build_options = {
+            { { ir_size::bit_8, ir_size::bit_8 }, "add 8,8" },
+            { { ir_size::bit_16, ir_size::bit_16 }, "add 16,16" },
+            { { ir_size::bit_32, ir_size::bit_32 }, "add 32,32" },
+            { { ir_size::bit_64, ir_size::bit_64 }, "add 64,64" },
         };
     }
 

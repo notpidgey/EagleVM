@@ -10,10 +10,17 @@ namespace eagle::ir::handler
         // todo: make vector of supported signatures
         // todo: make vector of handlers to generate
         valid_operands = {
-            operand_signature{ handler_op{ codec::op_none, codec::bit_8 }, "8" },
-            operand_signature{ handler_op{ codec::op_none, codec::bit_16 }, "16" },
-            operand_signature{ handler_op{ codec::op_none, codec::bit_32 }, "32" },
-            operand_signature{ handler_op{ codec::op_none, codec::bit_64 }, "64" },
+            { { { codec::op_none, codec::bit_8 } }, "8" },
+            { { { codec::op_none, codec::bit_16 } }, "16" },
+            { { { codec::op_none, codec::bit_32 } }, "32" },
+            { { { codec::op_none, codec::bit_64 } }, "64" },
+        };
+
+        build_options = {
+            { { ir_size::bit_8 }, "8" },
+            { { ir_size::bit_16 }, "16" },
+            { { ir_size::bit_32 }, "32" },
+            { { ir_size::bit_64 }, "64" },
         };
     }
 

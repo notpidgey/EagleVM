@@ -18,6 +18,11 @@ namespace eagle::asmb
         shuffle_functions = shuffle;
     }
 
+    void section_manager::add_code_container(const code_container_ptr& code)
+    {
+        section_labels.push_back(code);
+    }
+
     codec::encoded_vec section_manager::compile_section(const uint64_t section_address)
     {
         assert(section_address % 16 == 0 && "Section address must be aligned to 16 bytes");
@@ -28,7 +33,7 @@ namespace eagle::asmb
         // but i am not rewriting this unless i really need to
 
         if (shuffle_functions)
-            perform_shuffle();
+            shuffle_containers();
 
         uint64_t current_address = section_address;
 
@@ -151,7 +156,7 @@ namespace eagle::asmb
         return json_array;
     }
 
-    void section_manager::perform_shuffle()
+    void section_manager::shuffle_containers()
     {
         std::ranges::shuffle(section_labels, util::ran_device::get().gen);
     }

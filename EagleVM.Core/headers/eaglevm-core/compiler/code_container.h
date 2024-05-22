@@ -14,6 +14,9 @@ namespace eagle::asmb
     class code_container
     {
     public:
+        code_container();
+        code_container(const std::string& label_name, bool generate_comments);
+
         static code_container_ptr create();
         static code_container_ptr create(const std::string& label_name, bool generate_comments = true);
 
@@ -30,9 +33,6 @@ namespace eagle::asmb
         [[nodiscard]] std::vector<inst_label_v> get_instructions() const;
 
     private:
-        code_container();
-        code_container(const std::string& label_name, bool generate_comments);
-
         std::string name;
         bool is_named;
 

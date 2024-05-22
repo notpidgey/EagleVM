@@ -4,7 +4,8 @@
 
 namespace eagle::ir
 {
-    using variant_op = std::variant<reg_vm, discrete_store_ptr>;
+    // todo actually add options
+    using variant_op = std::variant<discrete_store_ptr>;
     class cmd_x86_dynamic : public base_command
     {
     public:

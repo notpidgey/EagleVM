@@ -6,7 +6,7 @@ namespace eagle::ir
     class cmd_context_store : public base_command
     {
     public:
-        explicit cmd_context_store(const codec::reg dest);
+        explicit cmd_context_store(codec::reg dest);
         codec::reg get_reg() const;
 
     private:

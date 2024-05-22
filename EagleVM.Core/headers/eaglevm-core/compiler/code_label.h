@@ -9,6 +9,9 @@ namespace eagle::asmb
     class code_label
     {
     public:
+        code_label();
+        code_label(const std::string& label_name, bool generate_comments);
+
         static code_label_ptr create();
         static code_label_ptr create(const std::string& label_name, bool generate_comments = true);
 
@@ -19,9 +22,6 @@ namespace eagle::asmb
         void set_address(uint64_t address);
 
     private:
-        code_label();
-        code_label(const std::string& label_name, bool generate_comments);
-        
         std::string name;
         bool is_named;
         
