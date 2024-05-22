@@ -39,8 +39,8 @@ namespace eagle::ir
         jz,
     };
 
-    class block_il;
-    using block_il_ptr = std::shared_ptr<block_il>;
+    class block_ir;
+    using block_il_ptr = std::shared_ptr<block_ir>;
 
     using vmexit_rva = uint64_t;
     using il_exit_result = std::variant<vmexit_rva, block_il_ptr>;

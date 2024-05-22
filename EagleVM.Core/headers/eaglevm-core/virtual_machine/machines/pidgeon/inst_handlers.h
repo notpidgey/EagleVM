@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include "inst_regs.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
 #include "eaglevm-core/compiler/code_container.h"
 
 namespace eagle::virt::pidg
@@ -17,7 +18,7 @@ namespace eagle::virt::pidg
     class inst_handlers
     {
     public:
-        explicit inst_handlers(machine_ptr  machine, vm_inst_regs_ptr  push_order);
+        explicit inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr  settings);
         void randomize_constants();
 
         asmb::code_label_ptr get_vm_enter(bool reference = true);
@@ -61,6 +62,7 @@ namespace eagle::virt::pidg
             }
         };
 
+        settings_ptr settings;
         machine_ptr machine;
         vm_inst_regs_ptr inst_regs;
 

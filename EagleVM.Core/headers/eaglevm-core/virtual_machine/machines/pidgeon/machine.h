@@ -1,4 +1,5 @@
 #pragma once
+#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_regs.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 
@@ -24,7 +25,7 @@ namespace eagle::virt::pidg
     class machine final : public base_machine, public std::enable_shared_from_this<machine>
     {
     public:
-        machine();
+        machine(const settings_ptr& settings_info);
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
@@ -45,8 +46,10 @@ namespace eagle::virt::pidg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
 
     private:
-        vm_inst_regs_ptr rm_;
-        vm_inst_handlers_ptr hg_;
+        settings_ptr settings;
+
+        vm_inst_regs_ptr rm;
+        vm_inst_handlers_ptr hg;
 
         void assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores);
     };

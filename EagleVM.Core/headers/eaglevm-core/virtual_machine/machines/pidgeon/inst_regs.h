@@ -4,6 +4,7 @@
 #include <functional>
 #include <random>
 
+#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
 #include "eaglevm-core/codec/zydis_enum.h"
 
 namespace eagle::virt::pidg
@@ -14,18 +15,20 @@ namespace eagle::virt::pidg
     class inst_regs
     {
     public:
-        explicit inst_regs(uint8_t temp_count = 2);
+        explicit inst_regs(uint8_t temp_count = 2, settings_ptr settings);
 
         void init_reg_order();
-        codec::zydis_register get_reg(uint8_t target) const;
-        codec::zydis_register get_reg_temp(uint8_t target) const;
+        codec::reg get_reg(uint8_t target) const;
+        codec::reg get_reg_temp(uint8_t target) const;
         std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         void enumerate(const std::function<void(codec::zydis_register)>& enumerable, bool from_back = false);
 
     private:
-        std::array<codec::zydis_register, 16> stack_order;
-        std::array<codec::zydis_register, 16> vm_order;
+        settings_ptr settings;
+
+        std::array<codec::reg, 16> stack_order;
+        std::array<codec::reg, 16> vm_order;
 
         uint8_t temp_variables;
         uint8_t number_of_vregs;

@@ -76,7 +76,7 @@ namespace eagle::ir
         // body
         //
         bool is_vm_block = true;
-        block_il_ptr current_block = std::make_shared<block_il>(false);
+        block_il_ptr current_block = std::make_shared<block_ir>(false);
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -137,7 +137,7 @@ namespace eagle::ir
                         const block_il_ptr previous = current_block;
                         block_info->add_body(current_block, false);
 
-                        current_block = std::make_shared<block_il>(false);
+                        current_block = std::make_shared<block_ir>(false);
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
 
                         previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
@@ -162,7 +162,7 @@ namespace eagle::ir
                         const block_il_ptr previous = current_block;
                         block_info->add_body(current_block, true);
 
-                        current_block = std::make_shared<block_il>(true);
+                        current_block = std::make_shared<block_ir>(true);
                         previous->add_command(std::make_shared<cmd_vm_exit>());
                         previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
                         is_vm_block = false;
@@ -324,8 +324,8 @@ namespace eagle::ir
 
     void ir_preopt_block::init()
     {
-        entry = std::make_shared<block_il>();
-        exit = std::make_shared<block_il>();
+        entry = std::make_shared<block_ir>();
+        exit = std::make_shared<block_ir>();
     }
 
     block_il_ptr ir_preopt_block::get_entry()

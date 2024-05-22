@@ -22,8 +22,8 @@ using namespace eagle::codec;
 
 namespace eagle::virt::pidg
 {
-    inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order)
-        : machine(std::move(machine)), inst_regs(std::move(push_order))
+    inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr  settings)
+        : machine(std::move(machine)), inst_regs(std::move(push_order)), settings(std::move(settings))
     {
         vm_overhead = 8 * 2000;
         vm_stack_regs = 17;
@@ -243,7 +243,7 @@ namespace eagle::virt::pidg
         for (uint8_t i = 0; i < 4; i++)
         {
             const tagged_vm_handler& handler = vm_load[i];
-            if(!handler.tagged)
+            if (!handler.tagged)
                 continue;
 
             asmb::code_container_ptr container = handler.code;
@@ -287,7 +287,7 @@ namespace eagle::virt::pidg
         for (uint8_t i = 0; i < 4; i++)
         {
             const tagged_vm_handler& handler = vm_store[i];
-            if(!handler.tagged)
+            if (!handler.tagged)
                 continue;
 
             asmb::code_container_ptr container = handler.code;
@@ -295,7 +295,7 @@ namespace eagle::virt::pidg
             const reg_size reg_size = load_store_index_size(i);
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
 
-            if(reg_size == bit_32)
+            if (reg_size == bit_32)
             {
                 // we have to clear upper 32 bits of target register here
                 container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
@@ -321,7 +321,7 @@ namespace eagle::virt::pidg
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, uint8_t operand_count, reg_size size)
     {
         std::tuple key = std::tie(mnemonic, operand_count, size);
-        if(tagged_instruction_handlers.contains(key))
+        if (tagged_instruction_handlers.contains(key))
             return tagged_instruction_handlers[key];
 
         asmb::code_label_ptr label = asmb::code_label::create();
@@ -333,7 +333,7 @@ namespace eagle::virt::pidg
     std::vector<asmb::code_container_ptr> inst_handlers::build_instruction_handlers()
     {
         std::vector<asmb::code_container_ptr> container;
-        for(const auto& [key, label] : tagged_instruction_handlers)
+        for (const auto& [key, label] : tagged_instruction_handlers)
         {
             auto [mnemonic, operand_count, size] = key;
 
@@ -341,7 +341,7 @@ namespace eagle::virt::pidg
             ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size), operand_count);
 
             // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
-            ir::block_il_ptr ir_block = std::make_shared<ir::block_il>();
+            ir::block_il_ptr ir_block = std::make_shared<ir::block_ir>();
             ir_block->add_command(handler_ir);
 
             const asmb::code_container_ptr handler = machine->lift_block(ir_block);

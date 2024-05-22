@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_regs.h"
 
 #include "eaglevm-core/util/random.h"
@@ -5,7 +7,8 @@
 
 namespace eagle::virt::pidg
 {
-    inst_regs::inst_regs(const uint8_t temp_count)
+    inst_regs::inst_regs(const uint8_t temp_count, settings_ptr settings)
+        : settings(std::move(settings))
     {
         stack_order = { };
         vm_order = { };
@@ -19,39 +22,41 @@ namespace eagle::virt::pidg
         // setup the scratch register stack order
         {
             // todo: find a safer way to do this instead of enumearting enum
-            for (int i = ZYDIS_REGISTER_RAX; i <= ZYDIS_REGISTER_R15; i++)
-                stack_order[i - ZYDIS_REGISTER_RAX] = static_cast<codec::zydis_register>(i);
+            for (int i = codec::rax; i <= codec::r15; i++)
+                stack_order[i - codec::rax] = static_cast<codec::reg>(i);
 
             // shuffle the scratch registers
-            std::ranges::shuffle(stack_order, util::ran_device::get().gen);
+            if (settings->get_randomize_stack_regs())
+                std::ranges::shuffle(stack_order, util::ran_device::get().gen);
         }
 
         // completely separate | setup virtual machine registers
         {
-            std::vector<codec::zydis_register> vm_regs_order;
+            std::vector<codec::reg> vm_regs_order;
             vm_regs_order.append_range(stack_order);
 
-            std::erase(vm_regs_order, ZYDIS_REGISTER_RAX);
-            std::erase(vm_regs_order, ZYDIS_REGISTER_RSP);
+            std::erase(vm_regs_order, codec::rax);
+            std::erase(vm_regs_order, codec::rsp);
 
-            std::ranges::shuffle(vm_regs_order, util::ran_device::get().gen);
+            if (settings->get_randomize_vm_regs())
+                std::ranges::shuffle(vm_regs_order, util::ran_device::get().gen);
 
             // Add the undesirable registers back to the end of the array
-            vm_regs_order.push_back(ZYDIS_REGISTER_RAX);
-            vm_regs_order.push_back(ZYDIS_REGISTER_RSP);
+            vm_regs_order.push_back(codec::rax);
+            vm_regs_order.push_back(codec::rsp);
 
             std::copy(vm_regs_order.begin(), vm_regs_order.end(), vm_order);
         }
     }
 
-    codec::zydis_register inst_regs::get_reg(const uint8_t target) const
+    codec::reg inst_regs::get_reg(const uint8_t target) const
     {
         // this would be something like VIP, VSP, VTEMP, etc
         assert(target <= number_of_vregs - 1, "attempt to access invalid vreg");
         return vm_order[target];
     }
 
-    codec::zydis_register inst_regs::get_reg_temp(const uint8_t target) const
+    codec::reg inst_regs::get_reg_temp(const uint8_t target) const
     {
         // this would be something like VTEMP, VTEMP2, VTEMP3
         assert(target <= temp_variables - 1, "attemp to access invalid vtemp");

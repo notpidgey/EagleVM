@@ -6,13 +6,13 @@
 
 namespace eagle::ir
 {
-    class block_il;
-    using block_il_ptr = std::shared_ptr<block_il>;
+    class block_ir;
+    using block_il_ptr = std::shared_ptr<block_ir>;
 
-    class block_il
+    class block_ir
     {
     public:
-        explicit block_il(const bool flag_aware = false)
+        explicit block_ir(const bool flag_aware = false)
             : exit(nullptr), flag_aware(flag_aware)
         {
         }
@@ -29,7 +29,7 @@ namespace eagle::ir
 
     private:
         std::vector<base_command_ptr> commands;
-        cmd_exit_ptr exit;
+        cmd_branch_ptr exit;
 
         bool flag_aware = false;
 
