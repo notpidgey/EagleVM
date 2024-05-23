@@ -1,21 +1,25 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/movsx.h"
 
+#include "eaglevm-core/virtual_machine/ir/models/ir_store.h"
+
 namespace eagle::ir::handler
 {
     movsx::movsx()
     {
-        entries = {
-            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } } },
-            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } } },
-            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } } },
+        valid_operands = {
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } }, "movsx, 16,8" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } }, "movsx, 32,8" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } }, "movsx, 64,8" },
 
-            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_16 } } },
-            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } } },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_16 } }, "movsx, 32,16" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } }, "movsx, 64,16" },
         };
     }
 
     ir_insts movsx::gen_handler(codec::reg_class size, uint8_t operands)
     {
+        assert("movsx has no assigned handler. this interaction should not be possible");
+        return { };
     }
 }
 
@@ -91,18 +95,15 @@ namespace eagle::ir::lifter
         else
         {
             // by default, this will be dereferenced and we will get the value at the address,
-            const ir_size target_size = ir_size(inst.operand_width);
-            const reg_vm target_temp = codec::get_bit_version(reg_vm::vtemp, target_size);
-
-            block->add_command(std::make_shared<cmd_pop>(reg_vm::vtemp, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_mem_read>(reg_vm::vtemp, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_push>(target_temp, target_size));
+            const ir_size target_size = static_cast<ir_size>(inst.operand_width);
+            block->add_command(std::make_shared<cmd_mem_read>(target_size));
 
             stack_displacement += static_cast<uint16_t>(target_size);
         }
 
         const ir_size target = get_op_width();
-        const ir_size size = ir_size(operands[idx].size);
+        const ir_size size = static_cast<ir_size>(operands[idx].size);
+
         block->add_command(std::make_shared<cmd_sx>(target, size));
 
         return translate_status::success;

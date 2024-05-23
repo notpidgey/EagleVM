@@ -65,7 +65,7 @@ namespace eagle::ir::lifter
             block->add_command(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
         }
 
-        stack_displacement += static_cast<uint8_t>(target_size);
+        stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
     }
 }

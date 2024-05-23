@@ -21,5 +21,7 @@ namespace eagle::ir::handler
 
     ir_insts pop::gen_handler(codec::reg_class size, uint8_t operands)
     {
+        codec::reg_size reg_size = get_reg_size(size);
+        discrete_store_ptr store = discrete_store::create();
     }
 }

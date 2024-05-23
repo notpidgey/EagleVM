@@ -3,15 +3,18 @@
 namespace eagle::ir
 {
     cmd_push::cmd_push(discrete_store_ptr reg_src, const ir_size reg_size)
-    : base_command(command_type::vm_push), reg(std::move(reg_src)), rip_relative(false), size(reg_size)
+        : base_command(command_type::vm_push), value(std::move(reg_src)), type(stack_type::vm_temp_register), size(reg_size)
     {
-        type = stack_type::vm_register;
     }
 
-    cmd_push::cmd_push(const uint64_t immediate, const ir_size stack_disp, const bool rip_relative)
-    : base_command(command_type::vm_push), value(immediate), rip_relative(rip_relative), size(stack_disp)
+    cmd_push::cmd_push(reg_vm reg_src, const ir_size reg_size)
+        : base_command(command_type::vm_push), value(reg_src), type(stack_type::vm_register), size(reg_size)
     {
-        type = stack_type::immediate;
+    }
+
+    cmd_push::cmd_push(const uint64_t immediate, const ir_size stack_disp)
+        : base_command(command_type::vm_push), value(immediate), type(stack_type::immediate), size(stack_disp)
+    {
     }
 
     void cmd_push::set_modifier(ir::modifier mod)
@@ -24,18 +27,23 @@ namespace eagle::ir
         return type;
     }
 
-    ir_size cmd_push::get_value_immediate_size() const
+    discrete_store_ptr cmd_push::get_value_temp_register()
     {
-        return size;
+        return std::get<discrete_store_ptr>(value);
     }
 
-    discrete_store_ptr cmd_push::get_value_register()
+    reg_vm cmd_push::get_value_register() const
     {
-        return reg;
+        return std::get<reg_vm>(value);
     }
 
     uint64_t cmd_push::get_value_immediate() const
     {
-        return value;
+        return std::get<uint64_t>(value);
+    }
+
+    ir_size cmd_push::get_size() const
+    {
+        return size;
     }
 }

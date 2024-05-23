@@ -115,7 +115,7 @@ namespace eagle::virt
     {
         std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> blocks;
         for (const auto& pair : block_context)
-            blocks.push_back(pair);
+            blocks.emplace_back(pair);
 
         return blocks;
     }

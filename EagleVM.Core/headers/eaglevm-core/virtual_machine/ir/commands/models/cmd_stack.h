@@ -6,7 +6,7 @@ namespace eagle::ir
     {
         none,
         vm_register,
-        x86_register,
+        vm_temp_register,
         immediate
     };
 }

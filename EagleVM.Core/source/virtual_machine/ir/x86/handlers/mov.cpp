@@ -22,6 +22,8 @@ namespace eagle::ir::handler
 
     ir_insts mov::gen_handler(codec::reg_class size, uint8_t operands)
     {
+        assert("mov has no assigned handler. this interaction should not be possible");
+        return { };
     }
 }
 

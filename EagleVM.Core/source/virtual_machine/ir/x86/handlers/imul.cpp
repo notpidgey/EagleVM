@@ -7,18 +7,24 @@ namespace eagle::ir::handler
 {
     imul::imul()
     {
-        entries = {
-            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } },
+        valid_operands = {
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "imul 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "imul 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "imul 64,64" },
 
-            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } }, "imul 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } }, "imul 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } }, "imul 64,64" },
 
-            { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } },
-            { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } },
-            { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_32 } },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "imul 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "imul 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_32 } }, "imul 64,64" },
+        };
+
+        build_options = {
+            { { ir_size::bit_16, ir_size::bit_16 }, "imul 16,16" },
+            { { ir_size::bit_32, ir_size::bit_32 }, "imul 32,32" },
+            { { ir_size::bit_64, ir_size::bit_64 }, "imul 64,64" },
         };
     }
 
@@ -38,66 +44,66 @@ namespace eagle::ir::handler
     }
 }
 
-void eagle::ir::lifter::imul::finalize_translate_to_virtual()
+namespace eagle::ir::lifter
 {
-    if (inst.operand_count_visible == 1)
+    bool imul::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
     {
-        // use the same operand twice
-        translate_status status = translate_status::unsupported;
-        switch (const codec::dec::operand& operand = operands[0]; operand.type)
-        {
-            case ZYDIS_OPERAND_TYPE_REGISTER:
-                status = encode_operand(operand.reg, 0);
-                break;
-            case ZYDIS_OPERAND_TYPE_MEMORY:
-                status = encode_operand(operand.mem, 0);
-                break;
-        }
-
-        assert(status == translate_status::success, "failed to virtualized operand");
+        return false;
     }
 
+    void imul::finalize_translate_to_virtual()
     {
+        //if (inst.operand_count_visible == 1)
+        //{
+        //    // use the same operand twice
+        //    translate_status status = translate_status::unsupported;
+        //    switch (const codec::dec::operand& operand = operands[0]; operand.type)
+        //    {
+        //        case ZYDIS_OPERAND_TYPE_REGISTER:
+        //            status = encode_operand(operand.reg, 0);
+        //            break;
+        //        case ZYDIS_OPERAND_TYPE_MEMORY:
+        //            status = encode_operand(operand.mem, 0);
+        //            break;
+        //    }
+
+        //    assert(status == translate_status::success, "failed to virtualized operand");
+        //}
+
         block->add_command(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
         block->add_command(std::make_shared<cmd_rflags_store>());
-    }
 
-    switch (inst.operand_count_visible)
-    {
-        case 1:
+        codec::dec::operand first_op = operands[0];
+        switch (inst.operand_count_visible)
         {
-            // we do not support yet
-            break;
-        }
-        case 2:
-        {
-            // the product is at the top of the stack
-            // we can save to the destination register by specifying the displacement
-            // and then calling store reg
-            block->add_command(std::make_shared<cmd_context_store>(codec::reg(operands[0].reg.value)));
-            break;
-        }
-        case 3:
-        {
-            // only these cases:
-            // IMUL r16, r/m16, imm8
-            // IMUL r32, r/m32, imm8
-            // IMUL r64, r/m64, imm8
-            // IMUL r16, r/m16, imm16
-            // IMUL r32, r/m32, imm32
-            // IMUL r64, r/m64, imm32
+            case 2:
+            {
+                // the product is at the top of the stack
+                block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
 
-            // TODO: make note of these imul instructions
-            // IMUL r16, r/m16, imm8    word register := r/m16 ∗ sign-extended immediate byte.
-            // IMUL r32, r/m32, imm8    doubleword register := r/m32 ∗ sign-extended immediate byte.
-            // IMUL r64, r/m64, imm8    Quadword register := r/m64 ∗ sign-extended immediate byte.
+                break;
+            }
+            case 3:
+            {
+                // when there are 3 operands
+                // op1 and op2 get imuld
+                // then, we store in op0 which will be a reg
 
-            // we want to move op2 -> op1
-            // op1 wil always be a reg
-            codec::reg_class size = codec::get_reg_class(operands[0].reg.value);
-            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::m_mov, 2, size));
-            break;
+                // product of op1 and op2 is already on stack
+                // store in op0
+
+                const codec::reg_size reg_size = get_reg_size(codec::get_reg_class(first_op.reg.value));
+                block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::m_mov, ir_handler_sig{ reg_size, reg_size }));
+
+                break;
+            }
+            default:
+            {
+                assert("operand count not supported by handler");
+
+                break;
+            }
         }
     }
 }

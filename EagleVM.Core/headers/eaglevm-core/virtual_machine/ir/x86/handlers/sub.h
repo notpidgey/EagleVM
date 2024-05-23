@@ -17,5 +17,6 @@ namespace eagle::ir::lifter
     class sub : public base_x86_translator
     {
         using base_x86_translator::base_x86_translator;
+        void finalize_translate_to_virtual() override;
     };
 }

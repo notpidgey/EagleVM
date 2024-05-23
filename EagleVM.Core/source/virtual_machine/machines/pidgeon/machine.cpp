@@ -184,7 +184,7 @@ namespace eagle::virt::pidg
         {
             case ir::stack_type::vm_register:
             {
-                const ir::discrete_store_ptr store = cmd->get_value_register();
+                const ir::discrete_store_ptr store = cmd->get_value_temp_register();
                 if (!store->get_finalized())
                     assign_discrete_storage({ store });
 

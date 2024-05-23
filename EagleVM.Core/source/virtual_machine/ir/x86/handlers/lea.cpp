@@ -2,36 +2,33 @@
 
 namespace eagle::ir::handler
 {
+    /*
+     * little confused and havent fully thought out the coimplexitiy of lea
+     * see 64-bit mode chart on https://www.felixcloutier.com/x86/lea
+     * the way that the memory operand is calculated is not correct to these rows
+     * need to fix !!!!!!
+     */
     lea::lea()
     {
-        entries = {
-            { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_32 } },
-            { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_64 } },
+        valid_operands = {
+            { { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_32 } }, "lea 16,16" },
+            { { { codec::op_reg, codec::bit_16 }, { codec::op_mem, codec::bit_64 } }, "lea 16,16" },
 
-            { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_32 } },
-            { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_64 } },
+            { { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_32 } }, "lea 32,32" },
+            { { { codec::op_reg, codec::bit_32 }, { codec::op_mem, codec::bit_64 } }, "lea 32,32" },
 
-            { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_32 } },
-            { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_64 } },
+            // todo: this needs to be zero extendd!!
+            { { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_32 } }, "lea 64,64" },
+            { { { codec::op_reg, codec::bit_64 }, { codec::op_mem, codec::bit_64 } }, "lea 64,64" },
         };
+
+        // again, we dont need handlers for lea :)
     }
 
     ir_insts lea::gen_handler(const codec::reg_class size, uint8_t operands)
     {
-        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
-
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
-
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            // contains memory address
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            // contains destination
-            std::make_shared<cmd_context_store>(vtemp2, vtemp, target_size),
-            // [vtemp2]
-            std::make_shared<cmd_push>(vtemp, target_size)
-        };
+        assert("lea has no assigned handler. this interaction should not be possible");
+        return { };
     }
 }
 
@@ -52,7 +49,6 @@ namespace eagle::ir::lifter
         // all we need to do is write it to the register
 
         codec::zydis_register reg = operands[0].reg.value;
-        codec::dec::op_mem mem = operands[1].mem;
 
         /*
         16 	32 	32-bit effective address is calculated (using 67H prefix). The lower 16 bits of the address are stored in the requested 16-bit register destination (using 66H prefix).

@@ -33,11 +33,9 @@ namespace eagle::ir::handler
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
-        // TODO: this needs to be marked as rflags sensitive
+        // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
+        // instruction using stack dereference
         return {
-            // there should be some kind of indication that we dont care what temp registers we pop into
-            // create some kind of parameter holder which will tell the x86 code gen that we will assign this register to this random temp and this to other temp
-            // todo: to this ^ maybe? or have it automatically happen by some obfuscation pass
             std::make_shared<cmd_pop>(vtemp, target_size),
             std::make_shared<cmd_pop>(vtemp2, target_size),
             std::make_shared<cmd_x86_dynamic>(codec::m_add, vtemp, vtemp2),
@@ -53,5 +51,8 @@ namespace eagle::ir::lifter
         block->add_command(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
         block->add_command(std::make_shared<cmd_rflags_store>());
+
+        codec::reg target_reg = static_cast<codec::reg>(operands[0].reg.value);
+        block->add_command(std::make_shared<cmd_context_store>(target_reg));
     }
 }
