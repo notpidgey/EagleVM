@@ -11,9 +11,9 @@ namespace eagle::pe
             : generator(generator) {}
 
         void set_overlay(bool overlay);
-        static std::pair<uint32_t, uint32_t> insert_pdb(encoded_vec& encoded_vec);
+        static std::pair<uint32_t, uint32_t> insert_pdb(codec::encoded_vec& encoded_vec);
 
-        asmb::section_manager create_section();
+        asmb::section_manager create_section() const;
 
     private:
         pe_generator* generator;

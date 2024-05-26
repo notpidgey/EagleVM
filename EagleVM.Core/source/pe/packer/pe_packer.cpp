@@ -1,8 +1,10 @@
 #include "eaglevm-core/pe/packer/pe_packer.h"
+
+#include <sstream>
+
+#include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/pe/models/code_view_pdb.h"
 
-#include "eaglevm-core/util/zydis_helper.h"
-#include "eaglevm-core/compiler/function_container.h"
 #include "eaglevm-core/compiler/section_manager.h"
 
 namespace eagle::pe
@@ -12,7 +14,7 @@ namespace eagle::pe
         text_overlay = overlay;
     }
 
-    std::pair<uint32_t, uint32_t> pe_packer::insert_pdb(encoded_vec& encoded_vec)
+    std::pair<uint32_t, uint32_t> pe_packer::insert_pdb(codec::encoded_vec& encoded_vec)
     {
         size_t address = encoded_vec.size();
 
@@ -42,16 +44,16 @@ namespace eagle::pe
         return {address, pdb_value.size() + sizeof(pdb)};
     }
 
-    asmb::section_manager pe_packer::create_section()
+    asmb::section_manager pe_packer::create_section() const
     {
         asmb::section_manager section_manager;
 
         // apply text overlay
         if (text_overlay)
         {
-            asmb::function_container container;
+            asmb::code_container_ptr container = asmb::code_container::create();
 
-            std::vector<zydis_encoder_request> target_instructions;
+            std::vector<codec::enc::req> target_instructions;
             int current_byte = 0;
 
             // if you want to use this feature add some kind of text file where the run directory for eaglevm is
@@ -79,9 +81,10 @@ namespace eagle::pe
                 header.Characteristics |= IMAGE_SCN_MEM_WRITE;
                 const uint32_t section_rva = header.VirtualAddress;
 
-                asmb::code_container* rel_label = asmb::code_container::create();
-                container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
-                container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, section_rva, 8))));
+                asmb::code_label_ptr rel_label = asmb::code_label::create();
+                container->bind(rel_label);
+                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_address(), 8))));
+                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, section_rva, 8))));
 
                 for (int i = 0; i < data.size(); i += 4)
                 {
@@ -95,30 +98,30 @@ namespace eagle::pe
                     *reinterpret_cast<uint32_t*>(&data[i]) = target_value;
 
                     // then we find a way to get it back
-                    int32_t diff = target_value - current_value;
-                    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_SUB, ZMEMBD(GR_RAX, 0, 4), ZIMMS(diff)));
-                    container.add(zydis_helper::enc(ZYDIS_MNEMONIC_ADD, ZREG(GR_RAX), ZIMMS(4)));
+                    const int32_t diff = target_value - current_value;
+                    container->add(encode(codec::m_sub, ZMEMBD(codec::rax, 0, 4), ZIMMS(diff)));
+                    container->add(encode(codec::m_add, ZREG(codec::rax), ZIMMS(4)));
 
                     current_byte += 4;
                 }
             }
 
-            section_manager.add(container);
+            section_manager.add_code_container(container);
         }
 
         // return to main
         {
-            asmb::function_container container;
+            asmb::code_container_ptr container = asmb::code_container::create();
             auto orig_entry = generator->nt_headers.OptionalHeader.AddressOfEntryPoint;
 
-            asmb::code_container* rel_label = asmb::code_container::create();
-            container.add(rel_label, RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(IP_RIP, -rel_label->get(), 8))));
-            container.add(RECOMPILE(zydis_helper::enc(ZYDIS_MNEMONIC_LEA, ZREG(GR_RAX), ZMEMBD(GR_RAX, orig_entry, 8))));
-            container.add(zydis_helper::enc(ZYDIS_MNEMONIC_JMP, ZREG(GR_RAX)));
+            asmb::code_label_ptr rel_label = asmb::code_label::create();
+            container->bind(rel_label);
+            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_address(), 8))));
+            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, orig_entry, 8))));
+            container->add(encode(codec::m_jmp, ZREG(codec::rax)));
 
-            section_manager.add(container);
+            section_manager.add_code_container(container);
         }
-
 
         return section_manager;
     }
