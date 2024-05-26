@@ -22,7 +22,7 @@ using namespace eagle::codec;
 
 namespace eagle::virt::pidg
 {
-    inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr  settings)
+    inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr settings)
         : machine(std::move(machine)), inst_regs(std::move(push_order)), settings(std::move(settings))
     {
         vm_overhead = 8 * 2000;
@@ -247,6 +247,7 @@ namespace eagle::virt::pidg
                 continue;
 
             asmb::code_container_ptr container = handler.code;
+            container->bind(handler.label);
 
             const reg_size reg_size = load_store_index_size(i);
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
@@ -255,7 +256,6 @@ namespace eagle::virt::pidg
             call_vm_handler(container, get_instruction_handler(m_push, 1, reg_size));
 
             create_vm_return(container);
-
             context_loads.push_back(container);
         }
 
@@ -291,6 +291,7 @@ namespace eagle::virt::pidg
                 continue;
 
             asmb::code_container_ptr container = handler.code;
+            container->bind(handler.label);
 
             const reg_size reg_size = load_store_index_size(i);
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
@@ -311,7 +312,100 @@ namespace eagle::virt::pidg
             }
 
             create_vm_return(container);
+            context_stores.push_back(container);
+        }
 
+        return context_stores;
+    }
+
+    asmb::code_label_ptr inst_handlers::get_push(reg_size size)
+    {
+        switch (size)
+        {
+            case bit_64:
+                return vm_push[0].label;
+            case bit_32:
+                return vm_push[1].label;
+            case bit_16:
+                return vm_push[2].label;
+            case bit_8:
+                return vm_push[3].label;
+            default:
+                assert("reached invalid push size");
+        }
+
+        return nullptr;
+    }
+
+    std::vector<asmb::code_container_ptr> inst_handlers::build_push() const
+    {
+        std::vector<asmb::code_container_ptr> context_stores;
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            const tagged_vm_handler& handler = vm_push[i];
+            if (!handler.tagged)
+                continue;
+
+            const asmb::code_container_ptr container = handler.code;
+            container->bind(handler.label);
+
+            const reg_size reg_size = load_store_index_size(i);
+            const uint16_t reg_size_bytes = reg_size / 8;
+
+            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            container->add({
+                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -reg_size_bytes, 8)),
+                encode(m_mov, ZMEMBD(VSP, 0, reg_size_bytes), ZREG(target_temp))
+            });
+
+            create_vm_return(container);
+            context_stores.push_back(container);
+        }
+
+        return context_stores;
+    }
+
+    asmb::code_label_ptr inst_handlers::get_pop(reg_size size)
+    {
+        switch (size)
+        {
+            case bit_64:
+                return vm_pop[0].label;
+            case bit_32:
+                return vm_pop[1].label;
+            case bit_16:
+                return vm_pop[2].label;
+            case bit_8:
+                return vm_pop[3].label;
+            default:
+                assert("reached invalid pop size");
+        }
+
+        return nullptr;
+    }
+
+    std::vector<asmb::code_container_ptr> inst_handlers::build_pop() const
+    {
+        std::vector<asmb::code_container_ptr> context_stores;
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            const tagged_vm_handler& handler = vm_pop[i];
+            if (!handler.tagged)
+                continue;
+
+            const asmb::code_container_ptr container = handler.code;
+            container->bind(handler.label);
+
+            const reg_size reg_size = load_store_index_size(i);
+            const uint16_t reg_size_bytes = reg_size / 8;
+
+            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            container->add({
+                encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, reg_size_bytes)),
+                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, reg_size_bytes, 8)),
+            });
+
+            create_vm_return(container);
             context_stores.push_back(container);
         }
 
@@ -346,8 +440,8 @@ namespace eagle::virt::pidg
 
             const asmb::code_container_ptr handler = machine->lift_block(ir_block);
             handler->bind_start(label);
-            create_vm_return(handler);
 
+            create_vm_return(handler);
             container.push_back(handler);
         }
 
@@ -357,20 +451,16 @@ namespace eagle::virt::pidg
     std::vector<asmb::code_container_ptr> inst_handlers::build_handlers()
     {
         std::vector<asmb::code_container_ptr> handlers;
-        if (vm_enter.tagged)
-            handlers.push_back(build_vm_enter());
-
-        if (vm_exit.tagged)
-            handlers.push_back(build_vm_exit());
-
-        if (vm_rflags_load.tagged)
-            handlers.push_back(build_rflags_load());
-
-        if (vm_rflags_save.tagged)
-            handlers.push_back(build_rflags_save());
+        if (vm_enter.tagged) handlers.push_back(build_vm_enter());
+        if (vm_exit.tagged) handlers.push_back(build_vm_exit());
+        if (vm_rflags_load.tagged) handlers.push_back(build_rflags_load());
+        if (vm_rflags_save.tagged) handlers.push_back(build_rflags_save());
 
         handlers.append_range(build_context_load());
         handlers.append_range(build_context_store());
+
+        handlers.append_range(build_push());
+        handlers.append_range(build_pop());
 
         handlers.append_range(build_instruction_handlers());
 
