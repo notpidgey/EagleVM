@@ -40,12 +40,15 @@ namespace eagle::ir::handler
     }
 }
 
-void eagle::ir::lifter::sub::finalize_translate_to_virtual()
+namespace eagle::ir::lifter
 {
-    block->add_command(std::make_shared<cmd_rflags_load>());
-    base_x86_translator::finalize_translate_to_virtual();
-    block->add_command(std::make_shared<cmd_rflags_store>());
+    void sub::finalize_translate_to_virtual()
+    {
+        block->add_command(std::make_shared<cmd_rflags_load>());
+        base_x86_translator::finalize_translate_to_virtual();
+        block->add_command(std::make_shared<cmd_rflags_store>());
 
-    codec::reg target_reg = static_cast<codec::reg>(operands[0].reg.value);
-    block->add_command(std::make_shared<cmd_context_store>(target_reg));
+        codec::reg target_reg = static_cast<codec::reg>(operands[0].reg.value);
+        block->add_command(std::make_shared<cmd_context_store>(target_reg));
+    }
 }

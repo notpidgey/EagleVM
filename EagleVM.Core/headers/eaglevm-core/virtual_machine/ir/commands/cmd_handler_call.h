@@ -11,14 +11,13 @@ namespace eagle::ir
     {
         none,
         inst_handler,
-        vm_handler
     };
 
     class cmd_handler_call : public base_command
     {
     public:
-        explicit cmd_handler_call(call_type type, codec::mnemonic mnemonic, x86_operand_sig signature);
-        explicit cmd_handler_call(call_type type, codec::mnemonic mnemonic, ir_handler_sig signataure);
+        explicit cmd_handler_call(codec::mnemonic mnemonic, x86_operand_sig signature);
+        explicit cmd_handler_call(codec::mnemonic mnemonic, ir_handler_sig signataure);
 
         [[nodiscard]] bool is_operand_sig() const;
         x86_operand_sig get_x86_signature();

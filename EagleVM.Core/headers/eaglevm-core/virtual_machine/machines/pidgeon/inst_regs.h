@@ -15,7 +15,7 @@ namespace eagle::virt::pidg
     class inst_regs
     {
     public:
-        explicit inst_regs(uint8_t temp_count = 2, settings_ptr settings);
+        explicit inst_regs(uint8_t temp_count, settings_ptr settings);
 
         void init_reg_order();
         codec::reg get_reg(uint8_t target) const;

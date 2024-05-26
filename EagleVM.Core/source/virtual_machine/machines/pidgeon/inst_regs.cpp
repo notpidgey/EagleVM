@@ -70,7 +70,7 @@ namespace eagle::virt::pidg
         const codec::reg bit64_reg = get_bit_version(reg, codec::reg_class::gpr_64);
 
         int found_index = 0;
-        constexpr auto reg_count = stack_order.size();
+        const auto reg_count = stack_order.size();
 
         for (int i = 0; i < reg_count; i++)
         {
@@ -94,7 +94,7 @@ namespace eagle::virt::pidg
     void inst_regs::enumerate(const std::function<void(codec::zydis_register)>& enumerable, const bool from_back)
     {
         if (from_back)
-            std::ranges::for_each(stack_order, enumerable);
+            std::for_each(stack_order.begin(), stack_order.end(), enumerable);
         else
             std::for_each(stack_order.rbegin(), stack_order.rend(), enumerable);
     }

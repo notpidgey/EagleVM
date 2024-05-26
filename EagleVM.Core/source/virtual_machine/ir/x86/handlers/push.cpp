@@ -21,5 +21,26 @@ namespace eagle::ir::handler
 
     ir_insts push::gen_handler(codec::reg_class size, uint8_t operands)
     {
+        assert("push has no assigned handler. this interaction should not be possible");
+        return { };
     }
 }
+
+namespace eagle::ir::lifter
+{
+    bool push::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    {
+        return false;
+    }
+
+    bool push::skip(uint8_t idx)
+    {
+        return true;
+    }
+
+    void push::finalize_translate_to_virtual()
+    {
+        base_x86_translator::finalize_translate_to_virtual();
+    }
+}
+

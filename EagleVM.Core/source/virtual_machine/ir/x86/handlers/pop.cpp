@@ -21,7 +21,46 @@ namespace eagle::ir::handler
 
     ir_insts pop::gen_handler(codec::reg_class size, uint8_t operands)
     {
-        codec::reg_size reg_size = get_reg_size(size);
-        discrete_store_ptr store = discrete_store::create();
+        assert("pop has no assigned handler. this interaction should not be possible");
+        return { };
+    }
+}
+
+namespace eagle::ir::lifter
+{
+    bool pop::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    {
+        // we only want to address of a memory operand
+        return operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY;
+    }
+
+    bool pop::skip(uint8_t idx)
+    {
+        return operands[0].type != ZYDIS_OPERAND_TYPE_MEMORY;
+    }
+
+    void pop::finalize_translate_to_virtual()
+    {
+        ir_size size = get_op_width();
+
+        discrete_store_ptr store = discrete_store::create(size);
+        block->add_command(std::make_shared<cmd_pop>(store, size));
+
+        auto first_op = operands[0];
+        switch (first_op.type)
+        {
+            case ZYDIS_OPERAND_TYPE_MEMORY:
+            {
+                block->add_command(std::make_shared<cmd_mem_write>(size, size));
+                break;
+            }
+            case ZYDIS_OPERAND_TYPE_REGISTER:
+            {
+                codec::reg target_reg = static_cast<codec::reg>(first_op.reg.value);
+                block->add_command(std::make_shared<cmd_context_store>(target_reg));
+
+                break;
+            }
+        }
     }
 }

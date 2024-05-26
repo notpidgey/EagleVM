@@ -7,7 +7,9 @@ namespace eagle::ir
     class cmd_mem_write : public base_command
     {
     public:
-        explicit cmd_mem_write(ir_size value_size, ir_size write_size);
+        explicit cmd_mem_write(ir_size value_size, ir_size write_size, bool value_nearest = true);
+
+        bool get_is_value_nearest() const;
 
         ir_size get_value_size() const;
         ir_size get_write_size() const;
@@ -15,5 +17,7 @@ namespace eagle::ir
     private:
         ir_size write_size;
         ir_size value_size;
+
+        bool value_nearest;
     };
 }

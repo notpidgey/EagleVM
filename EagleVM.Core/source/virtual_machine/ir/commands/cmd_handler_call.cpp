@@ -4,14 +4,13 @@
 
 namespace eagle::ir
 {
-    cmd_handler_call::cmd_handler_call(const ir::call_type type, const codec::mnemonic mnemonic, x86_operand_sig signature)
-        : base_command(command_type::vm_handler_call), call_type(type), mnemonic(mnemonic), operand_sig_init(true), operand_sig(std::move(signature))
+    cmd_handler_call::cmd_handler_call(const codec::mnemonic mnemonic, x86_operand_sig signature)
+        : base_command(command_type::vm_handler_call), mnemonic(mnemonic), operand_sig_init(true), operand_sig(std::move(signature))
     {
     }
 
-    cmd_handler_call::cmd_handler_call(const ir::call_type type, const codec::mnemonic mnemonic, ir_handler_sig  signataure)
-        : base_command(command_type::vm_handler_call), call_type(type),
-          mnemonic(mnemonic), operand_sig_init(false), handler_sig(std::move(signataure))
+    cmd_handler_call::cmd_handler_call(const codec::mnemonic mnemonic, ir_handler_sig signataure)
+        : base_command(command_type::vm_handler_call), mnemonic(mnemonic), operand_sig_init(false), handler_sig(std::move(signataure))
     {
     }
 

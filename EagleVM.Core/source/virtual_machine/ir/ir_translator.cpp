@@ -91,7 +91,7 @@ namespace eagle::ir
 
             std::vector<handler_op> il_operands;
             handler::base_handler_gen_ptr handler_gen = nullptr;
-            handler::handler_info_ptr target_handler = nullptr;
+            std::optional<op_signature> target_handler = std::nullopt;
 
             codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
             if (instruction_handlers.contains(mnemonic))
@@ -102,16 +102,16 @@ namespace eagle::ir
 
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
-                    il_operands.push_back({
+                    il_operands.emplace_back(
                         static_cast<codec::op_type>(ops[i].type),
                         static_cast<codec::reg_size>(ops[i].size)
-                    });
+                    );
                 }
 
                 target_handler = handler_gen->get_operand_handler(il_operands);
             }
 
-            bool translate_sucess = target_handler != nullptr;
+            bool translate_sucess = target_handler != std::nullopt;
             if (target_handler)
             {
                 // we know that a valid handler exists for this instruction

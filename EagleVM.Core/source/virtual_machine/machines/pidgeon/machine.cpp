@@ -60,8 +60,9 @@ namespace eagle::virt::pidg
                 using T = std::decay_t<exit_type>;
                 if constexpr (std::is_same_v<T, ir::vmexit_rva>)
                 {
-                    const ir::vmexit_rva rva = arg;
-                    block->add(encode(m_mov, ZREG(VTEMP), ZIMMS(rva)));
+                    const ir::vmexit_rva vmexit_rva = arg;
+                    const uint64_t rva = vmexit_rva;
+                    block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(rva)));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
                 {
@@ -131,17 +132,28 @@ namespace eagle::virt::pidg
         const ir::ir_size value_size = cmd->get_value_size();
         const ir::ir_size write_size = cmd->get_write_size();
 
-        // todo: !!!!! change order of these, value is on top
-        // pop vtemp2 ; pop address into vtemp2
-        hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, bit_64));
-        block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
+        const bool value_first = cmd->get_is_value_nearest();
+        if(value_first)
+        {
+            // pop vtemp
+            hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
+            block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
-        // pop vtemp ; pop value into vtemp
-        hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
+            hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, bit_64));
+        }
+        else
+        {
+            // pop vtemp2 ; pop address into vtemp2
+            hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, bit_64));
+            block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
-        // mov [vtemp2], vtemp
-        reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
-        block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
+            // pop vtemp ; pop value into vtemp
+            hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
+
+            // mov [vtemp2], vtemp
+            reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
+            block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
+        }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
@@ -205,7 +217,7 @@ namespace eagle::virt::pidg
             case ir::stack_type::immediate:
             {
                 const uint64_t constant = cmd->get_value_immediate();
-                const ir::ir_size size = cmd->get_value_immediate_size();
+                const ir::ir_size size = cmd->get_size();
 
                 const reg_class target_size = get_gpr_class_from_size(to_reg_size(size));
                 const reg target_temp = get_bit_version(VTEMP, target_size);

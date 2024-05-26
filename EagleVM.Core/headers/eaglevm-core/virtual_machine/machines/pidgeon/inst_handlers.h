@@ -39,6 +39,12 @@ namespace eagle::virt::pidg
         asmb::code_label_ptr get_context_store(codec::reg_size size);
         std::vector<asmb::code_container_ptr> build_context_store();
 
+        asmb::code_label_ptr get_push(codec::reg_size size);
+        std::vector<asmb::code_container_ptr> build_push() const;
+
+        asmb::code_label_ptr get_pop(codec::reg_size size);
+        std::vector<asmb::code_container_ptr> build_pop() const;
+
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint8_t operand_count, codec::reg_size size);
         std::vector<asmb::code_container_ptr> build_instruction_handlers();
 
@@ -73,6 +79,9 @@ namespace eagle::virt::pidg
 
         std::array<tagged_vm_handler, 4> vm_load;
         std::array<tagged_vm_handler, 4> vm_store;
+
+        std::array<tagged_vm_handler, 4> vm_push;
+        std::array<tagged_vm_handler, 4> vm_pop;
 
         std::unordered_map<
             std::tuple<codec::mnemonic, uint8_t, codec::reg_size>,

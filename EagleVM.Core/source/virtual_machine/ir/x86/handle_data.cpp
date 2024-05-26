@@ -1,7 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
 #define CREATE_LIFTER_GEN(x) [](codec::dec::inst_info decode, const uint64_t rva) \
-{ return std::static_pointer_cast<lifter::base_x86_lifter>(std::make_shared<lifter::x>(decode, rva)); }
+{ return std::static_pointer_cast<lifter::base_x86_translator>(std::make_shared<lifter::x>(decode, rva)); }
 
 namespace eagle::ir
 {
