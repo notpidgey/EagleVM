@@ -1,5 +1,4 @@
 #pragma once
-#include <complex.h>
 #include <unordered_map>
 #include "eaglevm-core/compiler/code_container.h"
 
@@ -23,7 +22,7 @@ namespace eagle::virt::pidg
     class inst_handlers
     {
     public:
-        explicit inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr  settings);
+        explicit inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr settings);
         void randomize_constants();
 
         asmb::code_label_ptr get_vm_enter(bool reference = true);
@@ -45,15 +44,15 @@ namespace eagle::virt::pidg
         std::vector<asmb::code_container_ptr> build_context_store();
 
         asmb::code_label_ptr get_push(codec::reg_size size);
-        std::vector<asmb::code_container_ptr> build_push() const;
+        [[nodiscard]] std::vector<asmb::code_container_ptr> build_push() const;
 
         asmb::code_label_ptr get_pop(codec::reg_size size);
-        std::vector<asmb::code_container_ptr> build_pop() const;
+        [[nodiscard]] std::vector<asmb::code_container_ptr> build_pop() const;
 
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
-        asmb::code_label_ptr& get_instruction_handler(codec::mnemonic mnemonic, int operand_sig, codec::reg_size bit_64);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
 
         std::vector<asmb::code_container_ptr> build_instruction_handlers();
 
@@ -92,9 +91,10 @@ namespace eagle::virt::pidg
         std::array<tagged_vm_handler, 4> vm_push;
         std::array<tagged_vm_handler, 4> vm_pop;
 
-        std::unordered_map<
-            std::tuple<codec::mnemonic, std::string>,
-            asmb::code_label_ptr
+        std::vector<
+            std::pair<
+                std::tuple<codec::mnemonic, std::string>,
+                asmb::code_label_ptr>
         > tagged_instruction_handlers;
 
         static codec::reg_size load_store_index_size(uint8_t index);

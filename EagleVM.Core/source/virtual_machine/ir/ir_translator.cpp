@@ -91,7 +91,8 @@ namespace eagle::ir
 
             std::vector<handler_op> il_operands;
             handler::base_handler_gen_ptr handler_gen = nullptr;
-            std::optional<op_signature> target_handler = std::nullopt;
+
+            std::optional<std::string> target_handler = std::nullopt;
 
             codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
             if (instruction_handlers.contains(mnemonic))
@@ -108,7 +109,7 @@ namespace eagle::ir
                     );
                 }
 
-                target_handler = handler_gen->get_operand_handler(il_operands);
+                target_handler = handler_gen->get_handler_id(il_operands);
             }
 
             bool translate_sucess = target_handler != std::nullopt;
@@ -202,9 +203,9 @@ namespace eagle::ir
             {
                 auto [target, type] = dasm->get_jump(bb);
                 if (type == dasm::jump_outside_segment)
-                    exits.push_back(target);
+                    exits.emplace_back(target);
                 else
-                    exits.push_back(bb_map[dasm->get_block(target)]->get_entry());
+                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
 
                 condition = exit_condition::jmp;
                 break;
@@ -215,18 +216,18 @@ namespace eagle::ir
                 {
                     auto [target, type] = dasm->get_jump(bb);
                     if (type == dasm::jump_outside_segment)
-                        exits.push_back(target);
+                        exits.emplace_back(target);
                     else
-                        exits.push_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
                 }
 
                 // case 2 - fall through
                 {
                     auto [target, type] = dasm->get_jump(bb, true);
                     if (type == dasm::jump_outside_segment)
-                        exits.push_back(target);
+                        exits.emplace_back(target);
                     else
-                        exits.push_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
                 }
 
                 const auto& [instruction, _] = bb->decoded_insts.back();
@@ -241,11 +242,15 @@ namespace eagle::ir
 
     std::vector<block_il_ptr> ir_translator::optimize()
     {
+        // todo: nice little beginner issue
+
         // remove vm enter block if every reference to vm enter block uses the same vm
 
         // remove vm exit block if every branching block uses the same vm
 
         // merge blocks together
+
+        return {};
     }
 
     dasm::basic_block* ir_translator::map_basic_block(const ir_preopt_block_ptr& preopt_target)

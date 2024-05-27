@@ -20,6 +20,8 @@ namespace eagle::ir
         explicit cmd_handler_call(codec::mnemonic mnemonic, handler_sig signataure);
 
         [[nodiscard]] bool is_operand_sig() const;
+
+        codec::mnemonic get_mnemonic() const;
         x86_operand_sig get_x86_signature();
         handler_sig get_handler_signature();
 

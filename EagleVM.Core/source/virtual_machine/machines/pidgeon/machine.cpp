@@ -4,6 +4,8 @@
 #include <set>
 
 #include "eaglevm-core/util/random.h"
+
+#include "eaglevm-core/virtual_machine/machines/util.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 
@@ -108,11 +110,13 @@ namespace eagle::virt::pidg
     {
         if (cmd->is_operand_sig())
         {
-            auto sig = cmd->get_x86_signature();
+            const auto sig = cmd->get_x86_signature();
+            hg->call_vm_handler(block, hg->get_instruction_handler(cmd->get_mnemonic(), sig));
         }
         else
         {
-            auto sig = cmd->get_handler_signature();
+            const auto sig = cmd->get_handler_signature();
+            hg->call_vm_handler(block, hg->get_instruction_handler(cmd->get_mnemonic(), sig));
         }
     }
 
@@ -123,7 +127,7 @@ namespace eagle::virt::pidg
         ir::ir_size target_size = cmd->get_read_size();
 
         // pop address
-        hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, reg_size::bit_64));
+        hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, bit_64));
 
         // mov temp, [address]
         block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
@@ -464,7 +468,7 @@ namespace eagle::virt::pidg
                 break;
         }
 
-        reg reg = codec::reg::none;
+        reg reg = none;
         switch (store)
         {
             case ir::reg_vm::vip:

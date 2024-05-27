@@ -18,7 +18,7 @@ namespace eagle::asmb
         std::string get_name();
         [[nodiscard]] bool get_is_named() const;
 
-        [[nodiscard]] uint64_t get_address() const;
+        [[nodiscard]] int64_t get_address() const;
         void set_address(uint64_t address);
 
     private:

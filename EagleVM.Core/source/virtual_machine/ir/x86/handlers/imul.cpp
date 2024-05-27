@@ -81,14 +81,12 @@ namespace eagle::ir::lifter
         switch (inst.operand_count_visible)
         {
             case 2:
-            {
-                // the product is at the top of the stack
-                block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
-
-                break;
-            }
             case 3:
             {
+                // 2:
+                // the product is at the top of the stack
+
+                // 3:
                 // when there are 3 operands
                 // op1 and op2 get imuld
                 // then, we store in op0 which will be a reg
@@ -96,8 +94,7 @@ namespace eagle::ir::lifter
                 // product of op1 and op2 is already on stack
                 // store in op0
 
-                const codec::reg_size reg_size = get_reg_size(codec::get_reg_class(first_op.reg.value));
-                block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::m_mov, handler_sig{ reg_size, reg_size }));
+                block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
 
                 break;
             }
@@ -108,5 +105,10 @@ namespace eagle::ir::lifter
                 break;
             }
         }
+    }
+
+    bool imul::skip(const uint8_t idx)
+    {
+        return idx == 0 && inst.operand_count_visible == 3;
     }
 }

@@ -22,7 +22,7 @@ namespace eagle::virt::pidg
         codec::reg get_reg_temp(uint8_t target) const;
         std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
-        void enumerate(const std::function<void(codec::zydis_register)>& enumerable, bool from_back = false);
+        void enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back = false);
 
     private:
         settings_ptr settings;

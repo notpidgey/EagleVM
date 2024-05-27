@@ -37,8 +37,6 @@ namespace eagle::virt
         [[nodiscard]] std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> get_blocks() const;
 
     protected:
-        ir::ir_size to_ir_size(codec::reg_size reg_size);
-        codec::reg_size to_reg_size(ir::ir_size ir_size);
         codec::mnemonic to_jump_mnemonic(ir::exit_condition condition);
 
         std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_context;

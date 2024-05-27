@@ -19,6 +19,11 @@ namespace eagle::ir
         return operand_sig_init;
     }
 
+    codec::mnemonic cmd_handler_call::get_mnemonic() const
+    {
+        return mnemonic;
+    }
+
     x86_operand_sig cmd_handler_call::get_x86_signature()
     {
         return o_sig;

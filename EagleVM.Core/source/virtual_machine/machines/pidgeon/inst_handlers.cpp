@@ -5,7 +5,10 @@
 
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/codec/zydis_helper.h"
+
 #include "eaglevm-core/util/random.h"
+
+#include "eaglevm-core/virtual_machine/machines/util.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 
 #define VIP         inst_regs->get_reg(I_VIP)
@@ -23,7 +26,7 @@ using namespace eagle::codec;
 namespace eagle::virt::pidg
 {
     inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr settings)
-        : machine(std::move(machine)), inst_regs(std::move(push_order)), settings(std::move(settings))
+        : settings(std::move(settings)), machine(std::move(machine)), inst_regs(std::move(push_order))
     {
         vm_overhead = 8 * 2000;
         vm_stack_regs = 17;
@@ -438,21 +441,24 @@ namespace eagle::virt::pidg
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
     {
-        std::tuple key = std::tie(mnemonic, handler_sig);
-        if (tagged_instruction_handlers.contains(key))
-            return tagged_instruction_handlers[key];
+        const std::tuple key = std::tie(mnemonic, handler_sig);
+        for(const auto& [tuple, code_label] : tagged_instruction_handlers)
+            if(tuple == key)
+                return code_label;
 
         asmb::code_label_ptr label = asmb::code_label::create();
-        tagged_instruction_handlers[key] = label;
+        tagged_instruction_handlers.emplace_back(key, label);
 
         return label;
     }
 
-    asmb::code_label_ptr& inst_handlers::get_instruction_handler(mnemonic mnemonic, int operand_sig, reg_size size)
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(const mnemonic mnemonic, const int len, const reg_size size)
     {
-        ir::handler_sig sig;
-        for (auto i = 0; i < operand_sig; i++)
-            sig.push_back(size);
+        ir::handler_sig signature;
+        for (auto i = 0; i < len; i++)
+            signature.push_back(to_ir_size(size));
+
+        return get_instruction_handler(mnemonic, signature);
     }
 
     std::vector<asmb::code_container_ptr> inst_handlers::build_instruction_handlers()

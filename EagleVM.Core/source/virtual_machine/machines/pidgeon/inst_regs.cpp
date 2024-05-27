@@ -45,7 +45,7 @@ namespace eagle::virt::pidg
             vm_regs_order.push_back(codec::rax);
             vm_regs_order.push_back(codec::rsp);
 
-            std::copy(vm_regs_order.begin(), vm_regs_order.end(), vm_order);
+            std::copy(vm_regs_order.begin(), vm_regs_order.end(), vm_order.begin());
         }
     }
 
@@ -91,10 +91,10 @@ namespace eagle::virt::pidg
         return { found_index * 8 + offset, reg_size };
     }
 
-    void inst_regs::enumerate(const std::function<void(codec::zydis_register)>& enumerable, const bool from_back)
+    void inst_regs::enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back)
     {
         if (from_back)
-            std::for_each(stack_order.begin(), stack_order.end(), enumerable);
+            std::ranges::for_each(stack_order, enumerable);
         else
             std::for_each(stack_order.rbegin(), stack_order.rend(), enumerable);
     }

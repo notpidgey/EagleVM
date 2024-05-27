@@ -22,7 +22,7 @@ namespace eagle::asmb
         return is_named;
     }
 
-    uint64_t code_label::get_address() const
+    int64_t code_label::get_address() const
     {
         return virtual_address;
     }
