@@ -432,7 +432,7 @@ namespace eagle::virt::pidg
             auto [mnemonic, operand_count, size] = key;
 
             const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
-            ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size), operand_count);
+            ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size));
 
             // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
             ir::block_il_ptr ir_block = std::make_shared<ir::block_ir>();

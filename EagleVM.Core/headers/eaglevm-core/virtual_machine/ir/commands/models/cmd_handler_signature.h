@@ -4,5 +4,5 @@
 
 namespace eagle::ir
 {
-    using ir_handler_sig = std::vector<codec::reg_size>;
+    using ir_handler_sig = std::vector<ir_size>;
 }

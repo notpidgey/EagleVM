@@ -8,7 +8,7 @@ namespace eagle::ir::handler
     {
     public:
         cmp();
-        ir_insts gen_handler(codec::reg_class size, uint8_t operands) override;
+        ir_insts gen_handler(ir_handler_sig signature) override;
     };
 }
 

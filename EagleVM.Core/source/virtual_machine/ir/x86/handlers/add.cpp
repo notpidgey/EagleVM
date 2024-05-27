@@ -22,13 +22,16 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts add::gen_handler(const codec::reg_class size, uint8_t operands)
+    ir_insts add::gen_handler(ir_handler_sig signature)
     {
+        assert(signature.size() == 2, "invalid signature. must contain 2 operands");
+        assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
+
+        ir_size target_size = signature.front();
+
         // the way this is done is far slower than it used to be
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
-
-        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
 
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);

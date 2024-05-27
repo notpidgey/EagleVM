@@ -24,12 +24,6 @@ namespace eagle::ir::handler
 
         // again, we dont need handlers for lea :)
     }
-
-    ir_insts lea::gen_handler(const codec::reg_class size, uint8_t operands)
-    {
-        assert("lea has no assigned handler. this interaction should not be possible");
-        return { };
-    }
 }
 
 namespace eagle::ir::lifter

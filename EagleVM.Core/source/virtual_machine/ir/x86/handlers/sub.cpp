@@ -22,9 +22,12 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts sub::gen_handler(const codec::reg_class size, uint8_t operands)
+    ir_insts sub::gen_handler(const ir_handler_sig signature)
     {
-        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
+        assert(signature.size() == 2, "invalid signature. must contain 2 operands");
+        assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
+
+        ir_size target_size = signature.front();
 
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);

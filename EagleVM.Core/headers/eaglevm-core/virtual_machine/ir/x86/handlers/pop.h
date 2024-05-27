@@ -8,7 +8,6 @@ namespace eagle::ir::handler
     {
     public:
         pop();
-        ir_insts gen_handler(codec::reg_class size, uint8_t operands) override;
     };
 }
 

@@ -25,7 +25,7 @@ namespace eagle::ir::handler
         {
         }
 
-        virtual ir_insts gen_handler(codec::reg_class size, uint8_t operands) = 0;
+        virtual ir_insts gen_handler(ir_handler_sig signature);
         [[nodiscard]] std::optional<op_signature> get_operand_handler(const std::vector<handler_op>& target_operands) const;
 
     protected:

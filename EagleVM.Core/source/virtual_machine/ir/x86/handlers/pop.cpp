@@ -18,12 +18,6 @@ namespace eagle::ir::handler
             { { ir_size::bit_64 }, "pop 64" },
         };
     }
-
-    ir_insts pop::gen_handler(codec::reg_class size, uint8_t operands)
-    {
-        assert("pop has no assigned handler. this interaction should not be possible");
-        return { };
-    }
 }
 
 namespace eagle::ir::lifter

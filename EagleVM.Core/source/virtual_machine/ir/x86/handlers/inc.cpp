@@ -8,23 +8,25 @@ namespace eagle::ir::handler
     inc::inc()
     {
         valid_operands = {
-            { { { codec::op_none, codec::bit_8 } }, "8" },
-            { { { codec::op_none, codec::bit_16 } }, "16" },
-            { { { codec::op_none, codec::bit_32 } }, "32" },
-            { { { codec::op_none, codec::bit_64 } }, "64" },
+            { { { codec::op_none, codec::bit_8 } }, "inc 8" },
+            { { { codec::op_none, codec::bit_16 } }, "inc 16" },
+            { { { codec::op_none, codec::bit_32 } }, "inc 32" },
+            { { { codec::op_none, codec::bit_64 } }, "inc 64" },
         };
 
         build_options = {
-            { { ir_size::bit_8 }, "8" },
-            { { ir_size::bit_16 }, "16" },
-            { { ir_size::bit_32 }, "32" },
-            { { ir_size::bit_64 }, "64" },
+            { { ir_size::bit_8 }, "inc 8" },
+            { { ir_size::bit_16 }, "inc 16" },
+            { { ir_size::bit_32 }, "inc 32" },
+            { { ir_size::bit_64 }, "inc 64" },
         };
     }
 
-    ir_insts inc::gen_handler(const codec::reg_class size, uint8_t operands)
+    ir_insts inc::gen_handler(ir_handler_sig signature)
     {
-        const ir_size target_size = static_cast<ir_size>(get_reg_size(size));
+        assert(signature.size() == 1, "invalid signature. must contain 1 operand");
+        ir_size target_size = signature.front();
+
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
 
         return {

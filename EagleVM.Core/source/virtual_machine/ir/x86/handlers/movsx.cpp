@@ -1,5 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/movsx.h"
 
+#include "eaglevm-core/compiler/code_label.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_store.h"
 
 namespace eagle::ir::handler
@@ -15,12 +16,6 @@ namespace eagle::ir::handler
             { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_16 } }, "movsx, 64,16" },
         };
     }
-
-    ir_insts movsx::gen_handler(codec::reg_class size, uint8_t operands)
-    {
-        assert("movsx has no assigned handler. this interaction should not be possible");
-        return { };
-    }
 }
 
 namespace eagle::ir::lifter
@@ -30,7 +25,7 @@ namespace eagle::ir::lifter
         if (op_mem.base == ZYDIS_REGISTER_RIP)
         {
             auto [target, _] = codec::calc_relative_rva(inst, operands, orig_rva, idx);
-            block->add_command(std::make_shared<cmd_push>(target, ir_size::bit_64, true));
+            block->add_command(std::make_shared<cmd_push>(target));
 
             return translate_status::success;
         }
@@ -43,8 +38,7 @@ namespace eagle::ir::lifter
             if (stack_displacement)
             {
                 block->add_command(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
-                block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                    codec::m_add, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
+                block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
             }
         }
         else
@@ -63,14 +57,12 @@ namespace eagle::ir::lifter
         if (op_mem.scale != 0)
         {
             block->add_command(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_imul, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_imul, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_add, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.disp.has_displacement)
@@ -80,8 +72,7 @@ namespace eagle::ir::lifter
 
             // subtract displacement value
             block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler,
-                codec::m_sub, ir_handler_sig{ codec::reg_size::bit_64, codec::reg_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_sub, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         // for memory operands we will only ever need one kind of action

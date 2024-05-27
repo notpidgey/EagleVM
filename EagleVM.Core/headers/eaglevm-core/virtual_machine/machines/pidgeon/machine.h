@@ -52,5 +52,6 @@ namespace eagle::virt::pidg
         vm_inst_handlers_ptr hg;
 
         void assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores);
+        codec::reg reg_vm_to_register(ir::reg_vm store);
     };
 }

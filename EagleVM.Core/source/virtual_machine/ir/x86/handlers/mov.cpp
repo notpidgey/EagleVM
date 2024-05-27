@@ -19,12 +19,6 @@ namespace eagle::ir::handler
         //     { { ir_size::bit_64, ir_size::bit_64 }, "mov 64,64" },
         // };
     }
-
-    ir_insts mov::gen_handler(codec::reg_class size, uint8_t operands)
-    {
-        assert("mov has no assigned handler. this interaction should not be possible");
-        return { };
-    }
 }
 
 namespace eagle::ir::lifter

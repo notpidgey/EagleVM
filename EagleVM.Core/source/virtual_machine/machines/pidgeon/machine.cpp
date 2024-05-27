@@ -106,6 +106,7 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
     {
+        cmd->
     }
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd)
@@ -133,7 +134,7 @@ namespace eagle::virt::pidg
         const ir::ir_size write_size = cmd->get_write_size();
 
         const bool value_first = cmd->get_is_value_nearest();
-        if(value_first)
+        if (value_first)
         {
             // pop vtemp
             hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, to_reg_size(value_size)));
@@ -194,7 +195,25 @@ namespace eagle::virt::pidg
         // call ia32 handler for push
         switch (cmd->get_push_type())
         {
-            case ir::stack_type::vm_register:
+            case ir::info_type::vm_register:
+            {
+                const ir::reg_vm store = cmd->get_value_register();
+                const reg target_reg = reg_vm_to_register(store);
+                const reg_class target_class = get_reg_class(target_reg);
+
+                const reg bit_64_reg = get_bit_version(target_reg, gpr_64);
+                if (VTEMP != bit_64_reg)
+                {
+                    reg target_temp = get_bit_version(VTEMP, target_class);
+                    block->add(encode(m_mov, ZREG(target_temp), ZREG(target_reg)));
+                }
+
+                const reg_size target_size = get_reg_size(target_reg);
+                hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, target_size));
+
+                break;
+            }
+            case ir::info_type::vm_temp_register:
             {
                 const ir::discrete_store_ptr store = cmd->get_value_temp_register();
                 if (!store->get_finalized())
@@ -212,9 +231,8 @@ namespace eagle::virt::pidg
 
                 const reg_size target_size = get_reg_size(target_reg);
                 hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, target_size));
-                break;
             }
-            case ir::stack_type::immediate:
+            case ir::info_type::immediate:
             {
                 const uint64_t constant = cmd->get_value_immediate();
                 const ir::ir_size size = cmd->get_size();
@@ -224,6 +242,16 @@ namespace eagle::virt::pidg
 
                 block->add(encode(m_mov, ZREG(target_temp), ZIMMU(constant)));
                 hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, to_reg_size(size)));
+
+                break;
+            }
+            case ir::info_type::address:
+            {
+                const uint64_t constant = cmd->get_value_immediate();
+
+                block->add(encode(m_lea, ZREG(VTEMP), ZMEMBD(VBASE, 0, constant)));
+                hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, bit_64));
+
                 break;
             }
             default:
@@ -252,7 +280,7 @@ namespace eagle::virt::pidg
         reg_size current_size = to_reg_size(ir_current_size);
 
         const ir::ir_size ir_target_size = cmd->get_target();
-        reg_size target_size = to_reg_size(ir_target_size);
+        const reg_size target_size = to_reg_size(ir_target_size);
 
         hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, current_size));
 
@@ -390,5 +418,68 @@ namespace eagle::virt::pidg
             const reg target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
             store->finalize_register(target_reg);
         }
+    }
+
+    reg machine::reg_vm_to_register(ir::reg_vm store)
+    {
+        ir::ir_size size = ir::ir_size::none;
+        switch (store)
+        {
+            case ir::reg_vm::vip:
+                size = ir::ir_size::bit_64;
+                break;
+            case ir::reg_vm::vip_32:
+                size = ir::ir_size::bit_32;
+                break;
+            case ir::reg_vm::vip_16:
+                size = ir::ir_size::bit_16;
+                break;
+            case ir::reg_vm::vip_8:
+                size = ir::ir_size::bit_8;
+                break;
+            case ir::reg_vm::vsp:
+                size = ir::ir_size::bit_64;
+                break;
+            case ir::reg_vm::vsp_32:
+                size = ir::ir_size::bit_32;
+                break;
+            case ir::reg_vm::vsp_16:
+                size = ir::ir_size::bit_16;
+                break;
+            case ir::reg_vm::vsp_8:
+                size = ir::ir_size::bit_8;
+                break;
+            case ir::reg_vm::vbase:
+                size = ir::ir_size::bit_64;
+                break;
+            default:
+                assert("invalid case reached for reg_vm");
+                break;
+        }
+
+        reg reg = codec::reg::none;
+        switch (store)
+        {
+            case ir::reg_vm::vip:
+            case ir::reg_vm::vip_32:
+            case ir::reg_vm::vip_16:
+            case ir::reg_vm::vip_8:
+                reg = VIP;
+                break;
+            case ir::reg_vm::vsp:
+            case ir::reg_vm::vsp_32:
+            case ir::reg_vm::vsp_16:
+            case ir::reg_vm::vsp_8:
+                reg = VSP;
+                break;
+            case ir::reg_vm::vbase:
+                reg = VBASE;
+                break;
+            default:
+                assert("invalid case reached for reg_vm");
+                break;
+        }
+
+        return get_bit_version(reg, get_gpr_class_from_size(to_reg_size(size)));
     }
 }

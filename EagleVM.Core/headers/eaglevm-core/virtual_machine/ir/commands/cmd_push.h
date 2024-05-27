@@ -15,10 +15,9 @@ namespace eagle::ir
         explicit cmd_push(discrete_store_ptr reg_src, ir_size reg_size);
         explicit cmd_push(reg_vm reg_src, ir_size reg_size);
         explicit cmd_push(uint64_t immediate, ir_size stack_disp);
+        explicit cmd_push(uint64_t immediate);
 
-        void set_modifier(modifier mod);
-
-        stack_type get_push_type() const;
+        info_type get_push_type() const;
 
         discrete_store_ptr get_value_temp_register();
         reg_vm get_value_register() const;
@@ -29,9 +28,9 @@ namespace eagle::ir
     private:
         std::variant<discrete_store_ptr, reg_vm, uint64_t> value;
 
-        stack_type type;
+        info_type type;
         ir_size size;
 
-        std::optional<modifier> modifier = std::nullopt;
+        // std::optional<modifier> modifier = std::nullopt;
     };
 }

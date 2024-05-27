@@ -2,6 +2,12 @@
 
 namespace eagle::ir::handler
 {
+    ir_insts base_handler_gen::gen_handler(ir_handler_sig signature)
+    {
+        assert("unimplemented gen_handler. unable to generate handler for signature");
+        return { };
+    }
+
     std::optional<op_signature> base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
     {
         const auto target_operands_len = target_operands.size();

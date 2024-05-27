@@ -2,11 +2,12 @@
 
 namespace eagle::ir
 {
-    enum class stack_type
+    enum class info_type
     {
         none,
         vm_register,
         vm_temp_register,
-        immediate
+        immediate,
+        address
     };
 }
