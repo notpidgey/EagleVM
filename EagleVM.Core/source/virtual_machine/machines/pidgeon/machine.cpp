@@ -190,7 +190,7 @@ namespace eagle::virt::pidg
             if (get_bit_version(target_reg, gpr_64) != VTEMP)
             {
                 reg target_temp = get_bit_version(VTEMP, get_reg_class(target_reg));
-                block->add(encode(m_mov, target_reg, target_temp));
+                block->add(encode(m_mov, ZREG(target_reg), ZREG(target_temp)));
             }
         }
         else
@@ -404,7 +404,7 @@ namespace eagle::virt::pidg
         block->add(cmd->get_request());
     }
 
-    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores)
+    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores) const
     {
         const size_t temp_required = stores.size();
 
@@ -421,7 +421,7 @@ namespace eagle::virt::pidg
 
         for (auto i = 0; i < temp_required; i++)
         {
-            const ir::discrete_store_ptr store = stores[i];
+            const ir::discrete_store_ptr& store = stores[i];
 
             const reg_size target_size = to_reg_size(store->get_store_size());
             const reg target_temp = rm->get_reg_temp(temp_reg_index[i]);
