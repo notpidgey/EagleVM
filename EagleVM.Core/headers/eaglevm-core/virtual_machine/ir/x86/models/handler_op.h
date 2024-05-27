@@ -16,4 +16,5 @@ namespace eagle::ir
         codec::op_type operand_type;
         codec::reg_size operand_size;
     };
+
 }

@@ -412,9 +412,33 @@ namespace eagle::virt::pidg
         return context_stores;
     }
 
-    asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, uint8_t operand_count, reg_size size)
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(const mnemonic mnemonic, const ir::x86_operand_sig& operand_sig)
     {
-        std::tuple key = std::tie(mnemonic, operand_count, size);
+        const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
+
+        ir::op_params sig = { };
+        for (const ir::x86_operand& entry : operand_sig)
+            sig.emplace_back(entry.operand_type, entry.operand_size);
+
+        const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(sig);
+        assert(handler_id != std::nullopt, "handler id is invalid, signature does not match");
+
+        return get_instruction_handler(mnemonic, handler_id.value());
+    }
+
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(const mnemonic mnemonic, const ir::handler_sig& handler_sig)
+    {
+        const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
+
+        const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(handler_sig);
+        assert(handler_id != std::nullopt, "handler id is invalid, signature does not match");
+
+        return get_instruction_handler(mnemonic, handler_id.value());
+    }
+
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
+    {
+        std::tuple key = std::tie(mnemonic, handler_sig);
         if (tagged_instruction_handlers.contains(key))
             return tagged_instruction_handlers[key];
 
@@ -424,15 +448,22 @@ namespace eagle::virt::pidg
         return label;
     }
 
+    asmb::code_label_ptr& inst_handlers::get_instruction_handler(mnemonic mnemonic, int operand_sig, reg_size size)
+    {
+        ir::handler_sig sig;
+        for (auto i = 0; i < operand_sig; i++)
+            sig.push_back(size);
+    }
+
     std::vector<asmb::code_container_ptr> inst_handlers::build_instruction_handlers()
     {
         std::vector<asmb::code_container_ptr> container;
         for (const auto& [key, label] : tagged_instruction_handlers)
         {
-            auto [mnemonic, operand_count, size] = key;
+            auto [mnemonic, handler_id] = key;
 
             const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
-            ir::ir_insts handler_ir = target_mnemonic->gen_handler(get_gpr_class_from_size(size));
+            ir::ir_insts handler_ir = target_mnemonic->gen_handler(handler_id);
 
             // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
             ir::block_il_ptr ir_block = std::make_shared<ir::block_ir>();

@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
-#include "eaglevm-core/codec/zydis_enum.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir
 {
-    using ir_handler_sig = std::vector<ir_size>;
+    using handler_sig = std::vector<ir_size>;
 }

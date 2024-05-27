@@ -28,7 +28,7 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts imul::gen_handler(ir_handler_sig signature)
+    ir_insts imul::gen_handler(handler_sig signature)
     {
         assert(signature.size() == 2, "invalid signature. must contain 2 operands");
         assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
@@ -97,7 +97,7 @@ namespace eagle::ir::lifter
                 // store in op0
 
                 const codec::reg_size reg_size = get_reg_size(codec::get_reg_class(first_op.reg.value));
-                block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::m_mov, ir_handler_sig{ reg_size, reg_size }));
+                block->add_command(std::make_shared<cmd_handler_call>(call_type::inst_handler, codec::m_mov, handler_sig{ reg_size, reg_size }));
 
                 break;
             }

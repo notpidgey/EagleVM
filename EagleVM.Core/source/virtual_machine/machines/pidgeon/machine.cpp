@@ -106,7 +106,14 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
     {
-        cmd->
+        if (cmd->is_operand_sig())
+        {
+            auto sig = cmd->get_x86_signature();
+        }
+        else
+        {
+            auto sig = cmd->get_handler_signature();
+        }
     }
 
     void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd)

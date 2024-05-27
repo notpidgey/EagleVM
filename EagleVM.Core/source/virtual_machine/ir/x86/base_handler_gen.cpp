@@ -2,18 +2,36 @@
 
 namespace eagle::ir::handler
 {
-    ir_insts base_handler_gen::gen_handler(ir_handler_sig signature)
+    ir_insts base_handler_gen::gen_handler(const std::string& target_handler_id)
+    {
+        std::optional<handler_sig> something = std::nullopt;
+        for(const auto& [size, handler_id] : build_options)
+        {
+            if(handler_id == target_handler_id)
+                something = size;
+        }
+
+        if(something == std::nullopt)
+        {
+            assert("invalid target handler id");
+            return {};
+        }
+
+        return gen_handler(something.value());
+    }
+
+    ir_insts base_handler_gen::gen_handler(handler_sig)
     {
         assert("unimplemented gen_handler. unable to generate handler for signature");
         return { };
     }
 
-    std::optional<op_signature> base_handler_gen::get_operand_handler(const std::vector<handler_op>& target_operands) const
+    std::optional<std::string> base_handler_gen::get_handler_id(const op_params& target_operands)
     {
         const auto target_operands_len = target_operands.size();
-        for (const op_signature& entry : valid_operands)
+        for (const auto& [entries, handler_id] : valid_operands)
         {
-            op_entries accepted_ops = entry.entries;
+            op_params accepted_ops = entries;
             if (accepted_ops.size() != target_operands.size())
                 continue;
 
@@ -36,8 +54,26 @@ namespace eagle::ir::handler
             }
 
             if (is_match)
-                return entry;
+                return handler_id;
         }
+
+        return std::nullopt;
+    }
+
+    std::optional<std::string> base_handler_gen::get_handler_id(const handler_params& target_build)
+    {
+        for(auto [params, handler_id] : build_options)
+            if(params == target_build)
+                return handler_id;
+
+        return std::nullopt;
+    }
+
+    std::optional<handler_build> base_handler_gen::get_handler_build(const std::string& target_handler_id) const
+    {
+        for (handler_build entry : build_options)
+            if (entry.handler_id == target_handler_id)
+                return entry;
 
         return std::nullopt;
     }

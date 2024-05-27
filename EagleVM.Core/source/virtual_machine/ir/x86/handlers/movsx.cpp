@@ -38,7 +38,7 @@ namespace eagle::ir::lifter
             if (stack_displacement)
             {
                 block->add_command(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
-                block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
             }
         }
         else
@@ -57,12 +57,12 @@ namespace eagle::ir::lifter
         if (op_mem.scale != 0)
         {
             block->add_command(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_imul, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_imul, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.disp.has_displacement)
@@ -72,7 +72,7 @@ namespace eagle::ir::lifter
 
             // subtract displacement value
             block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_sub, ir_handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_sub, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         // for memory operands we will only ever need one kind of action

@@ -22,7 +22,7 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts cmp::gen_handler(ir_handler_sig signature)
+    ir_insts cmp::gen_handler(handler_sig signature)
     {
         assert(signature.size() == 2, "invalid signature. must contain 2 operands");
         assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");

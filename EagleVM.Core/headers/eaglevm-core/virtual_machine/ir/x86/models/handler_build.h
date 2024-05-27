@@ -6,9 +6,10 @@
 
 namespace eagle::ir
 {
+    using handler_params = std::vector<ir_size>;
     struct handler_build
     {
-        std::vector<ir_size> size;
+        handler_params params;
         std::string handler_id;
     };
 }

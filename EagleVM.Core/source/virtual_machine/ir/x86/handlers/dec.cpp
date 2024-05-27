@@ -24,7 +24,7 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts dec::gen_handler(ir_handler_sig signature)
+    ir_insts dec::gen_handler(handler_sig signature)
     {
         assert(signature.size() == 1, "invalid signature. must contain 1 operand");
         ir_size target_size = signature.front();

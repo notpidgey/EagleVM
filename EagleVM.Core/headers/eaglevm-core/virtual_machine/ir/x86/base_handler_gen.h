@@ -25,8 +25,13 @@ namespace eagle::ir::handler
         {
         }
 
-        virtual ir_insts gen_handler(ir_handler_sig signature);
-        [[nodiscard]] std::optional<op_signature> get_operand_handler(const std::vector<handler_op>& target_operands) const;
+        ir_insts gen_handler(const std::string& target_handler_id);
+        virtual ir_insts gen_handler(handler_sig signature);
+
+        [[nodiscard]] std::optional<std::string> get_handler_id(const op_params& target_operands);
+        [[nodiscard]] std::optional<std::string> get_handler_id(const handler_sig& target_build);
+
+        [[nodiscard]] std::optional<handler_build> get_handler_build(const std::string& target_handler_id) const;
 
     protected:
         ~base_handler_gen() = default;

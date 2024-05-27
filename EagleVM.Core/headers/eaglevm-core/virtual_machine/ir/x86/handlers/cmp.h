@@ -8,7 +8,7 @@ namespace eagle::ir::handler
     {
     public:
         cmp();
-        ir_insts gen_handler(ir_handler_sig signature) override;
+        ir_insts gen_handler(handler_sig signature) override;
     };
 }
 

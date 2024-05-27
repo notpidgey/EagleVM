@@ -1,8 +1,13 @@
 #pragma once
+#include <complex.h>
 #include <unordered_map>
-#include "inst_regs.h"
-#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
 #include "eaglevm-core/compiler/code_container.h"
+
+#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_handler_signature.h"
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_operand_signature.h"
+
+#include "inst_regs.h"
 
 namespace eagle::virt::pidg
 {
@@ -45,7 +50,11 @@ namespace eagle::virt::pidg
         asmb::code_label_ptr get_pop(codec::reg_size size);
         std::vector<asmb::code_container_ptr> build_pop() const;
 
-        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint8_t operand_count, codec::reg_size size);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
+        asmb::code_label_ptr& get_instruction_handler(codec::mnemonic mnemonic, int operand_sig, codec::reg_size bit_64);
+
         std::vector<asmb::code_container_ptr> build_instruction_handlers();
 
         std::vector<asmb::code_container_ptr> build_handlers();
@@ -84,7 +93,7 @@ namespace eagle::virt::pidg
         std::array<tagged_vm_handler, 4> vm_pop;
 
         std::unordered_map<
-            std::tuple<codec::mnemonic, uint8_t, codec::reg_size>,
+            std::tuple<codec::mnemonic, std::string>,
             asmb::code_label_ptr
         > tagged_instruction_handlers;
 
