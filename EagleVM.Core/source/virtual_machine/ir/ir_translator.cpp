@@ -17,13 +17,13 @@ namespace eagle::ir
         dasm = seg_dasm;
     }
 
-    std::vector<preopt_block_ptr> ir_translator::translate(bool split)
+    std::vector<preopt_block_ptr> ir_translator::translate(const bool split)
     {
         // we want to initialzie the entire map with bb translates
         for (dasm::basic_block* block : dasm->blocks)
         {
             const preopt_block_ptr vm_il = std::make_shared<preopt_block>();
-            vm_il->init();
+            vm_il->init(block);
 
             bb_map[block] = vm_il;
         }
@@ -400,16 +400,35 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<block_vm_id> ir_translator::flatten(const std::vector<preopt_vm_id>& block_vms)
+    std::vector<block_vm_id> ir_translator::flatten(
+        const std::vector<preopt_vm_id>& block_vms,
+         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
+    )
     {
         // for now we just flatten
         std::vector<block_vm_id> block_groups;
         for (const auto& [block, vm_id] : block_vms)
         {
             std::vector<block_ptr> block_group;
-            block_group.push_back(block->get_entry());
-            block_group.append_range(block->get_body());
-            block_group.push_back(block->get_exit());
+            auto entry = block->get_entry();
+            auto body = block->get_body();
+            auto exit = block->get_exit();
+
+            if (block_tracker.contains(block))
+            {
+                // this is a block we want to track
+                if (entry == nullptr)
+                {
+                    // entry point was optimized out, we want to track body
+                    const block_ptr first_body = body.front();
+                    block_tracker[block] = first_body;
+                }
+                else
+                {
+                    // entry point exists so we will track entry
+                    block_tracker[block] = entry;
+                }
+            }
 
             std::erase(block_group, nullptr);
             block_groups.emplace_back(block_group, vm_id);
@@ -418,8 +437,11 @@ namespace eagle::ir
         return block_groups;
     }
 
-    std::vector<block_vm_id> ir_translator::optimize(const std::vector<preopt_vm_id>& block_vms,
-        const std::vector<preopt_block_ptr>& extern_call_blocks)
+    std::vector<block_vm_id> ir_translator::optimize(
+        const std::vector<preopt_vm_id>& block_vms,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+        const std::vector<preopt_block_ptr>& extern_call_blocks
+    )
     {
         std::unordered_map<uint32_t, std::vector<preopt_block_ptr>> vm_groups;
         for (const auto& [block, vm_id] : block_vms)
@@ -558,7 +580,7 @@ namespace eagle::ir
         }
 
         // merge blocks together
-        return flatten(block_vms);
+        return flatten(block_vms, block_tracker);
     }
 
     dasm::basic_block* ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
@@ -633,8 +655,8 @@ namespace eagle::ir
 
     void preopt_block::init(dasm::basic_block* block)
     {
-        entry = std::make_shared<block_ir>();
-        exit = std::make_shared<block_ir>();
+        head = std::make_shared<block_ir>();
+        tail = std::make_shared<block_ir>();
         original_block = block;
     }
 
@@ -645,12 +667,12 @@ namespace eagle::ir
 
     block_ptr preopt_block::get_entry()
     {
-        return entry;
+        return head;
     }
 
     void preopt_block::clear_entry()
     {
-        entry = nullptr;
+        head = nullptr;
     }
 
     std::vector<block_ptr> preopt_block::get_body()
@@ -660,7 +682,7 @@ namespace eagle::ir
 
     block_ptr preopt_block::get_exit()
     {
-        return exit;
+        return tail;
     }
 
     void preopt_block::add_body(const block_ptr& block)

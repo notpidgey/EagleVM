@@ -27,9 +27,15 @@ namespace eagle::ir
         explicit ir_translator(dasm::segment_dasm* seg_dasm);
 
         std::vector<preopt_block_ptr> translate(bool split);
-        std::vector<block_vm_id> flatten(const std::vector<preopt_vm_id>& block_vms);
-        std::vector<block_vm_id> optimize(const std::vector<preopt_vm_id>& block_vms,
-            const std::vector<preopt_block_ptr>& extern_call_blocks = { });
+        std::vector<block_vm_id> flatten(
+            const std::vector<preopt_vm_id>& block_vms,
+            std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
+        );
+        std::vector<block_vm_id> optimize(
+            const std::vector<preopt_vm_id>& block_vms,
+            std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+            const std::vector<preopt_block_ptr>& extern_call_blocks = { }
+        );
 
         dasm::basic_block* map_basic_block(const preopt_block_ptr& preopt_target);
         preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
@@ -62,8 +68,8 @@ namespace eagle::ir
     private:
         dasm::basic_block* original_block = nullptr;
 
-        block_ptr entry;
+        block_ptr head;
         std::vector<block_ptr> body;
-        block_ptr exit;
+        block_ptr tail;
     };
 }

@@ -4,6 +4,7 @@
 #include <utility>
 #include <vector>
 
+#include "eaglevm-core/util/random.h"
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
 
@@ -35,12 +36,18 @@ namespace eagle::ir
         explicit base_command(const command_type command)
             : command(command)
         {
+            unique_id = command_to_string(command) + ": " +
+                std::to_string(util::ran_device::get().gen_32());
         }
 
-        command_type get_command_type();
+        command_type get_command_type() const;
 
     protected:
         command_type command;
+        std::string unique_id;
+
+    private:
+        static std::string command_to_string(command_type type);
     };
 
     SHARED_DEFINE(base_command);

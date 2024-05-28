@@ -209,7 +209,8 @@ int main(int argc, char* argv[])
 
         // if we want, we can do a little optimzation which will rewrite the preopt blocks
         // or we could simply ir_trans.flatten()
-        std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, { entry_block });
+        std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
+        std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
         // we want the same settings for every machine
         virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
@@ -223,7 +224,7 @@ int main(int argc, char* argv[])
             for (const auto& block : blocks)
                 block_labels[block] = asmb::code_label::create();
 
-        asmb::code_label_ptr entry_point = nullptr;
+        asmb::code_label_ptr entry_point = asmb::code_label::create();
         for (const auto& [blocks, vm_id] : vm_blocks)
         {
             // we create a new machine based off of the same settings to make things more annoying
@@ -231,18 +232,12 @@ int main(int argc, char* argv[])
             virt::pidg::machine_ptr machine = virt::pidg::machine::create(settings);
             machine->add_block_context(block_labels);
 
-            bool first = true;
             for (auto& translated_block : blocks)
             {
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
-                if (first)
-                {
-                    asmb::code_label_ptr entry_mark = asmb::code_label::create();
-                    result_container->bind_start(entry_mark);
-
-                    entry_point = entry_mark;
-                    first = false;
-                }
+                ir::block_ptr block = block_tracker[entry_block];
+                if(block == translated_block)
+                    result_container->bind_start(entry_point);
 
                 vm_section.add_code_container(result_container);
             }
