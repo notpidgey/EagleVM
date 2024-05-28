@@ -26,10 +26,16 @@ namespace eagle::virt::pidg
     machine::machine(const settings_ptr& settings_info)
     {
         settings = settings_info;
-        rm = std::make_shared<inst_regs>(settings->get_temp_count(), settings);
-        hg = std::make_shared<inst_handlers>(std::shared_ptr<machine>(this), rm, settings);
+    }
 
-        rm->init_reg_order();
+    machine_ptr machine::create(const settings_ptr& settings_info)
+    {
+        const std::shared_ptr<machine> instance = std::make_shared<machine>(settings_info);
+        instance->rm = std::make_shared<inst_regs>(settings_info->get_temp_count(), settings_info);
+        instance->hg = std::make_shared<inst_handlers>(instance, instance->rm, settings_info);
+        instance->rm->init_reg_order();
+
+        return instance;
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()

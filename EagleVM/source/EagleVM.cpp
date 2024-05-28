@@ -210,17 +210,17 @@ int main(int argc, char* argv[])
         settings->set_randomize_stack_regs(true);
 
         // initialize block code labels
-        std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> block_labels;
+        std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_labels;
         for (auto& blocks : vm_blocks | std::views::keys)
-            for(const auto& block : blocks)
-                block_labels.emplace_back(block, asmb::code_label::create());
+            for (const auto& block : blocks)
+                block_labels[block] = asmb::code_label::create();
 
         asmb::code_label_ptr entry_point = nullptr;
         for (const auto& [blocks, vm_id] : vm_blocks)
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)
-            virt::pidg::machine_ptr machine = std::make_shared<virt::pidg::machine>(settings);
+            virt::pidg::machine_ptr machine = virt::pidg::machine::create(settings);
             machine->add_block_context(block_labels);
 
             bool first = true;
@@ -238,8 +238,6 @@ int main(int argc, char* argv[])
 
                 vm_section.add_code_container(result_container);
             }
-
-            std::printf("[+] rewrote %llu blocks using vmid: %i", blocks.size(), vm_id);
         }
 
         // overwrite the original instructions

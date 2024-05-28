@@ -116,6 +116,11 @@ namespace eagle::virt
         block_context[block] = label;
     }
 
+    void base_machine::add_block_context(std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_map)
+    {
+        block_context.insert(block_map.begin(), block_map.end());
+    }
+
     std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> base_machine::get_blocks() const
     {
         std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> blocks;

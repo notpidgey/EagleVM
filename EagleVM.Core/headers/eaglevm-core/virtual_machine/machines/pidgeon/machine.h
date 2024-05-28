@@ -26,6 +26,7 @@ namespace eagle::virt::pidg
     {
     public:
         machine(const settings_ptr& settings_info);
+        static machine_ptr create(const settings_ptr& settings_info);
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
