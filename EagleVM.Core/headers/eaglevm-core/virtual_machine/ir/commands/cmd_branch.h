@@ -52,8 +52,8 @@ namespace eagle::ir
         cmd_branch(const std::vector<il_exit_result>& result_info, exit_condition condition);
 
         [[nodiscard]] exit_condition get_condition() const;
-        il_exit_result get_condition_default();
-        il_exit_result get_condition_special();
+        il_exit_result& get_condition_default();
+        il_exit_result& get_condition_special();
 
     private:
         std::vector<il_exit_result> info;

@@ -1,5 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
+#include <ranges>
+#include <unordered_set>
+
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
 
@@ -240,23 +243,113 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<block_il_ptr> ir_translator::optimize()
+    std::vector<ir_block_vm_id> ir_translator::optimize(std::vector<ir_preopt_vm_id> block_vms)
     {
-        // todo: nice little beginner issue
+        // for now we just flatten
+        std::vector<ir_block_vm_id> block_groups;
+        for (const auto& [block, vm_id] : block_vms)
+        {
+            std::vector<block_il_ptr> block_group;
+            block_group.push_back(block->get_entry());
+            block_group.push_back(block->get_exit());
+
+            std::vector<ir_vm_x86_block> body_info = block->get_body();
+            for (auto& ir_vm_block : body_info | std::views::keys)
+                block_group.push_back(ir_vm_block);
+
+            block_groups.emplace_back(block_group, vm_id);
+        }
+
+        std::unordered_map<uint32_t, std::vector<ir_preopt_block_ptr>> vm_groups;
+        for (const auto& [block, vm_id] : block_vms)
+            vm_groups[vm_id].push_back(block);
 
         // remove vm enter block if every reference to vm enter block uses the same vm
+        for (auto& [vm_id, blocks] : vm_groups)
+        {
+            // check entery of every block
+            for (const ir_preopt_block_ptr& preopt_block : blocks)
+            {
+                const block_il_ptr search_enter = preopt_block->get_entry();
+                const std::vector redirect_body = preopt_block->get_body();
+
+                bool vm_enter_unremovable = false;
+                std::vector<cmd_branch_ptr> search_enter_refs;
+
+                // go through each preopt block
+                for (auto& [search_vm_id, other_blocks] : vm_groups)
+                {
+                    // go through each block
+                    for (const ir_preopt_block_ptr& search_preopt_block : other_blocks)
+                    {
+                        // the only blocks that can reference our search block are body and exit
+                        std::vector<block_il_ptr> search_blocks;
+                        search_blocks.append_range(search_preopt_block->get_body());
+                        search_blocks.push_back(search_preopt_block->get_exit());
+
+                        for (const block_il_ptr& search_block : search_blocks)
+                        {
+                            auto command_count = search_block->get_command_count();
+                            for (auto i = 0; i < command_count; i++)
+                            {
+                                auto command = search_block->get_command(i);
+                                assert(command->get_command_type() == command_type::vm_branch, "last enter block command is not a branching command");
+
+                                const cmd_branch_ptr branch = std::static_pointer_cast<cmd_branch>(command);
+                                auto check_block = [&](const il_exit_result& exit_result)
+                                {
+                                    if (std::holds_alternative<block_il_ptr>(exit_result))
+                                    {
+                                        const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
+                                        if (exit_block == search_enter && search_vm_id != vm_id)
+                                            vm_enter_unremovable = true;
+                                        else
+                                            search_enter_refs.emplace_back(branch);
+                                    }
+                                };
+
+                                check_block(branch->get_condition_default());
+                                check_block(branch->get_condition_special());
+
+                                if (vm_enter_unremovable)
+                                    goto UNREMOVABLE;
+                            }
+                        }
+                    }
+                }
+
+            UNREMOVABLE:
+
+                if (!vm_enter_unremovable)
+                {
+                    // we found that we can replace each branch to the block with a branch to the body
+                    for (const auto& branch_ref : search_enter_refs)
+                    {
+                        auto rewrite_branch = [&](il_exit_result& exit_result)
+                        {
+                            if (std::holds_alternative<block_il_ptr>(exit_result))
+                                exit_result = redirect_body.front().first;
+                        };
+
+                        rewrite_branch(branch_ref->get_condition_default());
+                        rewrite_branch(branch_ref->get_condition_special());
+                    }
+                }
+            }
+        }
 
         // remove vm exit block if every branching block uses the same vm
 
+
         // merge blocks together
 
-        return {};
+        return { };
     }
 
     dasm::basic_block* ir_translator::map_basic_block(const ir_preopt_block_ptr& preopt_target)
     {
-        for(auto& [bb, preopt] : bb_map)
-            if(preopt_target == preopt)
+        for (auto& [bb, preopt] : bb_map)
+            if (preopt_target == preopt)
                 return bb;
 
         return nullptr;

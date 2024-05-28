@@ -18,13 +18,16 @@ namespace eagle::ir
     using ir_preopt_block_ptr = std::shared_ptr<ir_preopt_block>;
     using ir_preopt_block_vec = std::vector<ir_preopt_block_ptr>;
 
+    using ir_preopt_vm_id = std::pair<ir_preopt_block_ptr, uint32_t>;
+    using ir_block_vm_id = std::pair<std::vector<block_il_ptr>, uint32_t>;
+
     class ir_translator
     {
     public:
-        ir_translator(dasm::segment_dasm* seg_dasm);
+        explicit ir_translator(dasm::segment_dasm* seg_dasm);
 
         std::vector<ir_preopt_block_ptr> translate();
-        std::vector<block_il_ptr> optimize();
+        std::vector<ir_block_vm_id> optimize(std::vector<ir_preopt_vm_id> block_vms);
 
         dasm::basic_block* map_basic_block(const ir_preopt_block_ptr& preopt_target);
         ir_preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);

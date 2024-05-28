@@ -25,6 +25,7 @@ namespace eagle::ir
         bool insert_before(const base_command_ptr& command_ptr);
 
         base_command_ptr get_command(size_t i);
+        base_command_ptr get_command_back();
         size_t get_command_count() const;
 
     private:

@@ -5,11 +5,13 @@ namespace eagle::ir
 {
     base_command_ptr block_ir::add_command(const base_command_ptr& command)
     {
-        if(command->get_command_type() == command_type::vm_branch && exit)
+        if (command->get_command_type() == command_type::vm_branch && exit)
         {
             assert(exit == nullptr, "cannot have two exiting commands");
             exit = std::static_pointer_cast<cmd_branch>(command);
         }
+
+        assert(exit == nullptr, "cannot append command after exit");
 
         commands.push_back(command);
         return command;
@@ -17,7 +19,7 @@ namespace eagle::ir
 
     void block_ir::add_command(const std::vector<base_command_ptr>& command)
     {
-        if(command.back()->get_command_type() == command_type::vm_branch && exit)
+        if (command.back()->get_command_type() == command_type::vm_branch && exit)
         {
             assert(exit == nullptr, "cannot have two exiting commands");
             exit = std::static_pointer_cast<cmd_branch>(command.back());
@@ -58,6 +60,12 @@ namespace eagle::ir
     {
         assert(i < commands.size(), "index beyond vector size");
         return commands[i];
+    }
+
+    base_command_ptr block_ir::get_command_back()
+    {
+        assert(!commands.empty(), "commands cannot be empty");
+        return commands.back();
     }
 
     std::vector<base_command_ptr>::iterator block_ir::get_iterator(base_command_ptr command)

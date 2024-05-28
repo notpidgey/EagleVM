@@ -187,9 +187,9 @@ namespace eagle::codec
         return instruction;
     }
 
-    ZydisEncoderRequest create_encode_request(const mnemonic mnemonic)
+    enc::req create_encode_request(const mnemonic mnemonic)
     {
-        ZydisEncoderRequest req;
+        enc::req req;
         ZYAN_MEMSET(&req, 0, sizeof(req));
         req.mnemonic = static_cast<ZydisMnemonic>(mnemonic);
         req.operand_count = 0;
@@ -207,36 +207,36 @@ namespace eagle::codec
         return encode_request;
     }
 
-    void add_op(ZydisEncoderRequest& req, const enc::op_imm imm)
+    void add_op(enc::req& req, const enc::op_imm imm)
     {
-        auto op_index = req.operand_count;
+        const auto op_index = req.operand_count;
 
         req.operands[op_index].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
         req.operands[op_index].imm = imm;
         req.operand_count++;
     }
 
-    void add_op(ZydisEncoderRequest& req, const enc::op_mem& mem)
+    void add_op(enc::req& req, const enc::op_mem mem)
     {
-        auto op_index = req.operand_count;
+        const auto op_index = req.operand_count;
 
         req.operands[op_index].type = ZYDIS_OPERAND_TYPE_MEMORY;
         req.operands[op_index].mem = mem;
         req.operand_count++;
     }
 
-    void add_op(ZydisEncoderRequest& req, const enc::op_ptr ptr)
+    void add_op(enc::req& req, const enc::op_ptr ptr)
     {
-        auto op_index = req.operand_count;
+        const auto op_index = req.operand_count;
 
         req.operands[op_index].type = ZYDIS_OPERAND_TYPE_POINTER;
         req.operands[op_index].ptr = ptr;
         req.operand_count++;
     }
 
-    void add_op(ZydisEncoderRequest& req, enc::op_reg reg)
+    void add_op(enc::req& req, enc::op_reg reg)
     {
-        auto op_index = req.operand_count;
+        const auto op_index = req.operand_count;
 
         req.operands[op_index].type = ZYDIS_OPERAND_TYPE_REGISTER;
         req.operands[op_index].reg = reg;

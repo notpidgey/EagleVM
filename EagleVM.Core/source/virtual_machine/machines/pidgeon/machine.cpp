@@ -27,7 +27,7 @@ namespace eagle::virt::pidg
     {
         settings = settings_info;
         rm = std::make_shared<inst_regs>(settings->get_temp_count(), settings);
-        hg = std::make_shared<inst_handlers>(shared_from_this(), rm, settings);
+        hg = std::make_shared<inst_handlers>(std::shared_ptr<machine>(this), rm, settings);
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()
@@ -130,7 +130,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_instruction_handler(m_pop, 1, bit_64));
 
         // mov temp, [address]
-        block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, target_size)));
+        block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, TOB(target_size))));
 
         // push
         hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, to_reg_size(target_size)));
@@ -164,7 +164,7 @@ namespace eagle::virt::pidg
 
             // mov [vtemp2], vtemp
             reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
-            block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, write_size), ZREG(target_vtemp)));
+            block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(write_size)), ZREG(target_vtemp)));
         }
     }
 

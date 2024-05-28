@@ -41,7 +41,7 @@ namespace eagle::codec
 
     char reg_size_to_string(reg_class reg_size);
 
-    std::vector<uint8_t> encode_request(enc::req& request);
+    std::vector<uint8_t> encode_request(const enc::req& request);
     enc::req create_encode_request(mnemonic mnemonic);
     enc::req decode_to_encode(const dec::inst_info& decode);
 

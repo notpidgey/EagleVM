@@ -12,23 +12,23 @@ namespace eagle::codec
 {
     namespace enc
     {
-        typedef ZydisEncoderRequest req;
+        using req = ZydisEncoderRequest;
 
-        typedef ZydisEncoderOperand_::ZydisEncoderOperandImm_ op_imm;
-        typedef ZydisEncoderOperand_::ZydisEncoderOperandMem_ op_mem;
-        typedef ZydisEncoderOperand_::ZydisEncoderOperandPtr_ op_ptr;
-        typedef ZydisEncoderOperand_::ZydisEncoderOperandReg_ op_reg;
+        using op_imm = ZydisEncoderOperand_::ZydisEncoderOperandImm_;
+        using op_mem = ZydisEncoderOperand_::ZydisEncoderOperandMem_;
+        using op_ptr = ZydisEncoderOperand_::ZydisEncoderOperandPtr_;
+        using op_reg = ZydisEncoderOperand_::ZydisEncoderOperandReg_;
     }
 
     namespace dec
     {
-        typedef ZydisDecodedInstruction inst;
+        using inst = ZydisDecodedInstruction;
 
-        typedef ZydisDecodedOperand operand;
-        typedef ZydisDecodedOperandImm_ op_imm;
-        typedef ZydisDecodedOperandMem_ op_mem;
-        typedef ZydisDecodedOperandPtr_ op_ptr;
-        typedef ZydisDecodedOperandReg_ op_reg;
+        using operand = ZydisDecodedOperand;
+        using op_imm = ZydisDecodedOperandImm_;
+        using op_mem = ZydisDecodedOperandMem_;
+        using op_ptr = ZydisDecodedOperandPtr_;
+        using op_reg = ZydisDecodedOperandReg_;
 
         struct inst_info
         {
@@ -62,3 +62,4 @@ namespace eagle::codec
 
 #define ZJMP(x, y) ZIMMU(x->get_address() - y->get_address())
 #define ZJMPR(x) ZIMMU(x->get_address() - rva)
+#define TOB(x) ((uint16_t)x / 8)
