@@ -14,52 +14,56 @@ namespace eagle::dasm
 
 namespace eagle::ir
 {
-    class ir_preopt_block;
-    using ir_preopt_block_ptr = std::shared_ptr<ir_preopt_block>;
-    using ir_preopt_block_vec = std::vector<ir_preopt_block_ptr>;
+    class preopt_block;
+    using preopt_block_ptr = std::shared_ptr<preopt_block>;
+    using preopt_block_vec = std::vector<preopt_block_ptr>;
 
-    using ir_preopt_vm_id = std::pair<ir_preopt_block_ptr, uint32_t>;
-    using ir_block_vm_id = std::pair<std::vector<block_il_ptr>, uint32_t>;
+    using preopt_vm_id = std::pair<preopt_block_ptr, uint32_t>;
+    using block_vm_id = std::pair<std::vector<block_ptr>, uint32_t>;
 
     class ir_translator
     {
     public:
         explicit ir_translator(dasm::segment_dasm* seg_dasm);
 
-        std::vector<ir_preopt_block_ptr> translate(bool split);
-        std::vector<ir_block_vm_id> flatten(const std::vector<ir_preopt_vm_id>& block_vms);
-        std::vector<ir_block_vm_id> optimize(const std::vector<ir_preopt_vm_id>& block_vms);
+        std::vector<preopt_block_ptr> translate(bool split);
+        std::vector<block_vm_id> flatten(const std::vector<preopt_vm_id>& block_vms);
+        std::vector<block_vm_id> optimize(const std::vector<preopt_vm_id>& block_vms,
+            const std::vector<preopt_block_ptr>& extern_call_blocks = { });
 
-        dasm::basic_block* map_basic_block(const ir_preopt_block_ptr& preopt_target);
-        ir_preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
+        dasm::basic_block* map_basic_block(const preopt_block_ptr& preopt_target);
+        preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
 
     private:
         dasm::segment_dasm* dasm;
 
-        std::unordered_map<dasm::basic_block*, ir_preopt_block_ptr> bb_map;
+        std::unordered_map<dasm::basic_block*, preopt_block_ptr> bb_map;
 
-        ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
-        ir_preopt_block_ptr translate_block_split(dasm::basic_block* bb);
+        preopt_block_ptr translate_block(dasm::basic_block* bb);
+        preopt_block_ptr translate_block_split(dasm::basic_block* bb);
 
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
     };
 
-    class ir_preopt_block
+    class preopt_block
     {
     public:
-        void init();
+        void init(dasm::basic_block* block);
 
-        block_il_ptr get_entry();
+        dasm::basic_block* get_original_block() const;
+        block_ptr get_entry();
         void clear_entry();
 
-        std::vector<block_il_ptr> get_body();
-        block_il_ptr get_exit();
+        std::vector<block_ptr> get_body();
+        block_ptr get_exit();
 
-        void add_body(const block_il_ptr& block);
+        void add_body(const block_ptr& block);
 
     private:
-        block_il_ptr entry;
-        std::vector<block_il_ptr> body;
-        block_il_ptr exit;
+        dasm::basic_block* original_block = nullptr;
+
+        block_ptr entry;
+        std::vector<block_ptr> body;
+        block_ptr exit;
     };
 }

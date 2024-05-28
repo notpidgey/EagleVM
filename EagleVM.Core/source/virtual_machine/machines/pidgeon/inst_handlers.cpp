@@ -472,7 +472,7 @@ namespace eagle::virt::pidg
             ir::ir_insts handler_ir = target_mnemonic->gen_handler(handler_id);
 
             // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
-            ir::block_il_ptr ir_block = std::make_shared<ir::block_ir>();
+            ir::block_ptr ir_block = std::make_shared<ir::block_ir>();
             ir_block->add_command(handler_ir);
 
             const asmb::code_container_ptr handler = machine->lift_block(ir_block);

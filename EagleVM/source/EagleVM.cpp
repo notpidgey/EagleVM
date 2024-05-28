@@ -190,18 +190,26 @@ int main(int argc, char* argv[])
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
 
         ir::ir_translator ir_trans(&dasm);
-        ir::ir_preopt_block_vec preopt = ir_trans.translate(true);
+        ir::preopt_block_vec preopt = ir_trans.translate(true);
 
         // here we assign vms to each block
         // for the current example we can assign a unique vm to each block
         uint32_t vm_index = 0;
-        std::vector<ir::ir_preopt_vm_id> block_vm_ids;
+        std::vector<ir::preopt_vm_id> block_vm_ids;
         for (const auto& preopt_block : preopt)
             block_vm_ids.emplace_back(preopt_block, vm_index++);
 
+        // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
+        ir::preopt_block_ptr entry_block = nullptr;
+        for (const auto& preopt_block : preopt)
+            if (preopt_block->get_original_block() == dasm.get_block(rva_inst_begin))
+                entry_block = preopt_block;
+
+        assert(entry_block != nullptr, "could not find matching preopt block for entry block");
+
         // if we want, we can do a little optimzation which will rewrite the preopt blocks
         // or we could simply ir_trans.flatten()
-        std::vector<ir::ir_block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids);
+        std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, { entry_block });
 
         // we want the same settings for every machine
         virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
@@ -210,7 +218,7 @@ int main(int argc, char* argv[])
         settings->set_randomize_stack_regs(true);
 
         // initialize block code labels
-        std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_labels;
+        std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
         for (auto& blocks : vm_blocks | std::views::keys)
             for (const auto& block : blocks)
                 block_labels[block] = asmb::code_label::create();

@@ -40,10 +40,10 @@ namespace eagle::ir
     };
 
     class block_ir;
-    using block_il_ptr = std::shared_ptr<block_ir>;
+    using block_ptr = std::shared_ptr<block_ir>;
 
     using vmexit_rva = uint64_t;
-    using il_exit_result = std::variant<vmexit_rva, block_il_ptr>;
+    using il_exit_result = std::variant<vmexit_rva, block_ptr>;
 
     class cmd_branch : public base_command
     {

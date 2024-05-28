@@ -17,71 +17,71 @@ namespace eagle::ir
         dasm = seg_dasm;
     }
 
-    std::vector<ir_preopt_block_ptr> ir_translator::translate(bool split)
+    std::vector<preopt_block_ptr> ir_translator::translate(bool split)
     {
         // we want to initialzie the entire map with bb translates
         for (dasm::basic_block* block : dasm->blocks)
         {
-            const ir_preopt_block_ptr vm_il = std::make_shared<ir_preopt_block>();
+            const preopt_block_ptr vm_il = std::make_shared<preopt_block>();
             vm_il->init();
 
             bb_map[block] = vm_il;
         }
 
-        std::vector<ir_preopt_block_ptr> result;
+        std::vector<preopt_block_ptr> result;
         for (dasm::basic_block* block : dasm->blocks)
             if (split)
                 result.push_back(translate_block_split(block));
             else
                 result.push_back(translate_block(block));
 
-        //auto similar_seq = [](const std::vector<ir_preopt_block_ptr>& blocks)
-        //    -> std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>>
-        //{
-        //    std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> sequence_map;
-        //    for (const ir_preopt_block_ptr& block : blocks)
-        //    {
-        //        auto body = block->get_body();
-        //        for (int window_size = 2; window_size <= 4; ++window_size)
-        //        {
-        //            for (int i = 0; i <= body.size() - window_size; ++i)
-        //            {
-        //                std::string sequence;
-        //                for (int j = i; j < i + window_size; ++j)
-        //                    sequence += body[j].first->to_string();
+        // auto similar_seq = [](const std::vector<ir_preopt_block_ptr>& blocks)
+        //     -> std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>>
+        // {
+        //     std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> sequence_map;
+        //     for (const ir_preopt_block_ptr& block : blocks)
+        //     {
+        //         auto body = block->get_body();
+        //         for (int window_size = 2; window_size <= 4; ++window_size)
+        //         {
+        //             for (int i = 0; i <= body.size() - window_size; ++i)
+        //             {
+        //                 std::string sequence;
+        //                 for (int j = i; j < i + window_size; ++j)
+        //                     sequence += body[j].first->to_string();
 
-        //                sequence_map[sequence].push_back(block);
-        //            }
-        //        }
-        //    }
+        //                 sequence_map[sequence].push_back(block);
+        //             }
+        //         }
+        //     }
 
-        //    std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> similar_sequences;
-        //    for (auto& pair : sequence_map)
-        //        if (pair.second.size() > 1)
-        //            similar_sequences.insert(pair);
+        //     std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> similar_sequences;
+        //     for (auto& pair : sequence_map)
+        //         if (pair.second.size() > 1)
+        //             similar_sequences.insert(pair);
 
-        //    return similar_sequences;
-        //};
+        //     return similar_sequences;
+        // };
 
         return result;
     }
 
-    ir_preopt_block_ptr ir_translator::translate_block(dasm::basic_block* bb)
+    preopt_block_ptr ir_translator::translate_block(dasm::basic_block* bb)
     {
-        ir_preopt_block_ptr block_info = bb_map[bb];
+        preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
             return block_info;
 
         //
         // entry
         //
-        const block_il_ptr entry = block_info->get_entry();
+        const block_ptr entry = block_info->get_entry();
         entry->add_command(std::make_shared<cmd_vm_enter>());
 
         //
         // body
         //
-        const block_il_ptr current_block = std::make_shared<block_ir>(false);
+        const block_ptr current_block = std::make_shared<block_ir>(false);
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -140,7 +140,7 @@ namespace eagle::ir
                     }
 
                     // append basic block
-                    block_il_ptr result_block = lifter->get_block();
+                    block_ptr result_block = lifter->get_block();
                     current_block->copy_from(result_block);
                 }
             }
@@ -159,7 +159,7 @@ namespace eagle::ir
         }
 
         // jump to exiting block
-        const block_il_ptr exit = block_info->get_exit();
+        const block_ptr exit = block_info->get_exit();
         current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
 
         block_info->add_body(current_block);
@@ -220,23 +220,23 @@ namespace eagle::ir
         return block_info;
     }
 
-    ir_preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block* bb)
+    preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block* bb)
     {
-        ir_preopt_block_ptr block_info = bb_map[bb];
+        preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
             return block_info;
 
         //
         // entry
         //
-        const block_il_ptr entry = block_info->get_entry();
+        const block_ptr entry = block_info->get_entry();
         entry->add_command(std::make_shared<cmd_vm_enter>());
 
         //
         // body
         //
         bool is_vm_block = true;
-        block_il_ptr current_block = std::make_shared<block_ir>(false);
+        block_ptr current_block = std::make_shared<block_ir>(false);
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -288,14 +288,14 @@ namespace eagle::ir
                 if (translate_sucess)
                 {
                     // append basic block
-                    block_il_ptr result_block = lifter->get_block();
+                    block_ptr result_block = lifter->get_block();
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
                     if (!is_vm_block)
                     {
                         // the current block is a x86 block
-                        const block_il_ptr previous = current_block;
+                        const block_ptr previous = current_block;
                         block_info->add_body(current_block);
 
                         current_block = std::make_shared<block_ir>(false);
@@ -320,7 +320,7 @@ namespace eagle::ir
                     else
                     {
                         // the current block is a vm block
-                        const block_il_ptr previous = current_block;
+                        const block_ptr previous = current_block;
                         block_info->add_body(current_block);
 
                         current_block = std::make_shared<block_ir>(true);
@@ -339,7 +339,7 @@ namespace eagle::ir
         }
 
         // jump to exiting block
-        const block_il_ptr exit = block_info->get_exit();
+        const block_ptr exit = block_info->get_exit();
         current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
 
         // insert vm exit
@@ -400,13 +400,13 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<ir_block_vm_id> ir_translator::flatten(const std::vector<ir_preopt_vm_id>& block_vms)
+    std::vector<block_vm_id> ir_translator::flatten(const std::vector<preopt_vm_id>& block_vms)
     {
         // for now we just flatten
-        std::vector<ir_block_vm_id> block_groups;
+        std::vector<block_vm_id> block_groups;
         for (const auto& [block, vm_id] : block_vms)
         {
-            std::vector<block_il_ptr> block_group;
+            std::vector<block_ptr> block_group;
             block_group.push_back(block->get_entry());
             block_group.append_range(block->get_body());
             block_group.push_back(block->get_exit());
@@ -418,9 +418,10 @@ namespace eagle::ir
         return block_groups;
     }
 
-    std::vector<ir_block_vm_id> ir_translator::optimize(const std::vector<ir_preopt_vm_id>& block_vms)
+    std::vector<block_vm_id> ir_translator::optimize(const std::vector<preopt_vm_id>& block_vms,
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
-        std::unordered_map<uint32_t, std::vector<ir_preopt_block_ptr>> vm_groups;
+        std::unordered_map<uint32_t, std::vector<preopt_block_ptr>> vm_groups;
         for (const auto& [block, vm_id] : block_vms)
             vm_groups[vm_id].push_back(block);
 
@@ -428,33 +429,44 @@ namespace eagle::ir
         for (auto& [vm_id, blocks] : vm_groups)
         {
             // check entery of every block
-            for (const ir_preopt_block_ptr& preopt_block : blocks)
+            for (const preopt_block_ptr& preopt_block : blocks)
             {
-                const block_il_ptr search_enter = preopt_block->get_entry();
+                const block_ptr search_enter = preopt_block->get_entry();
                 const std::vector redirect_body = preopt_block->get_body();
 
                 bool vm_enter_unremovable = false;
                 std::vector<cmd_branch_ptr> search_enter_refs;
 
+                // check if there are any external calls
+                // if there are, we cannot remove vm enter
+                for (auto& external : extern_call_blocks)
+                {
+                    if (preopt_block == external)
+                    {
+                        vm_enter_unremovable = true;
+                        break;
+                    }
+                }
+
                 // go through each preopt block
                 for (auto& [search_vm_id, other_blocks] : vm_groups)
                 {
                     // go through each block
-                    for (const ir_preopt_block_ptr& search_preopt_block : other_blocks)
+                    for (const preopt_block_ptr& search_preopt_block : other_blocks)
                     {
                         // the only blocks that can reference our search block are body and exit
-                        std::vector<block_il_ptr> search_blocks;
+                        std::vector<block_ptr> search_blocks;
                         search_blocks.append_range(search_preopt_block->get_body());
                         search_blocks.push_back(search_preopt_block->get_exit());
 
-                        for (const block_il_ptr& search_block : search_blocks)
+                        for (const block_ptr& search_block : search_blocks)
                         {
                             const cmd_branch_ptr branch = search_block->get_branch();
                             auto check_block = [&](const il_exit_result& exit_result)
                             {
-                                if (std::holds_alternative<block_il_ptr>(exit_result))
+                                if (std::holds_alternative<block_ptr>(exit_result))
                                 {
-                                    const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
+                                    const block_ptr exit_block = std::get<block_ptr>(exit_result);
                                     if (exit_block == search_enter && search_vm_id != vm_id)
                                         vm_enter_unremovable = true;
                                     else
@@ -480,7 +492,7 @@ namespace eagle::ir
                     {
                         auto rewrite_branch = [&](il_exit_result& exit_result)
                         {
-                            if (std::holds_alternative<block_il_ptr>(exit_result))
+                            if (std::holds_alternative<block_ptr>(exit_result))
                                 exit_result = redirect_body.front();
                         };
 
@@ -497,21 +509,21 @@ namespace eagle::ir
         for (auto& [vm_id, blocks] : vm_groups)
         {
             // check entery of every block
-            for (const ir_preopt_block_ptr& preopt_block : blocks)
+            for (const preopt_block_ptr& preopt_block : blocks)
             {
-                const block_il_ptr preopt_exit = preopt_block->get_exit();
+                const block_ptr preopt_exit = preopt_block->get_exit();
                 const cmd_branch_ptr branch = preopt_exit->get_branch();
 
                 // now we want to check if the current vm group has all the exits of this preopt
-                std::vector<ir_preopt_block_ptr>& curr_vm_group = vm_groups[vm_id];
+                std::vector<preopt_block_ptr>& curr_vm_group = vm_groups[vm_id];
                 auto is_same_vm = [&](const il_exit_result& exit_result)
                 {
-                    if (std::holds_alternative<block_il_ptr>(exit_result))
+                    if (std::holds_alternative<block_ptr>(exit_result))
                     {
-                        const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
+                        const block_ptr exit_block = std::get<block_ptr>(exit_result);
                         for (const auto& search_preopt : curr_vm_group)
                         {
-                            std::vector<block_il_ptr> all_search_blocks;
+                            std::vector<block_ptr> all_search_blocks;
                             all_search_blocks.push_back(search_preopt->get_entry());
                             all_search_blocks.append_range(search_preopt->get_body());
                             all_search_blocks.push_back(search_preopt->get_exit());
@@ -549,7 +561,7 @@ namespace eagle::ir
         return flatten(block_vms);
     }
 
-    dasm::basic_block* ir_translator::map_basic_block(const ir_preopt_block_ptr& preopt_target)
+    dasm::basic_block* ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
     {
         for (auto& [bb, preopt] : bb_map)
             if (preopt_target == preopt)
@@ -558,7 +570,7 @@ namespace eagle::ir
         return nullptr;
     }
 
-    ir_preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block* basic_block)
+    preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block* basic_block)
     {
         return bb_map[basic_block];
     }
@@ -619,33 +631,39 @@ namespace eagle::ir
         }
     }
 
-    void ir_preopt_block::init()
+    void preopt_block::init(dasm::basic_block* block)
     {
         entry = std::make_shared<block_ir>();
         exit = std::make_shared<block_ir>();
+        original_block = block;
     }
 
-    block_il_ptr ir_preopt_block::get_entry()
+    dasm::basic_block* preopt_block::get_original_block() const
+    {
+        return original_block;
+    }
+
+    block_ptr preopt_block::get_entry()
     {
         return entry;
     }
 
-    void ir_preopt_block::clear_entry()
+    void preopt_block::clear_entry()
     {
         entry = nullptr;
     }
 
-    std::vector<block_il_ptr> ir_preopt_block::get_body()
+    std::vector<block_ptr> preopt_block::get_body()
     {
         return body;
     }
 
-    block_il_ptr ir_preopt_block::get_exit()
+    block_ptr preopt_block::get_exit()
     {
         return exit;
     }
 
-    void ir_preopt_block::add_body(const block_il_ptr& block)
+    void preopt_block::add_body(const block_ptr& block)
     {
         body.push_back(block);
     }

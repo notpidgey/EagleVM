@@ -23,10 +23,10 @@ namespace eagle::ir::lifter
         explicit base_x86_translator(codec::dec::inst_info decode, uint64_t rva);
 
         virtual bool translate_to_il(uint64_t original_rva);
-        block_il_ptr get_block();
+        block_ptr get_block();
 
     protected:
-        block_il_ptr block;
+        block_ptr block;
         uint64_t orig_rva;
 
         codec::dec::inst inst;

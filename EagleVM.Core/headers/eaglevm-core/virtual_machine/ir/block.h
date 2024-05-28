@@ -7,7 +7,7 @@
 namespace eagle::ir
 {
     class block_ir;
-    using block_il_ptr = std::shared_ptr<block_ir>;
+    using block_ptr = std::shared_ptr<block_ir>;
 
     class block_ir
     {
@@ -20,7 +20,7 @@ namespace eagle::ir
         base_command_ptr add_command(const base_command_ptr& command);
         void add_command(const std::vector<base_command_ptr>& command);
 
-        void copy_from(const block_il_ptr& other);
+        void copy_from(const block_ptr& other);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);
 

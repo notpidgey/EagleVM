@@ -75,9 +75,9 @@ namespace eagle::virt::pidg
 
                     block->add(RECOMPILE(encode(mnemonic, ZIMMU(rva))));
                 }
-                else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
+                else if constexpr (std::is_same_v<T, ir::block_ptr>)
                 {
-                    const ir::block_il_ptr& target = arg;
+                    const ir::block_ptr& target = arg;
 
                     const asmb::code_label_ptr label = get_block_label(target);
                     assert(label != nullptr, "block contains missing context");

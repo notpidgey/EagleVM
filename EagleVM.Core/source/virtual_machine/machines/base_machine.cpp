@@ -5,7 +5,7 @@
 
 namespace eagle::virt
 {
-    asmb::code_container_ptr base_machine::lift_block(const ir::block_il_ptr& block)
+    asmb::code_container_ptr base_machine::lift_block(const ir::block_ptr& block)
     {
         const size_t command_count = block->get_command_count();
 
@@ -72,7 +72,7 @@ namespace eagle::virt
         return code;
     }
 
-    void base_machine::add_block_context(const std::vector<ir::block_il_ptr>& blocks)
+    void base_machine::add_block_context(const std::vector<ir::block_ptr>& blocks)
     {
         for (auto& block : blocks)
         {
@@ -83,7 +83,7 @@ namespace eagle::virt
         }
     }
 
-    void base_machine::add_block_context(const ir::block_il_ptr& block)
+    void base_machine::add_block_context(const ir::block_ptr& block)
     {
         if (block_context.contains(block))
             return;
@@ -91,7 +91,7 @@ namespace eagle::virt
         block_context[block] = asmb::code_label::create();
     }
 
-    void base_machine::add_block_context(const std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>>& blocks)
+    void base_machine::add_block_context(const std::vector<std::pair<ir::block_ptr, asmb::code_label_ptr>>& blocks)
     {
         for (auto& [block, label] : blocks)
         {
@@ -105,7 +105,7 @@ namespace eagle::virt
         }
     }
 
-    void base_machine::add_block_context(const ir::block_il_ptr& block, const asmb::code_label_ptr& label)
+    void base_machine::add_block_context(const ir::block_ptr& block, const asmb::code_label_ptr& label)
     {
         if (block_context.contains(block))
         {
@@ -116,14 +116,14 @@ namespace eagle::virt
         block_context[block] = label;
     }
 
-    void base_machine::add_block_context(std::unordered_map<ir::block_il_ptr, asmb::code_label_ptr> block_map)
+    void base_machine::add_block_context(std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_map)
     {
         block_context.insert(block_map.begin(), block_map.end());
     }
 
-    std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> base_machine::get_blocks() const
+    std::vector<std::pair<ir::block_ptr, asmb::code_label_ptr>> base_machine::get_blocks() const
     {
-        std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> blocks;
+        std::vector<std::pair<ir::block_ptr, asmb::code_label_ptr>> blocks;
         for (const auto& pair : block_context)
             blocks.emplace_back(pair);
 
@@ -186,7 +186,7 @@ namespace eagle::virt
         }
     }
 
-    asmb::code_label_ptr base_machine::get_block_label(const ir::block_il_ptr& block)
+    asmb::code_label_ptr base_machine::get_block_label(const ir::block_ptr& block)
     {
         if (block_context.contains(block))
             return block_context[block];

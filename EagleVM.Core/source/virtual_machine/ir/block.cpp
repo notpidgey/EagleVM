@@ -22,7 +22,7 @@ namespace eagle::ir
         commands.append_range(command);
     }
 
-    void block_ir::copy_from(const block_il_ptr& other)
+    void block_ir::copy_from(const block_ptr& other)
     {
         commands.append_range(other->commands);
 

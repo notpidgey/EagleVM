@@ -5,15 +5,15 @@
 #include <filesystem>
 #include <vector>
 #include <eaglevm-core/disassembler/disassembler.h>
-#include <../../EagleVM.Core/headers/eaglevm-core/disassembler/basic_block.h>
 
 #include "nlohmann/json.hpp"
 
-#include <../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_inst.h>
-#include <../../EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/vm_virtualizer.h>
-
 #include "util.h"
 #include "run_container.h"
+#include "eaglevm-core/compiler/section_manager.h"
+#include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
+#include "eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
 
 reg_overwrites build_writes(nlohmann::json& inputs);
 uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs, bool flags);
@@ -23,9 +23,6 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 const std::string inclusive_tests[] = {
     "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub", "cmp"
 };
-
-#pragma section(".handlers", execute)
-__declspec(allocate(".handlers")) unsigned char handler_buffer[0x1000 * 10] = { 0xCC };
 
 #pragma section(".run_section", execute)
 __declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { 0xCC };
@@ -38,10 +35,7 @@ int main(int argc, char* argv[])
     // the virtualizer doesnt allow displacement sizes larger than run time addresses
     // so all i can do is create a section 🤣
     DWORD old_protect;
-    VirtualProtect(handler_buffer, sizeof(handler_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
     VirtualProtect(run_buffer, sizeof(run_buffer), PAGE_EXECUTE_READWRITE, &old_protect);
-
-    memset(handler_buffer, 0xCC, sizeof(handler_buffer));
     memset(run_buffer, 0xCC, sizeof(run_buffer));
 
     // setbuf(stdout, NULL);
@@ -49,20 +43,14 @@ int main(int argc, char* argv[])
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
-    zydis_helper::setup_decoder();
-
-    eagle::virt::vm_inst vm_inst;
-    vm_inst.init_reg_order();
-
-    eagle::asmb::section_manager section = vm_inst.generate_vm_handlers(false);
-
-    uint64_t rva = reinterpret_cast<uint64_t>(&handler_buffer) - reinterpret_cast<uint64_t>(&__ImageBase);
-    encoded_vec vmhandle_data = section.compile_section(rva);
-
-    assert(sizeof(handler_buffer) >= vmhandle_data.size());
-    memcpy(&handler_buffer[0], vmhandle_data.data(), vmhandle_data.size());
-
+    eagle::codec::setup_decoder();
     run_container::init_veh();
+
+    // we want the same settings for every machine
+    eagle::virt::pidg::settings_ptr settings = std::make_shared<eagle::virt::pidg::settings>();
+    settings->set_temp_count(4);
+    settings->set_randomize_vm_regs(true);
+    settings->set_randomize_stack_regs(true);
 
     // loop each file that test_data_path contains
     for (const auto& entry: std::filesystem::directory_iterator(test_data_path))
@@ -120,22 +108,62 @@ int main(int argc, char* argv[])
 
             run_container container(ins, outs);
             {
-                eagle::virt::vm_virtualizer virt(&vm_inst);
-
                 std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
-                decode_vec instructions = zydis_helper::get_instructions(instruction_data.data(), instruction_data.size());
+                eagle::codec::decode_vec instructions = eagle::codec::get_instructions(instruction_data.data(), instruction_data.size());
 
-                eagle::dasm::segment_dasm dasm(instructions, 0, instruction_data.size());
+                eagle::dasm::segment_dasm dasm(std::move(instructions), 0, instruction_data.size());
                 dasm.generate_blocks();
 
-                eagle::asmb::section_manager vm_code_sm(false);
-                vm_code_sm.add(virt.virtualize_segment(&dasm));
+                eagle::ir::ir_translator ir_trans(&dasm);
+                eagle::ir::preopt_block_vec preopt = ir_trans.translate(true);
+
+                uint32_t vm_index = 0;
+                std::vector<eagle::ir::preopt_vm_id> block_vm_ids;
+                for (const auto& preopt_block : preopt)
+                    block_vm_ids.emplace_back(preopt_block, vm_index++);
+
+                // if we want, we can do a little optimzation which will rewrite the preopt blocks
+                // or we could simply ir_trans.flatten()
+                std::vector<eagle::ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids);
+
+                // initialize block code labels
+                std::unordered_map<eagle::ir::block_ptr, eagle::asmb::code_label_ptr> block_labels;
+                for (auto& blocks : vm_blocks | std::views::keys)
+                    for (const auto& block : blocks)
+                        block_labels[block] = eagle::asmb::code_label::create();
+
+                eagle::asmb::section_manager vm_section(true);
+                eagle::asmb::code_label_ptr entry_point = nullptr;
+
+                for (const auto& [blocks, vm_id] : vm_blocks)
+                {
+                    // we create a new machine based off of the same settings to make things more annoying
+                    // but the same machine could be used :)
+                    eagle::virt::pidg::machine_ptr machine = eagle::virt::pidg::machine::create(settings);
+                    machine->add_block_context(block_labels);
+
+                    bool first = true;
+                    for (auto& translated_block : blocks)
+                    {
+                        eagle::asmb::code_container_ptr result_container = machine->lift_block(translated_block);
+                        if (first)
+                        {
+                            eagle::asmb::code_label_ptr entry_mark = eagle::asmb::code_label::create();
+                            result_container->bind_start(entry_mark);
+
+                            entry_point = entry_mark;
+                            first = false;
+                        }
+
+                        vm_section.add_code_container(result_container);
+                    }
+                }
 
                 container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);
                 uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) -
                     reinterpret_cast<uint64_t>(&__ImageBase);
 
-                encoded_vec virtualized_instruction = vm_code_sm.compile_section(instruction_rva);
+                eagle::codec::encoded_vec virtualized_instruction = vm_section.compile_section(instruction_rva);
                 virtualized_instruction.erase(virtualized_instruction.end() - 5, virtualized_instruction.end());
                 virtualized_instruction.push_back(0x0F);
                 virtualized_instruction.push_back(0x01);
