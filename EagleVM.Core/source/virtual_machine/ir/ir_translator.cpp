@@ -17,7 +17,7 @@ namespace eagle::ir
         dasm = seg_dasm;
     }
 
-    std::vector<ir_preopt_block_ptr> ir_translator::translate()
+    std::vector<ir_preopt_block_ptr> ir_translator::translate(bool split)
     {
         // we want to initialzie the entire map with bb translates
         for (dasm::basic_block* block : dasm->blocks)
@@ -30,7 +30,10 @@ namespace eagle::ir
 
         std::vector<ir_preopt_block_ptr> result;
         for (dasm::basic_block* block : dasm->blocks)
-            result.push_back(translate_block(block));
+            if (split)
+                result.push_back(translate_block_split(block));
+            else
+                result.push_back(translate_block(block));
 
         //auto similar_seq = [](const std::vector<ir_preopt_block_ptr>& blocks)
         //    -> std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>>
@@ -64,6 +67,160 @@ namespace eagle::ir
     }
 
     ir_preopt_block_ptr ir_translator::translate_block(dasm::basic_block* bb)
+    {
+        ir_preopt_block_ptr block_info = bb_map[bb];
+        if (bb->decoded_insts.empty())
+            return block_info;
+
+        //
+        // entry
+        //
+        const block_il_ptr entry = block_info->get_entry();
+        entry->add_command(std::make_shared<cmd_vm_enter>());
+
+        //
+        // body
+        //
+        const block_il_ptr current_block = std::make_shared<block_ir>(false);
+
+        // we calculate skips here because a basic block might end with a jump
+        // we will handle that manually instead of letting the il translator handle this
+        const dasm::block_end_reason end_reason = bb->get_end_reason();
+        const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
+
+        bool is_in_vm = false;
+        for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
+        {
+            // use il x86 translator to translate the instruction to il
+            auto decoded_inst = bb->decoded_insts[i];
+            auto& [inst, ops] = decoded_inst;
+
+            std::vector<handler_op> il_operands;
+            handler::base_handler_gen_ptr handler_gen = nullptr;
+
+            std::optional<std::string> target_handler = std::nullopt;
+
+            codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
+            if (instruction_handlers.contains(mnemonic))
+            {
+                // first we verify if there is even a valid handler for this inustruction
+                // we do this by checking the handler generator for this specific handler
+                handler_gen = instruction_handlers[mnemonic];
+
+                for (int j = 0; j < inst.operand_count_visible; j++)
+                {
+                    il_operands.emplace_back(
+                        static_cast<codec::op_type>(ops[i].type),
+                        static_cast<codec::reg_size>(ops[i].size)
+                    );
+                }
+
+                target_handler = handler_gen->get_handler_id(il_operands);
+            }
+
+            bool translate_sucess = target_handler != std::nullopt;
+            if (target_handler)
+            {
+                // we know that a valid handler exists for this instruction
+                // this means that we can bring it into the base x86 lifter
+
+                // now we need to find a lifter
+                const uint64_t current_rva = bb->get_index_rva(i);
+
+                auto create_lifter = instruction_lifters[mnemonic];
+                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
+
+                translate_sucess = lifter->translate_to_il(current_rva);
+                if (translate_sucess)
+                {
+                    if (!is_in_vm)
+                    {
+                        current_block->add_command(std::make_shared<cmd_vm_enter>());
+                        is_in_vm = true;
+                    }
+
+                    // append basic block
+                    block_il_ptr result_block = lifter->get_block();
+                    current_block->copy_from(result_block);
+                }
+            }
+
+            if (!translate_sucess)
+            {
+                if (is_in_vm)
+                {
+                    current_block->add_command(std::make_shared<cmd_vm_exit>());
+                    is_in_vm = false;
+                }
+
+                // todo: if rip relative, translate
+                current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
+            }
+        }
+
+        // jump to exiting block
+        const block_il_ptr exit = block_info->get_exit();
+        current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
+
+        block_info->add_body(current_block);
+
+        // insert vm exit
+        if (is_in_vm)
+        {
+            exit->add_command(std::make_shared<cmd_vm_exit>());
+        }
+
+        //
+        // exit
+        //
+        std::vector<il_exit_result> exits;
+        exit_condition condition = exit_condition::none;
+
+        switch (end_reason)
+        {
+            case dasm::block_jump:
+            case dasm::block_end:
+            {
+                auto [target, type] = dasm->get_jump(bb);
+                if (type == dasm::jump_outside_segment)
+                    exits.emplace_back(target);
+                else
+                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+
+                condition = exit_condition::jmp;
+                break;
+            }
+            case dasm::block_conditional_jump:
+            {
+                // case 1 - condition succeed
+                {
+                    auto [target, type] = dasm->get_jump(bb);
+                    if (type == dasm::jump_outside_segment)
+                        exits.emplace_back(target);
+                    else
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                }
+
+                // case 2 - fall through
+                {
+                    auto [target, type] = dasm->get_jump(bb, true);
+                    if (type == dasm::jump_outside_segment)
+                        exits.emplace_back(target);
+                    else
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                }
+
+                const auto& [instruction, _] = bb->decoded_insts.back();
+                condition = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
+                break;
+            }
+        }
+
+        exit->add_command(std::make_shared<cmd_branch>(exits, condition));
+        return block_info;
+    }
+
+    ir_preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block* bb)
     {
         ir_preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
@@ -139,7 +296,7 @@ namespace eagle::ir
                     {
                         // the current block is a x86 block
                         const block_il_ptr previous = current_block;
-                        block_info->add_body(current_block, false);
+                        block_info->add_body(current_block);
 
                         current_block = std::make_shared<block_ir>(false);
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
@@ -164,7 +321,7 @@ namespace eagle::ir
                     {
                         // the current block is a vm block
                         const block_il_ptr previous = current_block;
-                        block_info->add_body(current_block, true);
+                        block_info->add_body(current_block);
 
                         current_block = std::make_shared<block_ir>(true);
                         previous->add_command(std::make_shared<cmd_vm_exit>());
@@ -181,17 +338,17 @@ namespace eagle::ir
             }
         }
 
-        // make sure to add a vmexit
-        if (is_vm_block)
-        {
-            current_block->add_command(std::make_shared<cmd_vm_exit>());
-        }
-
         // jump to exiting block
         const block_il_ptr exit = block_info->get_exit();
-        exit->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+        current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
 
-        block_info->add_body(current_block, is_vm_block);
+        // insert vm exit
+        if (is_vm_block)
+        {
+            exit->add_command(std::make_shared<cmd_vm_exit>());
+        }
+
+        block_info->add_body(current_block);
 
         //
         // exit
@@ -243,7 +400,7 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<ir_block_vm_id> ir_translator::optimize(std::vector<ir_preopt_vm_id> block_vms)
+    std::vector<ir_block_vm_id> ir_translator::flatten(std::vector<ir_preopt_vm_id> block_vms)
     {
         // for now we just flatten
         std::vector<ir_block_vm_id> block_groups;
@@ -253,13 +410,18 @@ namespace eagle::ir
             block_group.push_back(block->get_entry());
             block_group.push_back(block->get_exit());
 
-            std::vector<ir_vm_x86_block> body_info = block->get_body();
-            for (auto& ir_vm_block : body_info | std::views::keys)
+            std::vector<block_il_ptr> body_info = block->get_body();
+            for (auto& ir_vm_block : body_info)
                 block_group.push_back(ir_vm_block);
 
             block_groups.emplace_back(block_group, vm_id);
         }
 
+        return block_groups;
+    }
+
+    std::vector<ir_block_vm_id> ir_translator::optimize(const std::vector<ir_preopt_vm_id>& block_vms)
+    {
         std::unordered_map<uint32_t, std::vector<ir_preopt_block_ptr>> vm_groups;
         for (const auto& [block, vm_id] : block_vms)
             vm_groups[vm_id].push_back(block);
@@ -328,22 +490,72 @@ namespace eagle::ir
                         auto rewrite_branch = [&](il_exit_result& exit_result)
                         {
                             if (std::holds_alternative<block_il_ptr>(exit_result))
-                                exit_result = redirect_body.front().first;
+                                exit_result = redirect_body.front();
                         };
 
                         rewrite_branch(branch_ref->get_condition_default());
                         rewrite_branch(branch_ref->get_condition_special());
                     }
+
+                    preopt_block->clear_entry();
                 }
             }
         }
 
         // remove vm exit block if every branching block uses the same vm
+        for (auto& [vm_id, blocks] : vm_groups)
+        {
+            // check entery of every block
+            for (const ir_preopt_block_ptr& preopt_block : blocks)
+            {
+                const block_il_ptr preopt_exit = preopt_block->get_exit();
+                const cmd_branch_ptr branch = preopt_exit->get_branch();
 
+                // now we want to check if the current vm group has all the exits of this preopt
+                std::vector<ir_preopt_block_ptr>& curr_vm_group = vm_groups[vm_id];
+                auto is_same_vm = [&](const il_exit_result& exit_result)
+                {
+                    if (std::holds_alternative<block_il_ptr>(exit_result))
+                    {
+                        const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
+                        for (const auto& search_preopt : curr_vm_group)
+                        {
+                            std::vector<block_il_ptr> all_search_blocks;
+                            all_search_blocks.push_back(search_preopt->get_entry());
+                            all_search_blocks.append_range(search_preopt->get_body());
+                            all_search_blocks.push_back(search_preopt->get_exit());
+
+                            if (std::ranges::find(all_search_blocks, exit_block) != all_search_blocks.end())
+                                return true;
+                        }
+                    }
+
+                    // if one of the exits is an rva then we have to exit no matter what : (
+                    // otherwise the search would fall through to this fail
+                    return false;
+                };
+
+                const bool check_one = is_same_vm(branch->get_condition_default());
+                const bool check_two = is_same_vm(branch->get_condition_special());
+
+                if (check_one && check_two)
+                {
+                    // this means all exits are of the same vm
+                    const size_t command_count = preopt_exit->get_command_count();
+                    assert(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 commands");
+
+                    if (command_count == 2)
+                    {
+                        // this means we should have a vm exit command
+                        const base_command_ptr& cmd = preopt_exit->remove_command(0);
+                        assert(cmd->get_command_type() == command_type::vm_exit, "invalid command, expected exit");
+                    }
+                }
+            }
+        }
 
         // merge blocks together
-
-        return { };
+        return flatten(block_vms);
     }
 
     dasm::basic_block* ir_translator::map_basic_block(const ir_preopt_block_ptr& preopt_target)
@@ -427,7 +639,12 @@ namespace eagle::ir
         return entry;
     }
 
-    std::vector<ir_vm_x86_block> ir_preopt_block::get_body()
+    void ir_preopt_block::clear_entry()
+    {
+        entry = nullptr;
+    }
+
+    std::vector<block_il_ptr> ir_preopt_block::get_body()
     {
         return body;
     }
@@ -437,9 +654,8 @@ namespace eagle::ir
         return exit;
     }
 
-    void ir_preopt_block::add_body(const block_il_ptr& block, bool is_vm)
+    void ir_preopt_block::add_body(const block_il_ptr& block)
     {
-        const ir_vm_x86_block pair = { block, is_vm };
-        body.push_back(pair);
+        body.push_back(block);
     }
 }

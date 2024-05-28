@@ -3,7 +3,7 @@
 
 namespace eagle::ir
 {
-    base_command_ptr block_ir::add_command(const base_command_ptr& command)
+    base_command_ptr& block_ir::add_command(const base_command_ptr& command)
     {
         if (command->get_command_type() == command_type::vm_branch && exit)
         {
@@ -56,13 +56,13 @@ namespace eagle::ir
         return true;
     }
 
-    base_command_ptr block_ir::get_command(const size_t i)
+    base_command_ptr& block_ir::get_command(const size_t i)
     {
         assert(i < commands.size(), "index beyond vector size");
         return commands[i];
     }
 
-    base_command_ptr block_ir::get_command_back()
+    base_command_ptr& block_ir::get_command_back()
     {
         assert(!commands.empty(), "commands cannot be empty");
         return commands.back();
@@ -80,5 +80,20 @@ namespace eagle::ir
     size_t block_ir::get_command_count() const
     {
         return commands.size();
+    }
+
+    base_command_ptr& block_ir::remove_command(const size_t i)
+    {
+        assert(i < commands.size(), "index beyond vector size");
+
+        base_command_ptr& command = commands[i];
+        commands.erase(commands.begin() + i);
+
+        return command;
+    }
+
+    cmd_branch_ptr& block_ir::get_branch()
+    {
+        return exit;
     }
 }

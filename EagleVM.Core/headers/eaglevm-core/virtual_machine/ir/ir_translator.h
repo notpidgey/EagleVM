@@ -26,8 +26,8 @@ namespace eagle::ir
     public:
         explicit ir_translator(dasm::segment_dasm* seg_dasm);
 
-        std::vector<ir_preopt_block_ptr> translate();
-        std::vector<ir_block_vm_id> optimize(std::vector<ir_preopt_vm_id> block_vms);
+        std::vector<ir_preopt_block_ptr> translate(bool split);
+        std::vector<ir_block_vm_id> optimize(const std::vector<ir_preopt_vm_id>& block_vms);
 
         dasm::basic_block* map_basic_block(const ir_preopt_block_ptr& preopt_target);
         ir_preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
@@ -38,10 +38,11 @@ namespace eagle::ir
         std::unordered_map<dasm::basic_block*, ir_preopt_block_ptr> bb_map;
 
         ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
+        ir_preopt_block_ptr translate_block_split(dasm::basic_block* bb);
+        std::vector<ir_block_vm_id> flatten(std::vector<ir_preopt_vm_id> block_vms);
+
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
     };
-
-    using ir_vm_x86_block = std::pair<block_il_ptr, bool>;
 
     class ir_preopt_block
     {
@@ -49,14 +50,16 @@ namespace eagle::ir
         void init();
 
         block_il_ptr get_entry();
-        std::vector<ir_vm_x86_block> get_body();
+        void clear_entry();
+
+        std::vector<block_il_ptr> get_body();
         block_il_ptr get_exit();
 
-        void add_body(const block_il_ptr& block, bool is_vm);
+        void add_body(const block_il_ptr& block);
 
     private:
         block_il_ptr entry;
-        std::vector<ir_vm_x86_block> body;
+        std::vector<block_il_ptr> body;
         block_il_ptr exit;
     };
 }

@@ -17,16 +17,31 @@ namespace eagle::ir
         {
         }
 
-        base_command_ptr add_command(const base_command_ptr& command);
+        base_command_ptr& add_command(const base_command_ptr& command);
         void add_command(const std::vector<base_command_ptr>& command);
 
         void copy_from(const block_il_ptr& other);
         bool insert_after(const base_command_ptr& command_ptr);
         bool insert_before(const base_command_ptr& command_ptr);
 
-        base_command_ptr get_command(size_t i);
-        base_command_ptr get_command_back();
+        base_command_ptr& get_command(size_t i);
+
+        template <typename T>
+        std::shared_ptr<T>& get_command(const size_t i, const command_type command_assert = command_type::none)
+        {
+            const base_command_ptr& command = get_command(i);
+            if (command_assert != command_type::none)
+                assert(command->get_command_type() == command_assert, "command assert failed, invalid command type");
+
+            return std::static_pointer_cast<T>(command);
+        }
+
+        base_command_ptr& get_command_back();
         size_t get_command_count() const;
+
+        base_command_ptr& remove_command(size_t i);
+
+        cmd_branch_ptr& get_branch();
 
     private:
         std::vector<base_command_ptr> commands;
@@ -37,4 +52,3 @@ namespace eagle::ir
         std::vector<base_command_ptr>::iterator get_iterator(base_command_ptr command);
     };
 }
-
