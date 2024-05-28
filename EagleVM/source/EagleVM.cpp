@@ -263,6 +263,13 @@ int main(int argc, char* argv[])
     code_section.NumberOfRelocations = 0;
     code_section.NumberOfLinenumbers = 0;
 
+    codec::encoded_vec vm_code_bytes = vm_section.compile_section(code_section.VirtualAddress);
+    code_section.SizeOfRawData = generator.align_file(vm_code_bytes.size());
+    code_section.Misc.VirtualSize = generator.align_section(vm_code_bytes.size());
+    code_section_bytes += vm_code_bytes;
+
+    last_section = &code_section;
+
     // now that the section is compiled we must:
     // delete the code marked by va_delete
     // create jumps marked by va_enters

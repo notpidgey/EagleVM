@@ -72,7 +72,8 @@ namespace eagle::virt::pidg
                 {
                     const ir::vmexit_rva vmexit_rva = arg;
                     const uint64_t rva = vmexit_rva;
-                    block->add(encode(m_mov, ZREG(VTEMP), ZIMMU(rva)));
+
+                    block->add(RECOMPILE(encode(mnemonic, ZIMMU(rva))));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_il_ptr>)
                 {
@@ -81,11 +82,9 @@ namespace eagle::virt::pidg
                     const asmb::code_label_ptr label = get_block_label(target);
                     assert(label != nullptr, "block contains missing context");
 
-                    block->add(RECOMPILE(encode(m_mov, ZREG(VTEMP), ZIMMS(label->get_address()))));
+                    block->add(RECOMPILE(encode(mnemonic, ZIMMS(label->get_address()))));
                 }
             }, jump);
-
-            block->add(encode(mnemonic, ZREG(VTEMP)));
         };
 
         switch (cmd->get_condition())
@@ -268,7 +267,7 @@ namespace eagle::virt::pidg
             {
                 const uint64_t constant = cmd->get_value_immediate();
 
-                block->add(encode(m_lea, ZREG(VTEMP), ZMEMBD(VBASE, 0, constant)));
+                block->add(encode(m_lea, ZREG(VTEMP), ZMEMBD(VBASE, constant, 8)));
                 hg->call_vm_handler(block, hg->get_instruction_handler(m_push, 1, bit_64));
 
                 break;
