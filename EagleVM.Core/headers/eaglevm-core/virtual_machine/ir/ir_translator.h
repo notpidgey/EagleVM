@@ -27,6 +27,7 @@ namespace eagle::ir
         explicit ir_translator(dasm::segment_dasm* seg_dasm);
 
         std::vector<ir_preopt_block_ptr> translate(bool split);
+        std::vector<ir_block_vm_id> flatten(const std::vector<ir_preopt_vm_id>& block_vms);
         std::vector<ir_block_vm_id> optimize(const std::vector<ir_preopt_vm_id>& block_vms);
 
         dasm::basic_block* map_basic_block(const ir_preopt_block_ptr& preopt_target);
@@ -39,7 +40,6 @@ namespace eagle::ir
 
         ir_preopt_block_ptr translate_block(dasm::basic_block* bb);
         ir_preopt_block_ptr translate_block_split(dasm::basic_block* bb);
-        std::vector<ir_block_vm_id> flatten(std::vector<ir_preopt_vm_id> block_vms);
 
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
     };

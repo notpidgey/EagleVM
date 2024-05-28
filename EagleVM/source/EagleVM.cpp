@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <ranges>
 
 #include "eaglevm-core/compiler/section_manager.h"
 #include "eaglevm-core/pe/pe_parser.h"
@@ -189,10 +190,18 @@ int main(int argc, char* argv[])
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
 
         ir::ir_translator ir_trans(&dasm);
-        ir::ir_preopt_block_vec preopt = ir_trans.translate();
+        ir::ir_preopt_block_vec preopt = ir_trans.translate(true);
+
+        // here we assign vms to each block
+        // for the current example we can assign a unique vm to each block
+        uint32_t vm_index = 0;
+        std::vector<ir::ir_preopt_vm_id> block_vm_ids;
+        for (const auto& preopt_block : preopt)
+            block_vm_ids.emplace_back(preopt_block, vm_index++);
 
         // if we want, we can do a little optimzation which will rewrite the preopt blocks
-        // ir_trans.optimize();
+        // or we could simply ir_trans.flatten()
+        std::vector<ir::ir_block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids);
 
         // we want the same settings for every machine
         virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
@@ -200,21 +209,22 @@ int main(int argc, char* argv[])
         settings->set_randomize_vm_regs(true);
         settings->set_randomize_stack_regs(true);
 
+        // initialize block code labels
+        std::vector<std::pair<ir::block_il_ptr, asmb::code_label_ptr>> block_labels;
+        for (auto& blocks : vm_blocks | std::views::keys)
+            for(const auto& block : blocks)
+                block_labels.emplace_back(block, asmb::code_label::create());
+
         asmb::code_label_ptr entry_point = nullptr;
-        for (ir::ir_preopt_block_ptr& block : preopt)
+        for (const auto& [blocks, vm_id] : vm_blocks)
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)
             virt::pidg::machine_ptr machine = std::make_shared<virt::pidg::machine>(settings);
-
-            ir::block_il_ptr entry_block = block->get_entry();
-            vm_section.add_code_container(machine->lift_block(entry_block));
-
-            ir::block_il_ptr exit_block = block->get_exit();
-            vm_section.add_code_container(machine->lift_block(exit_block));
+            machine->add_block_context(block_labels);
 
             bool first = true;
-            for (auto& [translated_block, is_vm] : block->get_body())
+            for (auto& translated_block : blocks)
             {
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
                 if (first)
@@ -228,6 +238,8 @@ int main(int argc, char* argv[])
 
                 vm_section.add_code_container(result_container);
             }
+
+            std::printf("[+] rewrote %llu blocks using vmid: %i", blocks.size(), vm_id);
         }
 
         // overwrite the original instructions

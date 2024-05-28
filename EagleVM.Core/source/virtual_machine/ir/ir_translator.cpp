@@ -400,7 +400,7 @@ namespace eagle::ir
         return block_info;
     }
 
-    std::vector<ir_block_vm_id> ir_translator::flatten(std::vector<ir_preopt_vm_id> block_vms)
+    std::vector<ir_block_vm_id> ir_translator::flatten(const std::vector<ir_preopt_vm_id>& block_vms)
     {
         // for now we just flatten
         std::vector<ir_block_vm_id> block_groups;
@@ -408,12 +408,10 @@ namespace eagle::ir
         {
             std::vector<block_il_ptr> block_group;
             block_group.push_back(block->get_entry());
+            block_group.append_range(block->get_body());
             block_group.push_back(block->get_exit());
 
-            std::vector<block_il_ptr> body_info = block->get_body();
-            for (auto& ir_vm_block : body_info)
-                block_group.push_back(ir_vm_block);
-
+            std::erase(block_group, nullptr);
             block_groups.emplace_back(block_group, vm_id);
         }
 
@@ -451,31 +449,24 @@ namespace eagle::ir
 
                         for (const block_il_ptr& search_block : search_blocks)
                         {
-                            auto command_count = search_block->get_command_count();
-                            for (auto i = 0; i < command_count; i++)
+                            const cmd_branch_ptr branch = search_block->get_branch();
+                            auto check_block = [&](const il_exit_result& exit_result)
                             {
-                                auto command = search_block->get_command(i);
-                                assert(command->get_command_type() == command_type::vm_branch, "last enter block command is not a branching command");
-
-                                const cmd_branch_ptr branch = std::static_pointer_cast<cmd_branch>(command);
-                                auto check_block = [&](const il_exit_result& exit_result)
+                                if (std::holds_alternative<block_il_ptr>(exit_result))
                                 {
-                                    if (std::holds_alternative<block_il_ptr>(exit_result))
-                                    {
-                                        const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
-                                        if (exit_block == search_enter && search_vm_id != vm_id)
-                                            vm_enter_unremovable = true;
-                                        else
-                                            search_enter_refs.emplace_back(branch);
-                                    }
-                                };
+                                    const block_il_ptr exit_block = std::get<block_il_ptr>(exit_result);
+                                    if (exit_block == search_enter && search_vm_id != vm_id)
+                                        vm_enter_unremovable = true;
+                                    else
+                                        search_enter_refs.emplace_back(branch);
+                                }
+                            };
 
-                                check_block(branch->get_condition_default());
-                                check_block(branch->get_condition_special());
+                            check_block(branch->get_condition_default());
+                            check_block(branch->get_condition_special());
 
-                                if (vm_enter_unremovable)
-                                    goto UNREMOVABLE;
-                            }
+                            if (vm_enter_unremovable)
+                                goto UNREMOVABLE;
                         }
                     }
                 }

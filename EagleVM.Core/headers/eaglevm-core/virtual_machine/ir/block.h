@@ -17,7 +17,7 @@ namespace eagle::ir
         {
         }
 
-        base_command_ptr& add_command(const base_command_ptr& command);
+        base_command_ptr add_command(const base_command_ptr& command);
         void add_command(const std::vector<base_command_ptr>& command);
 
         void copy_from(const block_il_ptr& other);

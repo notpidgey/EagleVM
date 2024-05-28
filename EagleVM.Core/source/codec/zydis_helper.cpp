@@ -115,8 +115,7 @@ namespace eagle::codec
 
     reg_class get_reg_class(const zydis_register reg)
     {
-        const auto bit_size = ZydisRegisterGetWidth(ZYDIS_MACHINE_MODE_LONG_64, reg);
-        return static_cast<reg_class>(bit_size);
+        return static_cast<reg_class>(ZydisRegisterGetClass(reg));
     }
 
     reg_size get_reg_size(const reg reg)

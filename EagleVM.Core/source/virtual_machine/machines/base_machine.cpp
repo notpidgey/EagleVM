@@ -45,6 +45,9 @@ namespace eagle::virt
                 case ir::command_type::vm_context_load:
                     handle_cmd(code, std::static_pointer_cast<ir::cmd_context_load>(command));
                     break;
+                case ir::command_type::vm_context_store:
+                    handle_cmd(code, std::static_pointer_cast<ir::cmd_context_store>(command));
+                    break;
                 case ir::command_type::vm_exec_x86:
                     handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_exec>(command));
                     break;
