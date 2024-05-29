@@ -14,12 +14,13 @@
 #define VIP         inst_regs->get_reg(I_VIP)
 #define VSP         inst_regs->get_reg(I_VSP)
 #define VREGS       inst_regs->get_reg(I_VREGS)
-#define VTEMP       inst_regs->get_reg_temp(0)
-#define VTEMP2      inst_regs->get_reg_temp(1)
-#define VTEMPX(x)   inst_regs->get_reg_temp(x)
 #define VCS         inst_regs->get_reg(I_VCALLSTACK)
 #define VCSRET      inst_regs->get_reg(I_VCSRET)
 #define VBASE       inst_regs->get_reg(I_VBASE)
+
+#define VTEMP       inst_regs->get_reg_temp(0)
+#define VTEMP2      inst_regs->get_reg_temp(1)
+#define VTEMPX(x)   inst_regs->get_reg_temp(x)
 
 using namespace eagle::codec;
 
@@ -28,7 +29,7 @@ namespace eagle::virt::pidg
     inst_handlers::inst_handlers(machine_ptr machine, vm_inst_regs_ptr push_order, settings_ptr settings)
         : settings(std::move(settings)), machine(std::move(machine)), inst_regs(std::move(push_order))
     {
-        vm_overhead = 8 * 2000;
+        vm_overhead = 8 * 100;
         vm_stack_regs = 17;
         vm_call_stack = 3;
     }

@@ -236,7 +236,7 @@ int main(int argc, char* argv[])
             {
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
                 ir::block_ptr block = block_tracker[entry_block];
-                if(block == translated_block)
+                if (block == translated_block)
                     result_container->bind_start(entry_point);
 
                 vm_section.add_code_container(result_container);

@@ -21,11 +21,21 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
-    "add", "dec", "div", "inc", "lea", "mov", "movsx", "sub", "cmp"
+    "add",
+    "dec",
+    "div",
+    "inc",
+    "lea",
+    "mov",
+    "movsx",
+    "sub",
+    "cmp"
 };
 
 #pragma section(".run_section", execute)
 __declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { 0xCC };
+
+using namespace eagle;
 
 int main(int argc, char* argv[])
 {
@@ -39,21 +49,21 @@ int main(int argc, char* argv[])
     memset(run_buffer, 0xCC, sizeof(run_buffer));
 
     // setbuf(stdout, NULL);
-    auto test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
+    auto test_data_path = argc > 1 ? argv[1] : "../../../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
-    eagle::codec::setup_decoder();
+    codec::setup_decoder();
     run_container::init_veh();
 
     // we want the same settings for every machine
-    eagle::virt::pidg::settings_ptr settings = std::make_shared<eagle::virt::pidg::settings>();
+    virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
     settings->set_temp_count(4);
     settings->set_randomize_vm_regs(true);
     settings->set_randomize_stack_regs(true);
 
     // loop each file that test_data_path contains
-    for (const auto& entry: std::filesystem::directory_iterator(test_data_path))
+    for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
         auto entry_path = entry.path();
         entry_path.make_preferred();
@@ -76,7 +86,7 @@ int main(int argc, char* argv[])
         int failed = 0;
 
         // data now contains an array of objects, enumerate each object
-        for (auto& test: data)
+        for (auto& test : data)
         {
             // create a new file for each test
             std::string instr_data = test["data"];
@@ -91,16 +101,16 @@ int main(int argc, char* argv[])
                 continue;
 
             bool bp = false;
-            if(test.contains("bp"))
+            if (test.contains("bp"))
                 bp = test["bp"];
 
             {
                 outfile << "\n\n[test] " << instr.c_str() << "\n";
                 outfile << "[input]\n";
-                util::print_regs(inputs, outfile);
+                test_util::print_regs(inputs, outfile);
 
                 outfile << "[output]\n";
-                util::print_regs(outputs, outfile);
+                test_util::print_regs(outputs, outfile);
             }
 
             reg_overwrites ins = build_writes(inputs);
@@ -108,66 +118,80 @@ int main(int argc, char* argv[])
 
             run_container container(ins, outs);
             {
-                std::vector<uint8_t> instruction_data = util::parse_hex(instr_data);
-                eagle::codec::decode_vec instructions = eagle::codec::get_instructions(instruction_data.data(), instruction_data.size());
+                std::vector<uint8_t> instruction_data = test_util::parse_hex(instr_data);
+                instruction_data.push_back(0x0F);
+                instruction_data.push_back(0x01);
+                instruction_data.push_back(0xC1);
 
-                eagle::dasm::segment_dasm dasm(std::move(instructions), 0, instruction_data.size());
+                codec::decode_vec instructions = codec::get_instructions(instruction_data.data(), instruction_data.size());
+
+                dasm::segment_dasm dasm(std::move(instructions), 0, instruction_data.size());
                 dasm.generate_blocks();
 
-                eagle::ir::ir_translator ir_trans(&dasm);
-                eagle::ir::preopt_block_vec preopt = ir_trans.translate(true);
+                ir::ir_translator ir_trans(&dasm);
+                ir::preopt_block_vec preopt = ir_trans.translate(true);
 
+                // here we assign vms to each block
+                // for the current example we can assign a unique vm to each block
                 uint32_t vm_index = 0;
-                std::vector<eagle::ir::preopt_vm_id> block_vm_ids;
+                std::vector<ir::preopt_vm_id> block_vm_ids;
                 for (const auto& preopt_block : preopt)
                     block_vm_ids.emplace_back(preopt_block, vm_index++);
 
+                // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
+                ir::preopt_block_ptr entry_block = nullptr;
+                for (const auto& preopt_block : preopt)
+                    if (preopt_block->get_original_block() == dasm.get_block(0))
+                        entry_block = preopt_block;
+
+                assert(entry_block != nullptr, "could not find matching preopt block for entry block");
+
                 // if we want, we can do a little optimzation which will rewrite the preopt blocks
                 // or we could simply ir_trans.flatten()
-                std::vector<eagle::ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids);
+                std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
+                std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+
+                // we want the same settings for every machine
+                virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
+                settings->set_temp_count(4);
+                settings->set_randomize_vm_regs(true);
+                settings->set_randomize_stack_regs(true);
 
                 // initialize block code labels
-                std::unordered_map<eagle::ir::block_ptr, eagle::asmb::code_label_ptr> block_labels;
+                std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
                 for (auto& blocks : vm_blocks | std::views::keys)
                     for (const auto& block : blocks)
-                        block_labels[block] = eagle::asmb::code_label::create();
+                        block_labels[block] = asmb::code_label::create();
 
-                eagle::asmb::section_manager vm_section(true);
-                eagle::asmb::code_label_ptr entry_point = nullptr;
+                asmb::section_manager vm_section(false);
 
+                asmb::code_label_ptr entry_point = asmb::code_label::create();
                 for (const auto& [blocks, vm_id] : vm_blocks)
                 {
                     // we create a new machine based off of the same settings to make things more annoying
                     // but the same machine could be used :)
-                    eagle::virt::pidg::machine_ptr machine = eagle::virt::pidg::machine::create(settings);
+                    virt::pidg::machine_ptr machine = virt::pidg::machine::create(settings);
                     machine->add_block_context(block_labels);
 
-                    bool first = true;
                     for (auto& translated_block : blocks)
                     {
-                        eagle::asmb::code_container_ptr result_container = machine->lift_block(translated_block);
-                        if (first)
-                        {
-                            eagle::asmb::code_label_ptr entry_mark = eagle::asmb::code_label::create();
-                            result_container->bind_start(entry_mark);
-
-                            entry_point = entry_mark;
-                            first = false;
-                        }
+                        asmb::code_container_ptr result_container = machine->lift_block(translated_block);
+                        ir::block_ptr block = block_tracker[entry_block];
+                        if (block == translated_block)
+                            result_container->bind_start(entry_point);
 
                         vm_section.add_code_container(result_container);
                     }
+
+                    // build handlers
+                    std::vector<asmb::code_container_ptr> handler_containers = machine->create_handlers();
+                    vm_section.add_code_container(handler_containers);
                 }
 
                 container.set_run_area(reinterpret_cast<uint64_t>(&run_buffer), sizeof(run_buffer), false);
-                uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) -
-                    reinterpret_cast<uint64_t>(&__ImageBase);
+                uint64_t instruction_rva = reinterpret_cast<uint64_t>(&run_buffer) - reinterpret_cast<uint64_t>(&__ImageBase);
 
-                eagle::codec::encoded_vec virtualized_instruction = vm_section.compile_section(instruction_rva);
-                virtualized_instruction.erase(virtualized_instruction.end() - 5, virtualized_instruction.end());
-                virtualized_instruction.push_back(0x0F);
-                virtualized_instruction.push_back(0x01);
-                virtualized_instruction.push_back(0xC1);
+                codec::encoded_vec virtualized_instruction = vm_section.compile_section(instruction_rva);
 
                 assert(sizeof(run_buffer) >= virtualized_instruction.size());
                 container.set_instruction_data(virtualized_instruction);
@@ -194,14 +218,14 @@ int main(int argc, char* argv[])
                 {
                     outfile << "[!] register mismatch\n";
 
-                    for (auto [reg, value]: outs)
+                    for (auto [reg, value] : outs)
                     {
                         if (reg == "flags" || reg == "rip")
                             continue;
 
                         outfile << "  > " << reg << "\n";
-                        outfile << "  target: 0x" << std::hex << *util::get_value(output_target, reg) << '\n';
-                        outfile << "  out   : 0x" << std::hex << *util::get_value(result_context, reg) << '\n';
+                        outfile << "  target: 0x" << std::hex << *test_util::get_value(output_target, reg) << '\n';
+                        outfile << "  out   : 0x" << std::hex << *test_util::get_value(result_context, reg) << '\n';
                     }
                 }
 
@@ -237,7 +261,7 @@ int main(int argc, char* argv[])
 reg_overwrites build_writes(nlohmann::json& inputs)
 {
     reg_overwrites overwrites;
-    for (auto& input: inputs.items())
+    for (auto& input : inputs.items())
     {
         std::string reg = input.key();
         uint64_t value = 0;
@@ -267,13 +291,13 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
 
     // rip comparison is COOKED there is something really off about the test data
     // auto res_rip = result.Rip == target.Rip;
-    for (auto& [reg, value]: outs)
+    for (auto& [reg, value] : outs)
     {
         if (reg == "rip" || reg == "flags")
             continue;
 
-        uint64_t tar = *util::get_value(target, reg);
-        uint64_t out = *util::get_value(result, reg);
+        uint64_t tar = *test_util::get_value(target, reg);
+        uint64_t out = *test_util::get_value(result, reg);
 
         if (tar != out)
         {

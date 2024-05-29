@@ -45,7 +45,7 @@ namespace eagle::virt::pidg
             vm_regs_order.push_back(codec::rax);
             vm_regs_order.push_back(codec::rsp);
 
-            std::copy(vm_regs_order.begin(), vm_regs_order.end(), vm_order.begin());
+            std::ranges::copy(vm_regs_order, vm_order.begin());
         }
     }
 
@@ -60,7 +60,7 @@ namespace eagle::virt::pidg
     {
         // this would be something like VTEMP, VTEMP2, VTEMP3
         assert(target <= temp_variables - 1, "attemp to access invalid vtemp");
-        return vm_order[temp_variables + target];
+        return vm_order[number_of_vregs + target];
     }
 
     std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::reg reg) const

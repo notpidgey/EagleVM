@@ -167,7 +167,7 @@ namespace eagle::virt::pidg
             block->add(encode(m_mov, ZREG(VTEMP2), ZREG(VTEMP)));
 
             // pop vtemp ; pop value into vtemp
-            hg->call_vm_handler(block, hg->get_pop( to_reg_size(value_size)));
+            hg->call_vm_handler(block, hg->get_pop(to_reg_size(value_size)));
 
             // mov [vtemp2], vtemp
             reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
@@ -362,9 +362,9 @@ namespace eagle::virt::pidg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd)
     {
         const asmb::code_label_ptr vm_exit = hg->get_vm_exit();
+        const asmb::code_label_ptr ret = asmb::code_label::create();
 
         // mov VCSRET, ZLABEL(target)
-        const asmb::code_label_ptr ret = asmb::code_label::create();
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
 
         // lea VRIP, [VBASE + vmexit_address]

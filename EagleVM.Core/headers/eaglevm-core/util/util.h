@@ -9,7 +9,7 @@ std::vector<T>& operator +=(std::vector<T>& A, const std::vector<T>& B)
     return A;
 }
 
-namespace util
+namespace test_util
 {
     template <typename T, std::same_as<T>... Rest>
     inline std::vector<T> combine_vec(const std::vector<T>& first, const std::vector<Rest>&... rest)

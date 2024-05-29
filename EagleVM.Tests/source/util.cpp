@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-std::vector<uint8_t> util::parse_hex(const std::string& hex)
+std::vector<uint8_t> test_util::parse_hex(const std::string& hex)
 {
     std::vector<uint8_t> bytes;
     for (size_t i = 0; i < hex.length(); i += 2)
@@ -15,7 +15,7 @@ std::vector<uint8_t> util::parse_hex(const std::string& hex)
     return bytes;
 }
 
-void util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
+void test_util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
 {
     for (auto& input: inputs.items())
     {
@@ -37,7 +37,7 @@ void util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
     }
 }
 
-uint64_t* util::get_value(CONTEXT& new_context, std::string& reg)
+uint64_t* test_util::get_value(CONTEXT& new_context, std::string& reg)
 {
     if (reg == "rip")
         return &new_context.Rip ;
