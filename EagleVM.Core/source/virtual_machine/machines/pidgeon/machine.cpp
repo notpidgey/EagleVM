@@ -2,6 +2,7 @@
 
 #include <numeric>
 #include <set>
+#include <unordered_set>
 
 #include "eaglevm-core/util/random.h"
 
@@ -180,7 +181,7 @@ namespace eagle::virt::pidg
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
             if (!store->get_finalized())
-                assign_discrete_storage({ store });
+                assign_discrete_storage({ store }, cmd->get_block_list());
 
             const ir::ir_size pop_size = store->get_store_size();
 
@@ -235,7 +236,7 @@ namespace eagle::virt::pidg
             {
                 const ir::discrete_store_ptr store = cmd->get_value_temp_register();
                 if (!store->get_finalized())
-                    assign_discrete_storage({ store });
+                    assign_discrete_storage({ store }, cmd->get_block_list());
 
                 const reg target_reg = store->get_store_register();
                 const reg_class target_class = get_reg_class(target_reg);
@@ -392,7 +393,7 @@ namespace eagle::virt::pidg
                 }
             }, op);
 
-            assign_discrete_storage(stores);
+            assign_discrete_storage(stores, cmd->get_block_list());
 
             std::visit([&request]<typename reg_type>(reg_type&& arg)
             {
@@ -413,7 +414,8 @@ namespace eagle::virt::pidg
         block->add(cmd->get_request());
     }
 
-    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores) const
+    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores,
+        const std::vector<ir::discrete_store_ptr>& block_write) const
     {
         const size_t temp_required = stores.size();
 
@@ -428,14 +430,48 @@ namespace eagle::virt::pidg
         else
             assert(temp_required <= 2, "unable to assign more than 2 temp registers");
 
-        for (auto i = 0; i < temp_required; i++)
+        // set to keep track of used registers
+        std::unordered_set<reg> used_registers;
+
+        // add block_write registers to used_registers set
+        for (const auto& block : block_write)
+        {
+            if (block->get_finalized())
+            {
+                // todo:
+                // for the future this has to be checked that its a gpr register
+                used_registers.insert(get_bit_version(block->get_store_register(), gpr_64));
+            }
+        }
+
+        for (size_t i = 0; i < temp_required; i++)
         {
             const ir::discrete_store_ptr& store = stores[i];
 
             const reg_size target_size = to_reg_size(store->get_store_size());
-            const reg target_temp = rm->get_reg_temp(temp_reg_index[i]);
+            reg target_temp = rm->get_reg_temp(temp_reg_index[i]);
+            reg target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
 
-            const reg target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
+            // ensure the chosen register is not already used
+            while (used_registers.contains(get_bit_version(target_reg, gpr_64)))
+            {
+                i++;
+                if (i >= temp_reg_index.size())
+                {
+                    assert("ran out of temporary registers to assign");
+
+                    // im sorry im using asserts for now, will make better later
+                    // throw std::runtime_error("ran out of temporary registers to assign");
+                }
+
+                target_temp = rm->get_reg_temp(temp_reg_index[i]);
+                target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
+            }
+
+            // mark the chosen register as used
+            used_registers.insert(target_reg);
+
+            // finalize
             store->finalize_register(target_reg);
         }
     }

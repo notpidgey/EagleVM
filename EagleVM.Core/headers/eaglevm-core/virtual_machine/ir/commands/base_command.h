@@ -30,7 +30,7 @@ namespace eagle::ir
     SHARED_DEFINE(cmd_x86_exec);
     SHARED_DEFINE(cmd_branch);
 
-    class base_command
+    class base_command : public std::enable_shared_from_this<base_command>
     {
     public:
         explicit base_command(const command_type command)
@@ -44,11 +44,18 @@ namespace eagle::ir
 
         command_type get_command_type() const;
 
+        std::shared_ptr<base_command> block_modify(const discrete_store_ptr& store);
+        std::shared_ptr<base_command> block_modify(const std::vector<discrete_store_ptr>& stores);
+
+        std::vector<discrete_store_ptr> get_block_list();
+
     protected:
         command_type command;
 
         uint32_t unique_id;
         std::string unique_id_string;
+
+        std::vector<discrete_store_ptr> block_list;
 
     private:
         static std::string command_to_string(command_type type);

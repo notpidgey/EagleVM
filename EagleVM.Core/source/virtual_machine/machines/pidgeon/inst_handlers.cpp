@@ -67,7 +67,7 @@ namespace eagle::virt::pidg
 
         // reserve VM call stack
         // reserve VM stack
-        container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -(8 * vm_overhead), 8)));
+        container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -(8 * vm_overhead), TOB(bit_64))));
 
         // pushfq
         {
@@ -97,23 +97,23 @@ namespace eagle::virt::pidg
             encode(m_mov, ZREG(VREGS), ZREG(VSP)),
             encode(m_mov, ZREG(VCS), ZREG(VSP)),
 
-            encode(m_lea, ZREG(rsp), ZMEMBD(VREGS, 8 * vm_stack_regs, 8)),
+            encode(m_lea, ZREG(rsp), ZMEMBD(VREGS, 8 * vm_stack_regs, TOB(bit_64))),
 
-            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), 8)),
-            encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, 8)),
-            encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)),
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead), TOB(bit_64))),
+            encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, TOB(bit_64))),
+            encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, TOB(bit_64))),
             encode(m_mov, ZMEMBD(VCS, 0, 8), ZREG(VTEMP)),
         });
 
         // lea VIP, [0x14000000]    ; load base
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
         container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_address(), 8))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
 
         // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
         // mov VSP, VTEMP
         container->add({
-            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), 8)),
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VSP, 8 * (vm_stack_regs + vm_overhead + 1), TOB(bit_64))),
             encode(m_mov, ZREG(VSP), ZREG(VTEMP)),
         });
 
@@ -140,7 +140,7 @@ namespace eagle::virt::pidg
         // lea VTEMP, [VREGS + vm_stack_regs]
         // mov [VTEMP], VSP
         container->add({
-            encode(m_lea, ZREG(VTEMP), ZMEMBD(VREGS, 8 * vm_stack_regs, 8)),
+            encode(m_lea, ZREG(VTEMP), ZMEMBD(VREGS, 8 * vm_stack_regs, TOB(bit_64))),
             encode(m_mov, ZMEMBD(VTEMP, 0, 8), ZREG(VSP))
         });
 
@@ -148,8 +148,8 @@ namespace eagle::virt::pidg
         // we will place that after the RSP
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
         container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_address(), 8))));
-        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, 8)));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
+        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, TOB(bit_64))));
         container->add(encode(m_mov, ZMEMBD(VSP, -8, 8), ZREG(VIP)));
 
         // mov rsp, VREGS
@@ -159,7 +159,7 @@ namespace eagle::virt::pidg
         inst_regs->enumerate([&container](auto reg)
         {
             if (reg == ZYDIS_REGISTER_RSP || reg == ZYDIS_REGISTER_RIP)
-                container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, 8)));
+                container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, TOB(bit_64))));
             else
                 container->add(encode(m_pop, ZREG(reg)));
         }, true);
@@ -171,7 +171,7 @@ namespace eagle::virt::pidg
 
         // the rsp that we setup earlier before popping all the regs
         container->add(encode(m_pop, ZREG(rsp)));
-        container->add(encode(m_jmp, ZMEMBD(rsp, -8, 8)));
+        container->add(encode(m_jmp, ZMEMBD(rsp, -8, TOB(bit_64))));
 
         return vm_exit.code;
     }
@@ -191,7 +191,7 @@ namespace eagle::virt::pidg
         const asmb::code_container_ptr container = vm_rflags_load.code;
         container->bind(vm_rflags_load.label);
         container->add({
-            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -8, 8)),
+            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -8, TOB(bit_64))),
             encode(m_popfq),
         });
 
@@ -215,7 +215,7 @@ namespace eagle::virt::pidg
         container->bind(vm_rflags_save.label);
         container->add({
             encode(m_pushfq),
-            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, 8)),
+            encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, TOB(bit_64))),
         });
 
         create_vm_return(container);
@@ -227,13 +227,29 @@ namespace eagle::virt::pidg
         switch (size)
         {
             case bit_64:
-                return vm_load[0].label;
+            {
+                auto& ctx = vm_load[0];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_32:
-                return vm_load[1].label;
+            {
+                auto& ctx = vm_load[1];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_16:
-                return vm_load[2].label;
+            {
+                auto& ctx = vm_load[2];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_8:
-                return vm_load[3].label;
+            {
+                auto& ctx = vm_load[3];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             default:
                 assert("reached invalid load size");
         }
@@ -256,8 +272,8 @@ namespace eagle::virt::pidg
             const reg_size reg_size = load_store_index_size(i);
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
 
-            container->add(encode(m_mov, ZREG(target_temp), ZMEMBI(VREGS, VTEMP, 1, reg_size)));
-            call_vm_handler(container, get_instruction_handler(m_push, 1, reg_size));
+            container->add(encode(m_mov, ZREG(target_temp), ZMEMBI(VREGS, VTEMP, 1, TOB(reg_size))));
+            call_vm_handler(container, get_push(reg_size));
 
             create_vm_return(container);
             context_loads.push_back(container);
@@ -271,13 +287,29 @@ namespace eagle::virt::pidg
         switch (size)
         {
             case bit_64:
-                return vm_store[0].label;
+            {
+                auto& ctx = vm_store[0];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_32:
-                return vm_store[1].label;
+            {
+                auto& ctx = vm_store[1];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_16:
-                return vm_store[2].label;
+            {
+                auto& ctx = vm_store[2];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_8:
-                return vm_store[3].label;
+            {
+                auto& ctx = vm_store[3];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             default:
                 assert("reached invalid store size");
         }
@@ -303,16 +335,16 @@ namespace eagle::virt::pidg
             if (reg_size == bit_32)
             {
                 // we have to clear upper 32 bits of target register here
-                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-                call_vm_handler(container, get_instruction_handler(m_pop, 1, reg_size));
-                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, bit_64), ZIMMS(0)));
-                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, TOB(bit_64))));
+                call_vm_handler(container, get_pop(reg_size));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(bit_64)), ZIMMS(0)));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(reg_size)), ZREG(target_temp)));
             }
             else
             {
-                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, 8)));
-                call_vm_handler(container, get_instruction_handler(m_pop, 1, reg_size));
-                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, reg_size), ZREG(target_temp)));
+                container->add(encode(m_lea, ZREG(VTEMP2), ZMEMBI(VREGS, VTEMP, 1, TOB(bit_64))));
+                call_vm_handler(container, get_pop(reg_size));
+                container->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(reg_size)), ZREG(target_temp)));
             }
 
             create_vm_return(container);
@@ -327,13 +359,29 @@ namespace eagle::virt::pidg
         switch (size)
         {
             case bit_64:
-                return vm_push[0].label;
+            {
+                auto& ctx = vm_push[0];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_32:
-                return vm_push[1].label;
+            {
+                auto& ctx = vm_push[1];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_16:
-                return vm_push[2].label;
+            {
+                auto& ctx = vm_push[2];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_8:
-                return vm_push[3].label;
+            {
+                auto& ctx = vm_push[3];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             default:
                 assert("reached invalid push size");
         }
@@ -358,8 +406,8 @@ namespace eagle::virt::pidg
 
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
             container->add({
-                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -reg_size_bytes, 8)),
-                encode(m_mov, ZMEMBD(VSP, 0, reg_size_bytes), ZREG(target_temp))
+                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -reg_size_bytes, TOB(bit_64))),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(reg_size)), ZREG(target_temp))
             });
 
             create_vm_return(container);
@@ -374,13 +422,29 @@ namespace eagle::virt::pidg
         switch (size)
         {
             case bit_64:
-                return vm_pop[0].label;
+            {
+                auto& ctx = vm_pop[0];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_32:
-                return vm_pop[1].label;
+            {
+                auto& ctx = vm_pop[1];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_16:
-                return vm_pop[2].label;
+            {
+                auto& ctx = vm_pop[2];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             case bit_8:
-                return vm_pop[3].label;
+            {
+                auto& ctx = vm_pop[3];
+                ctx.tagged = true;
+                return ctx.label;
+            }
             default:
                 assert("reached invalid pop size");
         }
@@ -401,12 +465,11 @@ namespace eagle::virt::pidg
             container->bind(handler.label);
 
             const reg_size reg_size = load_store_index_size(i);
-            const uint16_t reg_size_bytes = reg_size / 8;
 
             reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
             container->add({
-                encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, reg_size_bytes)),
-                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, reg_size_bytes, 8)),
+                encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, TOB(reg_size))),
+                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, TOB(reg_size), 8)),
             });
 
             create_vm_return(container);
@@ -442,9 +505,12 @@ namespace eagle::virt::pidg
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
     {
+        assert(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
+        assert(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");
+
         const std::tuple key = std::tie(mnemonic, handler_sig);
-        for(const auto& [tuple, code_label] : tagged_instruction_handlers)
-            if(tuple == key)
+        for (const auto& [tuple, code_label] : tagged_instruction_handlers)
+            if (tuple == key)
                 return code_label;
 
         asmb::code_label_ptr label = asmb::code_label::create();
@@ -516,12 +582,12 @@ namespace eagle::virt::pidg
 
         // lea VCS, [VCS - 8]       ; allocate space for new return address
         // mov [VCS], code_label    ; place return rva on the stack
-        code->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, 8)));
-        code->add(RECOMPILE(encode(m_mov, ZMEMBD(VCS, 0, 8), ZLABEL(return_label))));
+        code->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, TOB(bit_64))));
+        code->add(RECOMPILE(encode(m_mov, ZMEMBD(VCS, 0, TOB(bit_64)), ZLABEL(return_label))));
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
-        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), 8))));
+        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), TOB(bit_64)))));
         code->add(encode(m_jmp, ZREG(VIP)));
 
         // execution after VM handler should end up here
@@ -532,12 +598,12 @@ namespace eagle::virt::pidg
     {
         // mov VCSRET, [VCS]        ; pop from call stack
         // lea VCS, [VCS + 8]       ; move up the call stack pointer
-        container->add(encode(m_mov, ZREG(VCSRET), ZMEMBD(VCS, 0, 8)));
-        container->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, 8, 8)));
+        container->add(encode(m_mov, ZREG(VCSRET), ZMEMBD(VCS, 0, TOB(bit_64))));
+        container->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, 8, TOB(bit_64))));
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
-        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VBASE, VCSRET, 1, 8)));
+        container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VBASE, VCSRET, 1, TOB(bit_64))));
         container->add(encode(m_jmp, ZREG(VIP)));
     }
 
