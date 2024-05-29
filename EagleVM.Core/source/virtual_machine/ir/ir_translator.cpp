@@ -72,16 +72,19 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
+        const block_ptr entry = block_info->get_entry();
+        const block_ptr current_block = std::make_shared<block_ir>(false);
+        const block_ptr exit = block_info->get_exit();
+
         //
         // entry
         //
-        const block_ptr entry = block_info->get_entry();
         entry->add_command(std::make_shared<cmd_vm_enter>());
+        entry->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
 
         //
         // body
         //
-        const block_ptr current_block = std::make_shared<block_ir>(false);
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -159,20 +162,15 @@ namespace eagle::ir
         }
 
         // jump to exiting block
-        const block_ptr exit = block_info->get_exit();
         current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
-
         block_info->add_body(current_block);
-
-        // insert vm exit
-        if (is_in_vm)
-        {
-            exit->add_command(std::make_shared<cmd_vm_exit>());
-        }
 
         //
         // exit
         //
+        if (is_in_vm)
+            exit->add_command(std::make_shared<cmd_vm_exit>());
+
         std::vector<il_exit_result> exits;
         exit_condition condition = exit_condition::none;
 
@@ -226,17 +224,20 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
+        const block_ptr entry = block_info->get_entry();
+        block_ptr current_block = std::make_shared<block_ir>(false);
+        const block_ptr exit = block_info->get_exit();
+
         //
         // entry
         //
-        const block_ptr entry = block_info->get_entry();
         entry->add_command(std::make_shared<cmd_vm_enter>());
+        entry->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
 
         //
         // body
         //
         bool is_vm_block = true;
-        block_ptr current_block = std::make_shared<block_ir>(false);
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -339,20 +340,15 @@ namespace eagle::ir
         }
 
         // jump to exiting block
-        const block_ptr exit = block_info->get_exit();
         current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
-
-        // insert vm exit
-        if (is_vm_block)
-        {
-            exit->add_command(std::make_shared<cmd_vm_exit>());
-        }
-
         block_info->add_body(current_block);
 
         //
         // exit
         //
+        if (is_vm_block)
+            exit->add_command(std::make_shared<cmd_vm_exit>());
+
         std::vector<il_exit_result> exits;
         exit_condition condition = exit_condition::none;
 

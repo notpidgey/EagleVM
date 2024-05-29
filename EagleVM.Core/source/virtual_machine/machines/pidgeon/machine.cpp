@@ -73,7 +73,7 @@ namespace eagle::virt::pidg
                     const ir::vmexit_rva vmexit_rva = arg;
                     const uint64_t rva = vmexit_rva;
 
-                    block->add(RECOMPILE(encode(mnemonic, ZIMMU(rva))));
+                    block->add(RECOMPILE(encode(mnemonic, ZJMPI(rva))));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_ptr>)
                 {
@@ -82,7 +82,7 @@ namespace eagle::virt::pidg
                     const asmb::code_label_ptr label = get_block_label(target);
                     assert(label != nullptr, "block contains missing context");
 
-                    block->add(RECOMPILE(encode(mnemonic, ZIMMS(label->get_address()))));
+                    block->add(RECOMPILE(encode(mnemonic, ZJMPR(label))));
                 }
             }, jump);
         };

@@ -8,8 +8,14 @@ namespace eagle::virt
     asmb::code_container_ptr base_machine::lift_block(const ir::block_ptr& block)
     {
         const size_t command_count = block->get_command_count();
-
         const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + command_count, true);
+
+        if (block_context.contains(block))
+        {
+            const asmb::code_label_ptr label = block_context[block];
+            code->bind(label);
+        }
+
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->get_command(i);

@@ -62,4 +62,5 @@ namespace eagle::codec
 
 #define ZJMP(x, y) ZIMMU(x->get_address() - y->get_address())
 #define ZJMPR(x) ZIMMU(x->get_address() - rva)
+#define ZJMPI(x) ZIMMU(x - rva)
 #define TOB(x) ((uint16_t)x / 8)

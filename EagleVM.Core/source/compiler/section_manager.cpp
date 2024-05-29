@@ -31,13 +31,6 @@ namespace eagle::asmb
 
     codec::encoded_vec section_manager::compile_section(const uint64_t section_address)
     {
-        assert(section_address % 16 == 0 && "Section address must be aligned to 16 bytes");
-        // i know there are better way to do this without using a variant vector (its disgusting)
-        // or recompiling all the instructions 2x
-        // but it is the easiest, and this is an open source project
-        // if someone would like to, i am open to changes
-        // but i am not rewriting this unless i really need to
-
         if (shuffle_functions)
             shuffle_containers();
 
