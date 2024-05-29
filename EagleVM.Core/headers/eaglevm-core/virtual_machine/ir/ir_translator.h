@@ -56,12 +56,15 @@ namespace eagle::ir
     public:
         void init(dasm::basic_block* block);
 
-        dasm::basic_block* get_original_block() const;
+        bool has_head() const;
         block_ptr get_entry();
-        void clear_entry();
+
+        dasm::basic_block* get_original_block() const;
+        block_ptr get_head();
+        void clear_head();
 
         std::vector<block_ptr> get_body();
-        block_ptr get_exit();
+        block_ptr get_tail();
 
         void add_body(const block_ptr& block);
 

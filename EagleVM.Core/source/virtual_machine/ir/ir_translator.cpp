@@ -72,9 +72,9 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
-        const block_ptr entry = block_info->get_entry();
+        const block_ptr entry = block_info->get_head();
         const block_ptr current_block = std::make_shared<block_ir>(false);
-        const block_ptr exit = block_info->get_exit();
+        const block_ptr exit = block_info->get_tail();
 
         //
         // entry
@@ -91,7 +91,7 @@ namespace eagle::ir
         const dasm::block_end_reason end_reason = bb->get_end_reason();
         const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
 
-        bool is_in_vm = false;
+        bool is_in_vm = true;
         for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
         {
             // use il x86 translator to translate the instruction to il
@@ -183,7 +183,7 @@ namespace eagle::ir
                 if (type == dasm::jump_outside_segment)
                     exits.emplace_back(target);
                 else
-                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
 
                 condition = exit_condition::jmp;
                 break;
@@ -196,7 +196,7 @@ namespace eagle::ir
                     if (type == dasm::jump_outside_segment)
                         exits.emplace_back(target);
                     else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
                 }
 
                 // case 2 - fall through
@@ -205,7 +205,7 @@ namespace eagle::ir
                     if (type == dasm::jump_outside_segment)
                         exits.emplace_back(target);
                     else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
                 }
 
                 const auto& [instruction, _] = bb->decoded_insts.back();
@@ -224,9 +224,9 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
-        const block_ptr entry = block_info->get_entry();
+        const block_ptr entry = block_info->get_head();
         block_ptr current_block = std::make_shared<block_ir>(false);
-        const block_ptr exit = block_info->get_exit();
+        const block_ptr exit = block_info->get_tail();
 
         //
         // entry
@@ -237,7 +237,8 @@ namespace eagle::ir
         //
         // body
         //
-        bool is_vm_block = true;
+        enum block_state { unassigned, vm_block, x86_block };
+        block_state current_state = unassigned;
 
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
@@ -293,7 +294,7 @@ namespace eagle::ir
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
-                    if (!is_vm_block)
+                    if (current_state == x86_block)
                     {
                         // the current block is a x86 block
                         const block_ptr previous = current_block;
@@ -303,7 +304,7 @@ namespace eagle::ir
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
 
                         previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
-                        is_vm_block = true;
+                        current_state = vm_block;
                     }
 
                     current_block->copy_from(result_block);
@@ -312,11 +313,15 @@ namespace eagle::ir
 
             if (!translate_sucess)
             {
-                if (is_vm_block)
+                if (current_state != x86_block)
                 {
-                    if (current_block->get_command_count() == 0)
+                    if (current_state == unassigned)
                     {
-                        is_vm_block = false;
+                        // todo: THIS IS NOT GOOD!!!
+                        // this means that the head vm enter is actually useless so we can remove it
+                        // but because im lazy and its actually kind of difficult i will just vm exit...
+                        // block_ptr preopt_entry = block_info->get_head();
+                        current_block->add_command(std::make_shared<cmd_vm_exit>());
                     }
                     else
                     {
@@ -327,8 +332,9 @@ namespace eagle::ir
                         current_block = std::make_shared<block_ir>(true);
                         previous->add_command(std::make_shared<cmd_vm_exit>());
                         previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
-                        is_vm_block = false;
                     }
+
+                    current_state = x86_block;
                 }
 
                 // handler does not exist
@@ -346,7 +352,7 @@ namespace eagle::ir
         //
         // exit
         //
-        if (is_vm_block)
+        if (current_state == vm_block)
             exit->add_command(std::make_shared<cmd_vm_exit>());
 
         std::vector<il_exit_result> exits;
@@ -361,7 +367,7 @@ namespace eagle::ir
                 if (type == dasm::jump_outside_segment)
                     exits.emplace_back(target);
                 else
-                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
 
                 condition = exit_condition::jmp;
                 break;
@@ -374,7 +380,7 @@ namespace eagle::ir
                     if (type == dasm::jump_outside_segment)
                         exits.emplace_back(target);
                     else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
                 }
 
                 // case 2 - fall through
@@ -383,7 +389,7 @@ namespace eagle::ir
                     if (type == dasm::jump_outside_segment)
                         exits.emplace_back(target);
                     else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_entry());
+                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
                 }
 
                 const auto& [instruction, _] = bb->decoded_insts.back();
@@ -406,9 +412,9 @@ namespace eagle::ir
         for (const auto& [block, vm_id] : block_vms)
         {
             std::vector<block_ptr> block_group;
-            auto entry = block->get_entry();
+            auto entry = block->get_head();
             auto body = block->get_body();
-            auto exit = block->get_exit();
+            auto exit = block->get_tail();
 
             if (block_tracker.contains(block))
             {
@@ -453,7 +459,7 @@ namespace eagle::ir
             // check entery of every block
             for (const preopt_block_ptr& preopt_block : blocks)
             {
-                const block_ptr search_enter = preopt_block->get_entry();
+                const block_ptr search_enter = preopt_block->get_head();
                 const std::vector redirect_body = preopt_block->get_body();
 
                 bool vm_enter_unremovable = false;
@@ -479,7 +485,7 @@ namespace eagle::ir
                         // the only blocks that can reference our search block are body and exit
                         std::vector<block_ptr> search_blocks;
                         search_blocks.append_range(search_preopt_block->get_body());
-                        search_blocks.push_back(search_preopt_block->get_exit());
+                        search_blocks.push_back(search_preopt_block->get_tail());
 
                         for (const block_ptr& search_block : search_blocks)
                         {
@@ -522,7 +528,7 @@ namespace eagle::ir
                         rewrite_branch(branch_ref->get_condition_special());
                     }
 
-                    preopt_block->clear_entry();
+                    preopt_block->clear_head();
                 }
             }
         }
@@ -533,7 +539,7 @@ namespace eagle::ir
             // check entery of every block
             for (const preopt_block_ptr& preopt_block : blocks)
             {
-                const block_ptr preopt_exit = preopt_block->get_exit();
+                const block_ptr preopt_exit = preopt_block->get_tail();
                 const cmd_branch_ptr branch = preopt_exit->get_branch();
 
                 // now we want to check if the current vm group has all the exits of this preopt
@@ -546,9 +552,9 @@ namespace eagle::ir
                         for (const auto& search_preopt : curr_vm_group)
                         {
                             std::vector<block_ptr> all_search_blocks;
-                            all_search_blocks.push_back(search_preopt->get_entry());
+                            all_search_blocks.push_back(search_preopt->get_head());
                             all_search_blocks.append_range(search_preopt->get_body());
-                            all_search_blocks.push_back(search_preopt->get_exit());
+                            all_search_blocks.push_back(search_preopt->get_tail());
 
                             if (std::ranges::find(all_search_blocks, exit_block) != all_search_blocks.end())
                                 return true;
@@ -660,17 +666,31 @@ namespace eagle::ir
         original_block = block;
     }
 
+    bool preopt_block::has_head() const
+    {
+        return head != nullptr;
+    }
+
+    block_ptr preopt_block::get_entry()
+    {
+        if(has_head())
+            return head;
+
+        assert(!body.empty(), "attempted to retrieve nearest entry while containing no body");
+        return body[0];
+    }
+
     dasm::basic_block* preopt_block::get_original_block() const
     {
         return original_block;
     }
 
-    block_ptr preopt_block::get_entry()
+    block_ptr preopt_block::get_head()
     {
         return head;
     }
 
-    void preopt_block::clear_entry()
+    void preopt_block::clear_head()
     {
         head = nullptr;
     }
@@ -680,7 +700,7 @@ namespace eagle::ir
         return body;
     }
 
-    block_ptr preopt_block::get_exit()
+    block_ptr preopt_block::get_tail()
     {
         return tail;
     }
