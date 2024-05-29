@@ -44,8 +44,8 @@ namespace eagle::ir
 
         command_type get_command_type() const;
 
-        std::shared_ptr<base_command> block_modify(const discrete_store_ptr& store);
-        std::shared_ptr<base_command> block_modify(const std::vector<discrete_store_ptr>& stores);
+        std::shared_ptr<base_command> block_write(const discrete_store_ptr& store);
+        std::shared_ptr<base_command> block_write(const std::vector<discrete_store_ptr>& stores);
 
         std::vector<discrete_store_ptr> get_block_list();
 

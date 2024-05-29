@@ -11,13 +11,24 @@ namespace eagle::codec
 
     reg get_bit_version(reg input_reg, const reg_class target_size)
     {
+        // unfortuantely this has to be manually resolved : (
+        const reg_class source_class = get_reg_class(input_reg);
+
         const zydis_register zy_register = static_cast<zydis_register>(input_reg);
         const zydis_reg_class zy_reg_class = static_cast<zydis_reg_class>(target_size);
 
-        const uint8_t id = ZydisRegisterGetId(zy_register);
-        zydis_register enc = ZydisRegisterEncode(zy_reg_class, id);
+        uint8_t id = ZydisRegisterGetId(zy_register);
+        if (source_class == gpr_8)
+            if (id >= 4)
+                id -= 4;
 
-        return static_cast<reg>(enc);
+        if (target_size == gpr_8)
+        {
+            if (id >= 4)
+                return static_cast<reg>(ZydisRegisterEncode(zy_reg_class, id + 4));
+        }
+
+        return static_cast<reg>(ZydisRegisterEncode(zy_reg_class, id));
     }
 
     reg get_bit_version(zydis_register input_reg, const reg_class target_size)
@@ -74,7 +85,7 @@ namespace eagle::codec
         switch (size)
         {
             case bit_64:
-                 return gpr_64;
+                return gpr_64;
             case bit_32:
                 return gpr_32;
             case bit_16:
@@ -91,7 +102,7 @@ namespace eagle::codec
 
     reg_class get_xmm_class_from_size(const reg_size size)
     {
-        switch(size)
+        switch (size)
         {
             case bit_512:
                 return zmm_512;
@@ -413,7 +424,7 @@ namespace eagle::codec
                 const auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva,
                     &target_address);
                 if (result == ZYAN_STATUS_SUCCESS)
-                    return {target_address, i};
+                    return { target_address, i };
             }
         }
         else
@@ -421,10 +432,10 @@ namespace eagle::codec
             const auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand],
                 rva, &target_address);
             if (result == ZYAN_STATUS_SUCCESS)
-                return {target_address, operand};
+                return { target_address, operand };
         }
 
-        return {target_address, -1};
+        return { target_address, -1 };
     }
 
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode, const uint32_t rva, const int8_t operand)
@@ -438,17 +449,17 @@ namespace eagle::codec
             {
                 auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva, &target_address);
                 if (result == ZYAN_STATUS_SUCCESS)
-                    return {target_address, i};
+                    return { target_address, i };
             }
         }
         else
         {
             auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand], rva, &target_address);
             if (result == ZYAN_STATUS_SUCCESS)
-                return {target_address, operand};
+                return { target_address, operand };
         }
 
-        return {target_address, -1};
+        return { target_address, -1 };
     }
 
     std::vector<dec::inst_info> get_instructions(void* data, size_t size)
@@ -456,7 +467,7 @@ namespace eagle::codec
         std::vector<dec::inst_info> decode_data;
 
         ZyanUSize offset = 0;
-        dec::inst_info decoded_instruction{};
+        dec::inst_info decoded_instruction{ };
 
         while (ZYAN_SUCCESS(
             ZydisDecoderDecodeFull(&zyids_decoder, static_cast<char*>(data) + offset, size - offset

@@ -14,7 +14,7 @@ namespace eagle::util
 #if _DEBUG
             gen.seed(0xDEADBEEF);
 #else
-            gen.seed(rd());
+            gen.seed(0xDEADBEEF);
 #endif
         }
 

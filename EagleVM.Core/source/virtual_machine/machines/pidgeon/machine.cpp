@@ -133,12 +133,13 @@ namespace eagle::virt::pidg
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: inline but also add option to use mov handler
         ir::ir_size target_size = cmd->get_read_size();
+        reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(target_size)));
 
         // pop address
         hg->call_vm_handler(block, hg->get_pop(bit_64));
 
         // mov temp, [address]
-        block->add(encode(m_mov, ZREG(VTEMP), ZMEMBD(VTEMP, 0, TOB(target_size))));
+        block->add(encode(m_mov, ZREG(target_temp), ZMEMBD(VTEMP, 0, TOB(target_size))));
 
         // push
         hg->call_vm_handler(block, hg->get_push(to_reg_size(target_size)));
