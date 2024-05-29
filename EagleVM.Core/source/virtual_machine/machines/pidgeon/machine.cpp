@@ -444,6 +444,12 @@ namespace eagle::virt::pidg
             }
         }
 
+        // according to this vms design the default function results will appear in VTEMP
+        // so we want to block VTEMP from being used because pushes and pops will rewrite it
+        // todo: this is weird because sometimes it doesnt matter if we pop into VTEMP and we want that to be a thing
+        if (!settings->get_variant_register_handlers())
+            used_registers.insert(VTEMP);
+
         for (size_t i = 0; i < temp_required; i++)
         {
             const ir::discrete_store_ptr& store = stores[i];

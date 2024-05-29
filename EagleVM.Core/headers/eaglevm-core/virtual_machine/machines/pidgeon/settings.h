@@ -32,7 +32,7 @@ namespace eagle::virt::pidg
 
         /*
          * if enabled, commands utalizing discrete_store_ptr will vary VTEMP(x) registers
-         * if disabled, will use the default VTEMP(0) and VTEMP(1)
+         * if disabled, will use the default VTEMP(x) order
          */
         _CREATE_VM_OPTION(bool, randomize_temp_registers, false)
 
