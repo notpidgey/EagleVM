@@ -36,15 +36,19 @@ namespace eagle::ir
         explicit base_command(const command_type command)
             : command(command)
         {
-            unique_id = command_to_string(command) + ": " +
-                std::to_string(util::ran_device::get().gen_32());
+            static uint32_t id = 0;
+
+            unique_id = id;
+            unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
         }
 
         command_type get_command_type() const;
 
     protected:
         command_type command;
-        std::string unique_id;
+
+        uint32_t unique_id;
+        std::string unique_id_string;
 
     private:
         static std::string command_to_string(command_type type);

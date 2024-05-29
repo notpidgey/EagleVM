@@ -51,7 +51,7 @@ namespace eagle::ir::lifter
         return true;
     }
 
-    block_il_ptr base_x86_translator::get_block()
+    block_ptr base_x86_translator::get_block()
     {
         return block;
     }

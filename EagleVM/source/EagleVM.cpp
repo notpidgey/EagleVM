@@ -240,6 +240,10 @@ int main(int argc, char* argv[])
                     result_container->bind_start(entry_point);
 
                 vm_section.add_code_container(result_container);
+
+                // build handlers
+                std::vector<asmb::code_container_ptr> handler_containers = machine->create_handlers();
+                vm_section.add_code_container(handler_containers);
             }
         }
 

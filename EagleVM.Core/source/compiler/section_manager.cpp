@@ -23,6 +23,12 @@ namespace eagle::asmb
         section_labels.push_back(code);
     }
 
+    void section_manager::add_code_container(const std::vector<code_container_ptr>& code)
+    {
+        section_labels.append_range(code);
+    }
+
+
     codec::encoded_vec section_manager::compile_section(const uint64_t section_address)
     {
         assert(section_address % 16 == 0 && "Section address must be aligned to 16 bytes");
@@ -38,9 +44,9 @@ namespace eagle::asmb
         uint64_t current_address = section_address;
 
         // this should take all the functions in the section and connect them to desired labels
-        for (code_container_ptr& code_label : section_labels)
+        for (code_container_ptr& code_container : section_labels)
         {
-            std::vector<inst_label_v> segments = code_label->get_instructions();
+            std::vector<inst_label_v> segments = code_container->get_instructions();
             for (auto& inst : segments)
             {
                 std::visit([&current_address](auto&& arg)
@@ -79,9 +85,9 @@ namespace eagle::asmb
         auto it = compiled_section.begin();
 
         current_address = section_address;
-        for (const code_container_ptr& code_label : section_labels)
+        for (const code_container_ptr& code_container : section_labels)
         {
-            auto segments = code_label->get_instructions();
+            std::vector<inst_label_v> segments = code_container->get_instructions();
             for (inst_label_v& label_code_variant : segments)
             {
                 bool force_recompile = false;
@@ -104,20 +110,16 @@ namespace eagle::asmb
 
                         std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
                         compiled_section.append_range(compiled);
+
                         current_address += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
                         if (label->get_address() != current_address)
-                        {
-                            label->set_address(current_address);
                             force_recompile = true;
-                        }
-                        else
-                        {
-                            label->set_address(current_address);
-                        }
+
+                        label->set_address(current_address);
                     }
                 }, label_code_variant);
 

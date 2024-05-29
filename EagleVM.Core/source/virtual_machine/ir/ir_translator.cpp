@@ -402,7 +402,7 @@ namespace eagle::ir
 
     std::vector<block_vm_id> ir_translator::flatten(
         const std::vector<preopt_vm_id>& block_vms,
-         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
     )
     {
         // for now we just flatten
@@ -430,7 +430,11 @@ namespace eagle::ir
                 }
             }
 
+            block_group.push_back(entry);
+            block_group.append_range(body);
+            block_group.push_back(exit);
             std::erase(block_group, nullptr);
+
             block_groups.emplace_back(block_group, vm_id);
         }
 
@@ -466,7 +470,7 @@ namespace eagle::ir
                     if (preopt_block == external)
                     {
                         vm_enter_unremovable = true;
-                        break;
+                        goto UNREMOVABLE;
                     }
                 }
 
