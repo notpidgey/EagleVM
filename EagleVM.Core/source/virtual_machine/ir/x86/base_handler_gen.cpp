@@ -42,7 +42,7 @@ namespace eagle::ir::handler
                 const auto accepted_op = accepted_ops[i];
 
                 // this can be of any type if the target is none
-                if (target_op.operand_type == codec::op_none)
+                if (accepted_op.operand_type == codec::op_none)
                     continue;
 
                 if (target_op.operand_size != accepted_op.operand_size ||
