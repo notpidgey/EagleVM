@@ -17,6 +17,8 @@ namespace eagle::ir::lifter
     class dec : public base_x86_translator
     {
         using base_x86_translator::base_x86_translator;
+
+        bool virtualize_as_address(codec::dec::operand operand, uint8_t idx) override;
         void finalize_translate_to_virtual() override;
     };
 }
