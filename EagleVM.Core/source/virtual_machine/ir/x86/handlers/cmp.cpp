@@ -63,10 +63,13 @@ namespace eagle::ir::lifter
         block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
 
         const codec::dec::operand first_op = operands[0];
+        const codec::dec::operand second_op = operands[1];
+
+        const ir_size imm_size = static_cast<ir_size>(second_op.size);
         const bool is_register = first_op.type == ZYDIS_OPERAND_TYPE_REGISTER;
         const bool is_bit64 = codec::get_reg_size(first_op.reg.value) == codec::bit_64;
 
-        if (is_register && is_bit64)
+        if (imm_size == ir_size::bit_32 && is_register && is_bit64)
         {
             // we need to sign extend the IMM value
             // this only happens in two cases
