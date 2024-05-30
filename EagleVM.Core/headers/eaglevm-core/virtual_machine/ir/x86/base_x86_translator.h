@@ -16,6 +16,13 @@ namespace eagle::ir::lifter
         unsupported
     };
 
+    enum class translate_mem_result
+    {
+        address,
+        value,
+        both
+    };
+
     class base_x86_translator
     {
     public:
@@ -34,12 +41,12 @@ namespace eagle::ir::lifter
 
         uint64_t stack_displacement = 0;
 
-        virtual bool virtualize_as_address(codec::dec::operand operand, uint8_t idx);
         virtual translate_status encode_operand(codec::dec::op_reg op_reg, uint8_t idx);
         virtual translate_status encode_operand(codec::dec::op_mem op_mem, uint8_t idx);
         virtual translate_status encode_operand(codec::dec::op_ptr op_ptr, uint8_t idx);
         virtual translate_status encode_operand(codec::dec::op_imm op_imm, uint8_t idx);
 
+        virtual translate_mem_result translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx);
         virtual void finalize_translate_to_virtual();
         virtual bool skip(uint8_t idx);
 

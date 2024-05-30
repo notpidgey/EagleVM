@@ -22,19 +22,15 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool push::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    translate_mem_result push::translate_mem_result()
     {
-        return false;
-    }
-
-    bool push::skip(uint8_t idx)
-    {
-        return true;
+        return translate_mem_result::value;
     }
 
     void push::finalize_translate_to_virtual()
     {
-        base_x86_translator::finalize_translate_to_virtual();
+        // dont do anything because the operand encoders automatically push values
+        // base_x86_translator::finalize_translate_to_virtual();
     }
 }
 

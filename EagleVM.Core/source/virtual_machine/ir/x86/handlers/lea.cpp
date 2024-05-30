@@ -28,10 +28,9 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool lea::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    translate_mem_result lea::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
     {
-        // this will only hit for the second operand and we will say yes
-        return true;
+        return translate_mem_result::address;
     }
 
     void lea::finalize_translate_to_virtual()

@@ -55,6 +55,11 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
+    translate_mem_result add::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
+    {
+        return idx == 0 ? translate_mem_result::both : base_x86_translator::translate_mem_action(op_mem, idx);
+    }
+
     translate_status add::encode_operand(codec::dec::op_imm op_imm, uint8_t)
     {
         codec::dec::operand second_op = operands[1];
@@ -76,7 +81,17 @@ namespace eagle::ir::lifter
         base_x86_translator::finalize_translate_to_virtual();
         block->add_command(std::make_shared<cmd_rflags_store>());
 
-        codec::reg target_reg = static_cast<codec::reg>(operands[0].reg.value);
-        block->add_command(std::make_shared<cmd_context_store>(target_reg));
+        codec::dec::operand first_op = operands[0];
+        if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
+        {
+            // register
+            codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
+            block->add_command(std::make_shared<cmd_context_store>(reg));
+        }
+        else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
+        {
+            ir_size value_size = static_cast<ir_size>(first_op.size);
+            block->add_command(std::make_shared<cmd_mem_write>(value_size, value_size));
+        }
     }
 }

@@ -41,9 +41,9 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool dec::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    translate_mem_result dec::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
     {
-        return base_x86_translator::virtualize_as_address(operand, idx);
+        return translate_mem_result::both;
     }
 
     void dec::finalize_translate_to_virtual()
@@ -53,16 +53,15 @@ namespace eagle::ir::lifter
         block->add_command(std::make_shared<cmd_rflags_store>());
 
         codec::dec::operand first_op = operands[0];
-        if(first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
+        if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
-            // register
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
             block->add_command(std::make_shared<cmd_context_store>(reg));
         }
-        else
+        else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
         {
-            // memory
+            ir_size value_size = static_cast<ir_size>(first_op.size);
+            block->add_command(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
-
     }
 }

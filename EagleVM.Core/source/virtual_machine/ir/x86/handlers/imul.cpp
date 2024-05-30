@@ -49,9 +49,9 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool imul::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    translate_mem_result imul::translate_mem_action(const codec::dec::op_mem& op_mem, const uint8_t idx)
     {
-        return false;
+        return idx == 1 ? translate_mem_result::value : base_x86_translator::translate_mem_action(op_mem, idx);
     }
 
     void imul::finalize_translate_to_virtual()

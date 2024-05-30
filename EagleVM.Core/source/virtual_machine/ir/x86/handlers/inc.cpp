@@ -31,7 +31,7 @@ namespace eagle::ir::handler
 
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_x86_dynamic>(codec::m_dec, vtemp),
+            std::make_shared<cmd_x86_dynamic>(codec::m_inc, vtemp),
             std::make_shared<cmd_push>(vtemp, target_size)
         };
     }
@@ -39,10 +39,28 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
+    translate_mem_result inc::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
+    {
+        return translate_mem_result::both;
+    }
+
     void inc::finalize_translate_to_virtual()
     {
         block->add_command(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
         block->add_command(std::make_shared<cmd_rflags_store>());
+
+        codec::dec::operand first_op = operands[0];
+        if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
+        {
+            // register
+            codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
+            block->add_command(std::make_shared<cmd_context_store>(reg));
+        }
+        else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
+        {
+            ir_size value_size = static_cast<ir_size>(first_op.size);
+            block->add_command(std::make_shared<cmd_mem_write>(value_size, value_size));
+        }
     }
 }

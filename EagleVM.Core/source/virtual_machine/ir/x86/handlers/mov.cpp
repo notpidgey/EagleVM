@@ -23,12 +23,10 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool mov::virtualize_as_address(const codec::dec::operand operand, const uint8_t idx)
+    translate_mem_result mov::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
     {
-        if (idx == 0 && operand.type == codec::op_mem)
-            return true;
-
-        return false;
+        if (idx == 0) return translate_mem_result::address;
+        return base_x86_translator::translate_mem_action(op_mem, idx);
     }
 
     void mov::finalize_translate_to_virtual()
@@ -54,5 +52,10 @@ namespace eagle::ir::lifter
 
         // no handler call required
         // base_x86_translator::finalize_translate_to_virtual();
+    }
+
+    bool mov::skip(const uint8_t idx)
+    {
+        return operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER && idx == 0;
     }
 }

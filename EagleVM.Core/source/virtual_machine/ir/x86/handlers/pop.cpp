@@ -22,15 +22,14 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    bool pop::virtualize_as_address(codec::dec::operand operand, uint8_t idx)
+    translate_mem_result pop::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
     {
-        // we only want to address of a memory operand
-        return operands[0].type == ZYDIS_OPERAND_TYPE_MEMORY;
+        return translate_mem_result::address;
     }
 
     bool pop::skip(uint8_t idx)
     {
-        return operands[0].type != ZYDIS_OPERAND_TYPE_MEMORY;
+        return operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER;
     }
 
     void pop::finalize_translate_to_virtual()

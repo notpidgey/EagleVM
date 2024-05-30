@@ -6,6 +6,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_handler_call.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_mem_read.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_pop.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir::lifter
@@ -68,11 +69,6 @@ namespace eagle::ir::lifter
         }
 
         block->add_command(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
-    }
-
-    bool base_x86_translator::virtualize_as_address(codec::dec::operand operand, const uint8_t idx)
-    {
-        return idx == 0;
     }
 
     translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
@@ -143,17 +139,40 @@ namespace eagle::ir::lifter
         // there has to be a better and cleaner way of doing this, but i have not thought of it yet
         // for now it will kind of just be an assumption
 
-        if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN || virtualize_as_address(operands[idx], idx))
+        switch (translate_mem_action(op_mem, idx))
         {
-            stack_displacement += static_cast<uint16_t>(ir_size::bit_64);
-        }
-        else
-        {
-            // by default, this will be dereferenced and we will get the value at the address,
-            const ir_size target_size = static_cast<ir_size>(inst.operand_width);
-            block->add_command(std::make_shared<cmd_mem_read>(target_size));
+            case translate_mem_result::address:
+            {
+                stack_displacement += static_cast<uint16_t>(TOB(ir_size::bit_64));
+                break;
+            }
+            case translate_mem_result::value:
+            {
+                // by default, this will be dereferenced and we will get the value at the address,
+                const ir_size target_size = static_cast<ir_size>(inst.operand_width);
+                block->add_command(std::make_shared<cmd_mem_read>(target_size));
 
-            stack_displacement += static_cast<uint16_t>(target_size);
+                stack_displacement += static_cast<uint16_t>(target_size);
+                break;
+            }
+            case translate_mem_result::both:
+            {
+                // todo: find a better way of doing this
+                // for instance adding a pop which actually doesnt remove from the stack and just reads
+                // or idfk
+
+                ir_size size = static_cast<ir_size>(operands[idx].size);
+
+                discrete_store_ptr store = discrete_store::create(ir_size::bit_64);
+                block->add_command({
+                    std::make_shared<cmd_pop>(store, ir_size::bit_64),
+                    std::make_shared<cmd_push>(store, ir_size::bit_64),
+                    std::make_shared<cmd_push>(store, ir_size::bit_64),
+                    std::make_shared<cmd_mem_read>(size)
+                });
+
+                break;
+            }
         }
 
         return translate_status::success;
@@ -172,6 +191,14 @@ namespace eagle::ir::lifter
 
         stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
+    }
+
+    translate_mem_result base_x86_translator::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t)
+    {
+        if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
+            return translate_mem_result::address;
+
+        return translate_mem_result::value;
     }
 
     bool base_x86_translator::skip(const uint8_t idx)
