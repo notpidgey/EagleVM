@@ -12,6 +12,12 @@ namespace eagle::ir::handler
             { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "sub 16,16" },
             { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "sub 32,32" },
             { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "sub 64,64" },
+
+            // sign extended handlers
+            { { { codec::op_none, codec::bit_16 }, { codec::op_imm, codec::bit_8 } }, "sub 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_imm, codec::bit_8 } }, "sub 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_8 } }, "sub 64,64" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_32 } }, "sub 64,64" },
         };
 
         build_options = {
@@ -37,14 +43,29 @@ namespace eagle::ir::handler
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
             std::make_shared<cmd_pop>(vtemp2, target_size)->block_write(vtemp),
-            std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp, vtemp2),
-            std::make_shared<cmd_push>(vtemp, target_size)
+            std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp2, vtemp),
+            std::make_shared<cmd_push>(vtemp2, target_size)
         };
     }
 }
 
 namespace eagle::ir::lifter
 {
+    translate_status sub::encode_operand(codec::dec::op_imm op_imm, uint8_t)
+    {
+        codec::dec::operand second_op = operands[1];
+        codec::dec::operand first_op = operands[0];
+
+        ir_size imm_size = static_cast<ir_size>(second_op.size);
+        ir_size imm_size_target = static_cast<ir_size>(first_op.size);
+
+        block->add_command(std::make_shared<cmd_push>(op_imm.value.u, imm_size));
+        if (imm_size != imm_size_target)
+            block->add_command(std::make_shared<cmd_sx>(imm_size_target, imm_size));
+
+        return translate_status::success;
+    }
+
     void sub::finalize_translate_to_virtual()
     {
         block->add_command(std::make_shared<cmd_rflags_load>());
