@@ -30,7 +30,6 @@ namespace eagle::ir::handler
 
         [[nodiscard]] std::optional<std::string> get_handler_id(const op_params& target_operands);
         [[nodiscard]] std::optional<std::string> get_handler_id(const handler_sig& target_build);
-
         [[nodiscard]] std::optional<handler_build> get_handler_build(const std::string& target_handler_id) const;
 
     protected:

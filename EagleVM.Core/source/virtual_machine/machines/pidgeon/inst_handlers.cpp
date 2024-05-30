@@ -488,9 +488,7 @@ namespace eagle::virt::pidg
             sig.emplace_back(entry.operand_type, entry.operand_size);
 
         const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(sig);
-        assert(handler_id != std::nullopt, "handler id is invalid, signature does not match");
-
-        return get_instruction_handler(mnemonic, handler_id.value());
+        return handler_id ? get_instruction_handler(mnemonic, handler_id.value()) : nullptr;
     }
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(const mnemonic mnemonic, const ir::handler_sig& handler_sig)
@@ -498,9 +496,7 @@ namespace eagle::virt::pidg
         const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
 
         const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(handler_sig);
-        assert(handler_id != std::nullopt, "handler id is invalid, signature does not match");
-
-        return get_instruction_handler(mnemonic, handler_id.value());
+        return handler_id ? get_instruction_handler(mnemonic, handler_id.value()) : nullptr;
     }
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
@@ -560,13 +556,13 @@ namespace eagle::virt::pidg
         if (vm_rflags_load.tagged) handlers.push_back(build_rflags_load());
         if (vm_rflags_save.tagged) handlers.push_back(build_rflags_save());
 
+        handlers.append_range(build_instruction_handlers());
+
         handlers.append_range(build_context_load());
         handlers.append_range(build_context_store());
 
         handlers.append_range(build_push());
         handlers.append_range(build_pop());
-
-        handlers.append_range(build_instruction_handlers());
 
         return handlers;
     }

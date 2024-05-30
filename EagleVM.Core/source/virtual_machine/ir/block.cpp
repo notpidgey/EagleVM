@@ -16,7 +16,7 @@ namespace eagle::ir
     void block_ir::add_command(const std::vector<base_command_ptr>& command)
     {
         assert(exit == nullptr, "cannot append command after exit");
-        if (command.back()->get_command_type() == command_type::vm_branch)
+        if (!command.empty() && command.back()->get_command_type() == command_type::vm_branch)
             exit = std::static_pointer_cast<cmd_branch>(command.back());
 
         commands.append_range(command);

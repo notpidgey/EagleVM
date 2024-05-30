@@ -12,6 +12,14 @@ namespace eagle::ir::handler
             { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "cmp 16,16" },
             { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "cmp 32,32" },
             { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "cmp 64,64" },
+
+            // sign extended handlers
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_32 } }, "cmp 64,64" },
+
+            // non sign extended
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_8 } }, "cmp 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_8 } }, "cmp 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_8 } }, "cmp 64,64" },
         };
 
         build_options = {
@@ -65,6 +73,7 @@ namespace eagle::ir::lifter
             // this only happens in two cases
             // 1. REX.W + 3D id	CMP RAX, imm32
             // 2. REX.W + 81 /7 id	CMP r/m64, imm32
+
             block->add_command(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
         }
 

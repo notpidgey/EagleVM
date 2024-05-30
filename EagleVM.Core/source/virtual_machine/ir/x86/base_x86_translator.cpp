@@ -165,10 +165,10 @@ namespace eagle::ir::lifter
         return translate_status::unsupported;
     }
 
-    translate_status base_x86_translator::encode_operand(codec::dec::op_imm op_mem, uint8_t idx)
+    translate_status base_x86_translator::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
         const ir_size target_size = static_cast<ir_size>(inst.operand_width);
-        block->add_command(std::make_shared<cmd_push>(op_mem.value.u, target_size));
+        block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
 
         stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
