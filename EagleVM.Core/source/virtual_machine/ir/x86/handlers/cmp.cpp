@@ -8,7 +8,7 @@ namespace eagle::ir::handler
     cmp::cmp()
     {
         valid_operands = {
-            { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "cmp, 8,8" },
+            { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "cmp 8,8" },
             { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "cmp 16,16" },
             { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "cmp 32,32" },
             { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "cmp 64,64" },
@@ -59,13 +59,12 @@ namespace eagle::ir::lifter
 
     translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
-        ir_size target_size = get_op_width();
-        block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
+        codec::dec::operand second_op = operands[1];
+        codec::dec::operand first_op = operands[0];
 
-        const codec::dec::operand first_op = operands[0];
-        const codec::dec::operand second_op = operands[1];
+        ir_size imm_size = static_cast<ir_size>(second_op.size);
+        ir_size imm_size_target = static_cast<ir_size>(first_op.size);
 
-        const ir_size imm_size = static_cast<ir_size>(second_op.size);
         const bool is_register = first_op.type == ZYDIS_OPERAND_TYPE_REGISTER;
         const bool is_bit64 = codec::get_reg_size(first_op.reg.value) == codec::bit_64;
 
@@ -76,10 +75,18 @@ namespace eagle::ir::lifter
             // 1. REX.W + 3D id	CMP RAX, imm32
             // 2. REX.W + 81 /7 id	CMP r/m64, imm32
 
+            block->add_command(std::make_shared<cmd_push>(op_imm.value.u, imm_size));
             block->add_command(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
+
+            stack_displacement += static_cast<uint16_t>(TOB(ir_size::bit_64));
+        }
+        else
+        {
+            block->add_command(std::make_shared<cmd_push>(op_imm.value.u, imm_size_target));
+
+            stack_displacement += static_cast<uint16_t>(TOB(imm_size_target));
         }
 
-        stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;
     }
 }
