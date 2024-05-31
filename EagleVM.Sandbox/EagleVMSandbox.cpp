@@ -13,11 +13,11 @@ int main(int argc, char* argv[])
     std::cin >> key;
 
     if (key == "1798263718265567865") {
-        std::cout << "correct key";
+        std::cout << "\ncorrect key";
     }
 
     if (key != "1798263718265567865") {
-        std::cout << "incorrect key";
+        std::cout << "\nincorrect key";
     }
 
     system("pause");
