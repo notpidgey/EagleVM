@@ -213,10 +213,10 @@ int main(int argc, char* argv[])
         std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
         // we want the same settings for every machine
-        virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
-        settings->set_temp_count(4);
-        settings->set_randomize_vm_regs(true);
-        settings->set_randomize_stack_regs(true);
+        virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
+        machine_settings->set_temp_count(4);
+        machine_settings->set_randomize_vm_regs(true);
+        machine_settings->set_randomize_stack_regs(true);
 
         // initialize block code labels
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)
-            virt::pidg::machine_ptr machine = virt::pidg::machine::create(settings);
+            virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
             machine->add_block_context(block_labels);
 
             for (auto& translated_block : blocks)
