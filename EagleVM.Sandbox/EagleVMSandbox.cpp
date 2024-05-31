@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-int main(int argc, char* argv[])
+int main(int, char*[])
 {
     fnEagleVMBegin();
 
@@ -13,11 +13,11 @@ int main(int argc, char* argv[])
     std::cin >> key;
 
     if (key == "1798263718265567865") {
-        std::cout << "\ncorrect key";
+        std::cout << "correct key";
     }
 
     if (key != "1798263718265567865") {
-        std::cout << "\nincorrect key";
+        std::cout << "incorrect key";
     }
 
     system("pause");
