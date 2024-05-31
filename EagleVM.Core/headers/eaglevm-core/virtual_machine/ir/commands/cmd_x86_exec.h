@@ -13,17 +13,17 @@ namespace eagle::ir
             request = codec::decode_to_encode(dec_req);
         }
 
-        explicit cmd_x86_exec(const codec::enc::req& enc_req)
+        explicit cmd_x86_exec(const codec::dynamic_instruction& enc_req)
             : base_command(command_type::vm_exec_x86), request(enc_req)
         {
         }
 
-        codec::enc::req get_request() const
+        codec::dynamic_instruction get_request() const
         {
             return request;
         }
 
     private:
-        codec::enc::req request{};
+        codec::dynamic_instruction request{ };
     };
 }

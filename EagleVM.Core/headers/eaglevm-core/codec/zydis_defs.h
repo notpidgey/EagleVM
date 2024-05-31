@@ -14,10 +14,11 @@ namespace eagle::codec
     {
         using req = ZydisEncoderRequest;
 
-        using op_imm = ZydisEncoderOperand_::ZydisEncoderOperandImm_;
-        using op_mem = ZydisEncoderOperand_::ZydisEncoderOperandMem_;
-        using op_ptr = ZydisEncoderOperand_::ZydisEncoderOperandPtr_;
-        using op_reg = ZydisEncoderOperand_::ZydisEncoderOperandReg_;
+        using op = ZydisEncoderOperand;
+        using op_imm = ZydisEncoderOperand::ZydisEncoderOperandImm_;
+        using op_mem = ZydisEncoderOperand::ZydisEncoderOperandMem_;
+        using op_ptr = ZydisEncoderOperand::ZydisEncoderOperandPtr_;
+        using op_reg = ZydisEncoderOperand::ZydisEncoderOperandReg_;
     }
 
     namespace dec

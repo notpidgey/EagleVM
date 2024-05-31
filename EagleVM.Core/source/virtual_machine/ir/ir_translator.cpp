@@ -3,12 +3,13 @@
 #include <ranges>
 #include <unordered_set>
 
+#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
 
 #include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/codec/zydis_helper.h"
-#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
 namespace eagle::ir
 {
@@ -95,7 +96,7 @@ namespace eagle::ir
         for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
         {
             // use il x86 translator to translate the instruction to il
-            auto decoded_inst = bb->decoded_insts[i];
+            codec::dec::inst_info decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
             std::vector<handler_op> il_operands;
@@ -156,8 +157,7 @@ namespace eagle::ir
                     is_in_vm = false;
                 }
 
-                // todo: if rip relative, translate
-                current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
+                handle_block_command(decoded_inst, current_block, bb->get_index_rva(i));
             }
         }
 
@@ -340,8 +340,7 @@ namespace eagle::ir
                 // handler does not exist
                 // we need to execute the original instruction
 
-                // todo: if rip relative, translate
-                current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
+                handle_block_command(decoded_inst, current_block, bb->get_index_rva(i));
             }
         }
 
@@ -659,6 +658,53 @@ namespace eagle::ir
         }
     }
 
+    void ir_translator::handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, const uint64_t current_rva)
+    {
+        if (codec::has_relative_operand(decoded_inst))
+        {
+            auto [target_address, op_i] = codec::calc_relative_rva(decoded_inst, current_rva);
+            current_block->add_command(
+                std::make_shared<cmd_x86_exec>
+                (
+                    [decoded_inst, target_address, op_i](const uint32_t rva)
+                    {
+                        // Decode instruction to an encode request
+                        codec::enc::req encode_request = codec::decode_to_encode(decoded_inst);
+                        codec::enc::op& op = encode_request.operands[op_i];
+
+                        // Adjust the operand based on its type
+                        switch (op.type)
+                        {
+                            case ZYDIS_OPERAND_TYPE_MEMORY:
+                            {
+                                // Adjust memory displacement
+                                op.mem.displacement = target_address - rva;
+                                break;
+                            }
+                            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                            {
+                                // Adjust immediate value
+                                op.imm.s = target_address - rva;
+                                break;
+                            }
+                            default:
+                            {
+                                // Break on unexpected operand type
+                                __debugbreak();
+                            }
+                        }
+
+                        return encode_request;
+                    }
+                )
+            );
+        }
+        else
+        {
+            current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
+        }
+    }
+
     void preopt_block::init(dasm::basic_block* block)
     {
         head = std::make_shared<block_ir>();
@@ -673,7 +719,7 @@ namespace eagle::ir
 
     block_ptr preopt_block::get_entry()
     {
-        if(has_head())
+        if (has_head())
             return head;
 
         assert(!body.empty(), "attempted to retrieve nearest entry while containing no body");

@@ -49,6 +49,8 @@ namespace eagle::ir
         preopt_block_ptr translate_block_split(dasm::basic_block* bb);
 
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
+
+        static void handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, uint64_t current_rva);
     };
 
     class preopt_block
