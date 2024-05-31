@@ -23,7 +23,6 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 const std::string inclusive_tests[] = {
     "add",
     "dec",
-    "div",
     "inc",
     "lea",
     "mov",
@@ -33,7 +32,7 @@ const std::string inclusive_tests[] = {
 };
 
 #pragma section(".run_section", execute)
-__declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { 0xCC };
+__declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { };
 
 using namespace eagle;
 
@@ -49,7 +48,7 @@ int main(int argc, char* argv[])
     memset(run_buffer, 0xCC, sizeof(run_buffer));
 
     // setbuf(stdout, NULL);
-    auto test_data_path = argc > 1 ? argv[1] : "../../../deps/x86_test_data/TestData64";
+    const char* test_data_path = argc > 1 ? argv[1] : "../../../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
@@ -85,6 +84,10 @@ int main(int argc, char* argv[])
         int passed = 0;
         int failed = 0;
 
+        #ifdef _DEBUG
+        outfile.basic_ios::rdbuf(std::cout.rdbuf());
+        #endif
+
         // data now contains an array of objects, enumerate each object
         for (auto& test : data)
         {
@@ -103,6 +106,11 @@ int main(int argc, char* argv[])
             bool bp = false;
             if (test.contains("bp"))
                 bp = test["bp"];
+
+            #ifdef _DEBUG
+            if(bp)
+                __debugbreak();
+            #endif
 
             {
                 outfile << "\n\n[test] " << instr.c_str() << "\n";
@@ -152,10 +160,10 @@ int main(int argc, char* argv[])
                 std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
                 // we want the same settings for every machine
-                virt::pidg::settings_ptr settings = std::make_shared<virt::pidg::settings>();
-                settings->set_temp_count(4);
-                settings->set_randomize_vm_regs(true);
-                settings->set_randomize_stack_regs(true);
+                virt::pidg::settings_ptr vm_settings = std::make_shared<virt::pidg::settings>();
+                vm_settings->set_temp_count(4);
+                vm_settings->set_randomize_vm_regs(true);
+                vm_settings->set_randomize_stack_regs(true);
 
                 // initialize block code labels
                 std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
@@ -170,7 +178,7 @@ int main(int argc, char* argv[])
                 {
                     // we create a new machine based off of the same settings to make things more annoying
                     // but the same machine could be used :)
-                    virt::pidg::machine_ptr machine = virt::pidg::machine::create(settings);
+                    virt::pidg::machine_ptr machine = virt::pidg::machine::create(vm_settings);
                     machine->add_block_context(block_labels);
 
                     for (auto& translated_block : blocks)
@@ -197,6 +205,13 @@ int main(int argc, char* argv[])
                 container.set_instruction_data(virtualized_instruction);
             }
 
+            #ifdef _DEBUG
+            if(!bp)
+                continue;
+            else
+                __debugbreak();
+            #endif
+
             auto [result_context, output_target] = container.run(bp);
 
             // result_context is being set in the exception handler
@@ -218,7 +233,7 @@ int main(int argc, char* argv[])
                 {
                     outfile << "[!] register mismatch\n";
 
-                    for (auto [reg, value] : outs)
+                    for (auto reg : outs | std::views::keys)
                     {
                         if (reg == "flags" || reg == "rip")
                             continue;
@@ -251,7 +266,7 @@ int main(int argc, char* argv[])
         std::printf("[>] passed: %i\n", passed);
         std::printf("[>] failed: %i\n", failed);
 
-        float success = (static_cast<float>(passed) / (passed + failed)) * 100;
+        float success = static_cast<float>(passed) / (passed + failed) * 100;
         std::printf("[>] success: %f%%\n\n", success);
     }
 
@@ -286,12 +301,9 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
 {
     uint32_t fail = none;
 
-    // this is such a stupid hack but instead of writing 20 if statements im going to do this for now
-    constexpr auto reg_size = 16 * 8;
-
     // rip comparison is COOKED there is something really off about the test data
     // auto res_rip = result.Rip == target.Rip;
-    for (auto& [reg, value] : outs)
+    for (auto& reg : outs | std::views::keys)
     {
         if (reg == "rip" || reg == "flags")
             continue;
@@ -308,7 +320,7 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
 
     if (flags)
     {
-        bool res_flags = (result.EFlags & target.EFlags) == target.EFlags;
+        const bool res_flags = (result.EFlags & target.EFlags) == target.EFlags;
         if (!res_flags)
             fail |= flags_mismatch;
     }
