@@ -137,21 +137,6 @@ int main(int argc, char* argv[])
 
     IMAGE_SECTION_HEADER* last_section = &std::get<0>(generator.get_last_section());
 
-    // its not a great idea to split up the virtual machines into a different section than the virtualized code
-    // as it will aid reverse engineers in understanding what is happening in the binary
-    auto& [data_section, data_section_bytes] = generator.add_section(".haihallo");
-    data_section.PointerToRawData = generator.align_file(last_section->PointerToRawData + last_section->SizeOfRawData);
-    data_section.SizeOfRawData = 0;
-    data_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
-    data_section.Misc.VirtualSize = 0;
-    data_section.Characteristics = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_CNT_CODE;
-    data_section.PointerToRelocations = 0;
-    data_section.NumberOfRelocations = 0;
-    data_section.NumberOfLinenumbers = 0;
-
-    last_section = &data_section;
-
-    std::printf("[>] generating vm handlers at %04X...\n", static_cast<uint32_t>(data_section.VirtualAddress));
     std::printf("\n[>] generating virtualized code...\n\n");
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
@@ -260,7 +245,7 @@ int main(int argc, char* argv[])
 
     std::printf("\n");
 
-    auto& [code_section, code_section_bytes] = generator.add_section(".vmcode");
+    auto& [code_section, code_section_bytes] = generator.add_section(".hai_hallo");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     code_section.SizeOfRawData = 0;
     code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
