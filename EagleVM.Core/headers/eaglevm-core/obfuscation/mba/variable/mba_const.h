@@ -1,37 +1,42 @@
 #pragma once
 #include "eaglevm-core/obfuscation/mba/variable/mba_var.h"
 
-template <typename T>
-class mba_var_const : public mba_variable
+namespace eagle::mba
 {
-public:
-    T value;
-
-    mba_var_const(T value, variable_modifier modifier = mod_none)
-        : mba_variable(constant, modifier), value(value) {}
-
-    std::string print() const override
+    template <typename T>
+    class mba_var_const : public mba_variable
     {
-        return std::to_string(value);
-    }
+    public:
+        T value;
 
-    void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) override
-    {
-        return;
-    }
+        mba_var_const(T value, variable_modifier modifier = mod_none)
+            : mba_variable(constant, modifier), value(value)
+        {
+        }
 
-    std::unique_ptr<mba_variable> clone() override
-    {
-        return std::make_unique<mba_var_const>(*this);
-    }
+        std::string print() const override
+        {
+            return std::to_string(value);
+        }
 
-    void walk(const std::function<void(mba_var_exp*)>& walk_callback) override
-    {
-        return;
-    }
+        void expand(const std::unique_ptr<mba_variable>& x, const std::unique_ptr<mba_variable>& y) override
+        {
+            return;
+        }
 
-    void walk_bottom(const std::function<void(mba_var_exp*)>& walk_callback) override
-    {
-        return;
-    }
-};
+        std::unique_ptr<mba_variable> clone() override
+        {
+            return std::make_unique<mba_var_const>(*this);
+        }
+
+        void walk(const std::function<void(mba_var_exp*)>& walk_callback) override
+        {
+            return;
+        }
+
+        void walk_bottom(const std::function<void(mba_var_exp*)>& walk_callback) override
+        {
+            return;
+        }
+    };
+}

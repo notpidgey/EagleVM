@@ -1,0 +1,19 @@
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_sx.h"
+
+namespace eagle::ir
+{
+    cmd_sx::cmd_sx(const ir_size to, const ir_size from)
+        : base_command(command_type::vm_sx), target(to), current(from)
+    {
+    }
+
+    ir_size cmd_sx::get_target() const
+    {
+        return target;
+    }
+
+    ir_size cmd_sx::get_current() const
+    {
+        return current;
+    }
+}

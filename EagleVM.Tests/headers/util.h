@@ -15,7 +15,7 @@ enum comparison_fail
     register_mismatch = 0b100
 };
 
-namespace util
+namespace test_util
 {
     std::vector<uint8_t> parse_hex(const std::string& hex);
     void print_regs(nlohmann::json& inputs, std::ofstream& stream);

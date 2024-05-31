@@ -1,7 +1,7 @@
 #include "run_container.h"
 
 #include <intrin.h>
-
+#include <iostream>
 #include "util.h"
 
 #pragma optimize("", off)
@@ -35,9 +35,12 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
-        if(bp)
+        if (bp)
         {
+            // so i can tell if its intentional in a debugger
+            __nop();
             __debugbreak();
+            __nop();
         }
 
         add_veh();
@@ -51,7 +54,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
     else
         memset(run_area, 0xCC, run_area_size);
 
-    return {result_context, output_target};
+    return { result_context, output_target };
 }
 #pragma optimize("", on)
 
@@ -89,7 +92,7 @@ memory_range run_container::create_run_area(const uint32_t size)
 
 void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
 {
-    run_area = reinterpret_cast<void *>(address);
+    run_area = reinterpret_cast<void*>(address);
     run_area_size = size;
     clear_run_area = clear;
 }
@@ -140,8 +143,8 @@ void run_container::destroy_veh()
 CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes)
 {
     CONTEXT new_context = safe;
-    for (auto& [reg, value]: writes)
-        *util::get_value(new_context, reg) = value;
+    for (auto& [reg, value] : writes)
+        *test_util::get_value(new_context, reg) = value;
 
     return new_context;
 }
@@ -149,8 +152,8 @@ CONTEXT run_container::build_context(const CONTEXT& safe, reg_overwrites& writes
 CONTEXT run_container::clear_context(const CONTEXT& safe, reg_overwrites& writes)
 {
     CONTEXT new_context = safe;
-    for (auto& [reg, value]: writes)
-        *util::get_value(new_context, reg) = 0;
+    for (auto& [reg, value] : writes)
+        *test_util::get_value(new_context, reg) = 0;
 
     return new_context;
 }
@@ -161,7 +164,7 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
     std::lock_guard lock(run_tests_mutex);
 
     bool found = false;
-    for (auto& [ranges, val]: run_tests)
+    for (auto& [ranges, val] : run_tests)
     {
         auto [low, size] = ranges;
         if (low <= current_rip && current_rip <= low + size)
@@ -174,10 +177,10 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
         }
     }
 
-    if(found)
+    if (found)
         return EXCEPTION_CONTINUE_EXECUTION;
 
-    if(info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
+    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
     {
         info->ContextRecord->Rip += 1;
         return EXCEPTION_CONTINUE_EXECUTION;

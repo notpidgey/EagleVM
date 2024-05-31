@@ -1,22 +1,25 @@
 #pragma once
 #include "eaglevm-core/pe/pe_generator.h"
-#include "eaglevm-core/util/section/section_manager.h"
+#include "eaglevm-core/compiler/section_manager.h"
 
-class pe_packer
+namespace eagle::pe
 {
-public:
-    explicit pe_packer(pe_generator* generator)
-        : generator(generator) {}
+    class pe_packer
+    {
+    public:
+        explicit pe_packer(pe_generator* generator)
+            : generator(generator) {}
 
-    void set_overlay(bool overlay);
-    static std::pair<uint32_t, uint32_t> insert_pdb(encoded_vec& encoded_vec);
+        void set_overlay(bool overlay);
+        static std::pair<uint32_t, uint32_t> insert_pdb(codec::encoded_vec& encoded_vec);
 
-    section_manager create_section();
+        asmb::section_manager create_section() const;
 
-private:
-    pe_generator* generator;
+    private:
+        pe_generator* generator;
 
-    bool text_overlay;
-    bool pdb_rewrite;
-    // other future features;
-};
+        bool text_overlay;
+        bool pdb_rewrite;
+        // other future features;
+    };
+}

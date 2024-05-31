@@ -1,10 +1,15 @@
 #pragma once
 #include <cstdint>
 
-struct code_view_pdb
+namespace eagle::pe
 {
-    char signature[4];
-    char guid[16];
-    uint32_t age;
-};
+    constexpr uint8_t signature_size = 4;
+    constexpr uint8_t guid_size = 16;
 
+    struct code_view_pdb
+    {
+        uint8_t signature[signature_size];
+        uint8_t guid[guid_size];
+        uint32_t age;
+    };
+}
