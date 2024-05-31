@@ -171,6 +171,7 @@ namespace eagle::ir::lifter
                     std::make_shared<cmd_mem_read>(size)
                 });
 
+                stack_displacement += static_cast<uint16_t>(TOB(size) + TOB(ir_size::bit_64));
                 break;
             }
         }
