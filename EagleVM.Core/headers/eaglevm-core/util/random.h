@@ -50,9 +50,6 @@ namespace eagle::util
 
         uint64_t gen_dist(std::uniform_int_distribution<uint64_t>& distribution)
         {
-            std::random_device rd;
-            std::mt19937 gen(rd());
-
             return distribution(gen);
         }
 

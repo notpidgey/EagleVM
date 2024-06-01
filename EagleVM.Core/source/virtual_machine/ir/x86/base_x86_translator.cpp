@@ -82,16 +82,16 @@ namespace eagle::ir::lifter
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
 
+        // [base + index * scale + disp]
+        // 1. loading the base register
         if (op_mem.base == ZYDIS_REGISTER_RIP)
         {
             auto [target, _] = codec::calc_relative_rva(inst, operands, orig_rva, idx);
             block->add_command(std::make_shared<cmd_push>(target));
 
-            return translate_status::success;
+            goto HANDLE_MEM_ACTION;
         }
 
-        // [base + index * scale + disp]
-        // 1. loading the base register
         if (op_mem.base == ZYDIS_REGISTER_RSP)
         {
             block->add_command(std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64));
@@ -139,6 +139,7 @@ namespace eagle::ir::lifter
         // there has to be a better and cleaner way of doing this, but i have not thought of it yet
         // for now it will kind of just be an assumption
 
+    HANDLE_MEM_ACTION:
         switch (translate_mem_action(op_mem, idx))
         {
             case translate_mem_result::address:

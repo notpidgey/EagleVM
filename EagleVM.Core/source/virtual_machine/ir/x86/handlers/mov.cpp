@@ -56,6 +56,6 @@ namespace eagle::ir::lifter
 
     bool mov::skip(const uint8_t idx)
     {
-        return operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER && idx == 0;
+        return idx == 0 && operands[idx].type == ZYDIS_OPERAND_TYPE_REGISTER;
     }
 }
