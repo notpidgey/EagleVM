@@ -1,12 +1,16 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
+#include <vector>
 
+/*
+ * daax inspired vm 💞
+ */
 namespace eagle::virt::eg
 {
+    using machine_ptr = std::shared_ptr<class machine>;
     class machine : public base_machine
     {
     public:
-        std::vector<asmb::code_container_ptr> create_handlers() override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd) override;
@@ -22,5 +26,7 @@ namespace eagle::virt::eg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
+
+        std::vector<asmb::code_container_ptr> create_handlers() override;
     };
 }
