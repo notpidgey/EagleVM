@@ -44,25 +44,30 @@ namespace eagle::virt::eg
         const std::array<codec::reg, 16> avail_regs = get_gpr64_regs();
         for (auto avail_reg : avail_regs)
         {
-            std::vector<uint64_t> points;
-            points.push_back(0);
-            points.push_back(64);
+            std::vector<uint16_t> points;
+            points.push_back(0); // starting point
+            points.push_back(64); // ending point (inclusive)
 
-            for (uint64_t j = 0; j < 5 - 1; ++j)
+            // generate random points between 0 and 62 (inclusive)
+            constexpr auto numRanges = 5;
+            for (uint16_t i = 0; i < numRanges - 1; ++i)
             {
-                uint64_t point;
+                uint16_t point;
                 do
-                    point = util::ran_device::get().gen_64() % 64;
+                {
+                    point = util::ran_device::get().gen_8() % 64; // generates random number between 0 and 63
+                }
                 while (std::ranges::find(points, point) != points.end());
-
                 points.push_back(point);
             }
 
+            // sort the points
             std::ranges::sort(points);
 
+            // form the inclusive ranges
             std::vector<reg_range> register_ranges;
-            for (size_t j = 0; j < points.size() - 1; ++j)
-                register_ranges.emplace_back(points[j], points[j + 1]);
+            for (size_t i = 0; i < points.size() - 1; ++i)
+                register_ranges.emplace_back( points[i], points[i + 1] - 1 );
 
             for (auto& [first, last] : register_ranges)
             {
@@ -113,7 +118,7 @@ namespace eagle::virt::eg
                 // give 10 attempts to map the range
                 std::optional<reg_range> found_range = std::nullopt;
                 for (auto j = 0; j < 10 && found_range == std::nullopt; j++)
-                    found_range = find_avail_range(occ_ranges, length, codec::get_reg_size(dest_reg));
+                    found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg));
 
                 assert(found_range.has_value(), "unable to find valid range to map registers");
                 occ_ranges.push_back(found_range.value());

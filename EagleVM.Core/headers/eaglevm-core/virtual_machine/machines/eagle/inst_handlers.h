@@ -18,6 +18,7 @@ namespace eagle::virt::eg
     {
         std::vector<tagged_handler_pair> variant_pairs{ };
         tagged_handler_pair add_pair();
+        tagged_handler_pair get_first_pair();
     };
 
     using inst_handlers_ptr = std::shared_ptr<class inst_handlers>;
@@ -40,7 +41,7 @@ namespace eagle::virt::eg
          * @param destination
          * @param use_handler
          */
-        void load_register(codec::reg reg, const ir::discrete_store_ptr& destination, bool use_handler = true);
+        void load_register(codec::reg reg, const ir::discrete_store_ptr& destination);
 
         /**
          * append to the current working block a call or inlined code to store a value in a specific register
@@ -49,7 +50,9 @@ namespace eagle::virt::eg
          * @param source
          * @param use_handler
          */
-        void store_register(codec::reg reg, const ir::discrete_store_ptr& source, bool use_handler = true);
+        void store_register(codec::reg reg, const ir::discrete_store_ptr& source);
+
+        void call_handler(asmb::code_label_ptr label);
 
     private:
         asmb::code_container_ptr working_block;
@@ -59,6 +62,7 @@ namespace eagle::virt::eg
         inst_regs_ptr regs;
         settings_ptr settings;
 
-        std::unordered_map<codec::reg, tagged_handler> register_handlers;
+        std::unordered_map<codec::reg, tagged_handler> register_load_handlers;
+        std::unordered_map<codec::reg, tagged_handler> register_store_handlers;
     };
 }

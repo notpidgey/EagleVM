@@ -16,6 +16,8 @@ namespace eagle::virt::eg
         /**
          * when "single_use_x86_handlers" is set to false,
          * this value will be used to determine the chance of generating a new handler
+         *
+         * recommended value: 1.0
          */
         float chance_to_generate_x86_handler = 1.0;
 
@@ -28,6 +30,8 @@ namespace eagle::virt::eg
         /**
          * when "single_use_vm_handlers" is set to false,
          * this value will be used to determine the chance of generating a new handler
+         *
+         * recommended value: 1.0
          */
         float chance_to_generate_vm_handler = 1.0;
 

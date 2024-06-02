@@ -20,6 +20,7 @@ namespace eagle::virt::eg
     };
 
     using inst_regs_ptr = std::shared_ptr<class inst_regs>;
+
     class inst_regs
     {
     public:
@@ -61,6 +62,9 @@ namespace eagle::virt::eg
          * @return ranges which are not occupied in "reg"
          */
         std::vector<reg_range> get_unoccupied_ranges(codec::reg reg);
+
+        codec::reg get_reg(uint16_t index);
+        codec::reg get_reg_temp(uint16_t index);
 
         /**
          * value containing the number of x86 registers being used by the virtual machine

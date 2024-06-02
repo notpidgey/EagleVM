@@ -53,6 +53,11 @@ namespace eagle::util
             return distribution(gen);
         }
 
+        double gen_dist(std::uniform_real_distribution<>& distribution)
+        {
+            return distribution(gen);
+        }
+
         ran_device(const ran_device&) = delete;
         ran_device& operator=(const ran_device&) = delete;
     };
