@@ -40,7 +40,7 @@ namespace eagle::ir::handler
 
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size)->block_write(vtemp),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
             std::make_shared<cmd_x86_dynamic>(codec::m_imul, vtemp, vtemp2),
             std::make_shared<cmd_push>(vtemp, target_size)
         };

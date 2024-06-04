@@ -1,6 +1,12 @@
 #pragma once
+#include <complex.h>
+
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include <vector>
+
+#include "inst_handlers.h"
+#include "inst_regs.h"
+#include "settings.h"
 
 /*
  * daax inspired vm 💞
@@ -11,6 +17,9 @@ namespace eagle::virt::eg
     class machine : public base_machine
     {
     public:
+        explicit machine(const settings_ptr& settings_info);
+        static machine_ptr create(const settings_ptr& settings_info);
+
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd) override;
@@ -28,5 +37,10 @@ namespace eagle::virt::eg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
+
+    private:
+        settings_ptr settings;
+        inst_regs_ptr rm;
+        inst_handlers_ptr hg;
     };
 }

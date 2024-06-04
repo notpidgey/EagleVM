@@ -29,6 +29,8 @@ namespace eagle::ir
 
         vm_sx,
         vm_branch,
+
+        transaction
     };
 
     std::string command_to_string(command_type cmd);

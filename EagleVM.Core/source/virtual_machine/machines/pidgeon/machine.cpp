@@ -32,9 +32,12 @@ namespace eagle::virt::pidg
     machine_ptr machine::create(const settings_ptr& settings_info)
     {
         const std::shared_ptr<machine> instance = std::make_shared<machine>(settings_info);
-        instance->rm = std::make_shared<inst_regs>(settings_info->get_temp_count(), settings_info);
-        instance->hg = std::make_shared<inst_handlers>(instance, instance->rm, settings_info);
-        instance->rm->init_reg_order();
+        const std::shared_ptr<inst_regs> reg_man = std::make_shared<inst_regs>(settings_info->get_temp_count(), settings_info);
+        reg_man->init_reg_order();
+
+        instance->rm = reg_man;
+        instance->hg = std::make_shared<inst_handlers>(instance, reg_man, settings_info);
+        instance->transaction = std::make_shared<transaction_handler>(reg_man->get_availiable_temp());
 
         return instance;
     }
@@ -181,8 +184,7 @@ namespace eagle::virt::pidg
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
-            if (!store->get_finalized())
-                assign_discrete_storage({ store }, cmd->get_block_list());
+            transaction->assign(store);
 
             const ir::ir_size pop_size = store->get_store_size();
 
@@ -236,8 +238,7 @@ namespace eagle::virt::pidg
             case ir::info_type::vm_temp_register:
             {
                 const ir::discrete_store_ptr store = cmd->get_value_temp_register();
-                if (!store->get_finalized())
-                    assign_discrete_storage({ store }, cmd->get_block_list());
+                transaction->assign(store);
 
                 const reg target_reg = store->get_store_register();
                 const reg_class target_class = get_reg_class(target_reg);
@@ -383,18 +384,14 @@ namespace eagle::virt::pidg
         enc::req request = create_encode_request(mnemonic);
         for (ir::variant_op& op : operands)
         {
-            std::vector<ir::discrete_store_ptr> stores;
-            std::visit([&stores]<typename reg_type>(reg_type&& arg)
+            std::visit([&]<typename reg_type>(reg_type&& arg)
             {
                 if constexpr (std::is_same_v<std::decay_t<reg_type>, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr& store = arg;
-                    if (!store->get_finalized())
-                        stores.push_back(store);
+                    transaction->assign(store);
                 }
             }, op);
-
-            assign_discrete_storage(stores, cmd->get_block_list());
 
             std::visit([&request]<typename reg_type>(reg_type&& arg)
             {
@@ -415,75 +412,7 @@ namespace eagle::virt::pidg
         block->add(cmd->get_request());
     }
 
-    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores,
-        const std::vector<ir::discrete_store_ptr>& block_write) const
-    {
-        const size_t temp_required = stores.size();
-
-        // fill this with indexes 0... temp_count
-        std::vector<uint8_t> temp_reg_index(settings->get_temp_count());
-        std::iota(temp_reg_index.begin(), temp_reg_index.end(), 0);
-
-        // if we use random registers, we shuffle the indexes
-        // otherwise it will be left in normal order
-        if (settings->get_randomize_temp_registers())
-            std::ranges::shuffle(temp_reg_index, util::ran_device::get().gen);
-        else
-            assert(temp_required <= 2, "unable to assign more than 2 temp registers");
-
-        // set to keep track of used registers
-        std::unordered_set<reg> used_registers;
-
-        // add block_write registers to used_registers set
-        for (const auto& block : block_write)
-        {
-            if (block->get_finalized())
-            {
-                // todo:
-                // for the future this has to be checked that its a gpr register
-                used_registers.insert(get_bit_version(block->get_store_register(), gpr_64));
-            }
-        }
-
-        // according to this vms design the default function results will appear in VTEMP
-        // so we want to block VTEMP from being used because pushes and pops will rewrite it
-        // todo: this is weird because sometimes it doesnt matter if we pop into VTEMP and we want that to be a thing
-        if (!settings->get_variant_register_handlers())
-            used_registers.insert(VTEMP);
-
-        for (size_t i = 0; i < temp_required; i++)
-        {
-            const ir::discrete_store_ptr& store = stores[i];
-
-            const reg_size target_size = to_reg_size(store->get_store_size());
-            reg target_temp = rm->get_reg_temp(temp_reg_index[i]);
-            reg target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
-
-            // ensure the chosen register is not already used
-            while (used_registers.contains(get_bit_version(target_reg, gpr_64)))
-            {
-                i++;
-                if (i >= temp_reg_index.size())
-                {
-                    assert("ran out of temporary registers to assign");
-
-                    // im sorry im using asserts for now, will make better later
-                    // throw std::runtime_error("ran out of temporary registers to assign");
-                }
-
-                target_temp = rm->get_reg_temp(temp_reg_index[i]);
-                target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
-            }
-
-            // mark the chosen register as used
-            used_registers.insert(target_reg);
-
-            // finalize
-            store->finalize_register(target_reg);
-        }
-    }
-
-    reg machine::reg_vm_to_register(ir::reg_vm store)
+    reg machine::reg_vm_to_register(const ir::reg_vm store) const
     {
         ir::ir_size size = ir::ir_size::none;
         switch (store)

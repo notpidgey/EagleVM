@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
 #include "eaglevm-core/codec/zydis_defs.h"
 
 #define CREATE_INDEX(y, v) inline static uint8_t index_##y = v;
@@ -24,7 +25,7 @@ namespace eagle::virt::eg
     class inst_regs
     {
     public:
-        inst_regs();
+        explicit inst_regs(const settings_ptr& settings_info);
 
         /**
          * initialize vm_order based on "settings"
@@ -107,6 +108,8 @@ namespace eagle::virt::eg
 
         std::array<codec::reg, 16> vm_order{ };
         uint8_t num_v_temp;
+
+        settings_ptr settings;
 
         /**
          * @return GPR registers in order r0-r15

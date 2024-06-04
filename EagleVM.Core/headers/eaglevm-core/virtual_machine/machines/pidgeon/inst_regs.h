@@ -20,6 +20,8 @@ namespace eagle::virt::pidg
         void init_reg_order();
         codec::reg get_reg(uint8_t target) const;
         codec::reg get_reg_temp(uint8_t target) const;
+        std::vector<codec::reg> get_availiable_temp() const;
+
         std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         void enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back = false);

@@ -4,6 +4,7 @@
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
+#include "eaglevm-core/virtual_machine/machines/transaction_handler.h"
 
 namespace eagle::virt::pidg
 {
@@ -47,16 +48,13 @@ namespace eagle::virt::pidg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
 
     private:
+        transaction_handler_ptr transaction;
+
         settings_ptr settings;
 
         vm_inst_regs_ptr rm;
         vm_inst_handlers_ptr hg;
 
-        void assign_discrete_storage(
-            const std::vector<ir::discrete_store_ptr>& stores,
-            const std::vector<ir::discrete_store_ptr>& block_write = { }
-        ) const;
-
-        codec::reg reg_vm_to_register(ir::reg_vm store);
+        codec::reg reg_vm_to_register(ir::reg_vm store) const;
     };
 }

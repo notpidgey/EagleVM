@@ -17,9 +17,13 @@ namespace eagle::virt::eg
     struct tagged_handler
     {
         std::vector<tagged_handler_pair> variant_pairs{ };
+
         tagged_handler_pair add_pair();
         tagged_handler_pair get_first_pair();
     };
+
+    struct load_register_lock { ir::discrete_store_ptr destination{}; ir::discrete_store_ptr temp{}; };
+    struct store_register_lock { ir::discrete_store_ptr source{}; ir::discrete_store_ptr temp{}; ir::discrete_store_ptr temp2{}; };
 
     using inst_handlers_ptr = std::shared_ptr<class inst_handlers>;
 
@@ -37,26 +41,28 @@ namespace eagle::virt::eg
         /**
          * append to the current working block a call or inlined code to load specific register
          * it is not garuanteed these instructions will be the same per call
-         * @param reg
+         * @param register_load
          * @param destination
-         * @param use_handler
          */
-        void load_register(codec::reg reg, const ir::discrete_store_ptr& destination);
+        void load_register(codec::reg register_load, const ir::discrete_store_ptr& destination);
 
         /**
          * append to the current working block a call or inlined code to store a value in a specific register
          * it is not garuanteed these instructions will be the same per call
          * @param reg
          * @param source
-         * @param use_handler
          */
         void store_register(codec::reg reg, const ir::discrete_store_ptr& source);
 
-        void call_handler(asmb::code_label_ptr label);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
+
+        void call_vm_handler(asmb::code_label_ptr label);
 
     private:
         asmb::code_container_ptr working_block;
-        std::deque<asmb::code_container_ptr> complete_containers;
 
         machine_ptr machine;
         inst_regs_ptr regs;
@@ -64,5 +70,15 @@ namespace eagle::virt::eg
 
         std::unordered_map<codec::reg, tagged_handler> register_load_handlers;
         std::unordered_map<codec::reg, tagged_handler> register_store_handlers;
+
+        using tagged_handler_id = std::pair<codec::mnemonic, std::string>;
+        using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
+        std::vector<tagged_handler_label> tagged_instruction_handlers;
+
+        [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
+        std::pair<bool, codec::reg> handle_reg_handler_query(std::unordered_map<codec::reg, tagged_handler>& handler_storage, codec::reg reg);
+
+        void handle_load_register_gpr64();
+        void handle_load_register_xmm();
     };
 }

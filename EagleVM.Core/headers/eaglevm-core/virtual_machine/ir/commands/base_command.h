@@ -44,10 +44,9 @@ namespace eagle::ir
 
         command_type get_command_type() const;
 
-        std::shared_ptr<base_command> block_write(const discrete_store_ptr& store);
-        std::shared_ptr<base_command> block_write(const std::vector<discrete_store_ptr>& stores);
-
-        std::vector<discrete_store_ptr> get_block_list();
+        std::shared_ptr<base_command> release(const std::vector<discrete_store_ptr>& stores);
+        std::shared_ptr<base_command> release(const discrete_store_ptr& store);
+        std::vector<discrete_store_ptr> get_release_list();
 
     protected:
         command_type command;
@@ -55,7 +54,7 @@ namespace eagle::ir
         uint32_t unique_id;
         std::string unique_id_string;
 
-        std::vector<discrete_store_ptr> block_list;
+        std::vector<discrete_store_ptr> release_list;
 
     private:
         static std::string command_to_string(command_type type);

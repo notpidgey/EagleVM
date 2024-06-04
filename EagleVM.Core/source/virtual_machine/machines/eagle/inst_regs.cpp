@@ -18,10 +18,11 @@ namespace eagle::virt::eg
     uint8_t inst_regs::index_vcsret = 4;
     uint8_t inst_regs::index_vbase = 5;
 
-    inst_regs::inst_regs()
+    inst_regs::inst_regs(const settings_ptr& settings_info)
     {
         vm_order = get_gpr64_regs();
         num_v_temp = 2;
+        settings = settings_info;
     }
 
     void inst_regs::init_reg_order()

@@ -7,21 +7,21 @@ namespace eagle::ir
         return command;
     }
 
-    std::shared_ptr<base_command> base_command::block_write(const discrete_store_ptr& store)
+    std::shared_ptr<base_command> base_command::release(const std::vector<discrete_store_ptr>& stores)
     {
-        block_list.push_back(store);
+        release_list.append_range(stores);
         return shared_from_this();
     }
 
-    std::shared_ptr<base_command> base_command::block_write(const std::vector<discrete_store_ptr>& stores)
+    std::shared_ptr<base_command> base_command::release(const discrete_store_ptr& store)
     {
-        block_list.append_range(stores);
+        release_list.push_back(store);
         return shared_from_this();
     }
 
-    std::vector<discrete_store_ptr> base_command::get_block_list()
+    std::vector<discrete_store_ptr> base_command::get_release_list()
     {
-        return block_list;
+        return release_list;
     }
 
     std::string base_command::command_to_string(const command_type type)
