@@ -60,6 +60,10 @@ namespace eagle::virt::eg
          * if the conditions are not met for these cases, VTEMP/VTEMP2 will be used by default
          */
         bool randomize_returning_register = false;
+
+        bool shuffle_push_order = false;
+        bool shuffle_vm_gpr_order = false;
+        bool shuffle_vm_xmm_order = false;
     };
 
     using settings_ptr = std::shared_ptr<settings>;

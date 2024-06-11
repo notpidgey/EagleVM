@@ -412,6 +412,13 @@ namespace eagle::virt::pidg
         block->add(cmd->get_request());
     }
 
+    void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
+    {
+        base_machine::handle_cmd(code, command);
+        for (ir::discrete_store_ptr& res : command->get_release_list())
+            transaction->release(res);
+    }
+
     reg machine::reg_vm_to_register(const ir::reg_vm store) const
     {
         ir::ir_size size = ir::ir_size::none;

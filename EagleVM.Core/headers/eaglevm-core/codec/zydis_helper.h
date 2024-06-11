@@ -24,13 +24,13 @@ namespace eagle::codec
 {
     void setup_decoder();
 
+    reg get_bit_version(reg input_reg, const reg_size target_size);
     reg get_bit_version(reg input_reg, reg_class target_size);
     reg get_bit_version(zydis_register input_reg, reg_class target_size);
 
     bool is_upper_8(reg reg);
 
-    reg_class get_gpr_class_from_size(reg_size size);
-    reg_class get_xmm_class_from_size(reg_size size);
+    reg_class get_class_from_size(const reg_size size);
 
     reg_class get_reg_class(reg reg);
     reg_class get_reg_class(zydis_register reg);

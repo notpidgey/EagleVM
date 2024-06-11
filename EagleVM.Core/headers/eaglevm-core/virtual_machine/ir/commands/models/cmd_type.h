@@ -5,7 +5,6 @@ namespace eagle::ir
 {
     enum class command_type
     {
-        none,
         vm_enter,
         vm_exit,
 
@@ -29,8 +28,6 @@ namespace eagle::ir
 
         vm_sx,
         vm_branch,
-
-        transaction
     };
 
     std::string command_to_string(command_type cmd);

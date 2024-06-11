@@ -13,6 +13,7 @@ namespace eagle::virt
 
         codec::reg assign(const ir::discrete_store_ptr& store);
         codec::reg get_any();
+        std::vector<codec::reg> get_any_multiple(uint8_t count);
 
         void block(const ir::discrete_store_ptr& store);
         void block(codec::reg reg);

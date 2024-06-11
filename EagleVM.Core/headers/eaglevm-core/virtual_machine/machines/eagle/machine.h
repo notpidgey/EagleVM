@@ -7,6 +7,7 @@
 #include "inst_handlers.h"
 #include "inst_regs.h"
 #include "settings.h"
+#include "eaglevm-core/virtual_machine/machines/transaction_handler.h"
 
 /*
  * daax inspired vm 💞
@@ -39,8 +40,12 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
     private:
+        transaction_handler_ptr reg_man;
+
         settings_ptr settings;
         inst_regs_ptr rm;
-        inst_handlers_ptr hg;
+        inst_handlers_ptr handlers;
+
+        void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
     };
 }

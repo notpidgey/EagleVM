@@ -39,9 +39,11 @@ namespace eagle::virt
         [[nodiscard]] std::vector<std::pair<ir::block_ptr, asmb::code_label_ptr>> get_blocks() const;
 
     protected:
-        codec::mnemonic to_jump_mnemonic(ir::exit_condition condition);
-
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_context;
+
+        virtual void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command);
+
+        codec::mnemonic to_jump_mnemonic(ir::exit_condition condition);
         asmb::code_label_ptr get_block_label(const ir::block_ptr& block);
     };
 }

@@ -105,8 +105,11 @@ namespace eagle::virt::eg
             // }
 
             const reg_class dest_reg_class = get_reg_class(dest_reg);
-
             const reg output_reg = destination->get_store_register();
+
+            reg temp = regs->get_reserved_temp(0);
+            reg temp2 = regs->get_reserved_temp(1);
+
             if (dest_reg_class == gpr_64)
             {
                 // gpr 64
@@ -116,32 +119,32 @@ namespace eagle::virt::eg
                     {
                         // bextr
                         const uint16_t length = d_to - d_from;
-                        out->add(encode(m_xor, ZREG(VTEMP2), ZREG(VTEMP2)));
-                        out->add(encode(m_bextr, ZREG(VTEMP2), dest_reg, length));
-                        out->add(encode(m_shl, ZREG(VTEMP2), s_from));
-                        out->add(encode(m_and, ZREG(output_reg), ZREG(VTEMP2)));
+                        out->add(encode(m_xor, ZREG(temp), ZREG(temp2)));
+                        out->add(encode(m_bextr, ZREG(temp2), dest_reg, length));
+                        out->add(encode(m_shl, ZREG(temp2), s_from));
+                        out->add(encode(m_and, ZREG(output_reg), ZREG(temp2)));
                     },
                     [&]
                     {
                         // shifter
-                        out->add(encode(m_mov, ZREG(VTEMP2), ZREG(dest_reg)));
+                        out->add(encode(m_mov, ZREG(temp2), ZREG(dest_reg)));
 
                         // we only care about the data inside the rangesa d_from to d_to
                         // but we want to clear all the data outside of that
                         // to do this we do the following:
 
                         // 1: shift d_from to bit 0
-                        out->add(encode(m_shr, ZREG(VTEMP2), d_from));
+                        out->add(encode(m_shr, ZREG(temp2), d_from));
 
                         // 2: shift d_to position all the way to 64th bit
                         uint16_t shift_left_orig = 64 - d_to + d_from;
-                        out->add(encode(m_shl, ZREG(VTEMP2), shift_left_orig));
+                        out->add(encode(m_shl, ZREG(temp2), shift_left_orig));
 
                         // 3: shift again to match source position
                         uint16_t shift_to_source = 64 - s_to;
-                        out->add(encode(m_shr, ZREG(VTEMP2), shift_to_source));
+                        out->add(encode(m_shr, ZREG(temp2), shift_to_source));
 
-                        out->add(encode(m_shr, ZREG(output_reg), ZREG(VTEMP2)));
+                        out->add(encode(m_shr, ZREG(output_reg), ZREG(temp2)));
                     }
                 };
 
@@ -180,22 +183,22 @@ namespace eagle::virt::eg
                     target_class = gpr_64;
                 }
 
-                reg target_temp = get_bit_version(VTEMP2, target_class);
+                reg target_temp = get_bit_version(temp2, target_class);
                 const reg_size target_temp_size = get_reg_size(target_class);
 
-                out->add(encode(m_xor, ZREG(VTEMP2), ZREG(VTEMP2)));
-                out->add(encode(mnemonic, ZREG(target_temp), dest_reg, d_from));
+                out->add(encode(m_xor, ZREG(temp2), ZREG(temp2)));
+                out->add(encode(mnemonic, ZREG(target_temp), ZIMMS(dest_reg), ZIMMS(d_from)));
 
                 // we have our value in VTEMP2 but it has data which we do not need
                 uint16_t spillage = target_temp_size - length * 8;
-                out->add(encode(m_shl, ZREG(target_temp), spillage));
+                out->add(encode(m_shl, ZREG(target_temp), ZIMMS(spillage)));
 
                 if (spillage > s_from)
-                    out->add(encode(m_shr, ZREG(VTEMP2), spillage - s_from));
+                    out->add(encode(m_shr, ZREG(target_temp), ZIMMS(spillage - s_from)));
                 else if (spillage < s_from)
-                    out->add(encode(m_shl, ZREG(VTEMP2), s_from - spillage));
+                    out->add(encode(m_shl, ZREG(target_temp), ZIMMS(s_from - spillage)));
 
-                out->add(encode(m_and, ZREG(output_reg), ZREG(VTEMP2)));
+                out->add(encode(m_and, ZREG(output_reg), ZREG(temp2)));
             }
 
             stored_ranges.push_back(source_range);
@@ -233,16 +236,61 @@ namespace eagle::virt::eg
             auto [s_from, s_to] = source_range;
             auto [d_from, d_to] = dest_range;
 
-            // we need to read bits [s_from, s_to)
-
             const reg_class dest_reg_class = get_reg_class(dest_reg);
             if (dest_reg_class == gpr_64)
             {
                 // gpr
+
+                // read bits [s_from, s_to)
+                // write those bits into [d_from, d_to)
+
+                out->add({
+                    encode(m_mov, ZREG(temp), ZREG(source_register)),
+                    encode(m_mov, ZREG(temp), ZREG(source_register)),
+                });
             }
             else
             {
                 // xmm0
+
+                /*
+                 * step 1: setup vtemp register
+                 *
+                 * method 1: shift mask:
+                 * mov vtmep, src
+                 * shr vtemp, s_from
+                 * and vtemp, (1 << (s_to - s_from)) - 1
+                 *
+                 * method 2: shift shift:
+                 * mov vtemp, src
+                 * shl vtemp, 64 - s_to
+                 * shr vtemp, s_from + 64 - s_to
+                 */
+
+                reg temp = regs->get_reserved_temp(0);
+
+                out->add({
+                    encode(m_mov, temp, )
+                })
+
+                /*
+                 * step 2: move into xmm
+                 *
+                 * pxor temp_xmm, temp_xmm
+                 * movq temp_xmm, vtemp
+                 */
+
+                /*
+                 * step 3: shift destination to start & clear destination
+                 *
+                 *
+                 */
+
+                /*
+                 * step 4: or temp_xmm and destination and rotate to correct position
+                 *
+                 *
+                 */
             }
         }
     }

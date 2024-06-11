@@ -39,6 +39,14 @@ namespace eagle::virt
         return out;
     }
 
+    std::vector<codec::reg> transaction_handler::get_any_multiple(const uint8_t count)
+    {
+        std::vector<codec::reg> out(count);
+        std::ranges::sample(avaliable_stores, std::back_inserter(out), count, util::ran_device().get().gen);
+
+        return out;
+    }
+
     void transaction_handler::block(const ir::discrete_store_ptr& store)
     {
         const codec::reg target_register = store->get_store_register();

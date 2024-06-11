@@ -20,24 +20,64 @@ namespace eagle::virt::eg
 
     inst_regs::inst_regs(const settings_ptr& settings_info)
     {
-        vm_order = get_gpr64_regs();
-        num_v_temp = 2;
+        virtual_order_gpr = get_gpr64_regs();
+
+        num_v_temp_reserved = settings->randomize_returning_register ? 0 : 2;
+        num_v_temp_unreserved = num_gpr_regs - num_v_regs - num_v_temp_reserved;
+
+        num_v_temp_xmm_reserved = 2;
+        num_v_temp_xmm_unreserved = 16 - 2;
+
         settings = settings_info;
     }
 
     void inst_regs::init_reg_order()
     {
-        // setup vm regs
-        std::ranges::shuffle(vm_order, util::ran_device::get().gen);
+        // setup stack order
+        // insert all xmm registers
+        // insert all gpr registers
+        {
+            for (int i = codec::xmm0; i <= codec::xmm15; i++)
+                push_order[i - codec::xmm0] = static_cast<codec::reg>(i);
 
-        // setup allowed registers for mapping
-        const auto blocked_values = num_v_regs + num_v_temp;
-        for (int i = blocked_values; i < vm_order.size(); i++)
-            dest_register_map[static_cast<codec::reg>(i)] = { };
+            for (int i = codec::rax; i <= codec::r15; i++)
+                push_order[i - codec::rax + 16] = static_cast<codec::reg>(i);
 
-        // setup allowed xmm registers for mapping
-        for (int i = codec::xmm0; i <= codec::xmm15; i++)
-            dest_register_map[static_cast<codec::reg>(i)] = { };
+            // shuffle the stack order
+            if (settings->shuffle_push_order)
+                std::ranges::shuffle(push_order, util::ran_device::get().gen);
+        }
+
+        // setup gpr order
+        // insert all gpr registers
+        {
+            for (int i = codec::rax; i <= codec::r15; i++)
+                virtual_order_gpr[i - codec::rax] = static_cast<codec::reg>(i);
+
+            if (settings->shuffle_vm_gpr_order)
+                std::ranges::shuffle(virtual_order_gpr, util::ran_device::get().gen);
+        }
+
+        // setup xmm order
+        // insert all xmm registers
+        {
+            for (int i = codec::xmm0; i <= codec::xmm15; i++)
+                virtual_order_xmm[i - codec::xmm0] = static_cast<codec::reg>(i);
+
+            if (settings->shuffle_vm_xmm_order)
+                std::ranges::shuffle(virtual_order_xmm, util::ran_device::get().gen);
+        }
+
+        // setup avail dest registers
+        {
+            // xmm all avail
+            for (int i = 0; i < num_v_temp_xmm_unreserved; i++)
+                dest_register_map[virtual_order_xmm[virtual_order_xmm.size() - 1 - i]] = { };
+
+            // gpr all avail
+            for (int i = 0; i < num_v_temp_unreserved; i++)
+                dest_register_map[virtual_order_gpr[virtual_order_gpr.size() - 1 - i]] = { };
+        }
     }
 
     void inst_regs::create_mappings()
@@ -68,7 +108,7 @@ namespace eagle::virt::eg
             // form the inclusive ranges
             std::vector<reg_range> register_ranges;
             for (size_t i = 0; i < points.size() - 1; ++i)
-                register_ranges.emplace_back( points[i], points[i + 1] - 1 );
+                register_ranges.emplace_back(points[i], points[i + 1] - 1);
 
             for (auto& [first, last] : register_ranges)
             {
@@ -171,11 +211,35 @@ namespace eagle::virt::eg
         return unoccupied_ranges;
     }
 
+    std::vector<codec::reg> inst_regs::get_unreserved_temp() const
+    {
+        std::vector<codec::reg> out;
+        for(uint8_t i = 0; i < num_v_temp_unreserved; i++)
+            out.push_back(virtual_order_gpr[virtual_order_gpr.size() - 1 - i]);
+
+        return out;
+    }
+
+    codec::reg inst_regs::get_reserved_temp(const uint8_t i) const
+    {
+        assert(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
+        return virtual_order_gpr[num_v_regs + i];
+    }
+
     std::array<codec::reg, 16> inst_regs::get_gpr64_regs()
     {
         std::array<codec::reg, 16> avail_regs{ };
         for (int i = codec::rax; i <= codec::r15; i++)
             avail_regs[i - codec::rax] = static_cast<codec::reg>(i);
+
+        return avail_regs;
+    }
+
+    std::array<codec::reg, 16> inst_regs::get_xmm_regs()
+    {
+        std::array<codec::reg, 16> avail_regs{ };
+        for (int i = codec::xmm0; i <= codec::xmm15; i++)
+            avail_regs[i - codec::xmm0] = static_cast<codec::reg>(i);
 
         return avail_regs;
     }

@@ -64,8 +64,11 @@ namespace eagle::virt::eg
          */
         std::vector<reg_range> get_unoccupied_ranges(codec::reg reg);
 
-        codec::reg get_reg(uint16_t index);
-        codec::reg get_reg_temp(uint16_t index);
+        std::vector<codec::reg> get_unreserved_temp() const;
+        codec::reg get_reserved_temp(uint8_t i) const;
+
+        std::vector<codec::reg> get_unreserved_temp_xmm() const;
+        codec::reg get_reserved_temp_xmm(uint8_t i) const;
 
         /**
          * value containing the number of x86 registers being used by the virtual machine
@@ -92,6 +95,7 @@ namespace eagle::virt::eg
          * index of VCS virtual machine register in vm_order
          */
         static uint8_t index_vcs;
+
         /**
          * index of VCSRET virtual machine register in vm_order
          */
@@ -103,17 +107,37 @@ namespace eagle::virt::eg
         static uint8_t index_vbase;
 
     private:
+        settings_ptr settings;
+
         std::unordered_map<codec::reg, std::vector<reg_mapped_range>> source_register_map;
         std::unordered_map<codec::reg, std::vector<reg_range>> dest_register_map;
 
-        std::array<codec::reg, 16> vm_order{ };
-        uint8_t num_v_temp;
+        /**
+         * order 0-first 31-last in which registers have been pushed to the the stack
+         */
+        std::array<codec::reg, 32> push_order{ };
 
-        settings_ptr settings;
+        /**
+         * when assigning virtual machine registers such as VREGS, VIP, VSP, VTEMP(x)
+         * they are accessed via a predefined index of this array
+         */
+        std::array<codec::reg, 16> virtual_order_gpr{ };
+
+        /**
+         * when assigning virtual
+         */
+        std::array<codec::reg, 16> virtual_order_xmm{ };
+
+        uint8_t num_v_temp_unreserved;
+        uint8_t num_v_temp_reserved;
+
+        uint8_t num_v_temp_xmm_unreserved;
+        uint8_t num_v_temp_xmm_reserved;
 
         /**
          * @return GPR registers in order r0-r15
          */
         static std::array<codec::reg, 16> get_gpr64_regs();
+        static std::array<codec::reg, 16> get_xmm_regs();
     };
 }
