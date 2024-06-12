@@ -4,7 +4,7 @@
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
-#include "eaglevm-core/virtual_machine/machines/transaction_handler.h"
+#include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 namespace eagle::virt::pidg
 {
@@ -48,7 +48,7 @@ namespace eagle::virt::pidg
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) override;
 
     private:
-        transaction_handler_ptr transaction;
+        register_context_ptr transaction;
 
         settings_ptr settings;
 

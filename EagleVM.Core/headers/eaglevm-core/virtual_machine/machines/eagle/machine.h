@@ -4,10 +4,10 @@
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include <vector>
 
-#include "inst_handlers.h"
-#include "inst_regs.h"
+#include "handler_manager.h"
+#include "register_manager.h"
 #include "settings.h"
-#include "eaglevm-core/virtual_machine/machines/transaction_handler.h"
+#include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 /*
  * daax inspired vm 💞
@@ -15,11 +15,12 @@
 namespace eagle::virt::eg
 {
     using machine_ptr = std::shared_ptr<class machine>;
+
     class machine : public base_machine
     {
     public:
-        explicit machine(const settings_ptr& settings_info);
-        static machine_ptr create(const settings_ptr& settings_info);
+        explicit machine(const machine_settings_ptr& settings_info);
+        static machine_ptr create(const machine_settings_ptr& settings_info);
 
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd) override;
@@ -40,12 +41,20 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
     private:
-        transaction_handler_ptr reg_man;
+        register_context_ptr reg_ctx;
 
-        settings_ptr settings;
-        inst_regs_ptr rm;
-        inst_handlers_ptr handlers;
+        machine_settings_ptr settings;
+        register_manager_ptr reg_man;
+        inst_handlers_ptr han_man;
 
         void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
+
+        void call_push(const ir::discrete_store_ptr& shared);
+        void call_push(const codec::reg reg);
+        void call_push(const codec::reg reg, codec::reg_size target);
+
+        void call_pop(const ir::discrete_store_ptr& shared);
+        void call_pop(const codec::reg reg);
+        void call_pop(const codec::reg reg, codec::reg_size target);
     };
 }

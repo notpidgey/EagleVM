@@ -6,10 +6,10 @@
 
 namespace eagle::virt
 {
-    class transaction_handler
+    class register_context
     {
     public:
-        explicit transaction_handler(const std::vector<codec::reg>& stores);
+        explicit register_context(const std::vector<codec::reg>& stores);
 
         codec::reg assign(const ir::discrete_store_ptr& store);
         codec::reg get_any();
@@ -27,5 +27,5 @@ namespace eagle::virt
         codec::reg pop_availiable_store();
     };
 
-    using transaction_handler_ptr = std::shared_ptr<transaction_handler>;
+    using register_context_ptr = std::shared_ptr<register_context>;
 }

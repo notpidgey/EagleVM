@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/eagle/inst_regs.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 
 #include <algorithm>
 #include <array>
@@ -8,21 +8,21 @@
 
 namespace eagle::virt::eg
 {
-    uint8_t inst_regs::num_v_regs = 6;
-    uint8_t inst_regs::num_gpr_regs = 16;
+    uint8_t register_manager::num_v_regs = 6;
+    uint8_t register_manager::num_gpr_regs = 16;
 
-    uint8_t inst_regs::index_vip = 0;
-    uint8_t inst_regs::index_vsp = 1;
-    uint8_t inst_regs::index_vregs = 2;
-    uint8_t inst_regs::index_vcs = 3;
-    uint8_t inst_regs::index_vcsret = 4;
-    uint8_t inst_regs::index_vbase = 5;
+    uint8_t register_manager::index_vip = 0;
+    uint8_t register_manager::index_vsp = 1;
+    uint8_t register_manager::index_vregs = 2;
+    uint8_t register_manager::index_vcs = 3;
+    uint8_t register_manager::index_vcsret = 4;
+    uint8_t register_manager::index_vbase = 5;
 
-    inst_regs::inst_regs(const settings_ptr& settings_info)
+    register_manager::register_manager(const machine_settings_ptr& settings_info)
     {
         virtual_order_gpr = get_gpr64_regs();
 
-        num_v_temp_reserved = settings->randomize_returning_register ? 0 : 2;
+        num_v_temp_reserved = settings->randomize_working_register ? 0 : 2;
         num_v_temp_unreserved = num_gpr_regs - num_v_regs - num_v_temp_reserved;
 
         num_v_temp_xmm_reserved = 2;
@@ -31,7 +31,7 @@ namespace eagle::virt::eg
         settings = settings_info;
     }
 
-    void inst_regs::init_reg_order()
+    void register_manager::init_reg_order()
     {
         // setup stack order
         // insert all xmm registers
@@ -80,7 +80,7 @@ namespace eagle::virt::eg
         }
     }
 
-    void inst_regs::create_mappings()
+    void register_manager::create_mappings()
     {
         const std::array<codec::reg, 16> avail_regs = get_gpr64_regs();
         for (auto avail_reg : avail_regs)
@@ -171,17 +171,17 @@ namespace eagle::virt::eg
         }
     }
 
-    std::vector<reg_mapped_range> inst_regs::get_register_mapped_ranges(const codec::reg reg)
+    std::vector<reg_mapped_range> register_manager::get_register_mapped_ranges(const codec::reg reg)
     {
         return source_register_map[reg];
     }
 
-    std::vector<reg_range> inst_regs::get_occupied_ranges(const codec::reg reg)
+    std::vector<reg_range> register_manager::get_occupied_ranges(const codec::reg reg)
     {
         return dest_register_map[reg];
     }
 
-    std::vector<reg_range> inst_regs::get_unoccupied_ranges(const codec::reg reg)
+    std::vector<reg_range> register_manager::get_unoccupied_ranges(const codec::reg reg)
     {
         const uint16_t bit_count = get_reg_size(reg);
         std::vector<reg_range> occupied_ranges = dest_register_map[reg];
@@ -211,7 +211,13 @@ namespace eagle::virt::eg
         return unoccupied_ranges;
     }
 
-    std::vector<codec::reg> inst_regs::get_unreserved_temp() const
+    codec::reg register_manager::get_vm_reg(const uint8_t i) const
+    {
+        assert(i + 1 <= num_v_regs, "attempted to access vreg outside of boundaries");
+        return virtual_order_gpr[i];
+    }
+
+    std::vector<codec::reg> register_manager::get_unreserved_temp() const
     {
         std::vector<codec::reg> out;
         for(uint8_t i = 0; i < num_v_temp_unreserved; i++)
@@ -220,13 +226,13 @@ namespace eagle::virt::eg
         return out;
     }
 
-    codec::reg inst_regs::get_reserved_temp(const uint8_t i) const
+    codec::reg register_manager::get_reserved_temp(const uint8_t i) const
     {
         assert(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
         return virtual_order_gpr[num_v_regs + i];
     }
 
-    std::array<codec::reg, 16> inst_regs::get_gpr64_regs()
+    std::array<codec::reg, 16> register_manager::get_gpr64_regs()
     {
         std::array<codec::reg, 16> avail_regs{ };
         for (int i = codec::rax; i <= codec::r15; i++)
@@ -235,12 +241,20 @@ namespace eagle::virt::eg
         return avail_regs;
     }
 
-    std::array<codec::reg, 16> inst_regs::get_xmm_regs()
+    std::array<codec::reg, 16> register_manager::get_xmm_regs()
     {
         std::array<codec::reg, 16> avail_regs{ };
         for (int i = codec::xmm0; i <= codec::xmm15; i++)
             avail_regs[i - codec::xmm0] = static_cast<codec::reg>(i);
 
         return avail_regs;
+    }
+
+    void register_manager::enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back)
+    {
+        if (from_back)
+            std::ranges::for_each(push_order, enumerable);
+        else
+            std::for_each(push_order.rbegin(), push_order.rend(), enumerable);
     }
 }

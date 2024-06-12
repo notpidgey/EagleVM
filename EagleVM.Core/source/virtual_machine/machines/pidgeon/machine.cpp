@@ -37,7 +37,7 @@ namespace eagle::virt::pidg
 
         instance->rm = reg_man;
         instance->hg = std::make_shared<inst_handlers>(instance, reg_man, settings_info);
-        instance->transaction = std::make_shared<transaction_handler>(reg_man->get_availiable_temp());
+        instance->transaction = std::make_shared<register_context>(reg_man->get_availiable_temp());
 
         return instance;
     }

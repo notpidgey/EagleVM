@@ -3,7 +3,7 @@
 
 namespace eagle::virt::eg
 {
-    using settings_ptr = std::shared_ptr<struct settings>;
+    using machine_settings_ptr = std::shared_ptr<struct settings>;
 
     struct settings
     {
@@ -59,12 +59,12 @@ namespace eagle::virt::eg
          * for this feature to work on register loading handlers, "single_use_register_handlers" must be enabled
          * if the conditions are not met for these cases, VTEMP/VTEMP2 will be used by default
          */
-        bool randomize_returning_register = false;
+        bool randomize_working_register = false;
 
         bool shuffle_push_order = false;
         bool shuffle_vm_gpr_order = false;
         bool shuffle_vm_xmm_order = false;
     };
 
-    using settings_ptr = std::shared_ptr<settings>;
+    using machine_settings_ptr = std::shared_ptr<settings>;
 }

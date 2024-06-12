@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/transaction_handler.h"
+#include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 #include <random>
 
@@ -9,13 +9,13 @@
 
 namespace eagle::virt
 {
-    transaction_handler::transaction_handler(const std::vector<codec::reg>& stores)
+    register_context::register_context(const std::vector<codec::reg>& stores)
     {
         for (codec::reg store : stores)
             avaliable_stores.insert(store);
     }
 
-    codec::reg transaction_handler::assign(const ir::discrete_store_ptr& store)
+    codec::reg register_context::assign(const ir::discrete_store_ptr& store)
     {
         if (store->get_finalized())
             return get_bit_version(store->get_store_register(), codec::gpr_64);
@@ -23,7 +23,7 @@ namespace eagle::virt
         const codec::reg target_register_64 = pop_availiable_store();
         block(target_register_64);
 
-        const codec::reg_class target_class = get_gpr_class_from_size(to_reg_size(store->get_store_size()));
+        const codec::reg_class target_class = codec::get_class_from_size(to_reg_size(store->get_store_size()));
 
         const codec::reg target_register = get_bit_version(target_register_64, target_class);
         store->finalize_register(target_register);
@@ -31,7 +31,7 @@ namespace eagle::virt
         return target_register;
     }
 
-    codec::reg transaction_handler::get_any()
+    codec::reg register_context::get_any()
     {
         codec::reg out;
         std::ranges::sample(avaliable_stores, &out, 1, util::ran_device().get().gen);
@@ -39,7 +39,7 @@ namespace eagle::virt
         return out;
     }
 
-    std::vector<codec::reg> transaction_handler::get_any_multiple(const uint8_t count)
+    std::vector<codec::reg> register_context::get_any_multiple(const uint8_t count)
     {
         std::vector<codec::reg> out(count);
         std::ranges::sample(avaliable_stores, std::back_inserter(out), count, util::ran_device().get().gen);
@@ -47,7 +47,7 @@ namespace eagle::virt
         return out;
     }
 
-    void transaction_handler::block(const ir::discrete_store_ptr& store)
+    void register_context::block(const ir::discrete_store_ptr& store)
     {
         const codec::reg target_register = store->get_store_register();
         const codec::reg target_register_64 = get_bit_version(target_register, codec::gpr_64);
@@ -57,7 +57,7 @@ namespace eagle::virt
         avaliable_stores.erase(target_register_64);
     }
 
-    void transaction_handler::block(const codec::reg reg)
+    void register_context::block(const codec::reg reg)
     {
         const codec::reg target_register_64 = get_bit_version(reg, codec::gpr_64);
 
@@ -66,7 +66,7 @@ namespace eagle::virt
         avaliable_stores.erase(target_register_64);
     }
 
-    void transaction_handler::release(const ir::discrete_store_ptr& store)
+    void register_context::release(const ir::discrete_store_ptr& store)
     {
         const codec::reg target_register = store->get_store_register();
         const codec::reg target_register_64 = get_bit_version(target_register, codec::gpr_64);
@@ -76,7 +76,7 @@ namespace eagle::virt
         blocked_stores.erase(target_register_64);
     }
 
-    void transaction_handler::release(const codec::reg reg)
+    void register_context::release(const codec::reg reg)
     {
         const codec::reg target_register_64 = get_bit_version(reg, codec::gpr_64);
 
@@ -85,7 +85,7 @@ namespace eagle::virt
         blocked_stores.erase(target_register_64);
     }
 
-    codec::reg transaction_handler::pop_availiable_store()
+    codec::reg register_context::pop_availiable_store()
     {
         assert(!avaliable_stores.empty(), "attempted to pop from empty register storage");
 
