@@ -265,9 +265,10 @@ namespace eagle::ir
 
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
+                    auto op = ops[j];
                     il_operands.emplace_back(
-                        static_cast<codec::op_type>(ops[i].type),
-                        static_cast<codec::reg_size>(ops[i].size)
+                        static_cast<codec::op_type>(op.type),
+                        static_cast<codec::reg_size>(op.size)
                     );
                 }
 
