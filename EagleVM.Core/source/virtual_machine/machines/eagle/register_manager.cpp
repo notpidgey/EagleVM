@@ -107,7 +107,7 @@ namespace eagle::virt::eg
             // form the inclusive ranges
             std::vector<reg_range> register_ranges;
             for (size_t i = 0; i < points.size() - 1; ++i)
-                register_ranges.emplace_back(points[i], points[i + 1] - 1);
+                register_ranges.emplace_back(points[i], points[i + 1]);
 
             for (auto& [first, last] : register_ranges)
             {
@@ -244,6 +244,12 @@ namespace eagle::virt::eg
             avail_regs[i - codec::xmm0] = static_cast<codec::reg>(i);
 
         return avail_regs;
+    }
+
+    codec::reg register_manager::get_reserved_temp_xmm(uint8_t i) const
+    {
+        assert(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
+        return virtual_order_xmm[i];
     }
 
     void register_manager::enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back)

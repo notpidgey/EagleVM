@@ -80,20 +80,23 @@ namespace eagle::virt::eg
         auto [out, label] = register_load_handlers[register_load].add_pair();
         out->bind(label);
 
+        reg target_register = destination->get_store_register();
+        working_block->add(encode(m_xor, ZREG(target_register), ZREG(target_register)));
+
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
-        auto ranges_required = get_relevant_ranges(source_reg);
+        std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(source_reg);
         std::ranges::shuffle(ranges_required, util::ran_device::get().rd);
 
-        reg temp = regs->get_reserved_temp(0);
-        working_block->add(encode(m_xor, ZREG(temp), ZREG(temp)));
+        std::array temp_regs { regs->get_reserved_temp(0), regs->get_reserved_temp(1) };
+        std::ranges::shuffle(temp_regs, util::ran_device::get().rd);
 
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
         {
-            const auto& [source_range,dest_range, dest_reg] = mapping;
-            auto [s_from, s_to] = source_range;
-            auto [d_from, d_to] = dest_range;
+            const auto& [source_range,dest_range, source_register] = mapping;
+            auto [destination_start, destination_end] = source_range;
+            auto [source_start, source_end] = dest_range;
 
             /*
             todo: finish implementing this.
@@ -130,100 +133,138 @@ namespace eagle::virt::eg
             }
              */
 
-            const reg_class dest_reg_class = get_reg_class(dest_reg);
-            const reg output_reg = destination->get_store_register();
-
-            reg temp2 = regs->get_reserved_temp(1);
-
-            if (dest_reg_class == gpr_64)
+            if (get_reg_class(source_register) == xmm_128)
             {
-                // gpr 64
-                const std::array<std::function<void()>, 2> extractors =
+                if (source_end <= 64) // lower 64 bits of XMM
                 {
-                    [&]
-                    {
-                        // bextr
-                        const uint16_t length = d_to - d_from;
-                        out->add(encode(m_xor, ZREG(temp), ZREG(temp2)));
-                        out->add(encode(m_bextr, ZREG(temp2), ZIMMS(dest_reg, length)));
-                        out->add(encode(m_shl, ZREG(temp2), ZIMMS(s_from)));
-                        out->add(encode(m_and, ZREG(output_reg), ZREG(temp2)));
-                    },
-                    [&]
-                    {
-                        // shifter
-                        out->add(encode(m_mov, ZREG(temp2), ZREG(dest_reg)));
+                    /*
+                        gpr_temp = fun_get_temps()[0];
 
-                        // we only care about the data inside the rangesa d_from to d_to
-                        // but we want to clear all the data outside of that
-                        // to do this we do the following:
+                        movq gpr_temp, source_register // move lower 64 bits into temp
+                        shl gpr_temp, 64 - source_end	// clear upper end bits
+                        shr gpr_temp, 64 - source_end + source_start	// clear lower start bits
+                        shl gpr_temp, destination_start	// move to intended destination location
+                        or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
+                     */
 
-                        // 1: shift d_from to bit 0
-                        out->add(encode(m_shr, ZREG(temp2), ZIMMS(d_from)));
+                    reg gpr_temp = temp_regs[0];
+                    out->add({
+                        encode(m_movq, ZREG(gpr_temp),ZREG(source_register)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
+                        encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
+                        encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                    });
+                }
+                else if (source_start >= 64) // upper 64 bits of XMM
+                {
+                    /*
+                        psrldq source_register, 8	// move upper 64 bits to lower 64 bits
 
-                        // 2: shift d_to position all the way to 64th bit
-                        uint16_t shift_left_orig = 64 - d_to + d_from;
-                        out->add(encode(m_shl, ZREG(temp2), ZIMMS(shift_left_orig)));
+                        source_start -= 64	// since we shifted down it will be 64 bits lower
+                        source_end -= 64	// since we shifted down it will be 64 bits lower
 
-                        // 3: shift again to match source position
-                        uint16_t shift_to_source = 64 - s_to;
-                        out->add(encode(m_shr, ZREG(temp2), ZIMMS(shift_to_source)));
+                        gpr_temp = fun_get_temps()[0];
 
-                        out->add(encode(m_mov, ZREG(output_reg), ZREG(temp2)));
-                    }
-                };
+                        movq gpr_temp, source_register // move lower 64 bits into temp
+                        shl gpr_temp, 64 - source_end	// clear upper end bits
+                        shr gpr_temp, 64 - source_end + source_start	// clear lower start bits
+                        shl gpr_temp, destination_start	// move to intended destination location
+                        or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
 
-                constexpr size_t extractor_len = extractors.size();
-                auto& target_fun = extractors[util::ran_device::get().gen_64() % extractor_len];
+                        psrldq source_register, 8	// move lower 64 bits back to upper 64 bits
+                    */
 
-                target_fun();
+                    out->add(encode(m_psrldq, ZREG(source_register), ZIMMU(8)));
+
+                    source_start -= 64;
+                    source_end -= 64;
+
+                    reg gpr_temp = temp_regs[0];
+                    out->add({
+                        encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
+                        encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
+                        encode(m_or, ZREG(target_register), ZREG(gpr_temp)),
+
+                        encode(m_psrldq, ZREG(source_register), ZIMMU(8))
+                    });
+                }
+                else // cross boundary register
+                {
+                    /*
+                        // lower boundary
+                        // [source_start, 64)
+
+                        temps = fun_get_temps(2);
+                        gpr_temp = temps[0];
+
+                        movq gpr_temp, source_register // move lower 64 bits into temp
+                        shr gpr_temp, 64 - source_start	// clear lower start bits
+                        shl gpr_temp, destination_start	// move to intended destination location
+                        or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
+
+                        // upper boundary
+                        // [64, source_end)
+
+                        psrldq source_register, 8	// move upper 64 bits to lower 64 bits
+
+                        source_start = 0	// because we read across boundaries this will now start at 0
+                        source_end -= 64	// since we shifted down it will be 64 bits lower
+
+                        gpr_temp = temps[1];
+
+                        movq gpr_temp, source_register // move lower 64 bits into temp
+                        shl gpr_temp, 64 - source_end	// clear upper end bits
+                        shr gpr_temp, 64 - source_end	// move to intended destination location
+                        or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
+
+                        psrldq source_register, 8	// move lower 64 bits back to upper 64 bits
+                    */
+
+                    reg gpr_temp = temp_regs[0];
+                    out->add({
+                        encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
+                        encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_start)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
+                        encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                    });
+
+                    source_start = 0;
+                    source_end -= 64;
+
+                    gpr_temp = temp_regs[1];
+                    out->add({
+                        encode(m_psrldq, ZREG(source_register), ZIMMU(8)),
+                        encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
+                        encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
+                        encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end)),
+                        encode(m_or, ZREG(target_register), ZREG(gpr_temp)),
+                        encode(m_psrldq, ZREG(source_register), ZIMMU(8))
+                    });
+                }
             }
             else
             {
-                // xmm
-                // todo: complete this function
-                const uint16_t length = d_to - d_from;
+                /*
+                    gpr_temp = fun_get_temps()[0];
 
-                mnemonic mnemonic = m_invalid;
-                reg_class target_class = invalid;
+                    mov gpr_temp, source_register // move lower 64 bits into temp
+                    shl gpr_temp, 64 - source_end	// clear upper end bits
+                    shr gpr_temp, 64 - source_end + source_start	// clear lower start bits
+                    shl gpr_temp, destination_start	// move to intended destination location
+                    or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
+                */
 
-                if (length <= 8)
-                {
-                    mnemonic = m_pextrb;
-                    target_class = gpr_8;
-                }
-                else if (length <= 16)
-                {
-                    mnemonic = m_pextrw;
-                    target_class = gpr_16;
-                }
-                else if (length <= 32)
-                {
-                    mnemonic = m_pextrd;
-                    target_class = gpr_32;
-                }
-                else
-                {
-                    mnemonic = m_pextrq;
-                    target_class = gpr_64;
-                }
-
-                reg target_temp = get_bit_version(temp2, target_class);
-                const reg_size target_temp_size = get_reg_size(target_class);
-
-                out->add(encode(m_xor, ZREG(temp2), ZREG(temp2)));
-                out->add(encode(mnemonic, ZREG(target_temp), ZIMMS(dest_reg), ZIMMS(d_from)));
-
-                // we have our value in VTEMP2 but it has data which we do not need
-                const uint16_t spillage = target_temp_size - length * 8;
-                out->add(encode(m_shl, ZREG(target_temp), ZIMMS(spillage)));
-
-                if (spillage > s_from)
-                    out->add(encode(m_shr, ZREG(target_temp), ZIMMS(spillage - s_from)));
-                else if (spillage < s_from)
-                    out->add(encode(m_shl, ZREG(target_temp), ZIMMS(s_from - spillage)));
-
-                out->add(encode(m_and, ZREG(output_reg), ZREG(temp2)));
+                reg gpr_temp = temp_regs[0];
+                out->add({
+                    encode(m_mov, ZREG(gpr_temp), ZREG(source_register)),
+                    encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
+                    encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
+                    encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
+                    encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                });
             }
 
             stored_ranges.push_back(source_range);
@@ -317,7 +358,7 @@ namespace eagle::virt::eg
 
                 auto handle_lb = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    reg temp_xmm_q = regs->get_reserved_temp(0);
+                    reg temp_xmm_q = regs->get_reserved_temp_xmm(0);
 
                     uint8_t bit_length = to - from;
                     out->add({

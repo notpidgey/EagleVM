@@ -28,7 +28,6 @@ namespace eagle::asmb
         section_labels.append_range(code);
     }
 
-
     codec::encoded_vec section_manager::compile_section(const uint64_t section_address)
     {
         if (shuffle_functions)
@@ -59,6 +58,7 @@ namespace eagle::asmb
                                 request = arg;
                         }, inst);
 
+                        attempt_instruction_fix(request);
                         current_address += codec::compile_absolute(request, 0).size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
@@ -100,6 +100,8 @@ namespace eagle::asmb
                             else if constexpr (std::is_same_v<T, codec::enc::req>)
                                 request = arg;
                         }, dynamic_inst);
+
+                        attempt_instruction_fix(request);
 
                         std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
                         compiled_section.append_range(compiled);
@@ -154,5 +156,19 @@ namespace eagle::asmb
     void section_manager::shuffle_containers()
     {
         std::ranges::shuffle(section_labels, util::ran_device::get().gen);
+    }
+
+    void section_manager::attempt_instruction_fix(codec::enc::req& request)
+    {
+        if(request.mnemonic == ZYDIS_MNEMONIC_LEA)
+        {
+            auto& second_op = request.operands[1].mem;
+            if(second_op.index == ZYDIS_REGISTER_RSP && second_op.scale == 1)
+            {
+                auto temp = second_op.base;
+                second_op.base = second_op.index;
+                second_op.index = temp;
+            }
+        }
     }
 }

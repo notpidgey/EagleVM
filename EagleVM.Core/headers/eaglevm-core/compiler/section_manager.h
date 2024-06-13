@@ -21,5 +21,7 @@ namespace eagle::asmb
     private:
         std::vector<code_container_ptr> section_labels;
         bool shuffle_functions = false;
+
+        static void attempt_instruction_fix(codec::enc::req& request);
     };
 }
