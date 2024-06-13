@@ -17,6 +17,11 @@ namespace eagle::asmb
         return name;
     }
 
+    void code_label::set_name(const std::string& new_name)
+    {
+        name = new_name;
+    }
+
     bool code_label::get_is_named() const
     {
         return is_named;

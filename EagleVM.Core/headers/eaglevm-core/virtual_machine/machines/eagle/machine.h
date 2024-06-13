@@ -21,9 +21,10 @@ namespace eagle::virt::eg
     class machine final : public base_machine
     {
     public:
-        explicit machine(const machine_settings_ptr& settings_info);
-        static machine_ptr create(const machine_settings_ptr& settings_info);
+        explicit machine(const settings_ptr& settings_info);
+        static machine_ptr create(const settings_ptr& settings_info);
 
+        virtual asmb::code_container_ptr lift_block(const ir::block_ptr& block) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd) override;
         void handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd) override;
@@ -45,7 +46,7 @@ namespace eagle::virt::eg
     private:
         register_context_ptr reg_ctx;
 
-        machine_settings_ptr settings;
+        settings_ptr settings;
         register_manager_ptr reg_man;
         inst_handlers_ptr han_man;
 

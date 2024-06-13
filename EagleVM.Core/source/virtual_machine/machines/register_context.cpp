@@ -33,6 +33,8 @@ namespace eagle::virt
 
     codec::reg register_context::get_any()
     {
+        assert(!avaliable_stores.empty(), "attempted to retreive sample from empty register storage");
+
         codec::reg out;
         std::ranges::sample(avaliable_stores, &out, 1, util::ran_device().get().gen);
 
@@ -41,6 +43,8 @@ namespace eagle::virt
 
     std::vector<codec::reg> register_context::get_any_multiple(const uint8_t count)
     {
+        assert(avaliable_stores.size() >= count, "attempted to retreive sample from empty register storage");
+
         std::vector<codec::reg> out(count);
         std::ranges::sample(avaliable_stores, std::back_inserter(out), count, util::ran_device().get().gen);
 

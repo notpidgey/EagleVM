@@ -33,6 +33,9 @@ namespace eagle::asmb
         [[nodiscard]] std::vector<inst_label_v> get_instructions() const;
 
     private:
+        uint32_t uid;
+        static uint32_t current_uid;
+
         std::string name;
         bool is_named;
 

@@ -56,7 +56,7 @@ namespace eagle::virt::eg
     class handler_manager
     {
     public:
-        handler_manager(machine_ptr machine, register_manager_ptr regs, const register_context_ptr& regs_context, machine_settings_ptr settings);
+        handler_manager(machine_ptr machine, register_manager_ptr regs, const register_context_ptr& regs_context, settings_ptr settings);
 
         /**
          * sets the block for the current inst_handlers context to be appeneded to
@@ -114,7 +114,7 @@ namespace eagle::virt::eg
         asmb::code_container_ptr working_block;
 
         machine_ptr machine;
-        machine_settings_ptr settings;
+        settings_ptr settings;
 
         register_manager_ptr regs;
         register_context_ptr regs_context;

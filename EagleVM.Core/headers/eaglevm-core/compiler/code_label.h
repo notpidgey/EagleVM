@@ -16,6 +16,7 @@ namespace eagle::asmb
         static code_label_ptr create(const std::string& label_name, bool generate_comments = true);
 
         std::string get_name();
+        void set_name(const std::string& new_name);
         [[nodiscard]] bool get_is_named() const;
 
         [[nodiscard]] int64_t get_address() const;

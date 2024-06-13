@@ -2,6 +2,9 @@
 #include <ranges>
 
 #include "eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
+
+#include <source_location>
+
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
@@ -36,8 +39,23 @@ namespace eagle::virt::eg
         return variant_pairs.front();
     }
 
+    tagged_handler_data_pair tagged_handler::get_pair()
+    {
+        return data;
+    }
+
+    asmb::code_container_ptr tagged_handler::get_container()
+    {
+        return std::get<0>(data);
+    }
+
+    asmb::code_label_ptr tagged_handler::get_label()
+    {
+        return std::get<1>(data);
+    }
+
     handler_manager::handler_manager(machine_ptr machine, register_manager_ptr regs, const register_context_ptr& regs_context,
-        machine_settings_ptr settings)
+        settings_ptr settings)
         : working_block(nullptr), machine(std::move(machine)), regs(std::move(regs)), regs_context(regs_context), settings(std::move(settings))
     {
         vm_overhead = 8 * 100;
@@ -151,7 +169,7 @@ namespace eagle::virt::eg
                         uint16_t shift_to_source = 64 - s_to;
                         out->add(encode(m_shr, ZREG(temp2), ZIMMS(shift_to_source)));
 
-                        out->add(encode(m_shr, ZREG(output_reg), ZREG(temp2)));
+                        out->add(encode(m_mov, ZREG(output_reg), ZREG(temp2)));
                     }
                 };
 
@@ -262,12 +280,12 @@ namespace eagle::virt::eg
                 out->add({
                     encode(m_mov, ZREG(temp_xmm_q), ZREG(dest_reg)),
                     encode(m_ror, ZREG(temp_xmm_q), ZIMMS(d_from)),
-                    encode(m_shr, ZREG(temp_xmm_q), ZREG(bit_length)),
-                    encode(m_shl, ZREG(temp_xmm_q), ZREG(bit_length)),
+                    encode(m_shr, ZREG(temp_xmm_q), ZIMMS(bit_length)),
+                    encode(m_shl, ZREG(temp_xmm_q), ZIMMS(bit_length)),
                     encode(m_or, ZREG(temp_xmm_q), ZREG(temp_value_reg)),
                     encode(m_rol, ZREG(temp_xmm_q), ZIMMS(d_from)),
 
-                    encode(m_movq, ZREG(dest_reg), ZREG(temp_xmm_q))
+                    encode(m_mov, ZREG(dest_reg), ZREG(temp_xmm_q))
                 });
             }
             else
@@ -305,8 +323,8 @@ namespace eagle::virt::eg
                     out->add({
                         encode(m_movq, ZREG(temp_xmm_q), ZREG(dest_reg)),
                         encode(m_ror, ZREG(temp_xmm_q), ZIMMS(d_from)),
-                        encode(m_shr, ZREG(temp_xmm_q), ZREG(bit_length)),
-                        encode(m_shl, ZREG(temp_xmm_q), ZREG(bit_length)),
+                        encode(m_shr, ZREG(temp_xmm_q), ZIMMS(bit_length)),
+                        encode(m_shl, ZREG(temp_xmm_q), ZIMMS(bit_length)),
                         encode(m_or, ZREG(temp_xmm_q), ZREG(temp_value_reg)),
                         encode(m_rol, ZREG(temp_xmm_q), ZIMMS(d_from)),
 
@@ -367,7 +385,10 @@ namespace eagle::virt::eg
     {
         const reg reg = get_bit_version(target_reg, size);
         if (!vm_push.contains(reg))
-            vm_push[reg] = { asmb::code_container::create(), asmb::code_label::create() };
+            vm_push[reg] = {
+                asmb::code_container::create("create_push " + std::to_string(size)),
+                asmb::code_label::create("create_push " + std::to_string(size))
+            };
 
         return std::get<1>(vm_push[reg]);
     }
@@ -376,7 +397,10 @@ namespace eagle::virt::eg
     {
         const reg reg = get_bit_version(target_reg, size);
         if (!vm_pop.contains(reg))
-            vm_pop[reg] = { asmb::code_container::create(), asmb::code_label::create() };
+            vm_pop[reg] = {
+                asmb::code_container::create("create_pop " + std::to_string(size)),
+                asmb::code_label::create("create_pop " + std::to_string(size))
+            };
 
         return std::get<1>(vm_pop[reg]);
     }
@@ -454,6 +478,24 @@ namespace eagle::virt::eg
 
     void handler_manager::call_vm_handler(asmb::code_label_ptr label)
     {
+        assert(label != nullptr, "code cannot be an invalid code label");
+
+        // todo: on debug verify that the target is a valid handler
+
+        const asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
+
+        // lea VCS, [VCS - 8]       ; allocate space for new return address
+        // mov [VCS], code_label    ; place return rva on the stack
+        working_block->add(encode(m_lea, ZREG(VCS), ZMEMBD(VCS, -8, TOB(bit_64))));
+        working_block->add(RECOMPILE(encode(m_mov, ZMEMBD(VCS, 0, TOB(bit_64)), ZLABEL(return_label))));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        working_block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, label->get_address(), TOB(bit_64)))));
+        working_block->add(encode(m_jmp, ZREG(VIP)));
+
+        // execution after VM handler should end up here
+        working_block->bind(return_label);
     }
 
     asmb::code_label_ptr handler_manager::get_vm_enter()
@@ -630,7 +672,7 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr handler_manager::build_rflags_store()
     {
-        auto [container, label] = vm_rflags_load.get_pair();
+        auto [container, label] = vm_rflags_store.get_pair();
         container->bind(label);
 
         container->add({
@@ -651,14 +693,12 @@ namespace eagle::virt::eg
     std::vector<asmb::code_container_ptr> handler_manager::build_push()
     {
         std::vector<asmb::code_container_ptr> context_stores;
-        for (auto& [target_reg, variant_handler] : vm_push)
+        for (auto& [target_temp, variant_handler] : vm_push)
         {
             auto& [container, label] = variant_handler;
             container->bind(label);
 
-            const reg_size reg_size = load_store_index_size(target_reg);
-
-            reg target_temp = get_bit_version(target_reg, reg_size);
+            const reg_size reg_size = get_reg_size(target_temp);
             container->add({
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -TOB(reg_size), TOB(bit_64))),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(reg_size)), ZREG(target_temp))
@@ -680,14 +720,12 @@ namespace eagle::virt::eg
     std::vector<asmb::code_container_ptr> handler_manager::build_pop()
     {
         std::vector<asmb::code_container_ptr> context_stores;
-        for (auto& [target_reg, variant_handler] : vm_pop)
+        for (auto& [target_temp, variant_handler] : vm_pop)
         {
             auto& [container, label] = variant_handler;
             container->bind(label);
 
-            const reg_size reg_size = load_store_index_size(target_reg);
-
-            reg target_temp = get_bit_version(target_reg, reg_size);
+            const reg_size reg_size = get_reg_size(target_temp);
             container->add({
                 encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, TOB(reg_size))),
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, TOB(reg_size), 8)),
@@ -744,7 +782,7 @@ namespace eagle::virt::eg
 
     std::pair<bool, reg> handler_manager::handle_reg_handler_query(std::unordered_map<reg, tagged_variant_handler>& handler_storage, reg reg)
     {
-        if (settings->single_use_register_handlers)
+        if (settings->single_register_handlers)
         {
         ATTEMPT_CREATE_HANDLER:
             // this setting means that we want to create and reuse the same handlers

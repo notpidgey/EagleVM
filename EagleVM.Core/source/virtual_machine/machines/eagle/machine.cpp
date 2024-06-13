@@ -3,6 +3,7 @@
 #include "eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
+#include "eaglevm-core/virtual_machine/ir/block.h"
 
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
 
@@ -23,16 +24,17 @@ using namespace eagle::codec;
 
 namespace eagle::virt::eg
 {
-    machine::machine(const machine_settings_ptr& settings_info)
+    machine::machine(const settings_ptr& settings_info)
     {
         settings = settings_info;
     }
 
-    machine_ptr machine::create(const machine_settings_ptr& settings_info)
+    machine_ptr machine::create(const settings_ptr& settings_info)
     {
         const std::shared_ptr<machine> instance = std::make_shared<machine>(settings_info);
         const std::shared_ptr<register_manager> reg_man = std::make_shared<register_manager>(settings_info);
         reg_man->init_reg_order();
+        reg_man->create_mappings();
 
         const std::shared_ptr<register_context> reg_ctx = std::make_shared<register_context>(reg_man->get_unreserved_temp());
         const std::shared_ptr<handler_manager> han_man = std::make_shared<handler_manager>(instance, reg_man, reg_ctx, settings_info);
@@ -42,6 +44,28 @@ namespace eagle::virt::eg
         instance->han_man = han_man;
 
         return instance;
+    }
+
+    asmb::code_container_ptr machine::lift_block(const ir::block_ptr& block)
+    {
+        const size_t command_count = block->get_command_count();
+
+        const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + std::to_string(command_count), true);
+        han_man->set_working_block(code);
+
+        if (block_context.contains(block))
+        {
+            const asmb::code_label_ptr label = block_context[block];
+            code->bind(label);
+        }
+
+        for (size_t i = 0; i < command_count; i++)
+        {
+            const ir::base_command_ptr command = block->get_command(i);
+            handle_cmd(code, command);
+        }
+
+        return code;
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
@@ -314,7 +338,7 @@ namespace eagle::virt::eg
     {
         const asmb::code_label_ptr vm_enter = han_man->get_vm_enter();
 
-        const asmb::code_label_ptr ret = asmb::code_label::create();
+        const asmb::code_label_ptr ret = asmb::code_label::create("vmenter_ret target");
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
         block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
         block->bind(ret);
@@ -323,7 +347,7 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd)
     {
         const asmb::code_label_ptr vm_exit = han_man->get_vm_exit();
-        const asmb::code_label_ptr ret = asmb::code_label::create();
+        const asmb::code_label_ptr ret = asmb::code_label::create("vmexit_ret target");
 
         // mov VCSRET, ZLABEL(target)
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));

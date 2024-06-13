@@ -3,7 +3,7 @@
 
 namespace eagle::virt::eg
 {
-    using machine_settings_ptr = std::shared_ptr<struct settings>;
+    using settings_ptr = std::shared_ptr<struct settings>;
 
     struct settings
     {
@@ -11,7 +11,7 @@ namespace eagle::virt::eg
          * when enabled, handlers will only be generated a single time
          * when disabled, handler will be generated every time time per call
          */
-        bool single_use_x86_handlers = false;
+        // todo: bool single_x86_handlers = false;
 
         /**
          * when "single_use_x86_handlers" is set to false,
@@ -25,7 +25,7 @@ namespace eagle::virt::eg
          * when enabled, handlers will only be generated a single time
          * when disabled, handler will be generated every time time per call
          */
-        bool single_use_vm_handlers = false;
+        bool single_vm_handlers = false;
 
         /**
          * when "single_use_vm_handlers" is set to false,
@@ -39,7 +39,7 @@ namespace eagle::virt::eg
         * when enabled, handlers will only be generated a single time
         * when disabled, handler will be generated every time time per call
         */
-        bool single_use_register_handlers = false;
+        bool single_register_handlers = false;
 
         /**
          * when "single_use_register_handlers" is set to false,
@@ -66,5 +66,5 @@ namespace eagle::virt::eg
         bool shuffle_vm_xmm_order = false;
     };
 
-    using machine_settings_ptr = std::shared_ptr<settings>;
+    using settings_ptr = std::shared_ptr<settings>;
 }

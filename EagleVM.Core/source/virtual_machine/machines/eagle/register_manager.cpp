@@ -18,8 +18,10 @@ namespace eagle::virt::eg
     uint8_t register_manager::index_vcsret = 4;
     uint8_t register_manager::index_vbase = 5;
 
-    register_manager::register_manager(const machine_settings_ptr& settings_info)
+    register_manager::register_manager(const settings_ptr& settings_info)
     {
+        settings = settings_info;
+
         virtual_order_gpr = get_gpr64_regs();
 
         num_v_temp_reserved = settings->randomize_working_register ? 0 : 2;
@@ -27,8 +29,6 @@ namespace eagle::virt::eg
 
         num_v_temp_xmm_reserved = 2;
         num_v_temp_xmm_unreserved = 16 - 2;
-
-        settings = settings_info;
     }
 
     void register_manager::init_reg_order()
@@ -89,8 +89,7 @@ namespace eagle::virt::eg
             points.push_back(0); // starting point
             points.push_back(64); // ending point (inclusive)
 
-            // generate random points between 0 and 62 (inclusive)
-            constexpr auto numRanges = 5;
+            constexpr auto numRanges = 64;
             for (uint16_t i = 0; i < numRanges - 1; ++i)
             {
                 uint16_t point;
@@ -156,12 +155,9 @@ namespace eagle::virt::eg
 
                 auto& [dest_reg, occ_ranges] = *it;
 
-                // give 10 attempts to map the range
-                std::optional<reg_range> found_range = std::nullopt;
-                for (auto j = 0; j < 10 && found_range == std::nullopt; j++)
-                    found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg));
-
+                std::optional<reg_range> found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg));
                 assert(found_range.has_value(), "unable to find valid range to map registers");
+
                 occ_ranges.push_back(found_range.value());
 
                 // insert into source registers

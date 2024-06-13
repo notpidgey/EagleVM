@@ -8,8 +8,11 @@
 
 #include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
+
+#include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 
 using namespace eagle;
 
@@ -197,11 +200,21 @@ int main(int argc, char* argv[])
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
-        // we want the same settings for every machine
-        virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
-        machine_settings->set_temp_count(4);
-        machine_settings->set_randomize_vm_regs(true);
-        machine_settings->set_randomize_stack_regs(true);
+        // // we want the same settings for every machine
+        // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
+        // machine_settings->set_temp_count(4);
+        // machine_settings->set_randomize_vm_regs(true);
+        // machine_settings->set_randomize_stack_regs(true);
+
+        virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
+        machine_settings->randomize_working_register = false;
+        machine_settings->single_vm_handlers = false;
+        machine_settings->single_register_handlers = false;
+        machine_settings->chance_to_generate_register_handler = 0.5;
+
+        machine_settings->shuffle_push_order = true;
+        machine_settings->shuffle_vm_gpr_order = true;
+        machine_settings->shuffle_vm_xmm_order = true;
 
         // initialize block code labels
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
@@ -214,7 +227,9 @@ int main(int argc, char* argv[])
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)
-            virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
+
+            // virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
+            virt::eg::machine_ptr machine = virt::eg::machine::create(machine_settings);
             machine->add_block_context(block_labels);
 
             for (auto& translated_block : blocks)

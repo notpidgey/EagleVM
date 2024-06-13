@@ -25,7 +25,7 @@ namespace eagle::virt::eg
     class register_manager
     {
     public:
-        explicit register_manager(const machine_settings_ptr& settings_info);
+        explicit register_manager(const settings_ptr& settings_info);
 
         /**
         * initialize vm_order based on "settings"
@@ -110,7 +110,7 @@ namespace eagle::virt::eg
         static uint8_t index_vbase;
 
     private:
-        machine_settings_ptr settings;
+        settings_ptr settings;
 
         std::unordered_map<codec::reg, std::vector<reg_mapped_range>> source_register_map;
         std::unordered_map<codec::reg, std::vector<reg_range>> dest_register_map;
