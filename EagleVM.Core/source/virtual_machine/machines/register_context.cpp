@@ -65,7 +65,7 @@ namespace eagle::virt
     {
         const codec::reg target_register_64 = get_bit_version(reg, codec::gpr_64);
 
-        assert(avaliable_stores.contains(target_register_64), "attempted to block unavailiable register");
+        assert(!blocked_stores.contains(target_register_64), "attempted to block blocked register");
         blocked_stores.insert(target_register_64);
         avaliable_stores.erase(target_register_64);
     }
@@ -75,7 +75,7 @@ namespace eagle::virt
         const codec::reg target_register = store->get_store_register();
         const codec::reg target_register_64 = get_bit_version(target_register, codec::gpr_64);
 
-        assert(blocked_stores.contains(target_register_64), "attempted to release unavailiable register");
+        assert(!avaliable_stores.contains(target_register_64), "attempted to release available register");
         avaliable_stores.insert(target_register_64);
         blocked_stores.erase(target_register_64);
     }
