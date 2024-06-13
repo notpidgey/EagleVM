@@ -270,7 +270,7 @@ namespace eagle::virt::pidg
             container->bind(handler.label);
 
             const reg_size reg_size = load_store_index_size(i);
-            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            reg target_temp = get_bit_version(VTEMP, reg_size);
 
             container->add(encode(m_mov, ZREG(target_temp), ZMEMBI(VREGS, VTEMP, 1, TOB(reg_size))));
             call_vm_handler(container, get_push(reg_size));
@@ -330,7 +330,7 @@ namespace eagle::virt::pidg
             container->bind(handler.label);
 
             const reg_size reg_size = load_store_index_size(i);
-            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            reg target_temp = get_bit_version(VTEMP, reg_size);
 
             if (reg_size == bit_32)
             {
@@ -404,7 +404,7 @@ namespace eagle::virt::pidg
             const reg_size reg_size = load_store_index_size(i);
             const uint16_t reg_size_bytes = reg_size / 8;
 
-            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            reg target_temp = get_bit_version(VTEMP, reg_size);
             container->add({
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -reg_size_bytes, TOB(bit_64))),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(reg_size)), ZREG(target_temp))
@@ -466,7 +466,7 @@ namespace eagle::virt::pidg
 
             const reg_size reg_size = load_store_index_size(i);
 
-            reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(reg_size));
+            reg target_temp = get_bit_version(VTEMP, reg_size);
             container->add({
                 encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, TOB(reg_size))),
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, TOB(reg_size), 8)),

@@ -8,7 +8,14 @@
 
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
-#include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
+
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_handler_signature.h"
+#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_operand_signature.h"
+
+namespace eagle::virt
+{
+    using register_context_ptr = std::shared_ptr<class register_context>;
+}
 
 namespace eagle::virt::eg
 {
@@ -44,11 +51,12 @@ namespace eagle::virt::eg
     };
 
     using inst_handlers_ptr = std::shared_ptr<class handler_manager>;
+    using machine_ptr = std::shared_ptr<class machine>;
 
     class handler_manager
     {
     public:
-        handler_manager(machine_ptr machine, register_manager_ptr regs, machine_settings_ptr settings);
+        handler_manager(machine_ptr machine, register_manager_ptr regs, const register_context_ptr& regs_context, machine_settings_ptr settings);
 
         /**
          * sets the block for the current inst_handlers context to be appeneded to
@@ -97,12 +105,19 @@ namespace eagle::virt::eg
          */
         void store_register(codec::reg reg, const ir::discrete_store_ptr& source);
 
+        asmb::code_label_ptr get_push(eagle::codec::reg target_reg, eagle::codec::reg_size size);
+        asmb::code_label_ptr get_pop(eagle::codec::reg reg, eagle::codec::reg_size size);
+
+        std::vector<asmb::code_container_ptr> build_handlers();
+
     private:
         asmb::code_container_ptr working_block;
 
         machine_ptr machine;
-        register_manager_ptr regs;
         machine_settings_ptr settings;
+
+        register_manager_ptr regs;
+        register_context_ptr regs_context;
 
         tagged_handler vm_enter;
         tagged_handler vm_exit;
@@ -110,8 +125,8 @@ namespace eagle::virt::eg
         tagged_handler vm_rflags_load;
         tagged_handler vm_rflags_store;
 
-        std::array<tagged_handler, 4> vm_push;
-        std::array<tagged_handler, 4> vm_pop;
+        std::unordered_map<codec::reg, tagged_handler_data_pair> vm_push;
+        std::unordered_map<codec::reg, tagged_handler_data_pair> vm_pop;
 
         std::unordered_map<codec::reg, tagged_variant_handler> register_load_handlers;
         std::unordered_map<codec::reg, tagged_variant_handler> register_store_handlers;
@@ -120,15 +135,14 @@ namespace eagle::virt::eg
         uint16_t vm_stack_regs;
         uint16_t vm_call_stack;
 
+        std::vector<asmb::code_container_ptr> build_instruction_handlers();
+
         using tagged_handler_id = std::pair<codec::mnemonic, std::string>;
         using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
         std::vector<tagged_handler_label> tagged_instruction_handlers;
 
         [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
         std::pair<bool, codec::reg> handle_reg_handler_query(std::unordered_map<codec::reg, tagged_variant_handler>& handler_storage, codec::reg reg);
-
-        void handle_load_register_gpr64();
-        void handle_load_register_xmm();
 
         void create_vm_return(const asmb::code_container_ptr& container) const;
 

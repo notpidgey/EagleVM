@@ -136,7 +136,7 @@ namespace eagle::virt::pidg
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: inline but also add option to use mov handler
         ir::ir_size target_size = cmd->get_read_size();
-        reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(target_size)));
+        reg target_temp = get_bit_version(VTEMP, to_reg_size(target_size));
 
         // pop address
         hg->call_vm_handler(block, hg->get_pop(bit_64));
@@ -175,7 +175,7 @@ namespace eagle::virt::pidg
             hg->call_vm_handler(block, hg->get_pop(to_reg_size(value_size)));
 
             // mov [vtemp2], vtemp
-            reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
+            reg target_vtemp = get_bit_version(VTEMP, to_reg_size(value_size));
             block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(write_size)), ZREG(target_vtemp)));
         }
     }
@@ -260,8 +260,7 @@ namespace eagle::virt::pidg
                 const uint64_t constant = cmd->get_value_immediate();
                 const ir::ir_size size = cmd->get_size();
 
-                const reg_class target_size = get_gpr_class_from_size(to_reg_size(size));
-                const reg target_temp = get_bit_version(VTEMP, target_size);
+                const reg target_temp = get_bit_version(VTEMP, to_reg_size(size));
 
                 block->add(encode(m_mov, ZREG(target_temp), ZIMMU(constant)));
                 hg->call_vm_handler(block, hg->get_push(to_reg_size(size)));
@@ -309,8 +308,8 @@ namespace eagle::virt::pidg
 
         // mov eax/ax/al, VTEMP
         block->add(encode(m_mov,
-            ZREG(get_bit_version(rax, get_gpr_class_from_size(current_size))),
-            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(current_size)))
+            ZREG(get_bit_version(rax, current_size)),
+            ZREG(get_bit_version(VTEMP, current_size))
         ));
 
         // keep upgrading the operand until we get to destination size
@@ -345,8 +344,8 @@ namespace eagle::virt::pidg
         }
 
         block->add(encode(m_mov,
-            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(target_size))),
-            ZREG(get_bit_version(rax, get_gpr_class_from_size(target_size)))
+            ZREG(get_bit_version(VTEMP, target_size)),
+            ZREG(get_bit_version(rax, target_size))
         ));
 
         hg->call_vm_handler(block, hg->get_push(target_size));
@@ -479,6 +478,6 @@ namespace eagle::virt::pidg
                 break;
         }
 
-        return get_bit_version(reg, get_gpr_class_from_size(to_reg_size(size)));
+        return get_bit_version(reg, to_reg_size(size));
     }
 }

@@ -5,6 +5,8 @@ namespace eagle::ir
 {
     enum class command_type
     {
+        none,
+
         vm_enter,
         vm_exit,
 

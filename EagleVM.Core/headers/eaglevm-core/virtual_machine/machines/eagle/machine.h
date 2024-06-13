@@ -1,13 +1,15 @@
 #pragma once
-#include <complex.h>
-
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include <vector>
 
 #include "handler_manager.h"
 #include "register_manager.h"
 #include "settings.h"
-#include "eaglevm-core/virtual_machine/machines/register_context.h"
+
+namespace eagle::virt
+{
+    using register_context_ptr = std::shared_ptr<class register_context>;
+}
 
 /*
  * daax inspired vm 💞
@@ -16,7 +18,7 @@ namespace eagle::virt::eg
 {
     using machine_ptr = std::shared_ptr<class machine>;
 
-    class machine : public base_machine
+    class machine final : public base_machine
     {
     public:
         explicit machine(const machine_settings_ptr& settings_info);
@@ -49,12 +51,12 @@ namespace eagle::virt::eg
 
         void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
 
-        void call_push(const ir::discrete_store_ptr& shared);
-        void call_push(const codec::reg reg);
-        void call_push(const codec::reg reg, codec::reg_size target);
+        void call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared);
+        void call_push(const asmb::code_container_ptr& block, const codec::reg target_reg);
 
-        void call_pop(const ir::discrete_store_ptr& shared);
-        void call_pop(const codec::reg reg);
-        void call_pop(const codec::reg reg, codec::reg_size target);
+        void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared);
+        void call_pop(const asmb::code_container_ptr& block, const codec::reg reg);
+
+        codec::reg reg_vm_to_register(ir::reg_vm store) const;
     };
 }

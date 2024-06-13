@@ -28,8 +28,6 @@ namespace eagle::ir
     {
         switch (type)
         {
-            case command_type::none:
-                return "none";
             case command_type::vm_enter:
                 return "vm_enter";
             case command_type::vm_exit:

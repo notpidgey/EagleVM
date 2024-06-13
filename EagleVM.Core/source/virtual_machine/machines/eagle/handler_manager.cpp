@@ -1,9 +1,13 @@
 #include <utility>
+#include <ranges>
 
 #include "eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
+#include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 #include "eaglevm-core/virtual_machine/machines/util.h"
+
+#include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 
 #define VIP         regs->get_vm_reg(register_manager::index_vip)
 #define VSP         regs->get_vm_reg(register_manager::index_vsp)
@@ -32,8 +36,9 @@ namespace eagle::virt::eg
         return variant_pairs.front();
     }
 
-    handler_manager::handler_manager(machine_ptr machine, register_manager_ptr regs, machine_settings_ptr settings)
-        : working_block(nullptr), machine(std::move(machine)), regs(std::move(regs)), settings(std::move(settings))
+    handler_manager::handler_manager(machine_ptr machine, register_manager_ptr regs, const register_context_ptr& regs_context,
+        machine_settings_ptr settings)
+        : working_block(nullptr), machine(std::move(machine)), regs(std::move(regs)), regs_context(regs_context), settings(std::move(settings))
     {
         vm_overhead = 8 * 100;
         vm_stack_regs = 17;
@@ -54,7 +59,7 @@ namespace eagle::virt::eg
         if (!status) return;
 
         // create a new handler
-        auto& [out, label] = register_load_handlers[register_load].add_pair();
+        auto [out, label] = register_load_handlers[register_load].add_pair();
         out->bind(label);
 
         // find the mapped ranges required to build the register that we want
@@ -62,7 +67,8 @@ namespace eagle::virt::eg
         auto ranges_required = get_relevant_ranges(source_reg);
         std::ranges::shuffle(ranges_required, util::ran_device::get().rd);
 
-        working_block->add(encode(m_xor, ZREG(VTEMP), ZREG(VTEMP)));
+        reg temp = regs->get_reserved_temp(0);
+        working_block->add(encode(m_xor, ZREG(temp), ZREG(temp)));
 
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
@@ -109,7 +115,6 @@ namespace eagle::virt::eg
             const reg_class dest_reg_class = get_reg_class(dest_reg);
             const reg output_reg = destination->get_store_register();
 
-            reg temp = regs->get_reserved_temp(0);
             reg temp2 = regs->get_reserved_temp(1);
 
             if (dest_reg_class == gpr_64)
@@ -122,8 +127,8 @@ namespace eagle::virt::eg
                         // bextr
                         const uint16_t length = d_to - d_from;
                         out->add(encode(m_xor, ZREG(temp), ZREG(temp2)));
-                        out->add(encode(m_bextr, ZREG(temp2), dest_reg, length));
-                        out->add(encode(m_shl, ZREG(temp2), s_from));
+                        out->add(encode(m_bextr, ZREG(temp2), ZIMMS(dest_reg, length)));
+                        out->add(encode(m_shl, ZREG(temp2), ZIMMS(s_from)));
                         out->add(encode(m_and, ZREG(output_reg), ZREG(temp2)));
                     },
                     [&]
@@ -136,15 +141,15 @@ namespace eagle::virt::eg
                         // to do this we do the following:
 
                         // 1: shift d_from to bit 0
-                        out->add(encode(m_shr, ZREG(temp2), d_from));
+                        out->add(encode(m_shr, ZREG(temp2), ZIMMS(d_from)));
 
                         // 2: shift d_to position all the way to 64th bit
                         uint16_t shift_left_orig = 64 - d_to + d_from;
-                        out->add(encode(m_shl, ZREG(temp2), shift_left_orig));
+                        out->add(encode(m_shl, ZREG(temp2), ZIMMS(shift_left_orig)));
 
                         // 3: shift again to match source position
                         uint16_t shift_to_source = 64 - s_to;
-                        out->add(encode(m_shr, ZREG(temp2), shift_to_source));
+                        out->add(encode(m_shr, ZREG(temp2), ZIMMS(shift_to_source)));
 
                         out->add(encode(m_shr, ZREG(output_reg), ZREG(temp2)));
                     }
@@ -219,7 +224,7 @@ namespace eagle::virt::eg
         if (!status) return;
 
         // create a new handler
-        auto& [out, label] = register_store_handlers[target_reg].add_pair();
+        auto [out, label] = register_store_handlers[target_reg].add_pair();
         out->bind(label);
 
         // find the mapped ranges required to build the register that we want
@@ -358,6 +363,50 @@ namespace eagle::virt::eg
         }
     }
 
+    asmb::code_label_ptr handler_manager::get_push(reg target_reg, reg_size size)
+    {
+        const reg reg = get_bit_version(target_reg, size);
+        if (!vm_push.contains(reg))
+            vm_push[reg] = { asmb::code_container::create(), asmb::code_label::create() };
+
+        return std::get<1>(vm_push[reg]);
+    }
+
+    asmb::code_label_ptr handler_manager::get_pop(reg target_reg, reg_size size)
+    {
+        const reg reg = get_bit_version(target_reg, size);
+        if (!vm_pop.contains(reg))
+            vm_pop[reg] = { asmb::code_container::create(), asmb::code_label::create() };
+
+        return std::get<1>(vm_pop[reg]);
+    }
+
+    std::vector<asmb::code_container_ptr> handler_manager::build_handlers()
+    {
+        std::vector<asmb::code_container_ptr> handlers;
+
+        handlers.push_back(build_vm_enter());
+        handlers.push_back(build_vm_exit());
+
+        handlers.push_back(build_rflags_load());
+        handlers.push_back(build_rflags_store());
+
+        handlers.append_range(build_instruction_handlers());
+
+        handlers.append_range(build_pop());
+        handlers.append_range(build_push());
+
+        for (auto& [_, variant_handler] : register_load_handlers)
+            for (auto& container : variant_handler.variant_pairs | std::views::keys)
+                handlers.push_back(container);
+
+        for (auto& [_, variant_handler] : register_store_handlers)
+            for (auto& container : variant_handler.variant_pairs | std::views::keys)
+                handlers.push_back(container);
+
+        return handlers;
+    }
+
     asmb::code_label_ptr handler_manager::get_instruction_handler(const mnemonic mnemonic, const ir::x86_operand_sig& operand_sig)
     {
         const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
@@ -415,7 +464,7 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr handler_manager::build_vm_enter()
     {
-        auto& [container, label] = vm_enter.get_pair();
+        auto [container, label] = vm_enter.get_pair();
         container->bind(label);
 
         // TODO: this is a temporary fix before i add stack overrun checks
@@ -496,10 +545,10 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr handler_manager::build_vm_exit()
     {
-        auto& [container, label] = vm_exit.get_pair();
+        auto [container, label] = vm_exit.get_pair();
         container->bind(label);
 
-        reg temp = rm->get_any();
+        reg temp = regs_context->get_any();
 
         // we need to place the target RSP after all the pops
         // lea VTEMP, [VREGS + vm_stack_regs]
@@ -561,7 +610,7 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr handler_manager::build_rflags_load()
     {
-        auto& [container, label] = vm_rflags_load.get_pair();
+        auto [container, label] = vm_rflags_load.get_pair();
         container->bind(label);
 
         container->add({
@@ -581,7 +630,7 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr handler_manager::build_rflags_store()
     {
-        auto& [container, label] = vm_rflags_load.get_pair();
+        auto [container, label] = vm_rflags_load.get_pair();
         container->bind(label);
 
         container->add({
@@ -602,18 +651,14 @@ namespace eagle::virt::eg
     std::vector<asmb::code_container_ptr> handler_manager::build_push()
     {
         std::vector<asmb::code_container_ptr> context_stores;
-        for (uint8_t i = 0; i < 4; i++)
+        for (auto& [target_reg, variant_handler] : vm_push)
         {
-            tagged_handler& handler = vm_push[i];
-            if (!handler.get_tagged())
-                continue;
-
-            auto& [container, label] = handler.get_pair();
+            auto& [container, label] = variant_handler;
             container->bind(label);
 
-            const reg_size reg_size = load_store_index_size(i);
+            const reg_size reg_size = load_store_index_size(target_reg);
 
-            reg target_temp = get_bit_version(get_push_working_register(), reg_size);
+            reg target_temp = get_bit_version(target_reg, reg_size);
             container->add({
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, -TOB(reg_size), TOB(bit_64))),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(reg_size)), ZREG(target_temp))
@@ -626,7 +671,7 @@ namespace eagle::virt::eg
         return context_stores;
     }
 
-    codec::reg handler_manager::get_pop_working_register()
+    reg handler_manager::get_pop_working_register()
     {
         assert(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
         return regs->get_reserved_temp(0);
@@ -635,18 +680,14 @@ namespace eagle::virt::eg
     std::vector<asmb::code_container_ptr> handler_manager::build_pop()
     {
         std::vector<asmb::code_container_ptr> context_stores;
-        for (uint8_t i = 0; i < 4; i++)
+        for (auto& [target_reg, variant_handler] : vm_pop)
         {
-            tagged_handler& handler = vm_pop[i];
-            if (!handler.get_tagged())
-                continue;
-
-            auto& [container, label] = handler.get_pair();
+            auto& [container, label] = variant_handler;
             container->bind(label);
 
-            const reg_size reg_size = load_store_index_size(i);
+            const reg_size reg_size = load_store_index_size(target_reg);
 
-            reg target_temp = get_bit_version(get_pop_working_register(), reg_size);
+            reg target_temp = get_bit_version(target_reg, reg_size);
             container->add({
                 encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, TOB(reg_size))),
                 encode(m_lea, ZREG(VSP), ZMEMBD(VSP, TOB(reg_size), 8)),
@@ -657,6 +698,30 @@ namespace eagle::virt::eg
         }
 
         return context_stores;
+    }
+
+    std::vector<asmb::code_container_ptr> handler_manager::build_instruction_handlers()
+    {
+        std::vector<asmb::code_container_ptr> container;
+        for (const auto& [key, label] : tagged_instruction_handlers)
+        {
+            auto [mnemonic, handler_id] = key;
+
+            const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
+            ir::ir_insts handler_ir = target_mnemonic->gen_handler(handler_id);
+
+            // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
+            ir::block_ptr ir_block = std::make_shared<ir::block_ir>();
+            ir_block->add_command(handler_ir);
+
+            const asmb::code_container_ptr handler = machine->lift_block(ir_block);
+            handler->bind_start(label);
+
+            create_vm_return(handler);
+            container.push_back(handler);
+        }
+
+        return container;
     }
 
     std::vector<reg_mapped_range> handler_manager::get_relevant_ranges(const reg source_reg) const
@@ -716,14 +781,6 @@ namespace eagle::virt::eg
         }
 
         return { true, reg };
-    }
-
-    void handler_manager::handle_load_register_gpr64()
-    {
-    }
-
-    void handler_manager::handle_load_register_xmm()
-    {
     }
 
     void handler_manager::create_vm_return(const asmb::code_container_ptr& container) const
