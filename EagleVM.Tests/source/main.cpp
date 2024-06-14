@@ -34,7 +34,7 @@ const std::string inclusive_tests[] = {
 };
 
 #pragma section(".run_section", execute)
-__declspec(allocate(".run_section")) unsigned char run_buffer[0x1000] = { };
+__declspec(allocate(".run_section")) unsigned char run_buffer[0x2000] = { };
 
 using namespace eagle;
 
@@ -73,7 +73,6 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_vm_gpr_order = true;
     machine_settings->shuffle_vm_xmm_order = true;
 
-
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
@@ -97,7 +96,7 @@ int main(int argc, char* argv[])
         int passed = 0;
         int failed = 0;
 
-        #ifdef _DEBUG
+        #ifndef _DEBUG
         outfile.basic_ios::rdbuf(std::cout.rdbuf());
         #endif
 

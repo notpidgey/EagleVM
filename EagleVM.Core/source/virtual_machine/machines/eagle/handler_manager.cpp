@@ -59,7 +59,7 @@ namespace eagle::virt::eg
         : working_block(nullptr), machine(std::move(machine)), regs(std::move(regs)), regs_context(regs_context), settings(std::move(settings))
     {
         vm_overhead = 8 * 100;
-        vm_stack_regs = 17;
+        vm_stack_regs = 16 * 2; // we only save xmm registers on the stack
         vm_call_stack = 3;
     }
 
@@ -77,7 +77,7 @@ namespace eagle::virt::eg
         if (!status) return;
 
         // create a new handler
-        auto [out, label] = register_load_handlers[register_load].add_pair();
+        auto [out, label] = register_load_handlers[source_reg].add_pair();
         out->bind(label);
 
         reg target_register = destination->get_store_register();
@@ -270,6 +270,7 @@ namespace eagle::virt::eg
             stored_ranges.push_back(source_range);
         }
 
+        create_vm_return(out);
         call_vm_handler(label);
     }
 
@@ -358,7 +359,7 @@ namespace eagle::virt::eg
 
                 auto handle_lb = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    reg temp_xmm_q = regs->get_reserved_temp_xmm(0);
+                    reg temp_xmm_q = regs->get_reserved_temp(0);
 
                     uint8_t bit_length = to - from;
                     out->add({
@@ -420,6 +421,9 @@ namespace eagle::virt::eg
                 }
             }
         }
+
+        create_vm_return(out);
+        call_vm_handler(label);
     }
 
     asmb::code_label_ptr handler_manager::get_push(reg target_reg, reg_size size)

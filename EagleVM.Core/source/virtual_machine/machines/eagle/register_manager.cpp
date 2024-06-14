@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <ranges>
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
@@ -40,6 +41,7 @@ namespace eagle::virt::eg
             for (int i = codec::xmm0; i <= codec::xmm15; i++)
                 push_order[i - codec::xmm0] = static_cast<codec::reg>(i);
 
+            push_order[16] = codec::rax;
             for (int i = codec::rax; i <= codec::r15; i++)
                 push_order[i - codec::rax + 16] = static_cast<codec::reg>(i);
 
@@ -109,7 +111,7 @@ namespace eagle::virt::eg
             for (size_t i = 0; i < points.size() - 1; ++i)
                 register_ranges.emplace_back(points[i], points[i + 1]);
 
-            for (auto& [first, last] : register_ranges)
+            for (const auto& [first, last] : register_ranges)
             {
                 const uint16_t length = last - first;
 
@@ -147,22 +149,31 @@ namespace eagle::virt::eg
                     return std::nullopt;
                 };
 
-                // get random destination register
-                std::uniform_int_distribution<uint64_t> distr(0, dest_register_map.size() - 1);
-                auto it = dest_register_map.begin();
-                const uint64_t random_dest_idx = util::ran_device::get().gen_dist(distr);
-                std::advance(it, random_dest_idx);
+                // Shuffle the keys in dest_register_map to iterate in random order
+                std::vector<codec::reg> dest_regs;
 
-                auto& [dest_reg, occ_ranges] = *it;
+                for (const auto& reg : dest_register_map | std::views::keys) dest_regs.push_back(reg);
+                std::ranges::shuffle(dest_regs, util::ran_device::get().gen);
 
-                std::optional<reg_range> found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg));
-                assert(found_range.has_value(), "unable to find valid range to map registers");
+                bool range_mapped = false;
+                for (const auto& dest_reg : dest_regs)
+                {
+                    auto& occ_ranges = dest_register_map[dest_reg];
 
-                occ_ranges.push_back(found_range.value());
+                    if (std::optional<reg_range> found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg)))
+                    {
+                        occ_ranges.push_back(found_range.value());
 
-                // insert into source registers
-                std::vector<reg_mapped_range>& source_register = source_register_map[avail_reg];
-                source_register.push_back({ { first, last }, found_range.value(), dest_reg });
+                        // insert into source registers
+                        std::vector<reg_mapped_range>& source_register = source_register_map[avail_reg];
+                        source_register.push_back({ { first, last }, found_range.value(), dest_reg });
+
+                        range_mapped = true;
+                        break; // exit loop once a valid range is found
+                    }
+                }
+
+                assert(range_mapped, "unable to find valid range to map registers");
             }
         }
     }
@@ -216,7 +227,7 @@ namespace eagle::virt::eg
     std::vector<codec::reg> register_manager::get_unreserved_temp() const
     {
         std::vector<codec::reg> out;
-        for(uint8_t i = 0; i < num_v_temp_unreserved; i++)
+        for (uint8_t i = 0; i < num_v_temp_unreserved; i++)
             out.push_back(virtual_order_gpr[virtual_order_gpr.size() - 1 - i]);
 
         return out;

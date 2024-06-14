@@ -118,7 +118,7 @@ namespace eagle::virt::eg
         /**
         * order 0-first 31-last in which registers have been pushed to the the stack
         */
-        std::array<codec::reg, 32> push_order{ };
+        std::array<codec::reg, 16> push_order{ };
 
         /**
         * when assigning virtual machine registers such as VREGS, VIP, VSP, VTEMP(x)
