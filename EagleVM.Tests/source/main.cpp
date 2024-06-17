@@ -34,7 +34,7 @@ const std::string inclusive_tests[] = {
 };
 
 #pragma section(".run_section", execute)
-__declspec(allocate(".run_section")) unsigned char run_buffer[0x2000] = { };
+__declspec(allocate(".run_section")) unsigned char run_buffer[0x100000] = { };
 
 using namespace eagle;
 
@@ -67,7 +67,6 @@ int main(int argc, char* argv[])
     machine_settings->randomize_working_register = false;
     machine_settings->single_vm_handlers = false;
     machine_settings->single_register_handlers = false;
-    machine_settings->chance_to_generate_register_handler = 0.5;
 
     machine_settings->shuffle_push_order = true;
     machine_settings->shuffle_vm_gpr_order = true;
@@ -96,7 +95,7 @@ int main(int argc, char* argv[])
         int passed = 0;
         int failed = 0;
 
-        #ifndef _DEBUG
+        #ifdef _DEBUG
         outfile.basic_ios::rdbuf(std::cout.rdbuf());
         #endif
 
@@ -214,9 +213,7 @@ int main(int argc, char* argv[])
             }
 
             #ifdef _DEBUG
-            if(!bp)
-                continue;
-            else
+            if(bp)
                 __debugbreak();
             #endif
 

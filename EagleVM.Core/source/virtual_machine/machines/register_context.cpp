@@ -15,6 +15,11 @@ namespace eagle::virt
             avaliable_stores.insert(store);
     }
 
+    std::unordered_set<codec::reg> register_context::get_all_availiable()
+    {
+        return avaliable_stores;
+    }
+
     codec::reg register_context::assign(const ir::discrete_store_ptr& store)
     {
         if (store->get_finalized())
@@ -23,12 +28,8 @@ namespace eagle::virt
         const codec::reg target_register_64 = pop_availiable_store();
         block(target_register_64);
 
-        const codec::reg_class target_class = codec::get_class_from_size(to_reg_size(store->get_store_size()));
-
-        const codec::reg target_register = get_bit_version(target_register_64, target_class);
-        store->finalize_register(target_register);
-
-        return target_register;
+        store->finalize_register(target_register_64);
+        return target_register_64;
     }
 
     codec::reg register_context::get_any()

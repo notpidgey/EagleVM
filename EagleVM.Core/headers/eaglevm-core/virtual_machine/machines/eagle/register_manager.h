@@ -42,6 +42,7 @@ namespace eagle::virt::eg
         * requires: init_reg_order must be called prior to function call
         */
         void create_mappings();
+        std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         /**
         *
@@ -109,6 +110,11 @@ namespace eagle::virt::eg
         */
         static uint8_t index_vbase;
 
+        /**
+        * @return GPR registers in order r0-r15
+        */
+        static std::array<codec::reg, 16> get_gpr64_regs();
+        static std::array<codec::reg, 16> get_xmm_regs();
     private:
         settings_ptr settings;
 
@@ -118,7 +124,7 @@ namespace eagle::virt::eg
         /**
         * order 0-first 31-last in which registers have been pushed to the the stack
         */
-        std::array<codec::reg, 16> push_order{ };
+        std::array<codec::reg, 32> push_order{ };
 
         /**
         * when assigning virtual machine registers such as VREGS, VIP, VSP, VTEMP(x)
@@ -141,11 +147,5 @@ namespace eagle::virt::eg
 
         uint8_t num_v_temp_xmm_unreserved;
         uint8_t num_v_temp_xmm_reserved;
-
-        /**
-        * @return GPR registers in order r0-r15
-        */
-        static std::array<codec::reg, 16> get_gpr64_regs();
-        static std::array<codec::reg, 16> get_xmm_regs();
     };
 }

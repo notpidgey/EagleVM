@@ -51,8 +51,6 @@ namespace eagle::virt::eg
         const size_t command_count = block->get_command_count();
 
         const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + std::to_string(command_count), true);
-        han_man->set_working_block(code);
-
         if (block_context.contains(block))
         {
             const asmb::code_label_ptr label = block_context[block];
@@ -65,39 +63,54 @@ namespace eagle::virt::eg
             handle_cmd(code, command);
         }
 
+        reg_ctx = std::make_shared<register_context>(reg_man->get_unreserved_temp());
         return code;
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, const ir::cmd_context_load_ptr cmd)
     {
         // we want to load this register onto the stack
         const reg target_reg = cmd->get_reg();
         const reg_size reg_size = get_reg_size(target_reg);
 
         const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(reg_size));
-        storage->finalize_register(reg_ctx->get_any());
+        reg_ctx->assign(storage);
 
         // load into storage
-        han_man->load_register(target_reg, storage);
+        auto [handler, working_reg] = han_man->load_register(target_reg, storage);
+
+        block->add(encode(m_xor, ZREG(working_reg), ZREG(working_reg)));
+        han_man->call_vm_handler(block, handler);
+
+        if (working_reg != storage->get_store_register())
+            block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
 
         // push onto stack
         call_push(block, storage);
+
+        reg_ctx->release(storage);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr block, const ir::cmd_context_store_ptr cmd)
     {
         // we want to store a value into this register from the stack
         const reg target_reg = cmd->get_reg();
         const reg_size reg_size = get_reg_size(target_reg);
 
         const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(reg_size));
-        storage->finalize_register(reg_ctx->get_any());
+        reg_ctx->assign(storage);
 
         // pop into storage
         call_pop(block, storage);
 
         // store into target
-        han_man->store_register(target_reg, storage);
+        auto [handler, working_reg] = han_man->store_register(target_reg, storage);
+        if (working_reg != storage->get_store_register())
+            block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
+
+        han_man->call_vm_handler(block, handler);
+
+        reg_ctx->release(storage);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
@@ -157,12 +170,12 @@ namespace eagle::virt::eg
         if (cmd->is_operand_sig())
         {
             const auto sig = cmd->get_x86_signature();
-            han_man->call_vm_handler(han_man->get_instruction_handler(cmd->get_mnemonic(), sig));
+            han_man->call_vm_handler(block, han_man->get_instruction_handler(cmd->get_mnemonic(), sig));
         }
         else
         {
             const auto sig = cmd->get_handler_signature();
-            han_man->call_vm_handler(han_man->get_instruction_handler(cmd->get_mnemonic(), sig));
+            han_man->call_vm_handler(block, han_man->get_instruction_handler(cmd->get_mnemonic(), sig));
         }
     }
 
@@ -268,13 +281,13 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_load_ptr)
     {
         const asmb::code_label_ptr vm_rflags_load = han_man->get_rlfags_load();
-        han_man->call_vm_handler(vm_rflags_load);
+        han_man->call_vm_handler(block, vm_rflags_load);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_store_ptr)
     {
         const asmb::code_label_ptr vm_rflags_store = han_man->get_rflags_store();
-        han_man->call_vm_handler(vm_rflags_store);
+        han_man->call_vm_handler(block, vm_rflags_store);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
@@ -381,7 +394,7 @@ namespace eagle::virt::eg
                 if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr& store = arg;
-                    add_op(request, ZREG(store->get_store_register()));
+                    add_op(request, ZREG(get_bit_version(store->get_store_register(), to_reg_size(store->get_store_size()))));
                 }
             }, op);
         }
@@ -424,7 +437,7 @@ namespace eagle::virt::eg
             pushing_register = shared->get_store_register();
         }
 
-        han_man->call_vm_handler(han_man->get_push(pushing_register, size));
+        han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
     }
 
     void machine::call_push(const asmb::code_container_ptr& block, const codec::reg target_reg)
@@ -445,49 +458,45 @@ namespace eagle::virt::eg
             pushing_register = get_bit_version(target_reg, bit_64);
         }
 
-        han_man->call_vm_handler(han_man->get_push(pushing_register, size));
+        han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
     }
 
-    void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared)
+    void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const
     {
-        reg pushing_register;
         const reg_size size = to_reg_size(shared->get_store_size());
-
         if (!settings->randomize_working_register)
         {
-            pushing_register = han_man->get_pop_working_register();
+            const reg returning_reg = han_man->get_pop_working_register();
 
-            reg target_returning = get_bit_version(pushing_register, size);
+            reg target_returning = get_bit_version(returning_reg, size);
             reg target_store = get_bit_version(shared->get_store_register(), size);
-            block->add(encode(m_mov, ZREG(target_returning), ZREG(target_store)));
+
+            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
+            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
         }
         else
         {
-            pushing_register = shared->get_store_register();
+            han_man->call_vm_handler(block, han_man->get_pop(shared->get_store_register(), size));
         }
-
-        han_man->call_vm_handler(han_man->get_pop(pushing_register, size));
     }
 
-    void machine::call_pop(const asmb::code_container_ptr& block, const codec::reg target_reg)
+    void machine::call_pop(const asmb::code_container_ptr& block, const reg target_reg) const
     {
-        reg pushing_register;
         const reg_size size = get_reg_size(target_reg);
-
         if (!settings->randomize_working_register)
         {
-            pushing_register = han_man->get_pop_working_register();
+            const reg returning_reg = han_man->get_pop_working_register();
 
-            reg target_returning = get_bit_version(pushing_register, size);
+            reg target_returning = get_bit_version(returning_reg, size);
             reg target_store = get_bit_version(target_reg, size);
-            block->add(encode(m_mov, ZREG(target_returning), ZREG(target_store)));
+
+            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
+            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
         }
         else
         {
-            pushing_register = get_bit_version(target_reg, bit_64);
+            han_man->call_vm_handler(block, han_man->get_pop(target_reg, size));
         }
-
-        han_man->call_vm_handler(han_man->get_pop(pushing_register, size));
     }
 
     reg machine::reg_vm_to_register(const ir::reg_vm store) const
@@ -497,34 +506,34 @@ namespace eagle::virt::eg
         {
             case ir::reg_vm::vip:
                 size = ir::ir_size::bit_64;
-            break;
+                break;
             case ir::reg_vm::vip_32:
                 size = ir::ir_size::bit_32;
-            break;
+                break;
             case ir::reg_vm::vip_16:
                 size = ir::ir_size::bit_16;
-            break;
+                break;
             case ir::reg_vm::vip_8:
                 size = ir::ir_size::bit_8;
-            break;
+                break;
             case ir::reg_vm::vsp:
                 size = ir::ir_size::bit_64;
-            break;
+                break;
             case ir::reg_vm::vsp_32:
                 size = ir::ir_size::bit_32;
-            break;
+                break;
             case ir::reg_vm::vsp_16:
                 size = ir::ir_size::bit_16;
-            break;
+                break;
             case ir::reg_vm::vsp_8:
                 size = ir::ir_size::bit_8;
-            break;
+                break;
             case ir::reg_vm::vbase:
                 size = ir::ir_size::bit_64;
-            break;
+                break;
             default:
                 assert("invalid case reached for reg_vm");
-            break;
+                break;
         }
 
         reg reg = none;
@@ -535,19 +544,19 @@ namespace eagle::virt::eg
             case ir::reg_vm::vip_16:
             case ir::reg_vm::vip_8:
                 reg = VIP;
-            break;
+                break;
             case ir::reg_vm::vsp:
             case ir::reg_vm::vsp_32:
             case ir::reg_vm::vsp_16:
             case ir::reg_vm::vsp_8:
                 reg = VSP;
-            break;
+                break;
             case ir::reg_vm::vbase:
                 reg = VBASE;
-            break;
+                break;
             default:
                 assert("invalid case reached for reg_vm");
-            break;
+                break;
         }
 
         return get_bit_version(reg, to_reg_size(size));

@@ -42,12 +42,6 @@ namespace eagle::virt::eg
         bool single_register_handlers = false;
 
         /**
-         * when "single_use_register_handlers" is set to false,
-         * this value will be used to determine the chance of generating a new handler
-         */
-        float chance_to_generate_register_handler = .3;
-
-        /**
          * before each command is translated, there will be a chance for the machine to generate code
          * which writes to unused register space occupied by x86 context storing register
          */

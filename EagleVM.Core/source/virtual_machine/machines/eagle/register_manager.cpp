@@ -9,7 +9,7 @@
 
 namespace eagle::virt::eg
 {
-    uint8_t register_manager::num_v_regs = 6;
+    uint8_t register_manager::num_v_regs = 8; // regular VREGS + RSP + RAX
     uint8_t register_manager::num_gpr_regs = 16;
 
     uint8_t register_manager::index_vip = 0;
@@ -25,7 +25,7 @@ namespace eagle::virt::eg
 
         virtual_order_gpr = get_gpr64_regs();
 
-        num_v_temp_reserved = settings->randomize_working_register ? 0 : 2;
+        num_v_temp_reserved = settings->randomize_working_register ? 0 : 3;
         num_v_temp_unreserved = num_gpr_regs - num_v_regs - num_v_temp_reserved;
 
         num_v_temp_xmm_reserved = 2;
@@ -41,7 +41,6 @@ namespace eagle::virt::eg
             for (int i = codec::xmm0; i <= codec::xmm15; i++)
                 push_order[i - codec::xmm0] = static_cast<codec::reg>(i);
 
-            push_order[16] = codec::rax;
             for (int i = codec::rax; i <= codec::r15; i++)
                 push_order[i - codec::rax + 16] = static_cast<codec::reg>(i);
 
@@ -58,6 +57,23 @@ namespace eagle::virt::eg
 
             if (settings->shuffle_vm_gpr_order)
                 std::ranges::shuffle(virtual_order_gpr, util::ran_device::get().gen);
+
+            // force RSP to be at virtual_order_gpr[num_vregs - 1]
+            // force RAX to be at virtual_order_gpr[num_vregs - 2]
+
+            // find the positions of RSP and RAX in the vector
+            const auto it_rsp = std::ranges::find(virtual_order_gpr, codec::rsp);
+            const auto it_rax = std::ranges::find(virtual_order_gpr, codec::rax);
+
+            // check if RSP and RAX were found in the vector
+            if (it_rsp != virtual_order_gpr.end() && it_rax != virtual_order_gpr.end())
+            {
+                // swap RSP with the element at position num_vregs
+                std::iter_swap(it_rsp, virtual_order_gpr.begin() + num_v_regs - 1);
+
+                // swap RAX with the element at position num_vregs + 1
+                std::iter_swap(it_rax, virtual_order_gpr.begin() + num_v_regs - 2);
+            }
         }
 
         // setup xmm order
@@ -75,10 +91,6 @@ namespace eagle::virt::eg
             // xmm all avail
             for (int i = 0; i < num_v_temp_xmm_unreserved; i++)
                 dest_register_map[virtual_order_xmm[virtual_order_xmm.size() - 1 - i]] = { };
-
-            // gpr all avail
-            for (int i = 0; i < num_v_temp_unreserved; i++)
-                dest_register_map[virtual_order_gpr[virtual_order_gpr.size() - 1 - i]] = { };
         }
     }
 
@@ -159,14 +171,33 @@ namespace eagle::virt::eg
                 for (const auto& dest_reg : dest_regs)
                 {
                     auto& occ_ranges = dest_register_map[dest_reg];
-
                     if (std::optional<reg_range> found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg)))
                     {
-                        occ_ranges.push_back(found_range.value());
-
                         // insert into source registers
                         std::vector<reg_mapped_range>& source_register = source_register_map[avail_reg];
-                        source_register.push_back({ { first, last }, found_range.value(), dest_reg });
+                        if (get_reg_class(dest_reg) == codec::xmm_128)
+                        {
+                            // check for cross boundary
+                            auto [from, to] = found_range.value();
+                            if (from <= 63 && to > 64)
+                            {
+                                // write across boundary
+                                // this means we need to create two different ones
+
+                                source_register.push_back({ { first, first + (64 - from) }, { from, 64 }, dest_reg });
+                                source_register.push_back({ { first + (64 - from), last }, { 64, to }, dest_reg });
+                            }
+                            else
+                            {
+                                source_register.push_back({ { first, last }, found_range.value(), dest_reg });
+                            }
+                        }
+                        else
+                        {
+                            source_register.push_back({ { first, last }, found_range.value(), dest_reg });
+                        }
+
+                        occ_ranges.push_back(found_range.value());
 
                         range_mapped = true;
                         break; // exit loop once a valid range is found
@@ -176,6 +207,33 @@ namespace eagle::virt::eg
                 assert(range_mapped, "unable to find valid range to map registers");
             }
         }
+    }
+
+    std::pair<uint32_t, codec::reg_size> register_manager::get_stack_displacement(const codec::reg reg) const
+    {
+        //determine 64bit version of register
+        const codec::reg_size reg_size = get_reg_size(reg);
+        const codec::reg bit64_reg = get_bit_version(reg, codec::reg_class::gpr_64);
+
+        int found_offset = 0;
+        const auto reg_count = push_order.size();
+
+        for (int i = 0; i < reg_count; i++)
+        {
+            if (bit64_reg == push_order[i])
+                break;
+
+            found_offset += get_reg_size(push_order[i]) / 8;
+        }
+
+        int offset = 0;
+        if (reg_size == codec::reg_size::bit_8)
+        {
+            if (is_upper_8(reg))
+                offset = 1;
+        }
+
+        return { found_offset + offset, reg_size };
     }
 
     std::vector<reg_mapped_range> register_manager::get_register_mapped_ranges(const codec::reg reg)

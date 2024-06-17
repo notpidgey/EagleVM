@@ -57,7 +57,7 @@ private:
     std::vector<uint8_t> instructions;
 
     void* run_area = nullptr;
-    uint16_t run_area_size = 0;
+    uint32_t run_area_size = 0;
     bool clear_run_area = true;
 
     CONTEXT result_context{};

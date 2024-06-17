@@ -210,7 +210,6 @@ int main(int argc, char* argv[])
         machine_settings->randomize_working_register = false;
         machine_settings->single_vm_handlers = false;
         machine_settings->single_register_handlers = false;
-        machine_settings->chance_to_generate_register_handler = 0.5;
 
         machine_settings->shuffle_push_order = true;
         machine_settings->shuffle_vm_gpr_order = true;

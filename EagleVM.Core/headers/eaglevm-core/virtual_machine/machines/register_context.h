@@ -11,6 +11,8 @@ namespace eagle::virt
     public:
         explicit register_context(const std::vector<codec::reg>& stores);
 
+        std::unordered_set<codec::reg> get_all_availiable();
+
         codec::reg assign(const ir::discrete_store_ptr& store);
         codec::reg get_any();
         std::vector<codec::reg> get_any_multiple(uint8_t count);
