@@ -20,7 +20,6 @@ public:
     run_container(const std::vector<uint8_t>& data,
         const reg_overwrites& input, const reg_overwrites& output)
     {
-        instructions = data;
         input_writes = input;
         output_writes = output;
 
@@ -43,19 +42,13 @@ public:
     void set_result(PCONTEXT result);
     CONTEXT get_safe_context();
 
-    memory_range create_run_area(uint32_t size = 0x1000);
     void set_run_area(uint64_t address, uint32_t size, bool clear);
-
-    void free_run_area();
-
     void* get_run_area();
 
     static void init_veh();
     static void destroy_veh();
 
 private:
-    std::vector<uint8_t> instructions;
-
     void* run_area = nullptr;
     uint32_t run_area_size = 0;
     bool clear_run_area = true;

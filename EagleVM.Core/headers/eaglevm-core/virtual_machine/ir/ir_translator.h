@@ -9,7 +9,7 @@
 
 namespace eagle::dasm
 {
-    class segment_dasm;
+    using segment_dasm_ptr = std::shared_ptr<class segment_dasm>;
 }
 
 namespace eagle::ir
@@ -24,7 +24,7 @@ namespace eagle::ir
     class ir_translator
     {
     public:
-        explicit ir_translator(dasm::segment_dasm* seg_dasm);
+        explicit ir_translator(dasm::segment_dasm_ptr seg_dasm);
 
         std::vector<preopt_block_ptr> translate(bool split);
         std::vector<block_vm_id> flatten(
@@ -37,16 +37,16 @@ namespace eagle::ir
             const std::vector<preopt_block_ptr>& extern_call_blocks = { }
         );
 
-        dasm::basic_block* map_basic_block(const preopt_block_ptr& preopt_target);
-        preopt_block_ptr map_preopt_block(dasm::basic_block* basic_block);
+        dasm::basic_block_ptr map_basic_block(const preopt_block_ptr& preopt_target);
+        preopt_block_ptr map_preopt_block(dasm::basic_block_ptr basic_block);
 
     private:
-        dasm::segment_dasm* dasm;
+        dasm::segment_dasm_ptr dasm;
 
-        std::unordered_map<dasm::basic_block*, preopt_block_ptr> bb_map;
+        std::unordered_map<dasm::basic_block_ptr, preopt_block_ptr> bb_map;
 
-        preopt_block_ptr translate_block(dasm::basic_block* bb);
-        preopt_block_ptr translate_block_split(dasm::basic_block* bb);
+        preopt_block_ptr translate_block(dasm::basic_block_ptr bb);
+        preopt_block_ptr translate_block_split(dasm::basic_block_ptr bb);
 
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
 
@@ -56,12 +56,12 @@ namespace eagle::ir
     class preopt_block
     {
     public:
-        void init(dasm::basic_block* block);
+        void init(dasm::basic_block_ptr block);
 
         bool has_head() const;
         block_ptr get_entry();
 
-        dasm::basic_block* get_original_block() const;
+        dasm::basic_block_ptr get_original_block() const;
         block_ptr get_head();
         void clear_head();
 
@@ -71,7 +71,7 @@ namespace eagle::ir
         void add_body(const block_ptr& block);
 
     private:
-        dasm::basic_block* original_block = nullptr;
+        dasm::basic_block_ptr original_block = nullptr;
 
         block_ptr head;
         std::vector<block_ptr> body;

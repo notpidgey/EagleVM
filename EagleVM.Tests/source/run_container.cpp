@@ -7,10 +7,6 @@
 #pragma optimize("", off)
 std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
 {
-    if (!run_area)
-        create_run_area();
-
-    memcpy(run_area, instructions.data(), instructions.size());
     CONTEXT output_target, input_target;
 
     bool test_ran = false;
@@ -48,20 +44,9 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
     }
 
     remove_veh();
-
-    if (clear_run_area)
-        free_run_area();
-    else
-        memset(run_area, 0xCC, run_area_size);
-
     return { result_context, output_target };
 }
 #pragma optimize("", on)
-
-void run_container::set_instruction_data(const std::vector<uint8_t>& data)
-{
-    instructions = data;
-}
 
 void run_container::set_result(const PCONTEXT result)
 {
@@ -71,23 +56,6 @@ void run_container::set_result(const PCONTEXT result)
 CONTEXT run_container::get_safe_context()
 {
     return safe_context;
-}
-
-memory_range run_container::create_run_area(const uint32_t size)
-{
-    if (run_area)
-        free_run_area();
-
-    run_area_size = size;
-    run_area = VirtualAlloc(
-        nullptr,
-        size,
-        MEM_COMMIT | MEM_RESERVE,
-        PAGE_EXECUTE_READWRITE
-    );
-
-    memset(run_area, 0xCC, run_area_size);
-    return get_range();
 }
 
 void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
@@ -115,14 +83,6 @@ void run_container::remove_veh()
 {
     std::lock_guard lock(run_tests_mutex);
     run_tests.erase(get_range());
-}
-
-void run_container::free_run_area()
-{
-    VirtualFree(run_area, 0x1000, MEM_RELEASE);
-
-    run_area = nullptr;
-    run_area_size = 0;
 }
 
 void* run_container::get_run_area()

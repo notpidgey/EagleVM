@@ -80,7 +80,6 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     reg_overwrites ins = build_writes(inputs);
     reg_overwrites outs = build_writes(outputs);
 
-    run_container container(ins, outs);
     std::vector<uint8_t> instruction_data = test_util::parse_hex(instr_data);
     instruction_data.push_back(0x0F);
     instruction_data.push_back(0x01);
@@ -88,10 +87,10 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
     codec::decode_vec instructions = codec::get_instructions(instruction_data.data(), instruction_data.size());
 
-    dasm::segment_dasm dasm(std::move(instructions), 0, instruction_data.size());
-    dasm.generate_blocks();
+    dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), 0, instruction_data.size());
+    dasm->generate_blocks();
 
-    ir::ir_translator ir_trans(&dasm);
+    ir::ir_translator ir_trans(dasm);
     ir::preopt_block_vec preopt = ir_trans.translate(true);
 
     // here we assign vms to each block
@@ -104,7 +103,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
     for (const auto& preopt_block : preopt)
-        if (preopt_block->get_original_block() == dasm.get_block(0))
+        if (preopt_block->get_original_block() == dasm->get_block(0))
             entry_block = preopt_block;
 
     assert(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -149,21 +148,24 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
     constexpr auto run_space_size = 0x50000;
     uint64_t run_space = reinterpret_cast<uint64_t>(VirtualAlloc(nullptr, run_space_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE));
+
     codec::encoded_vec virtualized_instruction = vm_section.compile_section(run_space);
+    memcpy(reinterpret_cast<void*>(run_space), virtualized_instruction.data(), virtualized_instruction.size());
 
     assert(run_space_size >= virtualized_instruction.size(), "run space is not big enough");
 
+    run_container container(ins, outs);
     container.set_run_area(run_space, run_space_size, false);
-    container.set_instruction_data(virtualized_instruction);
 
 #ifdef _DEBUG
     if (bp)
         __debugbreak();
-    else
-        return;
 #endif
 
+    spdlog::get("console_logger")->info("starting {} run at {:x}", instr.c_str(), run_space);
     auto [result_context, output_target] = container.run(bp);
+
+    VirtualFree(reinterpret_cast<void*>(run_space), run_space_size, MEM_DECOMMIT);
 
     // result_context is being set in the exception handler
     const uint32_t result = compare_context(

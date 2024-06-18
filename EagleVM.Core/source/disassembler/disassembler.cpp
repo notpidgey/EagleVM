@@ -11,7 +11,7 @@ namespace eagle::dasm
         rva_end = binary_end;
     }
 
-    basic_block* segment_dasm::generate_blocks()
+    basic_block_ptr segment_dasm::generate_blocks()
     {
         uint64_t block_start_rva = rva_begin;
         uint64_t current_rva = rva_begin;
@@ -25,7 +25,7 @@ namespace eagle::dasm
                 inst.instruction.mnemonic != ZYDIS_MNEMONIC_CALL)
             {
                 // end of our block
-                basic_block* block = new basic_block();
+                basic_block_ptr block = std::make_shared<basic_block>();
                 block->start_rva = block_start_rva;
                 block->end_rva_inc = current_rva + inst.instruction.length;
                 block->decoded_insts = block_instructions;
@@ -41,7 +41,7 @@ namespace eagle::dasm
 
         if (!block_instructions.empty())
         {
-            basic_block* block = new basic_block();
+            basic_block_ptr block = std::make_shared<basic_block>();
             block->start_rva = block_start_rva;
             block->end_rva_inc = current_rva;
             block->decoded_insts = block_instructions;
@@ -54,7 +54,7 @@ namespace eagle::dasm
         for (int i = 0; i < blocks.size(); i++)
         {
             // we only care about jumping blocks inside of the segment
-            const basic_block* block = blocks[i];
+            const basic_block_ptr block = blocks[i];
             if (block->get_end_reason() == block_end)
                 continue;
 
@@ -62,8 +62,8 @@ namespace eagle::dasm
             if (jump_type != jump_inside_segment)
                 continue;
 
-            basic_block* new_block = nullptr;
-            for (basic_block* target_block : blocks)
+            basic_block_ptr new_block = std::make_shared<basic_block>();
+            for (basic_block_ptr target_block : blocks)
             {
                 // non inclusive is key because we might already be at that block
                 if (jump_rva <= target_block->start_rva || jump_rva >= target_block->end_rva_inc)
@@ -71,7 +71,7 @@ namespace eagle::dasm
 
                 // we found a jump to the middle of a block
                 // we need to split the block
-                basic_block* split_block = new basic_block();
+                basic_block_ptr split_block = std::make_shared<basic_block>();
                 split_block->start_rva = jump_rva;
                 split_block->end_rva_inc = target_block->end_rva_inc;
                 target_block->end_rva_inc = jump_rva;
@@ -105,7 +105,7 @@ namespace eagle::dasm
 
 
         std::ranges::sort(blocks,
-            [](const basic_block* a, const basic_block* b)
+            [](const basic_block_ptr a, const basic_block_ptr b)
             {
                 return a->start_rva < b->start_rva;
             });
@@ -113,7 +113,7 @@ namespace eagle::dasm
         return blocks[0];
     }
 
-    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block* block, bool last)
+    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block_ptr block, bool last)
     {
         block_end_reason end_reason = block->get_end_reason();
         if (last)
@@ -154,9 +154,9 @@ namespace eagle::dasm
         return jump_outside_segment;
     }
 
-    basic_block* segment_dasm::get_block(const uint64_t rva) const
+    basic_block_ptr segment_dasm::get_block(const uint64_t rva) const
     {
-        for (basic_block* block : blocks)
+        for (basic_block_ptr block : blocks)
         {
             if (block->start_rva <= rva && rva < block->end_rva_inc)
                 return block;

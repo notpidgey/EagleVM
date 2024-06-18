@@ -60,4 +60,4 @@ sources = [
 include-directories = ["EagleVM.Tests/headers"]
 compile-features = ["cxx_std_23"]
 link-libraries = ["EagleVMCore", "nlohmann_json", "Zydis", "spdlog::spdlog", "$<$<BOOL:${MINGW}>:ws2_32>"]
-msvc.link-options = ["/DYNAMICBASE:NO"]
+msvc.link-options = ["/DYNAMICBASE:NO", "/D_ITERATOR_DEBUG_LEVEL=0"]

@@ -10,15 +10,15 @@ namespace eagle::dasm
     public:
         explicit segment_dasm(const codec::decode_vec&& segment, uint64_t binary_rva, uint64_t binary_end);
 
-        basic_block* generate_blocks();
+        basic_block_ptr generate_blocks();
 
-        std::pair<uint64_t, block_jump_location> get_jump(const basic_block* block, bool last = false);
+        std::pair<uint64_t, block_jump_location> get_jump(const basic_block_ptr block, bool last = false);
         block_jump_location get_jump_location(uint64_t rva) const;
 
-        basic_block* get_block(uint64_t rva) const;
+        basic_block_ptr get_block(uint64_t rva) const;
 
-        std::vector<basic_block*> blocks;
-        basic_block* root_block;
+        std::vector<basic_block_ptr> blocks;
+        basic_block_ptr root_block;
 
     private:
         uint64_t rva_begin;
@@ -26,4 +26,6 @@ namespace eagle::dasm
 
         codec::decode_vec function;
     };
+
+    using segment_dasm_ptr = std::shared_ptr<segment_dasm>;
 }
