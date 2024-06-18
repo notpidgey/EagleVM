@@ -283,7 +283,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for (auto& [enter_va, enter_location] : va_enters)
     {
-        codec::enc::req jump_request = encode(codec::m_jmp, ZIMMS(enter_location->get_address() - enter_va - 5));
+        codec::enc::req jump_request = encode(codec::m_jmp, ZIMMS(enter_location->get_relative_address() - enter_va - 5));
         va_inserts.emplace_back(enter_va, codec::encode_request(jump_request));
     }
 

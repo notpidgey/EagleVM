@@ -326,7 +326,15 @@ target_link_libraries(EagleVMTests PRIVATE
 	EagleVMCore
 	nlohmann_json
 	Zydis
+	spdlog::spdlog
+	"$<$<BOOL:${MINGW}>:ws2_32>"
 )
+
+if(MSVC) # msvc
+	target_link_options(EagleVMTests PRIVATE
+		"/DYNAMICBASE:NO"
+	)
+endif()
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)

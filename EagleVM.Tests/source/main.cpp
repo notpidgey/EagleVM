@@ -10,6 +10,11 @@
 
 #include "nlohmann/json.hpp"
 
+#include "spdlog/spdlog.h"
+#include "spdlog/async.h"
+#include "spdlog/sinks/basic_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
+
 #include "util.h"
 #include "run_container.h"
 #include "eaglevm-core/compiler/section_manager.h"
@@ -36,10 +41,9 @@ const std::string inclusive_tests[] = {
 };
 
 using namespace eagle;
-std::mutex container_mutex;
 
 void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohmann::basic_json<>& test, std::atomic_uint32_t* passed,
-    std::atomic_uint32_t* failed, std::ofstream& out, uint32_t task_id)
+    std::atomic_uint32_t* failed, uint32_t task_id)
 {
     std::stringstream ss;
 
@@ -173,6 +177,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     {
         ss << "[+] passed\n";
         passed->fetch_add(1);
+
+        spdlog::get("file_logger")->info(ss.str());
     }
     else
     {
@@ -203,10 +209,9 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
         ss << "[!] failed\n";
         failed->fetch_add(1);
-    }
 
-    out << ss.rdbuf();
-    out.flush();
+        spdlog::get("file_logger")->error(ss.str());
+    }
 }
 
 int main(int argc, char* argv[])
@@ -231,6 +236,9 @@ int main(int argc, char* argv[])
     machine_settings->set_randomize_vm_regs(true);
     machine_settings->set_randomize_stack_regs(true);*/
 
+    auto console_logger = spdlog::stdout_color_mt("console_logger");
+    spdlog::flush_every(std::chrono::seconds(5));
+
     virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
     machine_settings->randomize_working_register = false;
     machine_settings->single_vm_handlers = false;
@@ -250,11 +258,9 @@ int main(int argc, char* argv[])
         if (std::ranges::find(inclusive_tests, file_name) == std::end(inclusive_tests))
             continue;
 
-        std::printf("[>] generating tests for: %ls\n", entry_path.c_str());
-
         // Create an ofstream object for the output file
-        std::ofstream outfile("x86-tests/" + file_name);
-        outfile << "[>] generating tests for: " << entry_path << "\n";
+        std::shared_ptr<spdlog::logger> file_logger = spdlog::basic_logger_mt<spdlog::async_factory>("file_logger", "x86-tests/" + file_name);
+        spdlog::get("console_logger")->info("generating tests for {}", entry_path.string());
 
         // read entry file as string
         std::ifstream file(entry.path());
@@ -267,18 +273,15 @@ int main(int argc, char* argv[])
         std::for_each(std::execution::par_unseq, data.begin(), data.end(), [&](auto& n)
         {
             const auto current_task_id = task_id++;
-            process_entry(machine_settings, n, &passed, &failed, std::ref(outfile), current_task_id);
+            process_entry(machine_settings, n, &passed, &failed, current_task_id);
         });
 
-        // Close the output file
-        outfile.close();
-
-        std::printf("[+] finished generating %i tests for: %ls\n", passed + failed, entry_path.c_str());
-        std::printf("[>] passed: %i\n", passed.load());
-        std::printf("[>] failed: %i\n", failed.load());
+        spdlog::get("console_logger")->info("finished generating {} tests for: {}", passed + failed, file_name);
+        spdlog::get("console_logger")->info("passed {}", passed.load());
+        spdlog::get("console_logger")->info("failed {}", failed.load());
 
         float success = static_cast<float>(passed) / (passed.load() + failed.load()) * 100;
-        std::printf("[>] success: %f%%\n\n", success);
+        spdlog::get("console_logger")->info("success rate {}", success);
     }
 
     run_container::destroy_veh();
