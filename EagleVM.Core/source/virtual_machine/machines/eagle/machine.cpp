@@ -16,9 +16,9 @@
 #define VCSRET      reg_man->get_vm_reg(register_manager::index_vcsret)
 #define VBASE       reg_man->get_vm_reg(register_manager::index_vbase)
 
-#define VTEMP       reg_man->get_reg_temp(0)
-#define VTEMP2      reg_man->get_reg_temp(1)
-#define VTEMPX(x)   reg_man->get_reg_temp(x)
+#define VTEMP       reg_man->get_reserved_temp(0)
+#define VTEMP2      reg_man->get_reserved_temp(1)
+#define VTEMPX(x)   reg_man->get_reserved_temp(x)
 
 using namespace eagle::codec;
 
@@ -115,6 +115,7 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
     {
+        std::vector<std::pair<dynamic_instruction, asmb::code_label_ptr>> blah;
         auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
         {
             std::visit([&]<typename exit_type>(exit_type&& arg)
@@ -347,13 +348,26 @@ namespace eagle::virt::eg
         call_push(block, get_bit_version(temp_reg, target_size));
     }
 
+#include "eaglevm-core/codec/zydis_helper.h"
+
     void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)
     {
         const asmb::code_label_ptr vm_enter = han_man->get_vm_enter();
-
         const asmb::code_label_ptr ret = asmb::code_label::create("vmenter_ret target");
+
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
-        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
+        block->add(RECOMPILE_CHUNK([=](uint64_t)
+        {
+            std::vector<enc::req> shit;
+
+            const uint64_t address = vm_enter->get_address();
+            shit.push_back(encode(m_push, ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) | 0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
+            shit.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
+            shit.push_back(encode(m_ret));
+
+            return codec::compile_queue(shit);
+        }));
+
         block->bind(ret);
     }
 
@@ -366,7 +380,7 @@ namespace eagle::virt::eg
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
 
         // lea VRIP, [VBASE + vmexit_address]
-        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
+        block->add(RECOMPILE(encode(m_mov, ZREG(VIP), ZIMMS(vm_exit->get_address()))));
         block->add(encode(m_jmp, ZREG(VIP)));
         block->bind(ret);
     }

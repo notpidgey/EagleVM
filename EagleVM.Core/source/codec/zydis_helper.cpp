@@ -271,7 +271,7 @@ namespace eagle::codec
         return std::string(buffer);
     }
 
-    std::vector<uint8_t> compile(const enc::req& request)
+    std::vector<uint8_t> compile(enc::req& request)
     {
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;

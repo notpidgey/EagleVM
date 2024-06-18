@@ -27,14 +27,20 @@ namespace eagle::asmb
         return is_named;
     }
 
-    int64_t code_label::get_address() const
+    int64_t code_label::get_relative_address() const
     {
-        return virtual_address;
+        return relative_address;
     }
 
-    void code_label::set_address(const uint64_t address)
+    int64_t code_label::get_address() const
     {
-        virtual_address = address;
+        return relative_address + base_address;
+    }
+
+    void code_label::set_address(uint64_t base, uint64_t address)
+    {
+        base_address = base;
+        relative_address = address;
     }
 
     code_label::code_label()
@@ -42,7 +48,8 @@ namespace eagle::asmb
         is_named = false;
         name = "";
 
-        virtual_address = 0;
+        relative_address = 0;
+        base_address = 0;
     }
 
     code_label::code_label(const std::string& label_name, const bool generate_comments)
@@ -50,6 +57,7 @@ namespace eagle::asmb
         is_named = generate_comments;
         name = label_name;
 
-        virtual_address = 0;
+        relative_address = 0;
+        base_address = 0;
     }
 }

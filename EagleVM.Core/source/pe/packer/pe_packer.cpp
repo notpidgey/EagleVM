@@ -83,7 +83,7 @@ namespace eagle::pe
 
                 asmb::code_label_ptr rel_label = asmb::code_label::create();
                 container->bind(rel_label);
-                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_address(), 8))));
+                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_relative_address(), 8))));
                 container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, section_rva, 8))));
 
                 for (int i = 0; i < data.size(); i += 4)
@@ -116,7 +116,7 @@ namespace eagle::pe
 
             asmb::code_label_ptr rel_label = asmb::code_label::create();
             container->bind(rel_label);
-            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_address(), 8))));
+            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_relative_address(), 8))));
             container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, orig_entry, 8))));
             container->add(encode(codec::m_jmp, ZREG(codec::rax)));
 

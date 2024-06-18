@@ -108,7 +108,7 @@ namespace eagle::virt::pidg
         // lea VIP, [0x14000000]    ; load base
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
         container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_relative_address(), TOB(bit_64)))));
 
         // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
         // mov VSP, VTEMP
@@ -148,7 +148,7 @@ namespace eagle::virt::pidg
         // we will place that after the RSP
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
         container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_relative_address(), TOB(bit_64)))));
         container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, TOB(bit_64))));
         container->add(encode(m_mov, ZMEMBD(VSP, -8, 8), ZREG(VIP)));
 
@@ -583,7 +583,7 @@ namespace eagle::virt::pidg
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
-        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_address(), TOB(bit_64)))));
+        code->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, target->get_relative_address(), TOB(bit_64)))));
         code->add(encode(m_jmp, ZREG(VIP)));
 
         // execution after VM handler should end up here

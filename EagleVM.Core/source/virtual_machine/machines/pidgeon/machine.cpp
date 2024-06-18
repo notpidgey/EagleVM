@@ -357,7 +357,18 @@ namespace eagle::virt::pidg
 
         const asmb::code_label_ptr ret = asmb::code_label::create();
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
-        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
+        block->add(RECOMPILE_CHUNK([=](uint64_t)
+        {
+            std::vector<enc::req> shit;
+
+            const uint64_t address = vm_enter->get_address();
+            shit.push_back(encode(m_push, ZIMMS(static_cast<uint32_t>(address))));
+            shit.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
+            shit.push_back(encode(m_ret));
+
+            return codec::compile_queue(shit);
+        }));
+
         block->bind(ret);
     }
 
@@ -370,7 +381,7 @@ namespace eagle::virt::pidg
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
 
         // lea VRIP, [VBASE + vmexit_address]
-        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
+        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_relative_address(), 8))));
         block->add(encode(m_jmp, ZREG(VIP)));
         block->bind(ret);
     }

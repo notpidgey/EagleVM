@@ -526,7 +526,8 @@ namespace eagle::virt::eg
 
         // lea VIP, [VBASE + VCSRET]  ; add rva to base
         // jmp VIP
-        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, label->get_address(), TOB(bit_64)))));
+        container->add(RECOMPILE(encode(m_mov, ZREG(VIP), ZIMMS(label->get_relative_address()))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBI(VBASE, VIP, 1, TOB(bit_64)))));
         container->add(encode(m_jmp, ZREG(VIP)));
 
         // execution after VM handler should end up here
@@ -598,10 +599,14 @@ namespace eagle::virt::eg
             encode(m_mov, ZMEMBD(VCS, 0, 8), ZREG(temp)),
         });
 
-        // lea VIP, [0x14000000]    ; load base
+        // mov VBASE, 0x14000000 ; load base
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
+
+        // mov temp, rel_offset_to_virtual_base
         container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBD(rip, 0, 8))));
+        container->add(RECOMPILE(encode(m_mov, ZREG(temp), ZIMMS(-rel_label->get_relative_address()))));
+        container->add(RECOMPILE(encode(m_lea, ZREG(VBASE), ZMEMBI(VBASE, temp, 1, TOB(bit_64)))));
 
         // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed an rva)
         // mov VSP, VTEMP
@@ -656,9 +661,8 @@ namespace eagle::virt::eg
 
         // we also need to setup an RIP to return to main program execution
         // we will place that after the RSP
-        const asmb::code_label_ptr rel_label = asmb::code_label::create();
-        container->bind(rel_label);
-        container->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(rip, -rel_label->get_address(), TOB(bit_64)))));
+        container->add(RECOMPILE(encode(m_mov, ZREG(VIP), ZREG(VBASE))));
+
         container->add(encode(m_lea, ZREG(VIP), ZMEMBI(VIP, VCSRET, 1, TOB(bit_64))));
         container->add(encode(m_mov, ZMEMBD(VSP, -8, 8), ZREG(VIP)));
 

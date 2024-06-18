@@ -28,12 +28,12 @@ namespace eagle::asmb
         section_labels.append_range(code);
     }
 
-    codec::encoded_vec section_manager::compile_section(const uint64_t section_address)
+    codec::encoded_vec section_manager::compile_section(const uint64_t base_address)
     {
         if (shuffle_functions)
             shuffle_containers();
 
-        uint64_t current_address = section_address;
+        uint64_t current_address = 0;
 
         // this should take all the functions in the section and connect them to desired labels
         for (code_container_ptr& code_container : section_labels)
@@ -41,30 +41,36 @@ namespace eagle::asmb
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (auto& inst : segments)
             {
-                std::visit([&current_address](auto&& arg)
+                std::visit([&current_address, base_address](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
                         codec::dynamic_instruction inst = arg;
-
-                        codec::enc::req request;
-                        std::visit([&request, current_address](auto&& arg)
+                        std::visit([&current_address](auto&& arg)
                         {
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                request = arg(current_address);
-                            else if constexpr (std::is_same_v<T, codec::enc::req>)
-                                request = arg;
-                        }, inst);
+                            if constexpr (std::is_same_v<T, codec::recompile_chunk>)
+                            {
+                                current_address += arg(current_address).size();
+                            }
+                            else
+                            {
+                                codec::enc::req request;
+                                if constexpr (std::is_same_v<T, codec::recompile_promise>)
+                                    request = arg(current_address);
+                                else if constexpr (std::is_same_v<T, codec::enc::req>)
+                                    request = arg;
 
-                        attempt_instruction_fix(request);
-                        current_address += codec::compile_absolute(request, 0).size();
+                                attempt_instruction_fix(request);
+                                current_address += codec::compile_absolute(request, current_address).size();
+                            }
+                        }, inst);
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
-                        label->set_address(current_address);
+                        label->set_address(base_address, current_address);
                     }
                 }, inst);
             }
@@ -73,48 +79,59 @@ namespace eagle::asmb
     RECOMPILE:
 
         std::vector<uint8_t> compiled_section;
-        compiled_section.reserve(current_address - section_address);
+        compiled_section.reserve(current_address);
 
         auto it = compiled_section.begin();
 
-        current_address = section_address;
+        current_address = 0;
         for (const code_container_ptr& code_container : section_labels)
         {
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (inst_label_v& label_code_variant : segments)
             {
                 bool force_recompile = false;
-                std::visit([&current_address, &compiled_section, &force_recompile](auto&& arg)
+                std::visit([&current_address, &compiled_section, &force_recompile, base_address](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
                         codec::dynamic_instruction dynamic_inst = arg;
-
-                        codec::enc::req request;
-                        std::visit([&request, current_address](auto&& arg)
+                        std::visit([&current_address, &compiled_section](auto&& arg)
                         {
+                            std::vector<uint8_t> compiled;
+
                             using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                request = arg(current_address);
-                            else if constexpr (std::is_same_v<T, codec::enc::req>)
-                                request = arg;
+                            if constexpr (std::is_same_v<T, codec::recompile_chunk>)
+                            {
+                                compiled = arg(current_address);
+                                current_address += compiled.size();
+                            }
+                            else
+                            {
+                                codec::enc::req request;
+                                if constexpr (std::is_same_v<T, codec::recompile_promise>)
+                                    request = arg(current_address);
+                                else if constexpr (std::is_same_v<T, codec::enc::req>)
+                                    request = arg;
+                                else
+                                    __debugbreak();
+
+                                attempt_instruction_fix(request);
+
+                                compiled = codec::compile_absolute(request, 0);
+                                current_address += compiled.size();
+                            }
+
+                            compiled_section.append_range(compiled);
                         }, dynamic_inst);
-
-                        attempt_instruction_fix(request);
-
-                        std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
-                        compiled_section.append_range(compiled);
-
-                        current_address += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
-                        if (label->get_address() != current_address)
+                        if (label->get_relative_address() != current_address)
                             force_recompile = true;
 
-                        label->set_address(current_address);
+                        label->set_address(base_address, current_address);
                     }
                 }, label_code_variant);
 
@@ -160,10 +177,10 @@ namespace eagle::asmb
 
     void section_manager::attempt_instruction_fix(codec::enc::req& request)
     {
-        if(request.mnemonic == ZYDIS_MNEMONIC_LEA)
+        if (request.mnemonic == ZYDIS_MNEMONIC_LEA)
         {
             auto& second_op = request.operands[1].mem;
-            if(second_op.index == ZYDIS_REGISTER_RSP && second_op.scale == 1)
+            if (second_op.index == ZYDIS_REGISTER_RSP && second_op.scale == 1)
             {
                 auto temp = second_op.base;
                 second_op.base = second_op.index;
