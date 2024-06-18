@@ -56,6 +56,7 @@ namespace eagle::virt::eg
         void call_push(const asmb::code_container_ptr& block, const codec::reg target_reg);
 
         void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const;
+        void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, codec::reg_size size) const;
         void call_pop(const asmb::code_container_ptr& block, const codec::reg target_reg) const;
 
         codec::reg reg_vm_to_register(ir::reg_vm store) const;

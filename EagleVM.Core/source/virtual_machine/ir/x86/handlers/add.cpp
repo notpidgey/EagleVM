@@ -86,7 +86,10 @@ namespace eagle::ir::lifter
         {
             // register
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
-            block->add_command(std::make_shared<cmd_context_store>(reg));
+            if(static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+                reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
+
+            block->add_command(std::make_shared<cmd_context_store>(reg, static_cast<codec::reg_size>(first_op.size)));
         }
         else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
         {

@@ -94,14 +94,15 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         // we want to store a value into this register from the stack
-        const reg target_reg = cmd->get_reg();
-        const reg_size reg_size = get_reg_size(target_reg);
+        reg target_reg = cmd->get_reg();
+        auto r_size = get_reg_size(target_reg);
+        auto v_size = cmd->get_value_size();
 
-        const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(reg_size));
+        const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(r_size));
         reg_ctx->assign(storage);
 
         // pop into storage
-        call_pop(block, storage);
+        call_pop(block, storage, v_size);
 
         // store into target
         auto [handler, working_reg] = han_man->store_register(target_reg, storage);
@@ -357,16 +358,17 @@ namespace eagle::virt::eg
 
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
         block->add(RECOMPILE_CHUNK([=](uint64_t)
-        {
+            {
             std::vector<enc::req> shit;
 
             const uint64_t address = vm_enter->get_address();
-            shit.push_back(encode(m_push, ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) | 0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
+            shit.push_back(encode(m_push, ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) |
+                0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
             shit.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
             shit.push_back(encode(m_ret));
 
             return codec::compile_queue(shit);
-        }));
+            }));
 
         block->bind(ret);
     }
@@ -478,6 +480,25 @@ namespace eagle::virt::eg
     void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const
     {
         const reg_size size = to_reg_size(shared->get_store_size());
+        if (!settings->randomize_working_register)
+        {
+            const reg returning_reg = han_man->get_pop_working_register();
+
+            reg target_returning = get_bit_version(returning_reg, size);
+            reg target_store = get_bit_version(shared->get_store_register(), size);
+
+            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
+            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
+        }
+        else
+        {
+            han_man->call_vm_handler(block, han_man->get_pop(shared->get_store_register(), size));
+        }
+    }
+
+    void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, const reg_size size) const
+    {
+        assert(to_reg_size(shared->get_store_size()) >= size, "pop size cannot be greater than store size");
         if (!settings->randomize_working_register)
         {
             const reg returning_reg = han_man->get_pop_working_register();
