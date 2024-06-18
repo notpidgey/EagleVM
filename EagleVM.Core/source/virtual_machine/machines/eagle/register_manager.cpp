@@ -62,14 +62,17 @@ namespace eagle::virt::eg
             // force RAX to be at virtual_order_gpr[num_vregs - 2]
 
             // find the positions of RSP and RAX in the vector
-            const auto it_rsp = std::ranges::find(virtual_order_gpr, codec::rsp);
-            const auto it_rax = std::ranges::find(virtual_order_gpr, codec::rax);
+            auto it_rsp = std::ranges::find(virtual_order_gpr, codec::rsp);
+            auto it_rax = std::ranges::find(virtual_order_gpr, codec::rax);
 
             // check if RSP and RAX were found in the vector
             if (it_rsp != virtual_order_gpr.end() && it_rax != virtual_order_gpr.end())
             {
                 // swap RSP with the element at position num_vregs
                 std::iter_swap(it_rsp, virtual_order_gpr.begin() + num_v_regs - 1);
+
+                if (it_rax == virtual_order_gpr.begin() + num_v_regs - 1)
+                    it_rax = it_rsp;
 
                 // swap RAX with the element at position num_vregs + 1
                 std::iter_swap(it_rax, virtual_order_gpr.begin() + num_v_regs - 2);
