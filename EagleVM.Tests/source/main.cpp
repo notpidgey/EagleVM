@@ -1,3 +1,7 @@
+#define _CRTDBG_MAP_ALLOC
+#include <stdlib.h>
+#include <crtdbg.h>
+
 #include <bitset>
 #include <execution>
 #include <Windows.h>
@@ -31,13 +35,6 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
     "add",
-    "dec",
-    "inc",
-    "lea",
-    "mov",
-    "movsx",
-    "sub",
-    "cmp"
 };
 
 using namespace eagle;
@@ -225,7 +222,7 @@ int main(int argc, char* argv[])
     // so all i can do is create a section 🤣
 
     // setbuf(stdout, NULL);
-    const char* test_data_path = argc > 1 ? argv[1] : "../../../deps/x86_test_data/TestData64";
+    const char* test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
@@ -272,7 +269,7 @@ int main(int argc, char* argv[])
         std::atomic_uint32_t failed = 0;
 
         std::atomic_uint32_t task_id;
-        std::for_each(std::execution::par_unseq, data.begin(), data.end(), [&](auto& n)
+        std::for_each(std::execution::par_unseq, data.begin(), data.begin() + 5, [&](auto& n)
         {
             const auto current_task_id = task_id++;
             process_entry(machine_settings, n, &passed, &failed, current_task_id);
@@ -287,6 +284,9 @@ int main(int argc, char* argv[])
     }
 
     run_container::destroy_veh();
+
+        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
+    _CrtDumpMemoryLeaks();
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)

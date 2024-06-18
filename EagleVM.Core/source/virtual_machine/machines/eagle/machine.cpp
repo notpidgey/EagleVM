@@ -67,7 +67,7 @@ namespace eagle::virt::eg
         return code;
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, const ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
         // we want to load this register onto the stack
         const reg target_reg = cmd->get_reg();
@@ -91,7 +91,7 @@ namespace eagle::virt::eg
         reg_ctx->release(storage);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, const ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         // we want to store a value into this register from the stack
         const reg target_reg = cmd->get_reg();
@@ -113,7 +113,7 @@ namespace eagle::virt::eg
         reg_ctx->release(storage);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
         std::vector<std::pair<dynamic_instruction, asmb::code_label_ptr>> blah;
         auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
@@ -166,7 +166,7 @@ namespace eagle::virt::eg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
     {
         if (cmd->is_operand_sig())
         {
@@ -180,7 +180,7 @@ namespace eagle::virt::eg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
     {
         ir::ir_size target_size = cmd->get_read_size();
         reg target_temp = reg_ctx->get_any();
@@ -195,7 +195,7 @@ namespace eagle::virt::eg
         call_push(block, get_bit_version(target_temp, to_reg_size(target_size)));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd)
     {
         const ir::ir_size value_size = cmd->get_value_size();
         const ir::ir_size write_size = cmd->get_write_size();
@@ -219,7 +219,7 @@ namespace eagle::virt::eg
         block->add(encode(m_mov, ZMEMBD(temp_address, 0, TOB(write_size)), ZREG(temp_value)));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd)
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
@@ -233,7 +233,7 @@ namespace eagle::virt::eg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_push_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
     {
         // call ia32 handler for push
         switch (cmd->get_push_type())
@@ -279,19 +279,19 @@ namespace eagle::virt::eg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_load_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_load = han_man->get_rlfags_load();
         han_man->call_vm_handler(block, vm_rflags_load);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_store_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_store = han_man->get_rflags_store();
         han_man->call_vm_handler(block, vm_rflags_store);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd)
     {
         const ir::ir_size ir_current_size = cmd->get_current();
         reg_size current_size = to_reg_size(ir_current_size);
@@ -350,7 +350,7 @@ namespace eagle::virt::eg
 
 #include "eaglevm-core/codec/zydis_helper.h"
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {
         const asmb::code_label_ptr vm_enter = han_man->get_vm_enter();
         const asmb::code_label_ptr ret = asmb::code_label::create("vmenter_ret target");
@@ -371,7 +371,7 @@ namespace eagle::virt::eg
         block->bind(ret);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         const asmb::code_label_ptr vm_exit = han_man->get_vm_exit();
         const asmb::code_label_ptr ret = asmb::code_label::create("vmexit_ret target");
@@ -385,7 +385,7 @@ namespace eagle::virt::eg
         block->bind(ret);
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
     {
         const mnemonic mnemonic = cmd->get_mnemonic();
         std::vector<ir::variant_op> operands = cmd->get_operands();
@@ -416,7 +416,7 @@ namespace eagle::virt::eg
         block->add(request);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
     {
         block->add(cmd->get_request());
     }
@@ -454,7 +454,7 @@ namespace eagle::virt::eg
         han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
     }
 
-    void machine::call_push(const asmb::code_container_ptr& block, const codec::reg target_reg)
+    void machine::call_push(const asmb::code_container_ptr& block, const reg target_reg)
     {
         reg pushing_register;
         const reg_size size = get_reg_size(target_reg);

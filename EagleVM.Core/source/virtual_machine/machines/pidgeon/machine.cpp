@@ -47,7 +47,7 @@ namespace eagle::virt::pidg
         return hg->build_handlers();
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
         const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm->get_stack_displacement(target_reg);
@@ -56,7 +56,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_context_load(size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm->get_stack_displacement(target_reg);
@@ -65,7 +65,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_context_store(size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
         auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
         {
@@ -117,7 +117,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
     {
         if (cmd->is_operand_sig())
         {
@@ -131,7 +131,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: inline but also add option to use mov handler
@@ -148,7 +148,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_push(to_reg_size(target_size)));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd)
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: il_size should have a reg_size translator somewhere
@@ -180,7 +180,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd)
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
@@ -212,7 +212,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_push_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
     {
         // call ia32 handler for push
         switch (cmd->get_push_type())
@@ -284,19 +284,19 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_load_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_load = hg->get_rlfags_load();
         hg->call_vm_handler(block, vm_rflags_load);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_store_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_store = hg->get_rflags_store();
         hg->call_vm_handler(block, vm_rflags_store);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd)
     {
         const ir::ir_size ir_current_size = cmd->get_current();
         reg_size current_size = to_reg_size(ir_current_size);
@@ -351,7 +351,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_push(target_size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {
         const asmb::code_label_ptr vm_enter = hg->get_vm_enter();
 
@@ -372,7 +372,7 @@ namespace eagle::virt::pidg
         block->bind(ret);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         const asmb::code_label_ptr vm_exit = hg->get_vm_exit();
         const asmb::code_label_ptr ret = asmb::code_label::create();
@@ -386,7 +386,7 @@ namespace eagle::virt::pidg
         block->bind(ret);
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
     {
         const mnemonic mnemonic = cmd->get_mnemonic();
         std::vector<ir::variant_op> operands = cmd->get_operands();
@@ -417,7 +417,7 @@ namespace eagle::virt::pidg
         block->add(request);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
     {
         block->add(cmd->get_request());
     }

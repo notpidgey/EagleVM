@@ -14,21 +14,21 @@ namespace eagle::virt
         virtual asmb::code_container_ptr lift_block(const ir::block_ptr& block);
         virtual std::vector<asmb::code_container_ptr> create_handlers() = 0;
 
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_branch_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_pop_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_push_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_rflags_load_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_rflags_store_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_sx_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd) = 0;
-        virtual void handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) = 0;
 
         void add_block_context(const std::vector<ir::block_ptr>& blocks);
         void add_block_context(const ir::block_ptr& block);
