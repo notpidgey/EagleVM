@@ -12,6 +12,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
     bool test_ran = false;
     RtlCaptureContext(&safe_context);
 
+    add_veh();
     if (!test_ran)
     {
         test_ran = true;
@@ -39,7 +40,6 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
             __nop();
         }
 
-        add_veh();
         RtlRestoreContext(&input_target, nullptr);
     }
 
@@ -48,7 +48,7 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
 }
 #pragma optimize("", on)
 
-void run_container::set_result(const PCONTEXT result)
+void run_container::set_result_context(const PCONTEXT result)
 {
     result_context = *result;
 }
@@ -58,11 +58,10 @@ CONTEXT run_container::get_safe_context()
     return safe_context;
 }
 
-void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
+void run_container::set_run_area(uint64_t address, uint32_t size)
 {
     run_area = reinterpret_cast<void*>(address);
     run_area_size = size;
-    clear_run_area = clear;
 }
 
 memory_range run_container::get_range()
@@ -76,16 +75,16 @@ memory_range run_container::get_range()
 void run_container::add_veh()
 {
     std::lock_guard lock(run_tests_mutex);
-    run_tests[get_range()] = this;
+    run_tests[this] = get_range();
 }
 
 void run_container::remove_veh()
 {
     std::lock_guard lock(run_tests_mutex);
-    run_tests.erase(get_range());
+    run_tests.erase(this);
 }
 
-void* run_container::get_run_area()
+void* run_container::get_run_area() const
 {
     return run_area;
 }
@@ -124,15 +123,15 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
     std::lock_guard lock(run_tests_mutex);
 
     bool found = false;
-    for (auto& [ranges, val] : run_tests)
+    for (auto& [key, ranges] : run_tests)
     {
         auto [low, size] = ranges;
         if (low <= current_rip && current_rip <= low + size)
         {
             found = true;
 
-            val->set_result(info->ContextRecord);
-            *info->ContextRecord = val->get_safe_context();
+            key->set_result_context(info->ContextRecord);
+            *info->ContextRecord = key->get_safe_context();
             break;
         }
     }

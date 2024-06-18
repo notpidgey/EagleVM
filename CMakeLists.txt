@@ -327,13 +327,11 @@ target_link_libraries(EagleVMTests PRIVATE
 	nlohmann_json
 	Zydis
 	spdlog::spdlog
-	"$<$<BOOL:${MINGW}>:ws2_32>"
 )
 
 if(MSVC) # msvc
 	target_link_options(EagleVMTests PRIVATE
 		"/DYNAMICBASE:NO"
-		"/D_ITERATOR_DEBUG_LEVEL=0"
 	)
 endif()
 

@@ -56,7 +56,7 @@ namespace eagle::virt::eg
     class handler_manager
     {
     public:
-        handler_manager(machine_ptr machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings);
+        handler_manager(const machine_ptr& machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings);
 
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
@@ -107,7 +107,7 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> build_handlers();
 
     private:
-        machine_ptr machine;
+        std::weak_ptr<machine> machine_inst;
         settings_ptr settings;
 
         register_manager_ptr regs;

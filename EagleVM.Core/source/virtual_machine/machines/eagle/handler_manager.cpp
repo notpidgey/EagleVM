@@ -54,8 +54,8 @@ namespace eagle::virt::eg
         return std::get<1>(data);
     }
 
-    handler_manager::handler_manager(machine_ptr machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings)
-        : machine(std::move(machine)), settings(std::move(settings)), regs(std::move(regs)), regs_context(std::move(regs_context))
+    handler_manager::handler_manager(const machine_ptr& machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings)
+        : machine_inst(machine), settings(std::move(settings)), regs(std::move(regs)), regs_context(std::move(regs_context))
     {
         vm_overhead = 8 * 300;
         vm_stack_regs = 17 + 16 * 2; // we only save xmm registers on the stack
@@ -833,6 +833,7 @@ namespace eagle::virt::eg
             ir::block_ptr ir_block = std::make_shared<ir::block_ir>();
             ir_block->add_command(handler_ir);
 
+            const std::shared_ptr<machine> machine = machine_inst.lock();
             const asmb::code_container_ptr handler = machine->lift_block(ir_block);
             handler->bind_start(label);
 

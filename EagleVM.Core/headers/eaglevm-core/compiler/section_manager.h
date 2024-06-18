@@ -19,7 +19,7 @@ namespace eagle::asmb
         void shuffle_containers();
 
     private:
-        std::vector<code_container_ptr> section_labels;
+        std::vector<code_container_ptr> section_code_containers;
         bool shuffle_functions = false;
 
         static void attempt_instruction_fix(codec::enc::req& request);

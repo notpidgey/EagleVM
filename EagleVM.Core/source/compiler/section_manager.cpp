@@ -20,12 +20,12 @@ namespace eagle::asmb
 
     void section_manager::add_code_container(const code_container_ptr& code)
     {
-        section_labels.push_back(code);
+        section_code_containers.push_back(code);
     }
 
     void section_manager::add_code_container(const std::vector<code_container_ptr>& code)
     {
-        section_labels.append_range(code);
+        section_code_containers.append_range(code);
     }
 
     codec::encoded_vec section_manager::compile_section(const uint64_t base_address)
@@ -36,43 +36,43 @@ namespace eagle::asmb
         uint64_t current_address = 0;
 
         // this should take all the functions in the section and connect them to desired labels
-        for (code_container_ptr& code_container : section_labels)
+        for (const code_container_ptr& code_container : section_code_containers)
         {
             std::vector<inst_label_v> segments = code_container->get_instructions();
-            for (auto& inst : segments)
+            for (auto& label_code_variant : segments)
             {
                 std::visit([&current_address, base_address](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
-                        codec::dynamic_instruction inst = arg;
-                        std::visit([&current_address](auto&& arg)
+                        codec::dynamic_instruction dynamic_inst = arg;
+                        std::visit([&current_address](auto&& inner_arg)
                         {
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, codec::recompile_chunk>)
+                            using InnerT = std::decay_t<decltype(inner_arg)>;
+                            if constexpr (std::is_same_v<InnerT, codec::recompile_chunk>)
                             {
-                                current_address += arg(current_address).size();
+                                current_address += inner_arg(current_address).size();
                             }
                             else
                             {
                                 codec::enc::req request;
-                                if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                    request = arg(current_address);
-                                else if constexpr (std::is_same_v<T, codec::enc::req>)
-                                    request = arg;
+                                if constexpr (std::is_same_v<InnerT, codec::recompile_promise>)
+                                    request = inner_arg(current_address);
+                                else if constexpr (std::is_same_v<InnerT, codec::enc::req>)
+                                    request = inner_arg;
 
                                 attempt_instruction_fix(request);
                                 current_address += codec::compile_absolute(request, current_address).size();
                             }
-                        }, inst);
+                        }, dynamic_inst);
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
                         label->set_address(base_address, current_address);
                     }
-                }, inst);
+                }, label_code_variant);
             }
         }
 
@@ -84,7 +84,7 @@ namespace eagle::asmb
         auto it = compiled_section.begin();
 
         current_address = 0;
-        for (const code_container_ptr& code_container : section_labels)
+        for (const code_container_ptr& code_container : section_code_containers)
         {
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (inst_label_v& label_code_variant : segments)
@@ -161,7 +161,7 @@ namespace eagle::asmb
         };
 
         std::vector<std::string> json_array;
-        for (const code_container_ptr& code_label : section_labels)
+        for (const code_container_ptr& code_label : section_code_containers)
         {
             if (code_label->get_is_named())
                 json_array.push_back(create_json(code_label));
@@ -172,7 +172,7 @@ namespace eagle::asmb
 
     void section_manager::shuffle_containers()
     {
-        std::ranges::shuffle(section_labels, util::ran_device::get().gen);
+        std::ranges::shuffle(section_code_containers, util::ran_device::get().gen);
     }
 
     void section_manager::attempt_instruction_fix(codec::enc::req& request)
@@ -186,6 +186,11 @@ namespace eagle::asmb
                 second_op.base = second_op.index;
                 second_op.index = temp;
             }
+        }
+        else if (request.mnemonic == ZYDIS_MNEMONIC_JMP)
+        {
+            if (request.operands[0].type == ZYDIS_OPERAND_TYPE_IMMEDIATE)
+                request.branch_width = ZYDIS_BRANCH_WIDTH_32;
         }
     }
 }

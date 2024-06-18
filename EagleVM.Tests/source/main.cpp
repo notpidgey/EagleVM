@@ -35,6 +35,13 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
     "add",
+    "dec",
+    "inc",
+    "lea",
+    "mov",
+    "movsx",
+    "sub",
+    "cmp"
 };
 
 using namespace eagle;
@@ -117,6 +124,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
             block_labels[block] = asmb::code_label::create();
 
     asmb::section_manager vm_section(false);
+    std::vector<virt::eg::machine_ptr> used_machines;
 
     asmb::code_label_ptr entry_point = asmb::code_label::create();
     for (const auto& [blocks, vm_id] : vm_blocks)
@@ -126,6 +134,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
         //virt::pidg::machine_ptr machine = virt::pidg::machine::create(vm_settings);
         virt::eg::machine_ptr machine = virt::eg::machine::create(machine_settings);
+        used_machines.push_back(machine);
+
         machine->add_block_context(block_labels);
 
         for (auto& translated_block : blocks)
@@ -143,7 +153,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
         vm_section.add_code_container(handler_containers);
     }
 
-    constexpr auto run_space_size = 0x50000;
+    constexpr auto run_space_size = 0x500000;
     uint64_t run_space = reinterpret_cast<uint64_t>(VirtualAlloc(nullptr, run_space_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE));
 
     codec::encoded_vec virtualized_instruction = vm_section.compile_section(run_space);
@@ -152,7 +162,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     assert(run_space_size >= virtualized_instruction.size(), "run space is not big enough");
 
     run_container container(ins, outs);
-    container.set_run_area(run_space, run_space_size, false);
+    container.set_run_area(run_space, run_space_size);
 
 #ifdef _DEBUG
     if (bp)
@@ -162,7 +172,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     spdlog::get("console_logger")->info("starting {} run at {:x}", instr.c_str(), run_space);
     auto [result_context, output_target] = container.run(bp);
 
-    VirtualFree(reinterpret_cast<void*>(run_space), run_space_size, MEM_DECOMMIT);
+    VirtualFree(reinterpret_cast<void*>(run_space), 0, MEM_RELEASE);
 
     // result_context is being set in the exception handler
     const uint32_t result = compare_context(
@@ -222,7 +232,7 @@ int main(int argc, char* argv[])
     // so all i can do is create a section 🤣
 
     // setbuf(stdout, NULL);
-    const char* test_data_path = argc > 1 ? argv[1] : "../deps/x86_test_data/TestData64";
+    const char* test_data_path = argc > 1 ? argv[1] : "../../../deps/x86_test_data/TestData64";
     if (!std::filesystem::exists("x86-tests"))
         std::filesystem::create_directory("x86-tests");
 
@@ -269,7 +279,7 @@ int main(int argc, char* argv[])
         std::atomic_uint32_t failed = 0;
 
         std::atomic_uint32_t task_id;
-        std::for_each(std::execution::par_unseq, data.begin(), data.begin() + 5, [&](auto& n)
+        std::for_each(std::execution::par, data.begin(), data.end(), [&](auto& n)
         {
             const auto current_task_id = task_id++;
             process_entry(machine_settings, n, &passed, &failed, current_task_id);
@@ -284,9 +294,6 @@ int main(int argc, char* argv[])
     }
 
     run_container::destroy_veh();
-
-        _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_DEBUG);
-    _CrtDumpMemoryLeaks();
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)
