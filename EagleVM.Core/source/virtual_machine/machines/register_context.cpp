@@ -46,7 +46,7 @@ namespace eagle::virt
     {
         VM_ASSERT(avaliable_stores.size() >= count, "attempted to retreive sample from empty register storage");
 
-        std::vector<codec::reg> out(count);
+        std::vector<codec::reg> out;
         std::ranges::sample(avaliable_stores, std::back_inserter(out), count, util::ran_device().get().gen);
 
         return out;
