@@ -120,6 +120,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/x86/handlers/sub.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/x86/util.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/base_machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_generators.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_manager.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/machine.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/register_manager.cpp"

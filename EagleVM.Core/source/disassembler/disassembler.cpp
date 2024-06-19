@@ -106,7 +106,7 @@ namespace eagle::dasm
         return blocks[0];
     }
 
-    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block_ptr block, bool last)
+    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block_ptr& block, const bool last)
     {
         block_end_reason end_reason = block->get_end_reason();
         if (last)

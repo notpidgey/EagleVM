@@ -63,25 +63,18 @@ namespace eagle::virt::eg
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
 
-        void call_vm_handler(const asmb::code_container_ptr& container, const asmb::code_label_ptr& label) const;
-
         asmb::code_label_ptr get_vm_enter();
-        asmb::code_container_ptr build_vm_enter();
-
         asmb::code_label_ptr get_vm_exit();
-        asmb::code_container_ptr build_vm_exit();
-
         asmb::code_label_ptr get_rlfags_load();
-        asmb::code_container_ptr build_rflags_load();
-
         asmb::code_label_ptr get_rflags_store();
-        asmb::code_container_ptr build_rflags_store();
 
         codec::reg get_push_working_register() const;
-        std::vector<asmb::code_container_ptr> build_push();
-
         codec::reg get_pop_working_register();
-        std::vector<asmb::code_container_ptr> build_pop();
+
+        asmb::code_label_ptr get_push(codec::reg target_reg, codec::reg_size size);
+        asmb::code_label_ptr get_pop(codec::reg reg, codec::reg_size size);
+
+        void call_vm_handler(const asmb::code_container_ptr& container, const asmb::code_label_ptr& label) const;
 
         /**
          * append to the current working block a call or inlined code to load specific register
@@ -101,10 +94,16 @@ namespace eagle::virt::eg
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, const ir::discrete_store_ptr& source);
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, codec::reg source);
 
-        asmb::code_label_ptr get_push(eagle::codec::reg target_reg, eagle::codec::reg_size size);
-        asmb::code_label_ptr get_pop(eagle::codec::reg reg, eagle::codec::reg_size size);
-
         std::vector<asmb::code_container_ptr> build_handlers();
+
+        asmb::code_container_ptr build_vm_enter();
+        asmb::code_container_ptr build_vm_exit();
+
+        asmb::code_container_ptr build_rflags_load();
+        asmb::code_container_ptr build_rflags_store();
+
+        std::vector<asmb::code_container_ptr> build_push();
+        std::vector<asmb::code_container_ptr> build_pop();
 
     private:
         std::weak_ptr<machine> machine_inst;
@@ -129,16 +128,14 @@ namespace eagle::virt::eg
         uint16_t vm_stack_regs;
         uint16_t vm_call_stack;
 
-        std::vector<asmb::code_container_ptr> build_instruction_handlers();
-
         using tagged_handler_id = std::pair<codec::mnemonic, std::string>;
         using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
         std::vector<tagged_handler_label> tagged_instruction_handlers;
 
         [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
-
         void create_vm_return(const asmb::code_container_ptr& container) const;
+        static codec::reg_size load_store_index_size(uint8_t index);
 
-        static codec::reg_size load_store_index_size(const uint8_t index);
+        std::vector<asmb::code_container_ptr> build_instruction_handlers();
     };
 }
