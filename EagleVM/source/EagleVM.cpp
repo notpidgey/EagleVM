@@ -147,6 +147,8 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
     asmb::section_manager vm_section(true);
+    std::vector<std::shared_ptr<virt::base_machine>> machines_used;
+
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -172,12 +174,12 @@ int main(int argc, char* argv[])
 
         codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
-        dasm::segment_dasm dasm(std::move(instructions), rva_inst_begin, rva_inst_end);
-        dasm.generate_blocks();
+        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), rva_inst_begin, rva_inst_end);
+        dasm->generate_blocks();
 
-        std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+        std::printf("\t[>] dasm found %llu basic blocks\n", dasm->blocks.size());
 
-        ir::ir_translator ir_trans(&dasm);
+        ir::ir_translator ir_trans(dasm);
         ir::preopt_block_vec preopt = ir_trans.translate(true);
 
         // here we assign vms to each block
@@ -190,7 +192,7 @@ int main(int argc, char* argv[])
         // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
         for (const auto& preopt_block : preopt)
-            if (preopt_block->get_original_block() == dasm.get_block(rva_inst_begin))
+            if (preopt_block->get_original_block() == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
         assert(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -229,6 +231,8 @@ int main(int argc, char* argv[])
 
             // virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
             virt::eg::machine_ptr machine = virt::eg::machine::create(machine_settings);
+            machines_used.push_back(machine);
+
             machine->add_block_context(block_labels);
 
             for (auto& translated_block : blocks)
@@ -259,7 +263,7 @@ int main(int argc, char* argv[])
 
     std::printf("\n");
 
-    auto& [code_section, code_section_bytes] = generator.add_section(".hai_hallo");
+    auto& [code_section, code_section_bytes] = generator.add_section(".hihihi");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     code_section.SizeOfRawData = 0;
     code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);
@@ -283,7 +287,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, std::vector<uint8_t>>> va_inserts;
     for (auto& [enter_va, enter_location] : va_enters)
     {
-        codec::enc::req jump_request = encode(codec::m_jmp, ZIMMS(enter_location->get_relative_address() - enter_va - 5));
+        codec::enc::req jump_request = encode(codec::m_jmp, ZIMMS(enter_location->get_address() - enter_va - 5));
         va_inserts.emplace_back(enter_va, codec::encode_request(jump_request));
     }
 

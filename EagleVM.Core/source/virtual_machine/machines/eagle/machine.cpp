@@ -357,18 +357,28 @@ namespace eagle::virt::eg
         const asmb::code_label_ptr ret = asmb::code_label::create("vmenter_ret target");
 
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
-        block->add(RECOMPILE_CHUNK([=](uint64_t)
+        if (settings->relative_addressing)
+        {
+            block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
+        }
+        else
+        {
+            block->add(RECOMPILE_CHUNK([=](uint64_t)
             {
-            std::vector<enc::req> shit;
+                const uint64_t address = vm_enter->get_address();
 
-            const uint64_t address = vm_enter->get_address();
-            shit.push_back(encode(m_push, ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) |
-                0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
-            shit.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
-            shit.push_back(encode(m_ret));
+                std::vector<enc::req> address_gen;
+                address_gen.push_back(encode(m_push, ZIMMU(
+                    static_cast<uint32_t>(address) >= 0x80000000 ?
+                    static_cast<uint64_t>(address) |
+                    0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
 
-            return codec::compile_queue(shit);
+                address_gen.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
+                address_gen.push_back(encode(m_ret));
+
+                return codec::compile_queue(address_gen);
             }));
+        }
 
         block->bind(ret);
     }
@@ -380,10 +390,7 @@ namespace eagle::virt::eg
 
         // mov VCSRET, ZLABEL(target)
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
-
-        // lea VRIP, [VBASE + vmexit_address]
-        block->add(RECOMPILE(encode(m_mov, ZREG(VIP), ZIMMS(vm_exit->get_address()))));
-        block->add(encode(m_jmp, ZREG(VIP)));
+        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_exit))));
         block->bind(ret);
     }
 

@@ -28,12 +28,12 @@ namespace eagle::asmb
         section_code_containers.append_range(code);
     }
 
-    codec::encoded_vec section_manager::compile_section(const uint64_t base_address)
+    codec::encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
     {
         if (shuffle_functions)
             shuffle_containers();
 
-        uint64_t current_address = 0;
+        uint64_t base_offset = base_address;
 
         // this should take all the functions in the section and connect them to desired labels
         for (const code_container_ptr& code_container : section_code_containers)
@@ -41,36 +41,36 @@ namespace eagle::asmb
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (auto& label_code_variant : segments)
             {
-                std::visit([&current_address, base_address](auto&& arg)
+                std::visit([&base_offset, runtime_base](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
                         codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&current_address](auto&& inner_arg)
+                        std::visit([&base_offset](auto&& inner_arg)
                         {
                             using InnerT = std::decay_t<decltype(inner_arg)>;
                             if constexpr (std::is_same_v<InnerT, codec::recompile_chunk>)
                             {
-                                current_address += inner_arg(current_address).size();
+                                base_offset += inner_arg(base_offset).size();
                             }
                             else
                             {
                                 codec::enc::req request;
                                 if constexpr (std::is_same_v<InnerT, codec::recompile_promise>)
-                                    request = inner_arg(current_address);
+                                    request = inner_arg(base_offset);
                                 else if constexpr (std::is_same_v<InnerT, codec::enc::req>)
                                     request = inner_arg;
 
                                 attempt_instruction_fix(request);
-                                current_address += codec::compile_absolute(request, current_address).size();
+                                base_offset += codec::compile_absolute(request, base_offset).size();
                             }
                         }, dynamic_inst);
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
-                        label->set_address(base_address, current_address);
+                        label->set_address(runtime_base, base_offset);
                     }
                 }, label_code_variant);
             }
@@ -79,38 +79,36 @@ namespace eagle::asmb
     RECOMPILE:
 
         std::vector<uint8_t> compiled_section;
-        compiled_section.reserve(current_address);
+        compiled_section.reserve(base_offset - base_address);
 
-        auto it = compiled_section.begin();
-
-        current_address = 0;
+        base_offset = base_address;
         for (const code_container_ptr& code_container : section_code_containers)
         {
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (inst_label_v& label_code_variant : segments)
             {
                 bool force_recompile = false;
-                std::visit([&current_address, &compiled_section, &force_recompile, base_address](auto&& arg)
+                std::visit([&base_offset, &compiled_section, &force_recompile, base_address, runtime_base](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
                     {
                         codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&current_address, &compiled_section](auto&& arg)
+                        std::visit([&base_offset, &compiled_section](auto&& arg)
                         {
                             std::vector<uint8_t> compiled;
 
                             using T = std::decay_t<decltype(arg)>;
                             if constexpr (std::is_same_v<T, codec::recompile_chunk>)
                             {
-                                compiled = arg(current_address);
-                                current_address += compiled.size();
+                                compiled = arg(base_offset);
+                                base_offset += compiled.size();
                             }
                             else
                             {
                                 codec::enc::req request;
                                 if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                    request = arg(current_address);
+                                    request = arg(base_offset);
                                 else if constexpr (std::is_same_v<T, codec::enc::req>)
                                     request = arg;
                                 else
@@ -119,7 +117,7 @@ namespace eagle::asmb
                                 attempt_instruction_fix(request);
 
                                 compiled = codec::compile_absolute(request, 0);
-                                current_address += compiled.size();
+                                base_offset += compiled.size();
                             }
 
                             compiled_section.append_range(compiled);
@@ -128,10 +126,10 @@ namespace eagle::asmb
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
-                        if (label->get_relative_address() != current_address)
+                        if (label->get_relative_address() != base_offset)
                             force_recompile = true;
 
-                        label->set_address(base_address, current_address);
+                        label->set_address(runtime_base, base_offset);
                     }
                 }, label_code_variant);
 

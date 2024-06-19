@@ -258,6 +258,7 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_push_order = true;
     machine_settings->shuffle_vm_gpr_order = true;
     machine_settings->shuffle_vm_xmm_order = true;
+    machine_settings->relative_addressing = false;
 
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))

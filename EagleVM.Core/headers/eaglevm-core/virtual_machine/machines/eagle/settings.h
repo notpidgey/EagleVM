@@ -28,14 +28,6 @@ namespace eagle::virt::eg
         bool single_vm_handlers = false;
 
         /**
-         * when "single_use_vm_handlers" is set to false,
-         * this value will be used to determine the chance of generating a new handler
-         *
-         * recommended value: 1.0
-         */
-        float chance_to_generate_vm_handler = 1.0;
-
-        /**
         * when enabled, handlers will only be generated a single time
         * when disabled, handler will be generated every time time per call
         */
@@ -58,6 +50,8 @@ namespace eagle::virt::eg
         bool shuffle_push_order = false;
         bool shuffle_vm_gpr_order = false;
         bool shuffle_vm_xmm_order = false;
+
+        bool relative_addressing = true;
     };
 
     using settings_ptr = std::shared_ptr<settings>;

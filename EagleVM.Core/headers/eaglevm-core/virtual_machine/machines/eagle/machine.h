@@ -44,11 +44,13 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
     private:
-        register_context_ptr reg_ctx;
-
         settings_ptr settings;
         register_manager_ptr reg_man;
         inst_handlers_ptr han_man;
+        register_context_ptr reg_ctx;
+
+        // destination,
+        std::unordered_map<asmb::code_label_ptr, asmb::code_label_ptr> jump_table;
 
         void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
 
