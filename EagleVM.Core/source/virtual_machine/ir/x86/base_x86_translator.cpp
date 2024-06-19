@@ -132,7 +132,7 @@ namespace eagle::ir::lifter
 
             // subtract displacement value
             block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_sub, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         // for memory operands we will only ever need one kind of action
