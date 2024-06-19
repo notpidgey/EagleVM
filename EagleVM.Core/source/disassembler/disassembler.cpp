@@ -2,7 +2,7 @@
 
 namespace eagle::dasm
 {
-    segment_dasm::segment_dasm(const codec::decode_vec&& segment, const uint64_t binary_rva, const uint64_t binary_end)
+    segment_dasm::segment_dasm(const codec::decode_vec& segment, const uint64_t binary_rva, const uint64_t binary_end)
         : root_block(nullptr)
     {
         function = segment;
@@ -30,10 +30,10 @@ namespace eagle::dasm
                 block->end_rva_inc = current_rva + inst.instruction.length;
                 block->decoded_insts = block_instructions;
 
-                blocks.push_back(block);
                 block_instructions.clear();
-
                 block_start_rva = block->end_rva_inc;
+
+                blocks.push_back(std::move(block));
             }
 
             current_rva += inst.instruction.length;
@@ -46,69 +46,62 @@ namespace eagle::dasm
             block->end_rva_inc = current_rva;
             block->decoded_insts = block_instructions;
 
-            blocks.push_back(block);
+            blocks.push_back(std::move(block));
         }
 
         // but here we have an issue, some block may be jumping inside of another block
         // we need to fix that
-        for (int i = 0; i < blocks.size(); i++)
+        std::vector<basic_block_ptr> new_blocks;
+
+        for (auto i = 0; i < blocks.size(); i++)
         {
-            // we only care about jumping blocks inside of the segment
-            const basic_block_ptr block = blocks[i];
+            const basic_block_ptr &block = blocks[i];
             if (block->get_end_reason() == block_end)
                 continue;
 
-            const auto& [jump_rva, jump_type] = get_jump(block);
+            const auto &[jump_rva, jump_type] = get_jump(block);
             if (jump_type != jump_inside_segment)
                 continue;
 
-            basic_block_ptr new_block = std::make_shared<basic_block>();
-            for (basic_block_ptr target_block : blocks)
+            for (auto j = 0; j < blocks.size(); j++)
             {
-                // non inclusive is key because we might already be at that block
+                const basic_block_ptr &target_block = blocks[j];
                 if (jump_rva <= target_block->start_rva || jump_rva >= target_block->end_rva_inc)
                     continue;
 
-                // we found a jump to the middle of a block
-                // we need to split the block
                 basic_block_ptr split_block = std::make_shared<basic_block>();
                 split_block->start_rva = jump_rva;
                 split_block->end_rva_inc = target_block->end_rva_inc;
                 target_block->end_rva_inc = jump_rva;
 
-                // for the new_block, we copy all the instructions starting at the far_rva
                 uint64_t curr_rva = target_block->start_rva;
-                for (int j = 0; j < target_block->decoded_insts.size();)
+                for (auto k = 0; k < target_block->decoded_insts.size();)
                 {
-                    codec::dec::inst_info& inst = target_block->decoded_insts[j];
+                    codec::dec::inst_info &inst = target_block->decoded_insts[k];
                     if (curr_rva >= jump_rva)
                     {
-                        // add to new block, remove from old block
                         split_block->decoded_insts.push_back(inst);
-                        target_block->decoded_insts.erase(target_block->decoded_insts.begin() + j);
+                        target_block->decoded_insts.erase(target_block->decoded_insts.begin() + k);
                     }
                     else
                     {
-                        j++;
+                        k++;
                     }
-
-                    curr_rva += inst.instruction.length; // move this line up
+                    curr_rva += inst.instruction.length;
                 }
 
-                new_block = split_block;
+                new_blocks.push_back(std::move(split_block));
                 break;
             }
-
-            if (new_block)
-                blocks.push_back(new_block);
         }
 
+        for (auto &new_block : new_blocks)
+            blocks.push_back(std::move(new_block));
 
-        std::ranges::sort(blocks,
-            [](const basic_block_ptr a, const basic_block_ptr b)
-            {
-                return a->start_rva < b->start_rva;
-            });
+        std::ranges::sort(blocks, [](auto a, auto b)
+        {
+            return a->start_rva < b->start_rva;
+        });
 
         return blocks[0];
     }
@@ -123,7 +116,7 @@ namespace eagle::dasm
         {
             case block_end:
             {
-                return {block->end_rva_inc, get_jump_location(block->end_rva_inc)};
+                return { block->end_rva_inc, get_jump_location(block->end_rva_inc) };
             }
             case block_jump:
             {
@@ -131,7 +124,7 @@ namespace eagle::dasm
                 const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
                 auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);
-                return {target_rva, get_jump_location(target_rva)};
+                return { target_rva, get_jump_location(target_rva) };
             }
             case block_conditional_jump:
             {
@@ -139,11 +132,11 @@ namespace eagle::dasm
                 const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
                 auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);
-                return {target_rva, get_jump_location(target_rva)};
+                return { target_rva, get_jump_location(target_rva) };
             }
         }
 
-        return {0, jump_unknown};
+        return { 0, jump_unknown };
     }
 
     block_jump_location segment_dasm::get_jump_location(const uint64_t rva) const

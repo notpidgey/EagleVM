@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <array>
 #include <memory>
 #include <vector>
@@ -10,7 +11,7 @@
 
 namespace eagle::virt::eg
 {
-    using reg_range = std::pair<uint16_t, uint16_t>;
+    using reg_range = std::pair<uint32_t, uint32_t>;
 
     struct reg_mapped_range
     {
@@ -72,7 +73,14 @@ namespace eagle::virt::eg
         [[nodiscard]] std::vector<codec::reg> get_unreserved_temp_xmm() const;
         [[nodiscard]] codec::reg get_reserved_temp_xmm(uint8_t i) const;
 
-        void enumerate(const std::function<void(codec::reg)>& enumerable, bool from_back = false);
+        template<typename T>
+        void enumerate(const T& enumerable, const bool from_back = false)
+        {
+            if (from_back)
+                std::ranges::for_each(push_order, enumerable);
+            else
+                std::for_each(push_order.rbegin(), push_order.rend(), enumerable);
+        }
 
         /**
         * value containing the number of x86 registers being used by the virtual machine

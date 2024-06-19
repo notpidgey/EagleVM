@@ -573,13 +573,13 @@ namespace eagle::ir
                 {
                     // this means all exits are of the same vm
                     const size_t command_count = preopt_exit->get_command_count();
-                    assert(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 commands");
+                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 commands");
 
                     if (command_count == 2)
                     {
                         // this means we should have a vm exit command
                         const base_command_ptr& cmd = preopt_exit->remove_command(0);
-                        assert(cmd->get_command_type() == command_type::vm_exit, "invalid command, expected exit");
+                        VM_ASSERT(cmd->get_command_type() == command_type::vm_exit, "invalid command, expected exit");
                     }
                 }
             }
@@ -653,7 +653,7 @@ namespace eagle::ir
                 return exit_condition::jz;
             default:
             {
-                assert("invalid conditional jump reached");
+                VM_ASSERT("invalid conditional jump reached");
                 return exit_condition::none;
             }
         }
@@ -723,7 +723,7 @@ namespace eagle::ir
         if (has_head())
             return head;
 
-        assert(!body.empty(), "attempted to retrieve nearest entry while containing no body");
+        VM_ASSERT(!body.empty(), "attempted to retrieve nearest entry while containing no body");
         return body[0];
     }
 

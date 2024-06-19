@@ -158,7 +158,7 @@ namespace eagle::virt::pidg
         //pop r0-r15 to stack
         inst_regs->enumerate([&container](auto reg)
         {
-            if (reg == ZYDIS_REGISTER_RSP || reg == ZYDIS_REGISTER_RIP)
+            if (reg == rsp || reg == rip)
                 container->add(encode(m_lea, ZREG(rsp), ZMEMBD(rsp, 8, TOB(bit_64))));
             else
                 container->add(encode(m_pop, ZREG(reg)));
@@ -251,7 +251,7 @@ namespace eagle::virt::pidg
                 return ctx.label;
             }
             default:
-                assert("reached invalid load size");
+                VM_ASSERT("reached invalid load size");
         }
 
         return nullptr;
@@ -311,7 +311,7 @@ namespace eagle::virt::pidg
                 return ctx.label;
             }
             default:
-                assert("reached invalid store size");
+                VM_ASSERT("reached invalid store size");
         }
 
         return nullptr;
@@ -383,7 +383,7 @@ namespace eagle::virt::pidg
                 return ctx.label;
             }
             default:
-                assert("reached invalid push size");
+                VM_ASSERT("reached invalid push size");
         }
 
         return nullptr;
@@ -446,7 +446,7 @@ namespace eagle::virt::pidg
                 return ctx.label;
             }
             default:
-                assert("reached invalid pop size");
+                VM_ASSERT("reached invalid pop size");
         }
 
         return nullptr;
@@ -501,8 +501,8 @@ namespace eagle::virt::pidg
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
     {
-        assert(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
-        assert(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");
+        VM_ASSERT(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
+        VM_ASSERT(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");
 
         const std::tuple key = std::tie(mnemonic, handler_sig);
         for (const auto& [tuple, code_label] : tagged_instruction_handlers)
@@ -569,8 +569,8 @@ namespace eagle::virt::pidg
 
     void inst_handlers::call_vm_handler(const asmb::code_container_ptr& code, const asmb::code_label_ptr& target) const
     {
-        assert(target != nullptr, "target cannot be an invalid code label");
-        assert(code != nullptr, "code cannot be an invalid code label");
+        VM_ASSERT(target != nullptr, "target cannot be an invalid code label");
+        VM_ASSERT(code != nullptr, "code cannot be an invalid code label");
 
         // todo: on debug verify that the target is a valid handler
 

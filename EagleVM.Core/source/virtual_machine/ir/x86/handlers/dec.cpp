@@ -26,7 +26,7 @@ namespace eagle::ir::handler
 
     ir_insts dec::gen_handler(handler_sig signature)
     {
-        assert(signature.size() == 1, "invalid signature. must contain 1 operand");
+        VM_ASSERT(signature.size() == 1, "invalid signature. must contain 1 operand");
         ir_size target_size = signature.front();
 
         const discrete_store_ptr vtemp = discrete_store::create(target_size);

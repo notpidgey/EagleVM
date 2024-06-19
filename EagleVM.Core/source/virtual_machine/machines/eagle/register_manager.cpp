@@ -6,6 +6,7 @@
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
+#include "eaglevm-core/util/assert.h"
 
 namespace eagle::virt::eg
 {
@@ -128,7 +129,7 @@ namespace eagle::virt::eg
 
             for (const auto& [first, last] : register_ranges)
             {
-                const uint16_t length = last - first;
+                const auto length = last - first;
 
                 auto find_avail_range = [](
                     const std::vector<reg_range>& occupied_ranges,
@@ -207,7 +208,7 @@ namespace eagle::virt::eg
                     }
                 }
 
-                assert(range_mapped, "unable to find valid range to map registers");
+                VM_ASSERT(range_mapped, "unable to find valid range to map registers");
             }
         }
     }
@@ -251,14 +252,14 @@ namespace eagle::virt::eg
 
     std::vector<reg_range> register_manager::get_unoccupied_ranges(const codec::reg reg)
     {
-        const uint16_t bit_count = get_reg_size(reg);
+        const uint16_t bit_count = static_cast<uint16_t>(get_reg_size(reg));
         std::vector<reg_range> occupied_ranges = dest_register_map[reg];
         std::vector<reg_range> unoccupied_ranges;
 
         // Sort the occupied ranges by their starting point
         std::ranges::sort(occupied_ranges);
 
-        uint16_t current_pos = 0;
+        unsigned int current_pos = 0;
 
         for (const auto& [fst, snd] : occupied_ranges)
         {
@@ -281,7 +282,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_vm_reg(const uint8_t i) const
     {
-        assert(i + 1 <= num_v_regs, "attempted to access vreg outside of boundaries");
+        VM_ASSERT(i + 1 <= num_v_regs, "attempted to access vreg outside of boundaries");
         return virtual_order_gpr[i];
     }
 
@@ -296,7 +297,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_reserved_temp(const uint8_t i) const
     {
-        assert(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
+        VM_ASSERT(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
         return virtual_order_gpr[num_v_regs + i];
     }
 
@@ -320,15 +321,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_reserved_temp_xmm(uint8_t i) const
     {
-        assert(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
+        VM_ASSERT(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
         return virtual_order_xmm[i];
-    }
-
-    void register_manager::enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back)
-    {
-        if (from_back)
-            std::ranges::for_each(push_order, enumerable);
-        else
-            std::for_each(push_order.rbegin(), push_order.rend(), enumerable);
     }
 }

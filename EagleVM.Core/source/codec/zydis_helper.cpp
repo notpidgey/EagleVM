@@ -1,6 +1,8 @@
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/codec/zydis_defs.h"
 
+#include "eaglevm-core/util/assert.h"
+
 namespace eagle::codec
 {
     void setup_decoder()
@@ -68,7 +70,7 @@ namespace eagle::codec
 
         // this is really really bad, this should be a complete wrapper around zydis not just bound to restrictions of the virtualizer
         // will finish later and add limitations along with asserts.
-        assert(class_target != ZYDIS_REGCLASS_INVALID, "Invalid register input size");
+        VM_ASSERT(class_target != ZYDIS_REGCLASS_INVALID, "Invalid register input size");
         return static_cast<reg_class>(class_target);
     }
 
@@ -106,7 +108,7 @@ namespace eagle::codec
                 return xmm_128;
             default:
             {
-                assert("invalud reg_size for xmm class");
+                VM_ASSERT("invalud reg_size for xmm class");
                 return invalid;
             }
         }

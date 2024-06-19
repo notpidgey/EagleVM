@@ -11,7 +11,7 @@ namespace eagle::ir
     cmd_branch::cmd_branch(const std::vector<il_exit_result>& result_info, const exit_condition condition)
         : base_command(command_type::vm_branch), condition(condition)
     {
-        assert(result_info.size() <= 2, "cannot have more than 2 exiting branches");
+        VM_ASSERT(result_info.size() <= 2, "cannot have more than 2 exiting branches");
         for(auto& exit : result_info)
             info.push_back(exit);
     }

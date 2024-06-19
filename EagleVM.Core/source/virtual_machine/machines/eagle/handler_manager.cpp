@@ -64,19 +64,18 @@ namespace eagle::virt::eg
 
     std::pair<asmb::code_label_ptr, reg> handler_manager::load_register(const reg register_to_load, const ir::discrete_store_ptr& destination)
     {
-        assert(destination->get_finalized(), "destination storage must be finalized");
+        VM_ASSERT(destination->get_finalized(), "destination storage must be finalized");
         return load_register(register_to_load, destination->get_store_register());
     }
 
     std::pair<asmb::code_label_ptr, reg> handler_manager::load_register(reg register_to_load, reg load_destination)
     {
-        assert(get_reg_class(load_destination) == gpr_64, "invalid size of load destination");
+        VM_ASSERT(get_reg_class(load_destination) == gpr_64, "invalid size of load destination");
         if (settings->single_register_handlers)
         {
             register_to_load = get_bit_version(register_to_load, bit_64);
             load_destination = regs->get_reserved_temp(2);
 
-        ATTEMPT_CREATE_HANDLER:
             if (register_load_handlers.contains(register_to_load))
             {
                 auto [tagged, working] = register_load_handlers[register_to_load].get_first_pair();
@@ -224,7 +223,7 @@ namespace eagle::virt::eg
                     //     encode(m_or, ZREG(target_register), ZREG(gpr_temp)),
                     // });
 
-                    assert("this should not happen as the register manager should handle cross boundary loads");
+                    VM_ASSERT("this should not happen as the register manager should handle cross boundary loads");
                 }
             }
             else
@@ -258,19 +257,18 @@ namespace eagle::virt::eg
 
     std::pair<asmb::code_label_ptr, reg> handler_manager::store_register(const reg register_to_store_into, const ir::discrete_store_ptr& source)
     {
-        assert(source->get_finalized(), "destination storage must be finalized");
-        assert(source->get_store_size() == to_ir_size(get_reg_size(register_to_store_into)), "source must be the same size as desintation register");
+        VM_ASSERT(source->get_finalized(), "destination storage must be finalized");
+        VM_ASSERT(source->get_store_size() == to_ir_size(get_reg_size(register_to_store_into)), "source must be the same size as desintation register");
 
         return store_register(register_to_store_into, source->get_store_register());
     }
 
     std::pair<asmb::code_label_ptr, reg> handler_manager::store_register(const reg register_to_store_into, reg source)
     {
-        assert(get_reg_class(source) == gpr_64, "invalid size of load destination");
+        VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
 
         if (settings->single_register_handlers)
         {
-        ATTEMPT_CREATE_HANDLER:
             if (register_store_handlers.contains(register_to_store_into))
             {
                 auto [tagged, working] = register_store_handlers[register_to_store_into].get_first_pair();
@@ -411,7 +409,7 @@ namespace eagle::virt::eg
 
                     // case 3: we have a boundary, fuck
                 else
-                    assert("this should not happen, register manager needs to split cross read boundaries");
+                    VM_ASSERT("this should not happen, register manager needs to split cross read boundaries");
             }
         }
 
@@ -491,8 +489,8 @@ namespace eagle::virt::eg
 
     asmb::code_label_ptr handler_manager::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
     {
-        assert(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
-        assert(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");
+        VM_ASSERT(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
+        VM_ASSERT(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");
 
         const std::tuple key = std::tie(mnemonic, handler_sig);
         for (const auto& [tuple, code_label] : tagged_instruction_handlers)
@@ -516,7 +514,7 @@ namespace eagle::virt::eg
 
     void handler_manager::call_vm_handler(const asmb::code_container_ptr& container, const asmb::code_label_ptr& label) const
     {
-        assert(label != nullptr, "code cannot be an invalid code label");
+        VM_ASSERT(label != nullptr, "code cannot be an invalid code label");
         const asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
 
         // lea VCS, [VCS - 8]       ; allocate space for new return address
@@ -767,7 +765,7 @@ namespace eagle::virt::eg
 
     reg handler_manager::get_push_working_register() const
     {
-        assert(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
+        VM_ASSERT(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
         return regs->get_reserved_temp(0);
     }
 
@@ -794,7 +792,7 @@ namespace eagle::virt::eg
 
     reg handler_manager::get_pop_working_register()
     {
-        assert(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
+        VM_ASSERT(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
         return regs->get_reserved_temp(0);
     }
 

@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "eaglevm-core/util/random.h"
+#include "eaglevm-core/util/assert.h"
 
 namespace eagle::pe
 {
@@ -313,7 +314,7 @@ namespace eagle::pe
         });
 
         // make sure the header is padded correctly
-        assert(protected_binary.tellp() <= header_size);
+        VM_ASSERT(protected_binary.tellp() <= header_size);
         if (protected_binary.tellp() >= header_size)
         {
             printf("[!] header size adjustment went wrong...\n");

@@ -32,8 +32,8 @@ namespace eagle::ir::handler
 
     ir_insts cmp::gen_handler(handler_sig signature)
     {
-        assert(signature.size() == 2, "invalid signature. must contain 2 operands");
-        assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
+        VM_ASSERT(signature.size() == 2, "invalid signature. must contain 2 operands");
+        VM_ASSERT(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
 
         ir_size target_size = signature.front();
 

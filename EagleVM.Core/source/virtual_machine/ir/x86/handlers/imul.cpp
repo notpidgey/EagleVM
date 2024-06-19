@@ -30,8 +30,8 @@ namespace eagle::ir::handler
 
     ir_insts imul::gen_handler(handler_sig signature)
     {
-        assert(signature.size() == 2, "invalid signature. must contain 2 operands");
-        assert(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
+        VM_ASSERT(signature.size() == 2, "invalid signature. must contain 2 operands");
+        VM_ASSERT(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
 
         ir_size target_size = signature.front();
 
@@ -70,7 +70,7 @@ namespace eagle::ir::lifter
         //            break;
         //    }
 
-        //    assert(status == translate_status::success, "failed to virtualized operand");
+        //    VM_ASSERT(status == translate_status::success, "failed to virtualized operand");
         //}
 
         block->add_command(std::make_shared<cmd_rflags_load>());
@@ -100,7 +100,7 @@ namespace eagle::ir::lifter
             }
             default:
             {
-                assert("operand count not supported by handler");
+                VM_ASSERT("operand count not supported by handler");
 
                 break;
             }
