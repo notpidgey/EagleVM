@@ -169,7 +169,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
         __debugbreak();
 #endif
 
-    spdlog::get("console_logger")->info("starting {} run at {:x}", instr.c_str(), run_space);
+    spdlog::get("console")->info("starting {} run at {:x} {:x} bytes", instr.c_str(), run_space, virtualized_instruction.size());
     auto [result_context, output_target] = container.run(bp);
 
     VirtualFree(reinterpret_cast<void*>(run_space), 0, MEM_RELEASE);
@@ -187,7 +187,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
         ss << "[+] passed\n";
         passed->fetch_add(1);
 
-        spdlog::get("file_logger")->info(ss.str());
+        spdlog::get("test")->info(ss.str());
+        spdlog::get("console")->info("instruction {} passed", instr.c_str());
     }
     else
     {
@@ -219,7 +220,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
         ss << "[!] failed\n";
         failed->fetch_add(1);
 
-        spdlog::get("file_logger")->error(ss.str());
+        spdlog::get("test")->error(ss.str());
+        spdlog::get("console")->error("instruction {} failed", instr.c_str());
     }
 }
 
@@ -245,7 +247,7 @@ int main(int argc, char* argv[])
     machine_settings->set_randomize_vm_regs(true);
     machine_settings->set_randomize_stack_regs(true);*/
 
-    auto console_logger = spdlog::stdout_color_mt("console_logger");
+    auto console_logger = spdlog::stdout_color_mt("console");
     spdlog::flush_every(std::chrono::seconds(5));
 
     virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
@@ -268,8 +270,8 @@ int main(int argc, char* argv[])
             continue;
 
         // Create an ofstream object for the output file
-        std::shared_ptr<spdlog::logger> file_logger = spdlog::basic_logger_mt<spdlog::async_factory>("file_logger", "x86-tests/" + file_name);
-        spdlog::get("console_logger")->info("generating tests for {}", entry_path.string());
+        const std::shared_ptr<spdlog::logger> file_logger = spdlog::basic_logger_mt<spdlog::async_factory>("test", "x86-tests/" + file_name);
+        spdlog::get("console")->info("generating tests for {}", entry_path.string());
 
         // read entry file as string
         std::ifstream file(entry.path());
@@ -285,12 +287,15 @@ int main(int argc, char* argv[])
             process_entry(machine_settings, n, &passed, &failed, current_task_id);
         });
 
-        spdlog::get("console_logger")->info("finished generating {} tests for: {}", passed + failed, file_name);
-        spdlog::get("console_logger")->info("passed {}", passed.load());
-        spdlog::get("console_logger")->info("failed {}", failed.load());
+        spdlog::get("console")->info("finished generating {} tests for: {}", passed + failed, file_name);
+        spdlog::get("console")->info("passed {}", passed.load());
+        spdlog::get("console")->info("failed {}", failed.load());
 
         float success = static_cast<float>(passed) / (passed.load() + failed.load()) * 100;
-        spdlog::get("console_logger")->info("success rate {}", success);
+        spdlog::get("console")->info("success rate {}", success);
+
+        file_logger->flush();
+        spdlog::drop("test");
     }
 
     run_container::destroy_veh();
