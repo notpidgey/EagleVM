@@ -129,7 +129,7 @@ namespace eagle::virt::eg
 
             for (const auto& [first, last] : register_ranges)
             {
-                const uint16_t length = last - first;
+                const auto length = last - first;
 
                 auto find_avail_range = [](
                     const std::vector<reg_range>& occupied_ranges,
@@ -252,14 +252,14 @@ namespace eagle::virt::eg
 
     std::vector<reg_range> register_manager::get_unoccupied_ranges(const codec::reg reg)
     {
-        const uint16_t bit_count = get_reg_size(reg);
+        const uint16_t bit_count = static_cast<uint16_t>(get_reg_size(reg));
         std::vector<reg_range> occupied_ranges = dest_register_map[reg];
         std::vector<reg_range> unoccupied_ranges;
 
         // Sort the occupied ranges by their starting point
         std::ranges::sort(occupied_ranges);
 
-        uint16_t current_pos = 0;
+        unsigned int current_pos = 0;
 
         for (const auto& [fst, snd] : occupied_ranges)
         {
@@ -323,13 +323,5 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
         return virtual_order_xmm[i];
-    }
-
-    void register_manager::enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back)
-    {
-        if (from_back)
-            std::ranges::for_each(push_order, enumerable);
-        else
-            std::for_each(push_order.rbegin(), push_order.rend(), enumerable);
     }
 }

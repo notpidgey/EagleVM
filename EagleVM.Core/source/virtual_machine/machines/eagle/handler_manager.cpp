@@ -76,7 +76,6 @@ namespace eagle::virt::eg
             register_to_load = get_bit_version(register_to_load, bit_64);
             load_destination = regs->get_reserved_temp(2);
 
-        ATTEMPT_CREATE_HANDLER:
             if (register_load_handlers.contains(register_to_load))
             {
                 auto [tagged, working] = register_load_handlers[register_to_load].get_first_pair();
@@ -270,7 +269,6 @@ namespace eagle::virt::eg
 
         if (settings->single_register_handlers)
         {
-        ATTEMPT_CREATE_HANDLER:
             if (register_store_handlers.contains(register_to_store_into))
             {
                 auto [tagged, working] = register_store_handlers[register_to_store_into].get_first_pair();

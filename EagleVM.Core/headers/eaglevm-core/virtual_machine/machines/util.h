@@ -25,6 +25,9 @@ namespace eagle::virt
             case codec::bit_8:
                 return ir::ir_size::bit_8;
         }
+
+        VM_ASSERT("reached invalid ir size");
+        return ir::ir_size::none;
     }
 
     inline codec::reg_size to_reg_size(const ir::ir_size ir_size)
@@ -48,5 +51,8 @@ namespace eagle::virt
             case ir::ir_size::none:
                 return codec::reg_size::empty;
         }
+
+        VM_ASSERT("reached invalid reg size");
+        return codec::reg_size::empty;
     }
 }
