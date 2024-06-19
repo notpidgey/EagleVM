@@ -30,6 +30,16 @@ endif()
 add_subdirectory(nlohmann-json)
 set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
 
+# Subdirectory: spdlog
+set(CMKR_CMAKE_FOLDER ${CMAKE_FOLDER})
+if(CMAKE_FOLDER)
+	set(CMAKE_FOLDER "${CMAKE_FOLDER}/spdlog")
+else()
+	set(CMAKE_FOLDER spdlog)
+endif()
+add_subdirectory(spdlog)
+set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
+
 # Target: bigint
 add_library(bigint INTERFACE)
 

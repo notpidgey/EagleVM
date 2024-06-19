@@ -7,15 +7,12 @@
 #pragma optimize("", off)
 std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
 {
-    if (!run_area)
-        create_run_area();
-
-    memcpy(run_area, instructions.data(), instructions.size());
     CONTEXT output_target, input_target;
 
     bool test_ran = false;
     RtlCaptureContext(&safe_context);
 
+    add_veh();
     if (!test_ran)
     {
         test_ran = true;
@@ -43,27 +40,15 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
             __nop();
         }
 
-        add_veh();
         RtlRestoreContext(&input_target, nullptr);
     }
 
     remove_veh();
-
-    if (clear_run_area)
-        free_run_area();
-    else
-        memset(run_area, 0xCC, run_area_size);
-
     return { result_context, output_target };
 }
 #pragma optimize("", on)
 
-void run_container::set_instruction_data(const std::vector<uint8_t>& data)
-{
-    instructions = data;
-}
-
-void run_container::set_result(const PCONTEXT result)
+void run_container::set_result_context(const PCONTEXT result)
 {
     result_context = *result;
 }
@@ -73,28 +58,10 @@ CONTEXT run_container::get_safe_context()
     return safe_context;
 }
 
-memory_range run_container::create_run_area(const uint32_t size)
-{
-    if (run_area)
-        free_run_area();
-
-    run_area_size = size;
-    run_area = VirtualAlloc(
-        nullptr,
-        size,
-        MEM_COMMIT | MEM_RESERVE,
-        PAGE_EXECUTE_READWRITE
-    );
-
-    memset(run_area, 0xCC, run_area_size);
-    return get_range();
-}
-
-void run_container::set_run_area(uint64_t address, uint32_t size, bool clear)
+void run_container::set_run_area(uint64_t address, uint32_t size)
 {
     run_area = reinterpret_cast<void*>(address);
     run_area_size = size;
-    clear_run_area = clear;
 }
 
 memory_range run_container::get_range()
@@ -108,24 +75,16 @@ memory_range run_container::get_range()
 void run_container::add_veh()
 {
     std::lock_guard lock(run_tests_mutex);
-    run_tests[get_range()] = this;
+    run_tests[this] = get_range();
 }
 
 void run_container::remove_veh()
 {
     std::lock_guard lock(run_tests_mutex);
-    run_tests.erase(get_range());
+    run_tests.erase(this);
 }
 
-void run_container::free_run_area()
-{
-    VirtualFree(run_area, 0x1000, MEM_RELEASE);
-
-    run_area = nullptr;
-    run_area_size = 0;
-}
-
-void* run_container::get_run_area()
+void* run_container::get_run_area() const
 {
     return run_area;
 }
@@ -164,15 +123,15 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
     std::lock_guard lock(run_tests_mutex);
 
     bool found = false;
-    for (auto& [ranges, val] : run_tests)
+    for (auto& [key, ranges] : run_tests)
     {
         auto [low, size] = ranges;
         if (low <= current_rip && current_rip <= low + size)
         {
             found = true;
 
-            val->set_result(info->ContextRecord);
-            *info->ContextRecord = val->get_safe_context();
+            key->set_result_context(info->ContextRecord);
+            *info->ContextRecord = key->get_safe_context();
             break;
         }
     }

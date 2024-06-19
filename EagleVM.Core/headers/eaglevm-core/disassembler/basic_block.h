@@ -25,5 +25,7 @@ namespace eagle::dasm
 
         uint64_t get_index_rva(uint32_t index) const;
     };
+
+    using basic_block_ptr = std::shared_ptr<basic_block>;
 }
 

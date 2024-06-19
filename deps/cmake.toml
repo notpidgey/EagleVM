@@ -6,6 +6,8 @@ ZYDIS_BUILD_EXAMPLES = false
 
 [subdir.nlohmann-json]
 
+[subdir.spdlog]
+
 [target.bigint]
 type = "interface"
 include-directories = ["bigint"]

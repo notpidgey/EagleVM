@@ -36,8 +36,11 @@ namespace eagle::ir::lifter
         {
             case ZYDIS_OPERAND_TYPE_REGISTER:
             {
-                codec::reg target_reg = static_cast<codec::reg>(first_op.reg.value);
-                block->add_command(std::make_shared<cmd_context_store>(target_reg));
+                codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
+                if(static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+                    reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
+
+                block->add_command(std::make_shared<cmd_context_store>(reg, static_cast<codec::reg_size>(first_op.size)));
 
                 break;
             }
@@ -56,6 +59,6 @@ namespace eagle::ir::lifter
 
     bool mov::skip(const uint8_t idx)
     {
-        return operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER && idx == 0;
+        return idx == 0 && operands[idx].type == ZYDIS_OPERAND_TYPE_REGISTER;
     }
 }

@@ -63,6 +63,15 @@ namespace eagle::virt::pidg
         return vm_order[number_of_vregs + target];
     }
 
+    std::vector<codec::reg> inst_regs::get_availiable_temp() const
+    {
+        std::vector<codec::reg> out;
+        for(auto i = number_of_vregs; i < vm_order.size(); i++)
+            out.push_back(vm_order[i]);
+
+        return out;
+    }
+
     std::pair<uint32_t, codec::reg_size> inst_regs::get_stack_displacement(const codec::reg reg) const
     {
         //determine 64bit version of register

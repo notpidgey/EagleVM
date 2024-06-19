@@ -9,7 +9,8 @@
 namespace eagle::asmb
 {
     using code_container_ptr = std::shared_ptr<class code_container>;
-    using inst_label_v = std::variant<codec::dynamic_instruction, code_label_ptr>;
+    using inline_code_gen = std::function<std::vector<uint8_t>(uint64_t)>;
+    using inst_label_v = std::variant<codec::dynamic_instruction, code_label_ptr, std::vector<uint8_t>>;
 
     class code_container
     {
@@ -33,6 +34,9 @@ namespace eagle::asmb
         [[nodiscard]] std::vector<inst_label_v> get_instructions() const;
 
     private:
+        uint32_t uid;
+        static uint32_t current_uid;
+
         std::string name;
         bool is_named;
 

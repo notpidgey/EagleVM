@@ -7,9 +7,13 @@ namespace eagle::ir
     {
     public:
         explicit cmd_context_store(codec::reg dest);
+        explicit cmd_context_store(codec::reg dest, codec::reg_size size);
+
         codec::reg get_reg() const;
+        codec::reg_size get_value_size() const;
 
     private:
         codec::reg dest;
+        codec::reg_size size;
     };
 }

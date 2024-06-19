@@ -7,3 +7,6 @@
 [submodule "deps/x86_test_data"]
 	path = deps/x86_test_data
 	url = https://github.com/notpidgey/x86TestData
+[submodule "deps/spdlog"]
+	path = deps/spdlog
+	url = https://github.com/gabime/spdlog

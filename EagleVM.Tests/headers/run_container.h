@@ -8,19 +8,12 @@
 typedef std::vector<std::pair<std::string, uint64_t>> reg_overwrites;
 typedef std::pair<uint64_t, uint32_t> memory_range;
 
-struct memory_range_hash {
-    std::size_t operator()(const memory_range& mr) const {
-        return std::hash<uint64_t>()(mr.first) ^ std::hash<uint16_t>()(mr.second);
-    }
-};
-
 class run_container
 {
 public:
     run_container(const std::vector<uint8_t>& data,
         const reg_overwrites& input, const reg_overwrites& output)
     {
-        instructions = data;
         input_writes = input;
         output_writes = output;
 
@@ -39,26 +32,18 @@ public:
 
     std::pair<CONTEXT, CONTEXT> run(bool bp = false);
 
-    void set_instruction_data(const std::vector<uint8_t>& data);
-    void set_result(PCONTEXT result);
+    void set_result_context(PCONTEXT result);
     CONTEXT get_safe_context();
 
-    memory_range create_run_area(uint32_t size = 0x1000);
-    void set_run_area(uint64_t address, uint32_t size, bool clear);
-
-    void free_run_area();
-
-    void* get_run_area();
+    void set_run_area(uint64_t address, uint32_t size);
+    void* get_run_area() const;
 
     static void init_veh();
     static void destroy_veh();
 
 private:
-    std::vector<uint8_t> instructions;
-
     void* run_area = nullptr;
-    uint16_t run_area_size = 0;
-    bool clear_run_area = true;
+    uint32_t run_area_size = 0;
 
     CONTEXT result_context{};
     CONTEXT safe_context{};
@@ -75,7 +60,7 @@ private:
 
     inline static PVOID veh_handle;
     inline static std::mutex run_tests_mutex;
-    inline static std::unordered_map<memory_range, run_container*, memory_range_hash> run_tests;
+    inline static std::unordered_map<run_container*, memory_range> run_tests;
 
     static LONG CALLBACK veh_handler(EXCEPTION_POINTERS* info);
 };

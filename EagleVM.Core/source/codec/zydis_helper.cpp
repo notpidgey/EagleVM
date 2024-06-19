@@ -9,6 +9,12 @@ namespace eagle::codec
         ZydisFormatterInit(&zydis_formatter, ZYDIS_FORMATTER_STYLE_INTEL);
     }
 
+    reg get_bit_version(reg input_reg, const reg_size target_size)
+    {
+        const reg_class reg_class = get_class_from_size(target_size);
+        return get_bit_version(input_reg, reg_class);
+    }
+
     reg get_bit_version(reg input_reg, const reg_class target_size)
     {
         // unfortuantely this has to be manually resolved : (
@@ -80,7 +86,7 @@ namespace eagle::codec
         }
     }
 
-    reg_class get_gpr_class_from_size(const reg_size size)
+    reg_class get_class_from_size(const reg_size size)
     {
         switch (size)
         {
@@ -92,18 +98,6 @@ namespace eagle::codec
                 return gpr_16;
             case bit_8:
                 return gpr_8;
-            default:
-            {
-                assert("invalud reg_size for gpr class");
-                return invalid;
-            }
-        }
-    }
-
-    reg_class get_xmm_class_from_size(const reg_size size)
-    {
-        switch (size)
-        {
             case bit_512:
                 return zmm_512;
             case bit_256:
@@ -277,7 +271,7 @@ namespace eagle::codec
         return std::string(buffer);
     }
 
-    std::vector<uint8_t> compile(const enc::req& request)
+    std::vector<uint8_t> compile(enc::req& request)
     {
         std::vector<uint8_t> instruction_data(ZYDIS_MAX_INSTRUCTION_LENGTH);
         ZyanUSize encoded_length = ZYDIS_MAX_INSTRUCTION_LENGTH;

@@ -18,6 +18,6 @@ enum comparison_fail
 namespace test_util
 {
     std::vector<uint8_t> parse_hex(const std::string& hex);
-    void print_regs(nlohmann::json& inputs, std::ofstream& stream);
+    void print_regs(nlohmann::json& inputs, std::stringstream& stream);
     uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 };

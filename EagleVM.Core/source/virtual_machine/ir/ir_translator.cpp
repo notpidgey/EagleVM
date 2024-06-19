@@ -13,7 +13,7 @@
 
 namespace eagle::ir
 {
-    ir_translator::ir_translator(dasm::segment_dasm* seg_dasm)
+    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm)
     {
         dasm = seg_dasm;
     }
@@ -21,7 +21,7 @@ namespace eagle::ir
     std::vector<preopt_block_ptr> ir_translator::translate(const bool split)
     {
         // we want to initialzie the entire map with bb translates
-        for (dasm::basic_block* block : dasm->blocks)
+        for (dasm::basic_block_ptr block : dasm->blocks)
         {
             const preopt_block_ptr vm_il = std::make_shared<preopt_block>();
             vm_il->init(block);
@@ -30,7 +30,7 @@ namespace eagle::ir
         }
 
         std::vector<preopt_block_ptr> result;
-        for (dasm::basic_block* block : dasm->blocks)
+        for (dasm::basic_block_ptr block : dasm->blocks)
             if (split)
                 result.push_back(translate_block_split(block));
             else
@@ -67,7 +67,7 @@ namespace eagle::ir
         return result;
     }
 
-    preopt_block_ptr ir_translator::translate_block(dasm::basic_block* bb)
+    preopt_block_ptr ir_translator::translate_block(dasm::basic_block_ptr bb)
     {
         preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
@@ -218,7 +218,7 @@ namespace eagle::ir
         return block_info;
     }
 
-    preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block* bb)
+    preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block_ptr bb)
     {
         preopt_block_ptr block_info = bb_map[bb];
         if (bb->decoded_insts.empty())
@@ -265,9 +265,10 @@ namespace eagle::ir
 
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
+                    auto op = ops[j];
                     il_operands.emplace_back(
-                        static_cast<codec::op_type>(ops[i].type),
-                        static_cast<codec::reg_size>(ops[i].size)
+                        static_cast<codec::op_type>(op.type),
+                        static_cast<codec::reg_size>(op.size)
                     );
                 }
 
@@ -588,7 +589,7 @@ namespace eagle::ir
         return flatten(block_vms, block_tracker);
     }
 
-    dasm::basic_block* ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
+    dasm::basic_block_ptr ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
     {
         for (auto& [bb, preopt] : bb_map)
             if (preopt_target == preopt)
@@ -597,7 +598,7 @@ namespace eagle::ir
         return nullptr;
     }
 
-    preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block* basic_block)
+    preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block_ptr basic_block)
     {
         return bb_map[basic_block];
     }
@@ -705,7 +706,7 @@ namespace eagle::ir
         }
     }
 
-    void preopt_block::init(dasm::basic_block* block)
+    void preopt_block::init(dasm::basic_block_ptr block)
     {
         head = std::make_shared<block_ir>();
         tail = std::make_shared<block_ir>();
@@ -726,7 +727,7 @@ namespace eagle::ir
         return body[0];
     }
 
-    dasm::basic_block* preopt_block::get_original_block() const
+    dasm::basic_block_ptr preopt_block::get_original_block() const
     {
         return original_block;
     }

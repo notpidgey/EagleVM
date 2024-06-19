@@ -119,9 +119,13 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/x86/handlers/sub.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/x86/util.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/base_machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_manager.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/eagle/machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/eagle/register_manager.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/pidgeon/inst_handlers.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/pidgeon/inst_regs.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/pidgeon/machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/register_context.cpp"
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_defs.h"
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_enum.h"
 	"EagleVM.Core/headers/eaglevm-core/codec/zydis_helper.h"
@@ -194,10 +198,15 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/op_signature.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/util.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/base_machine.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/machine.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/settings.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/inst_regs.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/settings.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/register_context.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/util.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_op_action.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/models/vm_operand_sig.h"
@@ -317,7 +326,14 @@ target_link_libraries(EagleVMTests PRIVATE
 	EagleVMCore
 	nlohmann_json
 	Zydis
+	spdlog::spdlog
 )
+
+if(MSVC) # msvc
+	target_link_options(EagleVMTests PRIVATE
+		"/DYNAMICBASE:NO"
+	)
+endif()
 
 get_directory_property(CMKR_VS_STARTUP_PROJECT DIRECTORY ${PROJECT_SOURCE_DIR} DEFINITION VS_STARTUP_PROJECT)
 if(NOT CMKR_VS_STARTUP_PROJECT)

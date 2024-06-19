@@ -8,8 +8,11 @@
 
 #include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
+
+#include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 
 using namespace eagle;
 
@@ -144,6 +147,8 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
     asmb::section_manager vm_section(true);
+    std::vector<std::shared_ptr<virt::base_machine>> machines_used;
+
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -169,12 +174,12 @@ int main(int argc, char* argv[])
 
         codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
 
-        dasm::segment_dasm dasm(std::move(instructions), rva_inst_begin, rva_inst_end);
-        dasm.generate_blocks();
+        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), rva_inst_begin, rva_inst_end);
+        dasm->generate_blocks();
 
-        std::printf("\t[>] dasm found %llu basic blocks\n", dasm.blocks.size());
+        std::printf("\t[>] dasm found %llu basic blocks\n", dasm->blocks.size());
 
-        ir::ir_translator ir_trans(&dasm);
+        ir::ir_translator ir_trans(dasm);
         ir::preopt_block_vec preopt = ir_trans.translate(true);
 
         // here we assign vms to each block
@@ -187,7 +192,7 @@ int main(int argc, char* argv[])
         // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
         for (const auto& preopt_block : preopt)
-            if (preopt_block->get_original_block() == dasm.get_block(rva_inst_begin))
+            if (preopt_block->get_original_block() == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
         assert(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -197,11 +202,20 @@ int main(int argc, char* argv[])
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
-        // we want the same settings for every machine
-        virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
-        machine_settings->set_temp_count(4);
-        machine_settings->set_randomize_vm_regs(true);
-        machine_settings->set_randomize_stack_regs(true);
+        // // we want the same settings for every machine
+        // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
+        // machine_settings->set_temp_count(4);
+        // machine_settings->set_randomize_vm_regs(true);
+        // machine_settings->set_randomize_stack_regs(true);
+
+        virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
+        machine_settings->randomize_working_register = false;
+        machine_settings->single_vm_handlers = false;
+        machine_settings->single_register_handlers = false;
+
+        machine_settings->shuffle_push_order = true;
+        machine_settings->shuffle_vm_gpr_order = true;
+        machine_settings->shuffle_vm_xmm_order = true;
 
         // initialize block code labels
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
@@ -214,7 +228,11 @@ int main(int argc, char* argv[])
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)
-            virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
+
+            // virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
+            virt::eg::machine_ptr machine = virt::eg::machine::create(machine_settings);
+            machines_used.push_back(machine);
+
             machine->add_block_context(block_labels);
 
             for (auto& translated_block : blocks)
@@ -245,7 +263,7 @@ int main(int argc, char* argv[])
 
     std::printf("\n");
 
-    auto& [code_section, code_section_bytes] = generator.add_section(".hai_hallo");
+    auto& [code_section, code_section_bytes] = generator.add_section(".hihihi");
     code_section.PointerToRawData = last_section->PointerToRawData + last_section->SizeOfRawData;
     code_section.SizeOfRawData = 0;
     code_section.VirtualAddress = generator.align_section(last_section->VirtualAddress + last_section->Misc.VirtualSize);

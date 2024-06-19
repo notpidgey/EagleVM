@@ -32,9 +32,12 @@ namespace eagle::virt::pidg
     machine_ptr machine::create(const settings_ptr& settings_info)
     {
         const std::shared_ptr<machine> instance = std::make_shared<machine>(settings_info);
-        instance->rm = std::make_shared<inst_regs>(settings_info->get_temp_count(), settings_info);
-        instance->hg = std::make_shared<inst_handlers>(instance, instance->rm, settings_info);
-        instance->rm->init_reg_order();
+        const std::shared_ptr<inst_regs> reg_man = std::make_shared<inst_regs>(settings_info->get_temp_count(), settings_info);
+        reg_man->init_reg_order();
+
+        instance->rm = reg_man;
+        instance->hg = std::make_shared<inst_handlers>(instance, reg_man, settings_info);
+        instance->transaction = std::make_shared<register_context>(reg_man->get_availiable_temp());
 
         return instance;
     }
@@ -44,7 +47,7 @@ namespace eagle::virt::pidg
         return hg->build_handlers();
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_load_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
         const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm->get_stack_displacement(target_reg);
@@ -53,7 +56,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_context_load(size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_context_store_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         const reg target_reg = cmd->get_reg();
         auto [displacement, size] = rm->get_stack_displacement(target_reg);
@@ -62,7 +65,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_context_store(size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_branch_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
         auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
         {
@@ -114,7 +117,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_handler_call_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
     {
         if (cmd->is_operand_sig())
         {
@@ -128,12 +131,12 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_mem_read_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: inline but also add option to use mov handler
         ir::ir_size target_size = cmd->get_read_size();
-        reg target_temp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(target_size)));
+        reg target_temp = get_bit_version(VTEMP, to_reg_size(target_size));
 
         // pop address
         hg->call_vm_handler(block, hg->get_pop(bit_64));
@@ -145,7 +148,7 @@ namespace eagle::virt::pidg
         hg->call_vm_handler(block, hg->get_push(to_reg_size(target_size)));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_mem_write_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd)
     {
         // todo: add pop/push variants in handler_data so that we can generate handlers with random pop/push registers
         // todo: il_size should have a reg_size translator somewhere
@@ -172,17 +175,16 @@ namespace eagle::virt::pidg
             hg->call_vm_handler(block, hg->get_pop(to_reg_size(value_size)));
 
             // mov [vtemp2], vtemp
-            reg target_vtemp = get_bit_version(VTEMP, get_gpr_class_from_size(to_reg_size(value_size)));
+            reg target_vtemp = get_bit_version(VTEMP, to_reg_size(value_size));
             block->add(encode(m_mov, ZMEMBD(VTEMP2, 0, TOB(write_size)), ZREG(target_vtemp)));
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_pop_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd)
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
-            if (!store->get_finalized())
-                assign_discrete_storage({ store }, cmd->get_block_list());
+            transaction->assign(store);
 
             const ir::ir_size pop_size = store->get_store_size();
 
@@ -210,7 +212,7 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_push_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
     {
         // call ia32 handler for push
         switch (cmd->get_push_type())
@@ -236,8 +238,7 @@ namespace eagle::virt::pidg
             case ir::info_type::vm_temp_register:
             {
                 const ir::discrete_store_ptr store = cmd->get_value_temp_register();
-                if (!store->get_finalized())
-                    assign_discrete_storage({ store }, cmd->get_block_list());
+                transaction->assign(store);
 
                 const reg target_reg = store->get_store_register();
                 const reg_class target_class = get_reg_class(target_reg);
@@ -259,8 +260,7 @@ namespace eagle::virt::pidg
                 const uint64_t constant = cmd->get_value_immediate();
                 const ir::ir_size size = cmd->get_size();
 
-                const reg_class target_size = get_gpr_class_from_size(to_reg_size(size));
-                const reg target_temp = get_bit_version(VTEMP, target_size);
+                const reg target_temp = get_bit_version(VTEMP, to_reg_size(size));
 
                 block->add(encode(m_mov, ZREG(target_temp), ZIMMU(constant)));
                 hg->call_vm_handler(block, hg->get_push(to_reg_size(size)));
@@ -284,19 +284,19 @@ namespace eagle::virt::pidg
         }
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_load_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_load = hg->get_rlfags_load();
         hg->call_vm_handler(block, vm_rflags_load);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_rflags_store_ptr)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_store = hg->get_rflags_store();
         hg->call_vm_handler(block, vm_rflags_store);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_sx_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd)
     {
         const ir::ir_size ir_current_size = cmd->get_current();
         reg_size current_size = to_reg_size(ir_current_size);
@@ -308,8 +308,8 @@ namespace eagle::virt::pidg
 
         // mov eax/ax/al, VTEMP
         block->add(encode(m_mov,
-            ZREG(get_bit_version(rax, get_gpr_class_from_size(current_size))),
-            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(current_size)))
+            ZREG(get_bit_version(rax, current_size)),
+            ZREG(get_bit_version(VTEMP, current_size))
         ));
 
         // keep upgrading the operand until we get to destination size
@@ -344,24 +344,35 @@ namespace eagle::virt::pidg
         }
 
         block->add(encode(m_mov,
-            ZREG(get_bit_version(VTEMP, get_gpr_class_from_size(target_size))),
-            ZREG(get_bit_version(rax, get_gpr_class_from_size(target_size)))
+            ZREG(get_bit_version(VTEMP, target_size)),
+            ZREG(get_bit_version(rax, target_size))
         ));
 
         hg->call_vm_handler(block, hg->get_push(target_size));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_enter_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {
         const asmb::code_label_ptr vm_enter = hg->get_vm_enter();
 
         const asmb::code_label_ptr ret = asmb::code_label::create();
         block->add(RECOMPILE(encode(m_push, ZLABEL(ret))));
-        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_enter))));
+        block->add(RECOMPILE_CHUNK([=](uint64_t)
+        {
+            std::vector<enc::req> shit;
+
+            const uint64_t address = vm_enter->get_address();
+            shit.push_back(encode(m_push, ZIMMS(static_cast<uint32_t>(address))));
+            shit.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
+            shit.push_back(encode(m_ret));
+
+            return codec::compile_queue(shit);
+        }));
+
         block->bind(ret);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_vm_exit_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         const asmb::code_label_ptr vm_exit = hg->get_vm_exit();
         const asmb::code_label_ptr ret = asmb::code_label::create();
@@ -370,12 +381,12 @@ namespace eagle::virt::pidg
         block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
 
         // lea VRIP, [VBASE + vmexit_address]
-        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_address(), 8))));
+        block->add(RECOMPILE(encode(m_lea, ZREG(VIP), ZMEMBD(VBASE, vm_exit->get_relative_address(), 8))));
         block->add(encode(m_jmp, ZREG(VIP)));
         block->bind(ret);
     }
 
-    void machine::handle_cmd(asmb::code_container_ptr block, ir::cmd_x86_dynamic_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
     {
         const mnemonic mnemonic = cmd->get_mnemonic();
         std::vector<ir::variant_op> operands = cmd->get_operands();
@@ -383,18 +394,14 @@ namespace eagle::virt::pidg
         enc::req request = create_encode_request(mnemonic);
         for (ir::variant_op& op : operands)
         {
-            std::vector<ir::discrete_store_ptr> stores;
-            std::visit([&stores]<typename reg_type>(reg_type&& arg)
+            std::visit([&]<typename reg_type>(reg_type&& arg)
             {
                 if constexpr (std::is_same_v<std::decay_t<reg_type>, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr& store = arg;
-                    if (!store->get_finalized())
-                        stores.push_back(store);
+                    transaction->assign(store);
                 }
             }, op);
-
-            assign_discrete_storage(stores, cmd->get_block_list());
 
             std::visit([&request]<typename reg_type>(reg_type&& arg)
             {
@@ -410,80 +417,19 @@ namespace eagle::virt::pidg
         block->add(request);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr block, ir::cmd_x86_exec_ptr cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
     {
         block->add(cmd->get_request());
     }
 
-    void machine::assign_discrete_storage(const std::vector<ir::discrete_store_ptr>& stores,
-        const std::vector<ir::discrete_store_ptr>& block_write) const
+    void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
     {
-        const size_t temp_required = stores.size();
-
-        // fill this with indexes 0... temp_count
-        std::vector<uint8_t> temp_reg_index(settings->get_temp_count());
-        std::iota(temp_reg_index.begin(), temp_reg_index.end(), 0);
-
-        // if we use random registers, we shuffle the indexes
-        // otherwise it will be left in normal order
-        if (settings->get_randomize_temp_registers())
-            std::ranges::shuffle(temp_reg_index, util::ran_device::get().gen);
-        else
-            assert(temp_required <= 2, "unable to assign more than 2 temp registers");
-
-        // set to keep track of used registers
-        std::unordered_set<reg> used_registers;
-
-        // add block_write registers to used_registers set
-        for (const auto& block : block_write)
-        {
-            if (block->get_finalized())
-            {
-                // todo:
-                // for the future this has to be checked that its a gpr register
-                used_registers.insert(get_bit_version(block->get_store_register(), gpr_64));
-            }
-        }
-
-        // according to this vms design the default function results will appear in VTEMP
-        // so we want to block VTEMP from being used because pushes and pops will rewrite it
-        // todo: this is weird because sometimes it doesnt matter if we pop into VTEMP and we want that to be a thing
-        if (!settings->get_variant_register_handlers())
-            used_registers.insert(VTEMP);
-
-        for (size_t i = 0; i < temp_required; i++)
-        {
-            const ir::discrete_store_ptr& store = stores[i];
-
-            const reg_size target_size = to_reg_size(store->get_store_size());
-            reg target_temp = rm->get_reg_temp(temp_reg_index[i]);
-            reg target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
-
-            // ensure the chosen register is not already used
-            while (used_registers.contains(get_bit_version(target_reg, gpr_64)))
-            {
-                i++;
-                if (i >= temp_reg_index.size())
-                {
-                    assert("ran out of temporary registers to assign");
-
-                    // im sorry im using asserts for now, will make better later
-                    // throw std::runtime_error("ran out of temporary registers to assign");
-                }
-
-                target_temp = rm->get_reg_temp(temp_reg_index[i]);
-                target_reg = get_bit_version(target_temp, get_gpr_class_from_size(target_size));
-            }
-
-            // mark the chosen register as used
-            used_registers.insert(target_reg);
-
-            // finalize
-            store->finalize_register(target_reg);
-        }
+        base_machine::handle_cmd(code, command);
+        for (ir::discrete_store_ptr& res : command->get_release_list())
+            transaction->release(res);
     }
 
-    reg machine::reg_vm_to_register(ir::reg_vm store)
+    reg machine::reg_vm_to_register(const ir::reg_vm store) const
     {
         ir::ir_size size = ir::ir_size::none;
         switch (store)
@@ -543,6 +489,6 @@ namespace eagle::virt::pidg
                 break;
         }
 
-        return get_bit_version(reg, get_gpr_class_from_size(to_reg_size(size)));
+        return get_bit_version(reg, to_reg_size(size));
     }
 }

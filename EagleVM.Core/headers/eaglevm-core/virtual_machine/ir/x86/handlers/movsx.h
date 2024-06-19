@@ -18,5 +18,10 @@ namespace eagle::ir::lifter
         using base_x86_translator::base_x86_translator;
 
         translate_status encode_operand(codec::dec::op_mem op_mem, uint8_t idx) override;
+        translate_status encode_operand(codec::dec::op_reg op_reg, uint8_t idx) override;
+
+        translate_mem_result translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx);
+        void finalize_translate_to_virtual();
+        bool skip(uint8_t idx);
     };
 }

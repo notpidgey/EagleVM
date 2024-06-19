@@ -20,6 +20,8 @@ namespace eagle::virt::pidg
         void init_reg_order();
         codec::reg get_reg(uint8_t target) const;
         codec::reg get_reg_temp(uint8_t target) const;
+        std::vector<codec::reg> get_availiable_temp() const;
+
         std::pair<uint32_t, codec::reg_size> get_stack_displacement(codec::reg reg) const;
 
         void enumerate(const std::function<void(codec::reg)>& enumerable, const bool from_back = false);
@@ -43,11 +45,3 @@ namespace eagle::virt::pidg
 #define I_VCALLSTACK 3
 #define I_VCSRET 4
 #define I_VBASE 5
-
-#define MNEMONIC_VM_ENTER 0
-#define MNEMONIC_VM_EXIT 1
-#define MNEMONIC_VM_LOAD_REG 2
-#define MNEMONIC_VM_STORE_REG 3
-
-#define MNEMONIC_VM_RFLAGS_ACCEPT 4
-#define MNEMONIC_VM_RFLAGS_LOAD 5

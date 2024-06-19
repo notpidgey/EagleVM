@@ -2,6 +2,8 @@
 
 namespace eagle::asmb
 {
+    uint32_t code_container::current_uid = 0;
+
     code_container_ptr code_container::create()
     {
         return std::make_shared<code_container>();
@@ -56,11 +58,13 @@ namespace eagle::asmb
     {
         is_named = false;
         name = "";
+        uid = current_uid++;
     }
 
     code_container::code_container(const std::string& label_name, bool generate_comments)
     {
         is_named = generate_comments;
         name = label_name;
+        uid = current_uid++;
     }
 }

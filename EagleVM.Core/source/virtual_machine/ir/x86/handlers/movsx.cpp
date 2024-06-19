@@ -20,14 +20,57 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    translate_status movsx::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
+    translate_status movsx::encode_operand(codec::dec::op_mem op_mem, uint8_t idx)
     {
-        base_x86_translator::encode_operand(op_mem, idx);
+        auto res = base_x86_translator::encode_operand(op_mem, idx);
+        if (idx == 1)
+        {
+            block->add_command(std::make_shared<cmd_sx>(
+                static_cast<ir_size>(operands[0].size),
+                static_cast<ir_size>(operands[1].size)
+            ));
+        }
 
-        const ir_size target = get_op_width();
-        const ir_size size = static_cast<ir_size>(operands[idx].size);
+        return res;
+    }
 
-        block->add_command(std::make_shared<cmd_sx>(target, size));
-        return translate_status::success;
+    translate_status movsx::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
+    {
+        auto res = base_x86_translator::encode_operand(op_reg, idx);
+        if (idx == 1)
+        {
+            block->add_command(std::make_shared<cmd_sx>(
+                static_cast<ir_size>(operands[0].size),
+                static_cast<ir_size>(operands[1].size)
+            ));
+        }
+
+        return res;
+    }
+
+    translate_mem_result movsx::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
+    {
+        if (idx == 0) return translate_mem_result::address;
+        return base_x86_translator::translate_mem_action(op_mem, idx);
+    }
+
+    void movsx::finalize_translate_to_virtual()
+    {
+        codec::dec::operand first_op = operands[0];
+
+        // always will be a reg
+        codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
+        if(static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+            reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
+
+        block->add_command(std::make_shared<cmd_context_store>(reg, static_cast<codec::reg_size>(first_op.size)));
+
+        // no handler call required
+        // base_x86_translator::finalize_translate_to_virtual();
+    }
+
+    bool movsx::skip(const uint8_t idx)
+    {
+        return idx == 0 && operands[idx].type == ZYDIS_OPERAND_TYPE_REGISTER;
     }
 }

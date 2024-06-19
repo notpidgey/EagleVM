@@ -15,7 +15,7 @@ std::vector<uint8_t> test_util::parse_hex(const std::string& hex)
     return bytes;
 }
 
-void test_util::print_regs(nlohmann::json& inputs, std::ofstream& stream)
+void test_util::print_regs(nlohmann::json& inputs, std::stringstream& stream)
 {
     for (auto& input: inputs.items())
     {
