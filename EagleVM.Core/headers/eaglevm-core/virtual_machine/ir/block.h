@@ -31,7 +31,7 @@ namespace eagle::ir
         {
             const base_command_ptr& command = get_command(i);
             if (command_assert != command_type::none)
-                assert(command->get_command_type() == command_assert, "command assert failed, invalid command type");
+                VM_ASSERT(command->get_command_type() == command_assert, "command assert failed, invalid command type");
 
             return std::static_pointer_cast<T>(command);
         }

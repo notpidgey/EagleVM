@@ -6,6 +6,7 @@
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/random.h"
+#include "eaglevm-core/util/assert.h"
 
 namespace eagle::virt::eg
 {
@@ -207,7 +208,7 @@ namespace eagle::virt::eg
                     }
                 }
 
-                assert(range_mapped, "unable to find valid range to map registers");
+                VM_ASSERT(range_mapped, "unable to find valid range to map registers");
             }
         }
     }
@@ -281,7 +282,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_vm_reg(const uint8_t i) const
     {
-        assert(i + 1 <= num_v_regs, "attempted to access vreg outside of boundaries");
+        VM_ASSERT(i + 1 <= num_v_regs, "attempted to access vreg outside of boundaries");
         return virtual_order_gpr[i];
     }
 
@@ -296,7 +297,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_reserved_temp(const uint8_t i) const
     {
-        assert(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
+        VM_ASSERT(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
         return virtual_order_gpr[num_v_regs + i];
     }
 
@@ -320,7 +321,7 @@ namespace eagle::virt::eg
 
     codec::reg register_manager::get_reserved_temp_xmm(uint8_t i) const
     {
-        assert(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
+        VM_ASSERT(i + 1 <= num_v_temp_xmm_reserved, "attempted to retreive register with no reservation");
         return virtual_order_xmm[i];
     }
 

@@ -8,7 +8,7 @@ namespace eagle::dasm
     class segment_dasm
     {
     public:
-        explicit segment_dasm(const codec::decode_vec&& segment, uint64_t binary_rva, uint64_t binary_end);
+        explicit segment_dasm(const codec::decode_vec& segment, uint64_t binary_rva, uint64_t binary_end);
 
         basic_block_ptr generate_blocks();
 

@@ -2,7 +2,7 @@
 
 namespace eagle::dasm
 {
-    segment_dasm::segment_dasm(const codec::decode_vec&& segment, const uint64_t binary_rva, const uint64_t binary_end)
+    segment_dasm::segment_dasm(const codec::decode_vec& segment, const uint64_t binary_rva, const uint64_t binary_end)
         : root_block(nullptr)
     {
         function = segment;

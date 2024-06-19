@@ -5,6 +5,8 @@
 #include "eaglevm-core/util/random.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 
+#include "eaglevm-core/util/assert.h"
+
 namespace eagle::virt::pidg
 {
     inst_regs::inst_regs(const uint8_t temp_count, settings_ptr settings)
@@ -52,14 +54,14 @@ namespace eagle::virt::pidg
     codec::reg inst_regs::get_reg(const uint8_t target) const
     {
         // this would be something like VIP, VSP, VTEMP, etc
-        assert(target <= number_of_vregs - 1, "attempt to access invalid vreg");
+        VM_ASSERT(target <= number_of_vregs - 1, "attempt to access invalid vreg");
         return vm_order[target];
     }
 
     codec::reg inst_regs::get_reg_temp(const uint8_t target) const
     {
         // this would be something like VTEMP, VTEMP2, VTEMP3
-        assert(target <= temp_variables - 1, "attemp to access invalid vtemp");
+        VM_ASSERT(target <= temp_variables - 1, "attemp to access invalid vtemp");
         return vm_order[number_of_vregs + target];
     }
 

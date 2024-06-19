@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include "eaglevm-core/util/assert.h"
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
@@ -27,8 +28,8 @@ namespace eagle::ir
 
         void finalize_register(const codec::reg destination)
         {
-            assert(finalized == false, "warning: already finalized register");
-            assert(destination != codec::reg::none, "warning: assigned empty register");
+            VM_ASSERT(finalized == false, "warning: already finalized register");
+            VM_ASSERT(destination != codec::reg::none, "warning: assigned empty register");
 
             final_register = destination;
             finalized = true;
@@ -41,7 +42,7 @@ namespace eagle::ir
 
         [[nodiscard]] codec::reg get_store_register(bool get_bit_64 = true) const
         {
-            assert(finalized == true, "invalid retreival of unfinalized register");
+            VM_ASSERT(finalized == true, "invalid retreival of unfinalized register");
             return final_register;
         }
 

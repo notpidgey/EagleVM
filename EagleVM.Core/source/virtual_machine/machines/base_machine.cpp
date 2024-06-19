@@ -50,7 +50,7 @@ namespace eagle::virt
         {
             if (block_context.contains(block))
             {
-                assert("attempted to overwrite existing block");
+                VM_ASSERT("attempted to overwrite existing block");
                 continue;
             }
 
@@ -62,7 +62,7 @@ namespace eagle::virt
     {
         if (block_context.contains(block))
         {
-            assert("attempted to overwrite existing block");
+            VM_ASSERT("attempted to overwrite existing block");
             return;
         }
 
@@ -191,7 +191,7 @@ namespace eagle::virt
                 return codec::m_jz;
             default:
             {
-                assert("invalid exit condition reached");
+                VM_ASSERT("invalid exit condition reached");
                 return codec::m_invalid;
             }
         }

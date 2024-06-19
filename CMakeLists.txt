@@ -148,6 +148,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/pe/packer/pe_packer.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/pe_generator.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/pe_parser.h"
+	"EagleVM.Core/headers/eaglevm-core/util/assert.h"
 	"EagleVM.Core/headers/eaglevm-core/util/random.h"
 	"EagleVM.Core/headers/eaglevm-core/util/util.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/block.h"

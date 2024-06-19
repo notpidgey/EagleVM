@@ -5,7 +5,7 @@ namespace eagle::ir
 {
     base_command_ptr block_ir::add_command(const base_command_ptr& command)
     {
-        assert(exit == nullptr, "cannot append command after exit");
+        VM_ASSERT(exit == nullptr, "cannot append command after exit");
         if (command->get_command_type() == command_type::vm_branch)
             exit = std::static_pointer_cast<cmd_branch>(command);
 
@@ -15,7 +15,7 @@ namespace eagle::ir
 
     void block_ir::add_command(const std::vector<base_command_ptr>& command)
     {
-        assert(exit == nullptr, "cannot append command after exit");
+        VM_ASSERT(exit == nullptr, "cannot append command after exit");
         if (!command.empty() && command.back()->get_command_type() == command_type::vm_branch)
             exit = std::static_pointer_cast<cmd_branch>(command.back());
 
@@ -52,13 +52,13 @@ namespace eagle::ir
 
     base_command_ptr& block_ir::get_command(const size_t i)
     {
-        assert(i < commands.size(), "index beyond vector size");
+        VM_ASSERT(i < commands.size(), "index beyond vector size");
         return commands[i];
     }
 
     base_command_ptr& block_ir::get_command_back()
     {
-        assert(!commands.empty(), "commands cannot be empty");
+        VM_ASSERT(!commands.empty(), "commands cannot be empty");
         return commands.back();
     }
 
@@ -78,7 +78,7 @@ namespace eagle::ir
 
     base_command_ptr& block_ir::remove_command(const size_t i)
     {
-        assert(i < commands.size(), "index beyond vector size");
+        VM_ASSERT(i < commands.size(), "index beyond vector size");
 
         base_command_ptr& command = commands[i];
         commands.erase(commands.begin() + i);

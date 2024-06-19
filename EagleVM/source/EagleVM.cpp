@@ -173,8 +173,7 @@ int main(int argc, char* argv[])
          */
 
         codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
-
-        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), rva_inst_begin, rva_inst_end);
+        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(instructions, rva_inst_begin, rva_inst_end);
         dasm->generate_blocks();
 
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm->blocks.size());

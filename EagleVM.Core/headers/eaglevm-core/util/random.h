@@ -6,11 +6,12 @@ namespace eagle::util
     class ran_device
     {
     public:
-        std::random_device rd;
-        std::mt19937 gen;
+        std::mt19937 gen{};
 
         ran_device()
         {
+            std::random_device rd{};
+
 #if _DEBUG
             gen.seed(0xDEADBEEF);
 #else

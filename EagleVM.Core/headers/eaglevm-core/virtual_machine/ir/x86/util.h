@@ -1,5 +1,7 @@
 #pragma once
 #include <cassert>
+
+#include "eaglevm-core/util/assert.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir

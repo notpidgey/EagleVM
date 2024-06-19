@@ -13,7 +13,7 @@ namespace eagle::ir::handler
 
         if(something == std::nullopt)
         {
-            assert("invalid target handler id");
+            VM_ASSERT("invalid target handler id");
             return {};
         }
 
@@ -22,7 +22,7 @@ namespace eagle::ir::handler
 
     ir_insts base_handler_gen::gen_handler(handler_sig)
     {
-        assert("unimplemented gen_handler. unable to generate handler for signature");
+        VM_ASSERT("unimplemented gen_handler. unable to generate handler for signature");
         return { };
     }
 

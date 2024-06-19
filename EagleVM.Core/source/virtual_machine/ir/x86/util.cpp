@@ -24,7 +24,7 @@ namespace eagle::ir
                 return ir_size::bit_8;
             default:
             {
-                assert("reached invalid bit size of ir size");
+                VM_ASSERT("reached invalid bit size of ir size");
                 return ir_size::none;
             }
         }

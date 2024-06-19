@@ -134,7 +134,7 @@ namespace eagle::virt::eg
                     const ir::block_ptr& target = arg;
 
                     const asmb::code_label_ptr label = get_block_label(target);
-                    assert(label != nullptr, "block contains missing context");
+                    VM_ASSERT(label != nullptr, "block contains missing context");
 
                     block->add(RECOMPILE(encode(mnemonic, ZJMPR(label))));
                 }
@@ -152,7 +152,7 @@ namespace eagle::virt::eg
             }
             case ir::exit_condition::none:
             {
-                assert("invalid exit condition");
+                VM_ASSERT("invalid exit condition");
                 break;
             }
             default:
@@ -274,7 +274,7 @@ namespace eagle::virt::eg
             }
             default:
             {
-                assert("reached invalid stack_type for push command");
+                VM_ASSERT("reached invalid stack_type for push command");
                 break;
             }
         }
@@ -335,7 +335,7 @@ namespace eagle::virt::eg
                 }
                 default:
                 {
-                    assert("unable to handle size translation");
+                    VM_ASSERT("unable to handle size translation");
                 }
             }
         }
@@ -505,7 +505,7 @@ namespace eagle::virt::eg
 
     void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, const reg_size size) const
     {
-        assert(to_reg_size(shared->get_store_size()) >= size, "pop size cannot be greater than store size");
+        VM_ASSERT(to_reg_size(shared->get_store_size()) >= size, "pop size cannot be greater than store size");
         if (!settings->randomize_working_register)
         {
             const reg returning_reg = han_man->get_pop_working_register();
@@ -574,7 +574,7 @@ namespace eagle::virt::eg
                 size = ir::ir_size::bit_64;
                 break;
             default:
-                assert("invalid case reached for reg_vm");
+                VM_ASSERT("invalid case reached for reg_vm");
                 break;
         }
 
@@ -597,7 +597,7 @@ namespace eagle::virt::eg
                 reg = VBASE;
                 break;
             default:
-                assert("invalid case reached for reg_vm");
+                VM_ASSERT("invalid case reached for reg_vm");
                 break;
         }
 
