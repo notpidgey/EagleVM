@@ -18,6 +18,14 @@ namespace eagle::util
         uint64_t gen_dist(std::uniform_int_distribution<uint64_t>& distribution);
         double gen_dist(std::uniform_real_distribution<>& distribution);
 
+        template <typename T>
+        T random_elem(const std::vector<T>& vec) {
+            VM_ASSERT(!vec.empty(), "cannot get a random element from an empty vector");
+
+            std::uniform_int_distribution<> dist(0, vec.size() - 1);
+            return vec[dist(gen)];
+        }
+
         ran_device(const ran_device&) = delete;
         ran_device& operator=(const ran_device&) = delete;
     };

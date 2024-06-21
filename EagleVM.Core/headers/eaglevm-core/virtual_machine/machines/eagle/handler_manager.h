@@ -50,6 +50,12 @@ namespace eagle::virt::eg
         bool tagged = false;
     };
 
+    struct complex_load_info
+    {
+        std::vector<std::pair<reg_range, reg_range>> complex_mapping;
+        std::pair<reg_range, reg_range> get_mapping(uint16_t bit);
+    };
+
     using inst_handlers_ptr = std::shared_ptr<class handler_manager>;
     using machine_ptr = std::shared_ptr<class machine>;
 
@@ -69,10 +75,10 @@ namespace eagle::virt::eg
         asmb::code_label_ptr get_rflags_store();
 
         codec::reg get_push_working_register() const;
-        codec::reg get_pop_working_register();
+        codec::reg get_pop_working_register() const;
 
         asmb::code_label_ptr get_push(codec::reg target_reg, codec::reg_size size);
-        asmb::code_label_ptr get_pop(codec::reg reg, codec::reg_size size);
+        asmb::code_label_ptr get_pop(codec::reg target_reg, codec::reg_size size);
 
         void call_vm_handler(const asmb::code_container_ptr& container, const asmb::code_label_ptr& label) const;
 
@@ -83,7 +89,9 @@ namespace eagle::virt::eg
          * @param destination
          */
         std::pair<asmb::code_label_ptr, codec::reg> load_register(codec::reg register_to_load, const ir::discrete_store_ptr& destination);
-        std::pair<asmb::code_label_ptr, codec::reg> load_register(codec::reg register_to_load, const codec::reg load_destination);
+        std::pair<asmb::code_label_ptr, codec::reg> load_register(codec::reg register_to_load, codec::reg load_destination);
+        std::tuple<asmb::code_label_ptr, codec::reg, complex_load_info> load_register_complex(codec::reg register_to_load,
+            const ir::discrete_store_ptr& destination);
 
         /**
          * append to the current working block a call or inlined code to store a value in a specific register
@@ -93,6 +101,11 @@ namespace eagle::virt::eg
          */
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, const ir::discrete_store_ptr& source);
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, codec::reg source);
+        std::tuple<asmb::code_label_ptr, codec::reg> store_register_complex(const codec::reg register_to_store_into, codec::reg source,
+            const complex_load_info& load_info);
+
+        static complex_load_info generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit);
+        static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info, const std::vector<reg_mapped_range>& register_ranges);
 
         std::vector<asmb::code_container_ptr> build_handlers();
 
@@ -131,6 +144,10 @@ namespace eagle::virt::eg
         using tagged_handler_id = std::pair<codec::mnemonic, std::string>;
         using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
         std::vector<tagged_handler_label> tagged_instruction_handlers;
+
+        void load_register_internal(codec::reg target_register, const asmb::code_container_ptr& out,
+            const std::vector<reg_mapped_range>& ranges_required) const;
+        void store_register_internal(codec::reg source_register, const asmb::code_container_ptr& out, const std::vector<reg_mapped_range>& ranges_required) const;
 
         [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
         void create_vm_return(const asmb::code_container_ptr& container) const;

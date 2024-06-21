@@ -31,7 +31,7 @@ namespace eagle::virt::pidg
         _CREATE_VM_OPTION(bool, variant_register_handlers, false)
 
         /*
-         * if enabled, commands utalizing discrete_store_ptr will vary VTEMP(x) registers
+         * if enabled, obfuscation utalizing discrete_store_ptr will vary VTEMP(x) registers
          * if disabled, will use the default VTEMP(x) order
          */
         _CREATE_VM_OPTION(bool, randomize_temp_registers, false)

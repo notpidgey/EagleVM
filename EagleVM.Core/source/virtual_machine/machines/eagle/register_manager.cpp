@@ -83,7 +83,7 @@ namespace eagle::virt::eg
         // setup xmm order
         // insert all xmm registers
         {
-            for (int i = codec::xmm0; i <= codec::xmm15; i++)
+            for (int i = codec::xmm0; i <= codec::xmm31; i++)
                 virtual_order_xmm[i - codec::xmm0] = static_cast<codec::reg>(i);
 
             if (settings->shuffle_vm_xmm_order)
@@ -310,10 +310,10 @@ namespace eagle::virt::eg
         return avail_regs;
     }
 
-    std::array<codec::reg, 16> register_manager::get_xmm_regs()
+    std::array<codec::reg, 32> register_manager::get_xmm_regs()
     {
-        std::array<codec::reg, 16> avail_regs{ };
-        for (int i = codec::xmm0; i <= codec::xmm15; i++)
+        std::array<codec::reg, 32> avail_regs{ };
+        for (int i = codec::xmm0; i <= codec::xmm31; i++)
             avail_regs[i - codec::xmm0] = static_cast<codec::reg>(i);
 
         return avail_regs;

@@ -573,7 +573,7 @@ namespace eagle::ir
                 {
                     // this means all exits are of the same vm
                     const size_t command_count = preopt_exit->get_command_count();
-                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 commands");
+                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
 
                     if (command_count == 2)
                     {

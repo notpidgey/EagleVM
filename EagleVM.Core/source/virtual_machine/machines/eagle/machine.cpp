@@ -77,7 +77,21 @@ namespace eagle::virt::eg
         reg_ctx->assign(storage);
 
         // load into storage
-        auto [handler, working_reg] = han_man->load_register(target_reg, storage);
+        asmb::code_label_ptr handler = nullptr;
+        reg working_reg;
+
+        if (settings->complex_temp_loading)
+        {
+            auto [handler_res, working_reg_res, complex_mapping] = han_man->load_register_complex(target_reg, storage);
+            handler = handler_res;
+            working_reg = working_reg_res;
+        }
+        else
+        {
+            auto [handler_res, working_reg_res] = han_man->load_register(target_reg, storage);
+            handler = handler_res;
+            working_reg = working_reg_res;
+        }
 
         block->add(encode(m_xor, ZREG(working_reg), ZREG(working_reg)));
         han_man->call_vm_handler(block, handler);
@@ -86,7 +100,14 @@ namespace eagle::virt::eg
             block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
 
         // push onto stack
-        call_push(block, storage);
+        if (settings->complex_temp_loading)
+        {
+            call_push(block, storage);
+        }
+        else
+        {
+            call_push(block, storage);
+        }
 
         reg_ctx->release(storage);
     }
@@ -110,7 +131,6 @@ namespace eagle::virt::eg
             block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
 
         han_man->call_vm_handler(block, handler);
-
         reg_ctx->release(storage);
     }
 
@@ -364,7 +384,7 @@ namespace eagle::virt::eg
         else
         {
             block->add(RECOMPILE_CHUNK([=](uint64_t)
-            {
+                {
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
@@ -377,7 +397,7 @@ namespace eagle::virt::eg
                 address_gen.push_back(encode(m_ret));
 
                 return codec::compile_queue(address_gen);
-            }));
+                }));
         }
 
         block->bind(ret);

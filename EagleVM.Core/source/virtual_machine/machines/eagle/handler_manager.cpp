@@ -89,11 +89,11 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         if (is_upper_8(register_to_load))
         {
-            for(reg_mapped_range& mapping : ranges_required)
+            for (reg_mapped_range& mapping : ranges_required)
             {
                 auto& [source_range,dest_range, dest_reg] = mapping;
                 auto& [s_from, s_to] = source_range;
@@ -103,8 +103,57 @@ namespace eagle::virt::eg
             }
         }
 
+        load_register_internal(target_register, out, ranges_required);
+        return { label, load_destination };
+    }
+
+    std::tuple<asmb::code_label_ptr, reg, complex_load_info> handler_manager::load_register_complex(const reg register_to_load,
+        const ir::discrete_store_ptr& destination)
+    {
+        const auto load_destination = register_to_load;
+
+        // create a new handler
+        auto [out, label] = register_load_handlers[register_to_load].add_pair(load_destination);
+        out->bind(label);
+
+        // find the mapped ranges required to build the register that we want
+        // shuffle the ranges because we will rebuild it at random
+        std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+
+        complex_load_info load_info;
+        if (is_upper_8(register_to_load))
+        {
+            load_info = generate_complex_load_info(8, 16);
+
+            for (reg_mapped_range& mapping : ranges_required)
+            {
+                auto& [source_range,dest_range, dest_reg] = mapping;
+                auto& [s_from, s_to] = source_range;
+
+                s_from -= 8;
+                s_to -= 8;
+            }
+        }
+        else
+        {
+            load_info = generate_complex_load_info(0, static_cast<uint16_t>(destination->get_store_size()));
+        }
+
+        const reg target_register = load_destination;
+        ranges_required = apply_complex_mapping(load_info, ranges_required);
+        load_register_internal(target_register, out, ranges_required);
+
+        return { label, load_destination, load_info };
+    }
+
+    void handler_manager::load_register_internal(
+        reg target_register,
+        const asmb::code_container_ptr& out,
+        const std::vector<reg_mapped_range>& ranges_required) const
+    {
         std::array temp_regs{ regs->get_reserved_temp(0), regs->get_reserved_temp(1) };
-        // std::ranges::shuffle(temp_regs, util::ran_device::get().gen);
+        std::ranges::shuffle(temp_regs, util::ran_device::get().gen);
 
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
@@ -249,13 +298,13 @@ namespace eagle::virt::eg
         }
 
         create_vm_return(out);
-        return { label, load_destination };
     }
 
     std::pair<asmb::code_label_ptr, reg> handler_manager::store_register(const reg register_to_store_into, const ir::discrete_store_ptr& source)
     {
         VM_ASSERT(source->get_finalized(), "destination storage must be finalized");
-        VM_ASSERT(source->get_store_size() == to_ir_size(get_reg_size(register_to_store_into)), "source must be the same size as desintation register");
+        VM_ASSERT(source->get_store_size() == to_ir_size(get_reg_size(register_to_store_into)),
+            "source must be the same size as desintation register");
 
         return store_register(register_to_store_into, source->get_store_register());
     }
@@ -282,11 +331,11 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         if (is_upper_8(register_to_store_into))
         {
-            for(reg_mapped_range& mapping : ranges_required)
+            for (reg_mapped_range& mapping : ranges_required)
             {
                 auto& [source_range,dest_range, dest_reg] = mapping;
                 auto& [s_from, s_to] = source_range;
@@ -296,8 +345,55 @@ namespace eagle::virt::eg
             }
         }
 
-        reg source_register = source;
+        store_register_internal(source, out, ranges_required);
+        return { label, source };
+    }
 
+    std::tuple<asmb::code_label_ptr, reg> handler_manager::store_register_complex(const reg register_to_store_into, reg source,
+        const complex_load_info& load_info)
+    {
+        VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
+
+        if (settings->single_register_handlers)
+        {
+            if (register_store_handlers.contains(register_to_store_into))
+            {
+                auto [tagged, working] = register_store_handlers[register_to_store_into].get_first_pair();
+                return { std::get<1>(tagged), working };
+            }
+
+            source = regs->get_reserved_temp(2);
+        }
+
+        // create a new handler
+        auto [out, label] = register_store_handlers[register_to_store_into].add_pair(source);
+        out->bind(label);
+
+        // find the mapped ranges required to build the register that we want
+        // shuffle the ranges because we will rebuild it at random
+        std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+
+        if (is_upper_8(register_to_store_into))
+        {
+            for (reg_mapped_range& mapping : ranges_required)
+            {
+                auto& [source_range,dest_range, dest_reg] = mapping;
+                auto& [s_from, s_to] = source_range;
+
+                s_from -= 8;
+                s_to -= 8;
+            }
+        }
+
+        ranges_required = apply_complex_mapping(load_info, ranges_required);
+        store_register_internal(source, out, ranges_required);
+        return { label, source };
+    }
+
+    void handler_manager::store_register_internal(reg source_register, const asmb::code_container_ptr& out,
+            const std::vector<reg_mapped_range>& ranges_required) const
+    {
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
         {
@@ -406,15 +502,128 @@ namespace eagle::virt::eg
 
                     // case 3: we have a boundary, fuck
                 else
-                    VM_ASSERT("this should not happen, register manager needs to split cross read boundaries");
+                VM_ASSERT("this should not happen, register manager needs to split cross read boundaries");
             }
         }
 
         create_vm_return(out);
-        return { label, source_register };
     }
 
-    asmb::code_label_ptr handler_manager::get_push(reg target_reg, reg_size size)
+    complex_load_info handler_manager::generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit)
+    {
+        std::vector<uint16_t> points;
+        points.push_back(start_bit); // starting point
+        points.push_back(end_bit); // ending point (inclusive)
+
+        constexpr auto min_complex = 5;
+        constexpr auto max_complex = 15;
+
+        std::uniform_int_distribution<uint64_t> num_ranges_dist(min_complex, max_complex);
+        const auto num_ranges = util::ran_device::get().gen_dist(num_ranges_dist);
+
+        for (auto i = 0; i < num_ranges - 1; ++i)
+        {
+            uint16_t point;
+            do
+            {
+                point = util::ran_device::get().gen_8() % (end_bit - start_bit);
+            }
+            while (std::ranges::find(points, point) != points.end());
+            points.push_back(point);
+        }
+
+        std::ranges::sort(points);
+
+        std::vector<reg_range> complex_source_ranges;
+        for (size_t i = 0; i < points.size() - 1; ++i)
+            complex_source_ranges.emplace_back(points[i], points[i + 1]);
+
+        std::vector<reg_range> complex_dest_ranges = complex_source_ranges;
+        std::ranges::shuffle(complex_dest_ranges, util::ran_device::get().gen);
+
+        uint16_t current_bit = 0;
+        for (auto& [begin, end] : complex_dest_ranges)
+        {
+            const auto length = end - begin;
+            begin = current_bit;
+            end = current_bit + length;
+
+            current_bit = end;
+        }
+
+        std::vector<std::pair<reg_range, reg_range>> complex_range_mappings;
+        for (auto& src_range : complex_source_ranges)
+        {
+            auto [src_begin, src_end] = src_range;
+            const auto src_len = src_end - src_begin;
+
+            std::vector<std::pair<reg_range, uint32_t>> valid_ranges;
+            for (auto i = 0; i < complex_dest_ranges.size(); i++)
+            {
+                auto& [dest_begin, dest_end] = complex_dest_ranges[i];
+                const auto dest_len = dest_end - dest_begin;
+
+                if (dest_len == src_len)
+                    valid_ranges.emplace_back(complex_dest_ranges[i], i);
+            }
+
+            VM_ASSERT(!valid_ranges.empty(), "it should not be possible to not find element of same length");
+
+            std::pair<reg_range, uint32_t> random_elem = util::ran_device::get().random_elem(valid_ranges);
+            complex_dest_ranges.erase(complex_dest_ranges.begin() + std::get<1>(random_elem));
+            complex_range_mappings.emplace_back(src_range, std::get<0>(random_elem));
+        }
+
+        return { complex_range_mappings };
+    }
+
+    std::vector<reg_mapped_range> handler_manager::apply_complex_mapping(const complex_load_info& load_info,
+        const std::vector<reg_mapped_range>& register_ranges)
+    {
+        std::vector<reg_mapped_range> new_required_ranges;
+        for (const auto& mapping : register_ranges)
+        {
+            const auto& [source_range, dest_range, extra] = mapping;
+            auto [source_start, source_end] = source_range;
+            auto [destination_start, destination_end] = dest_range;
+
+            // iterate through complex_range_mappings to find applicable new source ranges
+            for (const auto& [orig_src, new_src] : load_info.complex_mapping)
+            {
+                auto [orig_src_start, orig_src_end] = orig_src;
+                auto [new_src_start, new_src_end] = new_src;
+
+                // if the source_start is within the original source range
+                if (source_end > orig_src_start && source_start < orig_src_end)
+                {
+                    // calculate the intersection range
+                    int intersect_start = std::max(source_start, orig_src_start);
+                    int intersect_end = std::min(source_end, orig_src_end);
+
+                    // calculate the offset in the new_src range
+                    int new_start_offset = intersect_start - orig_src_start;
+                    int new_end_offset = orig_src_end - intersect_end;
+
+                    // adjust the destination range based on the intersection
+                    int dest_start_offset = intersect_start - source_start;
+                    int dest_end_offset = source_end - intersect_end;
+
+                    // add the new mapped range to new_required_ranges
+                    new_required_ranges.push_back(
+                        {
+                            { new_src_start + new_start_offset, new_src_end - new_end_offset },
+                            { destination_start + dest_start_offset, destination_end - dest_end_offset },
+                            extra
+                        }
+                    );
+                }
+            }
+        }
+
+        return new_required_ranges;
+    }
+
+    asmb::code_label_ptr handler_manager::get_push(const reg target_reg, const reg_size size)
     {
         const reg reg = get_bit_version(target_reg, size);
         if (!vm_push.contains(reg))
@@ -426,7 +635,7 @@ namespace eagle::virt::eg
         return std::get<1>(vm_push[reg]);
     }
 
-    asmb::code_label_ptr handler_manager::get_pop(reg target_reg, reg_size size)
+    asmb::code_label_ptr handler_manager::get_pop(const reg target_reg, const reg_size size)
     {
         const reg reg = get_bit_version(target_reg, size);
         if (!vm_pop.contains(reg))
@@ -533,7 +742,7 @@ namespace eagle::virt::eg
         return regs->get_reserved_temp(0);
     }
 
-    reg handler_manager::get_pop_working_register()
+    reg handler_manager::get_pop_working_register() const
     {
         VM_ASSERT(!settings->randomize_working_register, "can only return a working register if randomization is disabled");
         return regs->get_reserved_temp(0);

@@ -49,7 +49,7 @@ namespace eagle::virt::eg
         return handlers;
     }
 
-        asmb::code_container_ptr handler_manager::build_vm_enter()
+    asmb::code_container_ptr handler_manager::build_vm_enter()
     {
         auto [container, label] = vm_enter.get_pair();
         container->bind(label);
@@ -147,7 +147,7 @@ namespace eagle::virt::eg
         return container;
     }
 
-        asmb::code_container_ptr handler_manager::build_vm_exit()
+    asmb::code_container_ptr handler_manager::build_vm_exit()
     {
         auto [container, label] = vm_exit.get_pair();
         container->bind(label);
