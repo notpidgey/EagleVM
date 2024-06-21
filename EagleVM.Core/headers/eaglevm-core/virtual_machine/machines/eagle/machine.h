@@ -24,7 +24,7 @@ namespace eagle::virt::eg
         explicit machine(const settings_ptr& settings_info);
         static machine_ptr create(const settings_ptr& settings_info);
 
-        virtual asmb::code_container_ptr lift_block(const ir::block_ptr& block) override;
+        asmb::code_container_ptr lift_block(const ir::block_ptr& block) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd) override;
@@ -47,7 +47,9 @@ namespace eagle::virt::eg
         settings_ptr settings;
         register_manager_ptr reg_man;
         inst_handlers_ptr han_man;
-        register_context_ptr reg_ctx;
+
+        register_context_ptr reg_64_container;
+        register_context_ptr reg_128_container;
 
         std::unordered_map<ir::discrete_store_ptr, complex_load_info> store_complex_load_info;
 

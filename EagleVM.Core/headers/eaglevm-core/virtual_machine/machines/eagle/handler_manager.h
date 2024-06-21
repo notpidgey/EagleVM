@@ -62,7 +62,9 @@ namespace eagle::virt::eg
     class handler_manager
     {
     public:
-        handler_manager(const machine_ptr& machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings);
+        handler_manager(const machine_ptr& machine, register_manager_ptr regs,
+            register_context_ptr regs_64_context, register_context_ptr regs_128_context,
+            settings_ptr settings);
 
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
@@ -105,7 +107,8 @@ namespace eagle::virt::eg
             const complex_load_info& load_info);
 
         static complex_load_info generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit);
-        static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info, const std::vector<reg_mapped_range>& register_ranges);
+        static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info,
+            const std::vector<reg_mapped_range>& register_ranges);
 
         std::vector<asmb::code_container_ptr> build_handlers();
 
@@ -123,7 +126,8 @@ namespace eagle::virt::eg
         settings_ptr settings;
 
         register_manager_ptr regs;
-        register_context_ptr regs_context;
+        register_context_ptr regs_64_context;
+        register_context_ptr regs_128_context;
 
         tagged_handler vm_enter;
         tagged_handler vm_exit;
@@ -147,7 +151,8 @@ namespace eagle::virt::eg
 
         void load_register_internal(codec::reg target_register, const asmb::code_container_ptr& out,
             const std::vector<reg_mapped_range>& ranges_required) const;
-        void store_register_internal(codec::reg source_register, const asmb::code_container_ptr& out, const std::vector<reg_mapped_range>& ranges_required) const;
+        void store_register_internal(codec::reg source_register, const asmb::code_container_ptr& out,
+            const std::vector<reg_mapped_range>& ranges_required) const;
 
         [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
         void create_vm_return(const asmb::code_container_ptr& container) const;

@@ -135,7 +135,7 @@ namespace eagle::virt::eg
             if (settings->single_register_handlers)
                 target_reg = regs->get_reserved_temp(2);
             else
-                target_reg = regs_context->get_any();
+                target_reg = regs_64_context->get_any();
 
             auto [disp, _] = regs->get_stack_displacement(gpr);
 
@@ -152,7 +152,7 @@ namespace eagle::virt::eg
         auto [container, label] = vm_exit.get_pair();
         container->bind(label);
 
-        reg temp = regs_context->get_any();
+        reg temp = regs_64_context->get_any();
 
         // we need to place the target RSP after all the pops
         // lea VTEMP, [VREGS + vm_stack_regs]
@@ -183,7 +183,7 @@ namespace eagle::virt::eg
             if (settings->single_register_handlers)
                 target_reg = regs->get_reserved_temp(2);
             else
-                target_reg = regs_context->get_any();
+                target_reg = regs_64_context->get_any();
 
             auto [disp, _] = regs->get_stack_displacement(gpr);
 

@@ -29,4 +29,6 @@ namespace eagle::util
         ran_device(const ran_device&) = delete;
         ran_device& operator=(const ran_device&) = delete;
     };
+
+    inline ran_device& get_ran_device();
 }

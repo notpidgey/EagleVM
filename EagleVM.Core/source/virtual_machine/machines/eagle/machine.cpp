@@ -40,7 +40,7 @@ namespace eagle::virt::eg
         const std::shared_ptr<handler_manager> han_man = std::make_shared<handler_manager>(instance, reg_man, reg_ctx, settings_info);
 
         instance->reg_man = reg_man;
-        instance->reg_ctx = reg_ctx;
+        instance->reg_64_container = reg_ctx;
         instance->han_man = han_man;
 
         return instance;
@@ -63,7 +63,9 @@ namespace eagle::virt::eg
             handle_cmd(code, command);
         }
 
-        reg_ctx = std::make_shared<register_context>(reg_man->get_unreserved_temp());
+        reg_64_container = std::make_shared<register_context>(reg_man->get_unreserved_temp(), gpr_64);
+        reg_128_container = std::make_shared<register_context>(reg_man->get_unreserved_temp_xmm(), xmm_128);
+
         return code;
     }
 
@@ -74,7 +76,7 @@ namespace eagle::virt::eg
         const reg_size reg_size = get_reg_size(target_reg);
 
         const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(reg_size));
-        reg_ctx->assign(storage);
+        reg_64_container->assign(storage);
 
         // load into storage
         asmb::code_label_ptr handler = nullptr;
@@ -109,7 +111,7 @@ namespace eagle::virt::eg
             call_push(block, storage);
         }
 
-        reg_ctx->release(storage);
+        reg_64_container->release(storage);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
@@ -120,7 +122,7 @@ namespace eagle::virt::eg
         auto v_size = cmd->get_value_size();
 
         const ir::discrete_store_ptr storage = ir::discrete_store::create(to_ir_size(r_size));
-        reg_ctx->assign(storage);
+        reg_64_container->assign(storage);
 
         // pop into storage
         call_pop(block, storage, v_size);
@@ -131,7 +133,7 @@ namespace eagle::virt::eg
             block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
 
         han_man->call_vm_handler(block, handler);
-        reg_ctx->release(storage);
+        reg_64_container->release(storage);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
@@ -204,7 +206,7 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
     {
         ir::ir_size target_size = cmd->get_read_size();
-        reg target_temp = reg_ctx->get_any();
+        reg target_temp = reg_64_container->get_any();
 
         // pop address
         call_pop(block, target_temp);
@@ -221,7 +223,7 @@ namespace eagle::virt::eg
         const ir::ir_size value_size = cmd->get_value_size();
         const ir::ir_size write_size = cmd->get_write_size();
 
-        const std::vector<reg> temps = reg_ctx->get_any_multiple(2);
+        const std::vector<reg> temps = reg_64_container->get_any_multiple(2);
 
         const reg temp_value = get_bit_version(temps[0], to_reg_size(value_size));
         const reg temp_address = temps[1];
@@ -244,12 +246,12 @@ namespace eagle::virt::eg
     {
         if (const ir::discrete_store_ptr store = cmd->get_destination_reg())
         {
-            reg_ctx->assign(store);
+            reg_64_container->assign(store);
             call_pop(block, store);
         }
         else
         {
-            const reg temp = reg_ctx->get_any();
+            const reg temp = reg_64_container->get_any();
             call_pop(block, temp);
         }
     }
@@ -270,14 +272,14 @@ namespace eagle::virt::eg
             case ir::info_type::vm_temp_register:
             {
                 const ir::discrete_store_ptr store = cmd->get_value_temp_register();
-                reg_ctx->assign(store);
+                reg_64_container->assign(store);
 
                 call_push(block, store);
                 break;
             }
             case ir::info_type::immediate:
             {
-                const reg temp_reg = reg_ctx->get_any();
+                const reg temp_reg = reg_64_container->get_any();
                 block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(cmd->get_value_immediate())));
 
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
@@ -286,7 +288,7 @@ namespace eagle::virt::eg
             case ir::info_type::address:
             {
                 const uint64_t constant = cmd->get_value_immediate();
-                const reg temp_reg = reg_ctx->get_any();
+                const reg temp_reg = reg_64_container->get_any();
 
                 block->add(encode(m_lea, ZREG(temp_reg), ZMEMBD(VBASE, constant, 8)));
                 call_push(block, temp_reg);
@@ -320,7 +322,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_target_size = cmd->get_target();
         const reg_size target_size = to_reg_size(ir_target_size);
 
-        reg temp_reg = reg_ctx->get_any();
+        reg temp_reg = reg_64_container->get_any();
         call_pop(block, get_bit_version(temp_reg, current_size));
 
         // mov eax/ax/al, VTEMP
@@ -427,7 +429,7 @@ namespace eagle::virt::eg
                 if constexpr (std::is_same_v<std::decay_t<reg_type>, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr& store = arg;
-                    reg_ctx->assign(store);
+                    reg_64_container->assign(store);
                 }
             }, op);
 
@@ -459,7 +461,7 @@ namespace eagle::virt::eg
     {
         base_machine::handle_cmd(code, command);
         for (ir::discrete_store_ptr& res : command->get_release_list())
-            reg_ctx->release(res);
+            reg_64_container->release(res);
     }
 
     void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared)

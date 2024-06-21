@@ -29,12 +29,6 @@ namespace eagle::virt::eg
         bool single_vm_handlers = false;
 
         /**
-        * when enabled, handlers will only be generated a single time
-        * when disabled, handler will be generated every time time per call
-        */
-        bool single_register_handlers = false;
-
-        /**
         * before each command is translated, there will be a chance for the machine to generate code
         * which writes to unused register space occupied by x86 context storing register
         */

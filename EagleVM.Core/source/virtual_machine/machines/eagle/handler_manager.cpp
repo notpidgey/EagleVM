@@ -51,8 +51,10 @@ namespace eagle::virt::eg
         return std::get<1>(data);
     }
 
-    handler_manager::handler_manager(const machine_ptr& machine, register_manager_ptr regs, register_context_ptr regs_context, settings_ptr settings)
-        : machine_inst(machine), settings(std::move(settings)), regs(std::move(regs)), regs_context(std::move(regs_context))
+    handler_manager::handler_manager(const machine_ptr& machine, register_manager_ptr regs,
+        register_context_ptr regs_64_context, register_context_ptr regs_128_context, settings_ptr settings)
+        : machine_inst(machine), settings(std::move(settings)), regs(std::move(regs)), regs_64_context(std::move(regs_64_context)),
+          regs_128_context(std::move(regs_128_context))
     {
         vm_overhead = 8 * 300;
         vm_stack_regs = 17 + 16 * 2; // we only save xmm registers on the stack
@@ -68,17 +70,6 @@ namespace eagle::virt::eg
     std::pair<asmb::code_label_ptr, reg> handler_manager::load_register(reg register_to_load, reg load_destination)
     {
         VM_ASSERT(get_reg_class(load_destination) == gpr_64, "invalid size of load destination");
-        if (settings->single_register_handlers)
-        {
-            register_to_load = get_bit_version(register_to_load, bit_64);
-            load_destination = regs->get_reserved_temp(2);
-
-            if (register_load_handlers.contains(register_to_load))
-            {
-                auto [tagged, working] = register_load_handlers[register_to_load].get_first_pair();
-                return { std::get<1>(tagged), working };
-            }
-        }
 
         // create a new handler
         auto [out, label] = register_load_handlers[register_to_load].add_pair(load_destination);
@@ -152,9 +143,6 @@ namespace eagle::virt::eg
         const asmb::code_container_ptr& out,
         const std::vector<reg_mapped_range>& ranges_required) const
     {
-        std::array temp_regs{ regs->get_reserved_temp(0), regs->get_reserved_temp(1) };
-        std::ranges::shuffle(temp_regs, util::ran_device::get().gen);
-
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
         {
@@ -162,6 +150,7 @@ namespace eagle::virt::eg
             auto [destination_start, destination_end] = source_range;
             auto [source_start, source_end] = dest_range;
 
+            scope_register_manager int_64_ctx = regs_64_context->create_scope();
             if (get_reg_class(source_register) == xmm_128)
             {
                 if (source_end <= 64) // lower 64 bits of XMM
@@ -176,7 +165,7 @@ namespace eagle::virt::eg
                         or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
                      */
 
-                    reg gpr_temp = temp_regs[0];
+                    reg gpr_temp = int_64_ctx.reserve();
                     out->add({
                         encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
@@ -208,7 +197,7 @@ namespace eagle::virt::eg
                     source_start -= 64;
                     source_end -= 64;
 
-                    reg gpr_temp = temp_regs[0];
+                    reg gpr_temp = int_64_ctx.reserve();
                     out->add({
                         encode(m_pextrq, ZREG(gpr_temp), ZREG(source_register), ZIMMS(1)),
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
@@ -284,7 +273,7 @@ namespace eagle::virt::eg
                     or target_register, get_bit_version(gpr_temp, bit_64)	// write bits to target
                 */
 
-                reg gpr_temp = temp_regs[0];
+                reg gpr_temp = int_64_ctx.reserve();
                 out->add({
                     encode(m_mov, ZREG(gpr_temp), ZREG(source_register)),
                     encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
@@ -312,17 +301,6 @@ namespace eagle::virt::eg
     std::pair<asmb::code_label_ptr, reg> handler_manager::store_register(const reg register_to_store_into, reg source)
     {
         VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
-
-        if (settings->single_register_handlers)
-        {
-            if (register_store_handlers.contains(register_to_store_into))
-            {
-                auto [tagged, working] = register_store_handlers[register_to_store_into].get_first_pair();
-                return { std::get<1>(tagged), working };
-            }
-
-            source = regs->get_reserved_temp(2);
-        }
 
         // create a new handler
         auto [out, label] = register_store_handlers[register_to_store_into].add_pair(source);
@@ -354,17 +332,6 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
 
-        if (settings->single_register_handlers)
-        {
-            if (register_store_handlers.contains(register_to_store_into))
-            {
-                auto [tagged, working] = register_store_handlers[register_to_store_into].get_first_pair();
-                return { std::get<1>(tagged), working };
-            }
-
-            source = regs->get_reserved_temp(2);
-        }
-
         // create a new handler
         auto [out, label] = register_store_handlers[register_to_store_into].add_pair(source);
         out->bind(label);
@@ -391,8 +358,10 @@ namespace eagle::virt::eg
         return { label, source };
     }
 
-    void handler_manager::store_register_internal(reg source_register, const asmb::code_container_ptr& out,
-            const std::vector<reg_mapped_range>& ranges_required) const
+    void handler_manager::store_register_internal(
+        reg source_register,
+        const asmb::code_container_ptr& out,
+        const std::vector<reg_mapped_range>& ranges_required) const
     {
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
@@ -412,10 +381,9 @@ namespace eagle::virt::eg
                     encode(m_mov, ZREG(temp_value_reg), ZREG(source_register)),
                     encode(m_shl, ZREG(temp_value_reg), ZIMMS(64 - s_to)),
                     encode(m_shr, ZREG(temp_value_reg), ZIMMS(s_from + 64 - s_to)) // or use a mask
-
                 });
 
-                uint8_t bit_length = s_to - s_from;
+                const uint8_t bit_length = s_to - s_from;
 
                 reg temp_xmm_q = regs->get_reserved_temp(1);
                 out->add({
@@ -458,7 +426,8 @@ namespace eagle::virt::eg
 
                 auto handle_lb = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    reg temp_xmm_q = regs->get_reserved_temp(1);
+                    scope_register_manager int_64_ctx = regs_64_context->create_scope();
+                    reg temp_xmm_q = int_64_ctx.reserve();
 
                     const uint8_t bit_length = to - from;
                     out->add({
@@ -475,7 +444,8 @@ namespace eagle::virt::eg
 
                 auto handle_ub = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    reg temp_xmm_q = regs->get_reserved_temp(1);
+                    scope_register_manager int_64_ctx = regs_64_context->create_scope();
+                    reg temp_xmm_q = int_64_ctx.reserve();
 
                     const uint8_t bit_length = to - from;
                     out->add({
@@ -499,10 +469,9 @@ namespace eagle::virt::eg
                     // solution is simple: rotate qwords read bottom one
                 else if (d_from >= 64)
                     handle_ub(d_to, d_from, temp_value);
-
                     // case 3: we have a boundary, fuck
                 else
-                VM_ASSERT("this should not happen, register manager needs to split cross read boundaries");
+                    VM_ASSERT("this should not happen, register manager needs to split cross read boundaries");
             }
         }
 
