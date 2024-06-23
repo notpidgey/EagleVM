@@ -38,13 +38,11 @@ namespace eagle::virt::eg
         handlers.append_range(build_pop());
         handlers.append_range(build_push());
 
-        for (auto& [variant_pairs] : register_load_handlers | std::views::values)
-            for (auto& container : variant_pairs | std::views::keys)
-                handlers.push_back(std::get<0>(container));
+        for (auto& container : register_load_handlers | std::views::keys)
+            handlers.push_back(container);
 
-        for (auto& [variant_pairs] : register_store_handlers | std::views::values)
-            for (auto& container : variant_pairs | std::views::keys)
-                handlers.push_back(std::get<0>(container));
+        for (auto& container : register_store_handlers | std::views::keys)
+            handlers.push_back(container);
 
         return handlers;
     }
@@ -124,19 +122,14 @@ namespace eagle::virt::eg
             encode(m_mov, ZREG(VSP), ZREG(temp)),
         });
 
-        // setup register mampings
+        // setup register mapings
         std::array<reg, 16> gprs = regs->get_gpr64_regs();
         if (settings->shuffle_push_order)
             std::ranges::shuffle(gprs, util::ran_device::get().gen);
 
         for (const auto& gpr : gprs)
         {
-            reg target_reg;
-            if (settings->single_register_handlers)
-                target_reg = regs->get_reserved_temp(2);
-            else
-                target_reg = regs_64_context->get_any();
-
+            reg target_reg = regs_64_context->get_any();
             auto [disp, _] = regs->get_stack_displacement(gpr);
 
             container->add(encode(m_mov, ZREG(target_reg), ZMEMBD(VREGS, disp, 8)));
@@ -179,12 +172,7 @@ namespace eagle::virt::eg
 
         for (const auto& gpr : gprs)
         {
-            reg target_reg;
-            if (settings->single_register_handlers)
-                target_reg = regs->get_reserved_temp(2);
-            else
-                target_reg = regs_64_context->get_any();
-
+            reg target_reg = regs_64_context->get_any();
             auto [disp, _] = regs->get_stack_displacement(gpr);
 
             container->add(encode(m_xor, ZREG(target_reg), ZREG(target_reg)));

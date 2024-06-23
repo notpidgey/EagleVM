@@ -7,6 +7,51 @@
 
 namespace eagle::virt
 {
+    scope_register_manager::scope_register_manager(register_context_ptr ctx)
+        : ctx(std::move(ctx))
+    {
+    }
+
+
+    scope_register_manager::~scope_register_manager()
+    {
+        for (const auto elem : context_used)
+            ctx->release(elem);
+    }
+
+    codec::reg scope_register_manager::reserve()
+    {
+        const codec::reg reg = ctx->get_any();
+
+        ctx->block(reg);
+        context_used.insert(reg);
+
+        return reg;
+    }
+
+    std::vector<codec::reg> scope_register_manager::reserve_multiple(uint8_t count)
+    {
+        std::vector<codec::reg> result(count);
+        for(auto i = 0; i < count; i++)
+            result.push_back(reserve());
+
+        return result;
+    }
+
+    void scope_register_manager::release(const codec::reg reg)
+    {
+        VM_ASSERT(context_used.contains(reg), "context does not manage this register");
+
+        context_used.erase(reg);
+        ctx->release(reg);
+    }
+
+    void scope_register_manager::release(const std::vector<codec::reg>& regs)
+    {
+        for(const auto reg : regs)
+            release(reg);
+    }
+
     register_context::register_context(const std::vector<codec::reg>& stores, const codec::reg_class target_size)
         : target_size(target_size)
     {
@@ -102,42 +147,5 @@ namespace eagle::virt
         avaliable_stores.erase(i);
 
         return i;
-    }
-
-    codec::reg scope_register_manager::reserve()
-    {
-        const auto any = ctx->get_any();
-        ctx->block(any);
-
-        context_used.insert(any);
-        return any;
-    }
-
-    std::vector<codec::reg> scope_register_manager::reserve_multiple(const uint8_t count)
-    {
-        const auto any = ctx->get_any_multiple(count);
-        for(const auto reg : any)
-            ctx->block(reg);
-
-        context_used.insert(any.begin(), any.end());
-        return any;
-    }
-
-    void scope_register_manager::release(const codec::reg reg)
-    {
-        VM_ASSERT(context_used.contains(reg), "context must contain used register");
-        ctx->release(reg);
-        context_used.erase(reg);
-    }
-
-    void scope_register_manager::release(const std::vector<codec::reg>& regs)
-    {
-        for(auto reg : regs)
-        {
-            VM_ASSERT(context_used.contains(reg), "context must contain used register");
-
-            ctx->release(reg);
-            context_used.erase(reg);
-        }
     }
 }

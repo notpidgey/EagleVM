@@ -6,7 +6,7 @@ namespace eagle::util
     class ran_device
     {
     public:
-        std::mt19937 gen{};
+        std::mt19937 gen{ };
 
         ran_device();
         static ran_device& get();
@@ -19,7 +19,8 @@ namespace eagle::util
         double gen_dist(std::uniform_real_distribution<>& distribution);
 
         template <typename T>
-        T random_elem(const std::vector<T>& vec) {
+        T random_elem(const std::vector<T>& vec)
+        {
             VM_ASSERT(!vec.empty(), "cannot get a random element from an empty vector");
 
             std::uniform_int_distribution<> dist(0, vec.size() - 1);
@@ -30,5 +31,5 @@ namespace eagle::util
         ran_device& operator=(const ran_device&) = delete;
     };
 
-    inline ran_device& get_ran_device();
+    ran_device& get_ran_device();
 }

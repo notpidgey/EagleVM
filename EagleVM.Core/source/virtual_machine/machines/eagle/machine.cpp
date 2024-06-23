@@ -36,11 +36,13 @@ namespace eagle::virt::eg
         reg_man->init_reg_order();
         reg_man->create_mappings();
 
-        const std::shared_ptr<register_context> reg_ctx = std::make_shared<register_context>(reg_man->get_unreserved_temp());
-        const std::shared_ptr<handler_manager> han_man = std::make_shared<handler_manager>(instance, reg_man, reg_ctx, settings_info);
+        const std::shared_ptr<register_context> reg_ctx_64 = std::make_shared<register_context>(reg_man->get_unreserved_temp(), gpr_64);
+        const std::shared_ptr<register_context> reg_ctx_128 = std::make_shared<register_context>(reg_man->get_unreserved_temp(), xmm_128);
+        const std::shared_ptr<handler_manager> han_man = std::make_shared<handler_manager>(instance, reg_man, reg_ctx_64, reg_ctx_128, settings_info);
 
         instance->reg_man = reg_man;
-        instance->reg_64_container = reg_ctx;
+        instance->reg_64_container = reg_ctx_64;
+        instance->reg_128_container = reg_ctx_128;
         instance->han_man = han_man;
 
         return instance;
@@ -80,34 +82,20 @@ namespace eagle::virt::eg
 
         // load into storage
         asmb::code_label_ptr handler = nullptr;
-        reg working_reg;
-
         if (settings->complex_temp_loading)
         {
             auto [handler_res, working_reg_res, complex_mapping] = han_man->load_register_complex(target_reg, storage);
             handler = handler_res;
-            working_reg = working_reg_res;
+
+            han_man->call_vm_handler(block, handler);
+            call_push(block, storage);
         }
         else
         {
             auto [handler_res, working_reg_res] = han_man->load_register(target_reg, storage);
             handler = handler_res;
-            working_reg = working_reg_res;
-        }
 
-        block->add(encode(m_xor, ZREG(working_reg), ZREG(working_reg)));
-        han_man->call_vm_handler(block, handler);
-
-        if (working_reg != storage->get_store_register())
-            block->add(encode(m_mov, ZREG(storage->get_store_register()), ZREG(working_reg)));
-
-        // push onto stack
-        if (settings->complex_temp_loading)
-        {
-            call_push(block, storage);
-        }
-        else
-        {
+            han_man->call_vm_handler(block, handler);
             call_push(block, storage);
         }
 

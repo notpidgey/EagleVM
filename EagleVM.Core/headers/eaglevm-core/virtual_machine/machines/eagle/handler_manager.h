@@ -21,14 +21,6 @@ namespace eagle::virt::eg
 {
     using tagged_handler_data_pair = std::pair<asmb::code_container_ptr, asmb::code_label_ptr>;
 
-    struct tagged_variant_handler
-    {
-        std::vector<std::pair<tagged_handler_data_pair, codec::reg>> variant_pairs{ };
-
-        tagged_handler_data_pair add_pair(codec::reg working_reg);
-        std::pair<tagged_handler_data_pair, codec::reg> get_first_pair();
-    };
-
     class tagged_handler
     {
     public:
@@ -103,12 +95,14 @@ namespace eagle::virt::eg
          */
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, const ir::discrete_store_ptr& source);
         std::pair<asmb::code_label_ptr, codec::reg> store_register(codec::reg register_to_store_into, codec::reg source);
-        std::tuple<asmb::code_label_ptr, codec::reg> store_register_complex(const codec::reg register_to_store_into, codec::reg source,
+        std::tuple<asmb::code_label_ptr, codec::reg> store_register_complex(codec::reg register_to_store_into, codec::reg source,
             const complex_load_info& load_info);
 
         static complex_load_info generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit);
         static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info,
             const std::vector<reg_mapped_range>& register_ranges);
+
+        asmb::code_label_ptr resolve_complexity(const ir::discrete_store_ptr& source, const complex_load_info& load_info);
 
         std::vector<asmb::code_container_ptr> build_handlers();
 
@@ -138,8 +132,10 @@ namespace eagle::virt::eg
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_push;
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_pop;
 
-        std::unordered_map<codec::reg, tagged_variant_handler> register_load_handlers;
-        std::unordered_map<codec::reg, tagged_variant_handler> register_store_handlers;
+        std::vector<tagged_handler_data_pair> register_load_handlers;
+        std::vector<tagged_handler_data_pair> register_store_handlers;
+
+        std::vector<tagged_handler_data_pair> complex_resolve_handlers;
 
         uint16_t vm_overhead;
         uint16_t vm_stack_regs;

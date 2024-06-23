@@ -20,22 +20,6 @@ using namespace eagle::codec;
 
 namespace eagle::virt::eg
 {
-    tagged_handler_data_pair tagged_variant_handler::add_pair(reg working_reg)
-    {
-        auto container = asmb::code_container::create();
-        auto label = asmb::code_label::create();
-
-        const tagged_handler_data_pair pair{ container, label };
-        variant_pairs.emplace_back(pair, working_reg);
-
-        return pair;
-    }
-
-    std::pair<tagged_handler_data_pair, reg> tagged_variant_handler::get_first_pair()
-    {
-        return variant_pairs.front();
-    }
-
     tagged_handler_data_pair tagged_handler::get_pair()
     {
         return data;
@@ -71,11 +55,13 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(get_reg_class(load_destination) == gpr_64, "invalid size of load destination");
 
-        // create a new handler
-        auto [out, label] = register_load_handlers[register_to_load].add_pair(load_destination);
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        auto [out, label] = handler;
         out->bind(label);
 
-        reg target_register = load_destination;
+        register_load_handlers.push_back(handler);
+
+        const reg target_register = load_destination;
 
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
@@ -103,9 +89,11 @@ namespace eagle::virt::eg
     {
         const auto load_destination = register_to_load;
 
-        // create a new handler
-        auto [out, label] = register_load_handlers[register_to_load].add_pair(load_destination);
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        auto [out, label] = handler;
         out->bind(label);
+
+        register_load_handlers.push_back(handler);
 
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
@@ -303,8 +291,11 @@ namespace eagle::virt::eg
         VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
 
         // create a new handler
-        auto [out, label] = register_store_handlers[register_to_store_into].add_pair(source);
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        auto [out, label] = handler;
         out->bind(label);
+
+        register_store_handlers.push_back(handler);
 
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
@@ -332,9 +323,11 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(get_reg_class(source) == gpr_64, "invalid size of load destination");
 
-        // create a new handler
-        auto [out, label] = register_store_handlers[register_to_store_into].add_pair(source);
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        auto [out, label] = handler;
         out->bind(label);
+
+        register_store_handlers.push_back(handler);
 
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
@@ -372,11 +365,13 @@ namespace eagle::virt::eg
             auto [s_from, s_to] = source_range;
             auto [d_from, d_to] = dest_range;
 
+            auto scope_64 = regs_64_context->create_scope();
+
             const reg_class dest_reg_class = get_reg_class(dest_reg);
             if (dest_reg_class == gpr_64)
             {
                 // gpr
-                reg temp_value_reg = regs->get_reserved_temp(0);
+                reg temp_value_reg = scope_64.reserve();
                 out->add({
                     encode(m_mov, ZREG(temp_value_reg), ZREG(source_register)),
                     encode(m_shl, ZREG(temp_value_reg), ZIMMS(64 - s_to)),
@@ -385,7 +380,7 @@ namespace eagle::virt::eg
 
                 const uint8_t bit_length = s_to - s_from;
 
-                reg temp_xmm_q = regs->get_reserved_temp(1);
+                reg temp_xmm_q = scope_64.reserve();
                 out->add({
                     encode(m_mov, ZREG(temp_xmm_q), ZREG(dest_reg)),
                     encode(m_ror, ZREG(temp_xmm_q), ZIMMS(d_from)),
@@ -409,7 +404,7 @@ namespace eagle::virt::eg
                  * shr vtemp, s_from + 64 - s_to
                  */
 
-                reg temp_value = regs->get_reserved_temp(0);
+                reg temp_value = scope_64.reserve();
                 out->add({
                     encode(m_mov, ZREG(temp_value), ZREG(source_register)),
                     encode(m_shl, ZREG(temp_value), ZIMMS(64 - s_to)),
@@ -426,8 +421,7 @@ namespace eagle::virt::eg
 
                 auto handle_lb = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    scope_register_manager int_64_ctx = regs_64_context->create_scope();
-                    reg temp_xmm_q = int_64_ctx.reserve();
+                    reg temp_xmm_q = scope_64.reserve();
 
                     const uint8_t bit_length = to - from;
                     out->add({
@@ -444,8 +438,7 @@ namespace eagle::virt::eg
 
                 auto handle_ub = [&](auto to, auto from, auto temp_value_reg)
                 {
-                    scope_register_manager int_64_ctx = regs_64_context->create_scope();
-                    reg temp_xmm_q = int_64_ctx.reserve();
+                    reg temp_xmm_q = scope_64.reserve();
 
                     const uint8_t bit_length = to - from;
                     out->add({
@@ -481,8 +474,8 @@ namespace eagle::virt::eg
     complex_load_info handler_manager::generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit)
     {
         std::vector<uint16_t> points;
-        points.push_back(start_bit); // starting point
-        points.push_back(end_bit); // ending point (inclusive)
+        points.push_back(0); // starting point
+        points.push_back(64); // ending point (inclusive)
 
         constexpr auto min_complex = 5;
         constexpr auto max_complex = 15;
@@ -590,6 +583,51 @@ namespace eagle::virt::eg
         }
 
         return new_required_ranges;
+    }
+
+    asmb::code_label_ptr handler_manager::resolve_complexity(const ir::discrete_store_ptr& source, const complex_load_info& load_info)
+    {
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        auto [out, label] = handler;
+        out->bind(label);
+
+        complex_resolve_handlers.push_back(handler);
+
+        const uint16_t relevant_bits = static_cast<uint16_t>(source->get_store_size());
+        int16_t irrelevant_range_max = 15;
+
+        std::vector<std::pair<reg_range, reg_range>> mappings = load_info.complex_mapping;
+        std::ranges::shuffle(mappings, util::get_ran_device().gen);
+
+        scope_register_manager scope_64 = regs_64_context->create_scope();
+        reg resultant = scope_64.reserve();
+
+        for(auto& [orig_range, curr_range] : mappings)
+        {
+            scope_register_manager inner_scope_64 = regs_64_context->create_scope();
+            reg temp_value_holder = inner_scope_64.reserve();
+
+            auto [orig_start, orig_end] = orig_range;
+            auto [curr_start, curr_end] = curr_range;
+
+            if(orig_start <= relevant_bits || irrelevant_range_max--)
+            {
+                // step 1: clear necessary orig bits
+                out->add({
+                    encode(m_mov, ZREG(temp_value_holder), ZIMMS(source->get_store_register())),
+                    encode(m_shl, ZREG(temp_value_holder), ZIMMS(64 - curr_end)),
+                    encode(m_shr, ZREG(temp_value_holder), ZIMMS(64 - curr_end + curr_start)),
+
+                    encode(m_shl, ZREG(resultant), ZIMMS(64 - orig_end)),
+                    encode(m_shr, ZREG(resultant), ZIMMS(64 - orig_end + orig_start)),
+                    encode(m_or, ZREG(resultant), ZREG(temp_value_holder)),
+
+                    encode(m_rol, ZREG(resultant), ZIMMS(curr_start))
+                });
+            }
+        }
+
+        return label;
     }
 
     asmb::code_label_ptr handler_manager::get_push(const reg target_reg, const reg_size size)

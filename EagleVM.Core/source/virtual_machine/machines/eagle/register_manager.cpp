@@ -39,11 +39,11 @@ namespace eagle::virt::eg
         // insert all xmm registers
         // insert all gpr registers
         {
-            for (int i = codec::xmm0; i <= codec::xmm15; i++)
+            for (int i = codec::xmm0; i <= codec::xmm31; i++)
                 push_order[i - codec::xmm0] = static_cast<codec::reg>(i);
 
             for (int i = codec::rax; i <= codec::r15; i++)
-                push_order[i - codec::rax + 16] = static_cast<codec::reg>(i);
+                push_order[i - codec::rax + 32] = static_cast<codec::reg>(i);
 
             // shuffle the stack order
             if (settings->shuffle_push_order)
@@ -299,6 +299,15 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(i + 1 <= num_v_temp_reserved, "attempted to retreive register with no reservation");
         return virtual_order_gpr[num_v_regs + i];
+    }
+
+    std::vector<codec::reg> register_manager::get_unreserved_temp_xmm() const
+    {
+        std::vector<codec::reg> out;
+        for (uint8_t i = 0; i < num_v_temp_xmm_unreserved; i++)
+            out.push_back(virtual_order_xmm[virtual_order_gpr.size() - 1 - i]);
+
+        return out;
     }
 
     std::array<codec::reg, 16> register_manager::get_gpr64_regs()
