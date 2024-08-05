@@ -122,7 +122,7 @@ namespace eagle::virt::eg
         * @return GPR registers in order r0-r15
         */
         static std::array<codec::reg, 16> get_gpr64_regs();
-        static std::array<codec::reg, 32> get_xmm_regs();
+        static std::array<codec::reg, 16> get_xmm_regs();
     private:
         settings_ptr settings;
 
@@ -132,7 +132,7 @@ namespace eagle::virt::eg
         /**
         * order 0-first 31-last in which registers have been pushed to the the stack
         */
-        std::array<codec::reg, 16 + 32> push_order{ };
+        std::array<codec::reg, 16 + 16> push_order{ };
 
         /**
         * when assigning virtual machine registers such as VREGS, VIP, VSP, VTEMP(x)
@@ -148,7 +148,7 @@ namespace eagle::virt::eg
         /**
         * when assigning virtual
         */
-        std::array<codec::reg, 32> virtual_order_xmm{ };
+        std::array<codec::reg, 16> virtual_order_xmm{ };
 
         uint8_t num_v_temp_unreserved;
         uint8_t num_v_temp_reserved;

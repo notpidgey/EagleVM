@@ -26,10 +26,11 @@ namespace eagle::virt
         ctx->block(reg);
         context_used.insert(reg);
 
+        VM_ASSERT(reg != codec::reg::none, "reserved empty register");
         return reg;
     }
 
-    std::vector<codec::reg> scope_register_manager::reserve_multiple(uint8_t count)
+    std::vector<codec::reg> scope_register_manager::reserve_multiple(const uint8_t count)
     {
         std::vector<codec::reg> result(count);
         for(auto i = 0; i < count; i++)

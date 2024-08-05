@@ -145,7 +145,7 @@ namespace eagle::virt::eg
         using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
         std::vector<tagged_handler_label> tagged_instruction_handlers;
 
-        void load_register_internal(codec::reg target_register, const asmb::code_container_ptr& out,
+        void load_register_internal(codec::reg load_destination, const asmb::code_container_ptr& out,
             const std::vector<reg_mapped_range>& ranges_required) const;
         void store_register_internal(codec::reg source_register, const asmb::code_container_ptr& out,
             const std::vector<reg_mapped_range>& ranges_required) const;

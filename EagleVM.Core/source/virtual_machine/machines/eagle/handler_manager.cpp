@@ -66,7 +66,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
-        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         if (is_upper_8(register_to_load))
         {
@@ -87,9 +87,7 @@ namespace eagle::virt::eg
     std::tuple<asmb::code_label_ptr, reg, complex_load_info> handler_manager::load_register_complex(const reg register_to_load,
         const ir::discrete_store_ptr& destination)
     {
-        const auto load_destination = register_to_load;
-
-        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        tagged_handler_data_pair handler = { asmb::code_container::create("load_complex"), asmb::code_label::create() };
         auto [out, label] = handler;
         out->bind(label);
 
@@ -98,7 +96,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
-        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         complex_load_info load_info;
         if (is_upper_8(register_to_load))
@@ -119,15 +117,14 @@ namespace eagle::virt::eg
             load_info = generate_complex_load_info(0, static_cast<uint16_t>(destination->get_store_size()));
         }
 
-        const reg target_register = load_destination;
         ranges_required = apply_complex_mapping(load_info, ranges_required);
-        load_register_internal(target_register, out, ranges_required);
+        load_register_internal(destination->get_store_register(), out, ranges_required);
 
-        return { label, load_destination, load_info };
+        return { label, register_to_load, load_info };
     }
 
     void handler_manager::load_register_internal(
-        reg target_register,
+        reg load_destination,
         const asmb::code_container_ptr& out,
         const std::vector<reg_mapped_range>& ranges_required) const
     {
@@ -159,7 +156,7 @@ namespace eagle::virt::eg
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
                         encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
-                        encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                        encode(m_or, ZREG(load_destination), ZREG(gpr_temp))
                     });
                 }
                 else if (source_start >= 64) // upper 64 bits of XMM
@@ -191,7 +188,7 @@ namespace eagle::virt::eg
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
                         encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
                         encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
-                        encode(m_or, ZREG(target_register), ZREG(gpr_temp)),
+                        encode(m_or, ZREG(load_destination), ZREG(gpr_temp)),
                     });
                 }
                 else // cross boundary register
@@ -267,7 +264,7 @@ namespace eagle::virt::eg
                     encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
                     encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start)),
                     encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
-                    encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                    encode(m_or, ZREG(load_destination), ZREG(gpr_temp))
                 });
             }
 
@@ -300,7 +297,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
-        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         if (is_upper_8(register_to_store_into))
         {
@@ -332,7 +329,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
-        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         if (is_upper_8(register_to_store_into))
         {
@@ -587,7 +584,7 @@ namespace eagle::virt::eg
 
     asmb::code_label_ptr handler_manager::resolve_complexity(const ir::discrete_store_ptr& source, const complex_load_info& load_info)
     {
-        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create() };
+        tagged_handler_data_pair handler = { asmb::code_container::create(), asmb::code_label::create("resolve_complex") };
         auto [out, label] = handler;
         out->bind(label);
 

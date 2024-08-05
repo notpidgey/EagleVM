@@ -72,7 +72,7 @@ namespace eagle::virt::eg
                 {
                     container->add({
                         encode(m_lea, ZREG(rsp), ZMEMBD(rsp, -16, TOB(bit_64))),
-                        encode(m_movdqu, ZMEMBD(rsp, 0, TOB(bit_128)), ZREG(reg))
+                        encode(m_movq, ZMEMBD(rsp, 0, TOB(bit_128)), ZREG(reg))
                     });
                 }
                 else

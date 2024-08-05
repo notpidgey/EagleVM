@@ -146,7 +146,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
     std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
-    asmb::section_manager vm_section(true);
+    asmb::section_manager vm_section(false);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
 
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
@@ -210,7 +210,6 @@ int main(int argc, char* argv[])
         virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
         machine_settings->randomize_working_register = false;
         machine_settings->single_vm_handlers = false;
-        machine_settings->single_register_handlers = false;
 
         machine_settings->shuffle_push_order = true;
         machine_settings->shuffle_vm_gpr_order = true;

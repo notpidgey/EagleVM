@@ -254,9 +254,9 @@ int main(int argc, char* argv[])
     machine_settings->randomize_working_register = false;
     machine_settings->single_vm_handlers = false;
 
-    machine_settings->shuffle_push_order = true;
-    machine_settings->shuffle_vm_gpr_order = true;
-    machine_settings->shuffle_vm_xmm_order = true;
+    machine_settings->shuffle_push_order = false;
+    machine_settings->shuffle_vm_gpr_order = false;
+    machine_settings->shuffle_vm_xmm_order = false;
     machine_settings->relative_addressing = false;
 
     // loop each file that test_data_path contains
@@ -281,7 +281,12 @@ int main(int argc, char* argv[])
         std::atomic_uint32_t failed = 0;
 
         std::atomic_uint32_t task_id;
-        std::for_each(std::execution::par, data.begin(), data.end(), [&](auto& n)
+#ifdef _DEBUG
+        auto execution_policy = std::execution::seq;
+#else
+        auto execution_policy = std::execution::par_unseq;
+#endif
+        std::for_each(execution_policy, data.begin(), data.end(), [&](auto& n)
         {
             const auto current_task_id = task_id++;
             process_entry(machine_settings, n, &passed, &failed, current_task_id);
