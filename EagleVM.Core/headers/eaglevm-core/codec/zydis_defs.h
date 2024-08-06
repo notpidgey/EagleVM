@@ -7,6 +7,7 @@
 #include <Zycore/LibC.h>
 
 #include "eaglevm-core/codec/zydis_enum.h"
+#include "eaglevm-core/compiler/label_tracker.h"
 
 namespace eagle::codec
 {
@@ -37,16 +38,6 @@ namespace eagle::codec
             operand operands[ZYDIS_MAX_OPERAND_COUNT];
         };
     }
-
-    typedef std::function<enc::req(uint64_t)> recompile_promise;
-    typedef std::function<std::vector<uint8_t>(uint64_t)> recompile_chunk;
-    typedef std::variant<enc::req, recompile_promise, recompile_chunk> dynamic_instruction;
-
-    typedef std::vector<dynamic_instruction> dynamic_instructions_vec;
-    typedef std::vector<enc::req> instructions_vec;
-    typedef std::vector<uint8_t> encoded_vec;
-
-    typedef std::vector<dec::inst_info> decode_vec;
 }
 
 #define ZREG(x)			    eagle::codec::enc::op_reg{ (ZydisRegister)x, 0 }

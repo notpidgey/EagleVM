@@ -28,113 +28,149 @@ namespace eagle::asmb
         section_code_containers.append_range(code);
     }
 
-    codec::encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
+    encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
     {
         if (shuffle_functions)
             shuffle_containers();
 
         uint64_t base_offset = base_address;
 
-        // this should take all the functions in the section and connect them to desired labels
+        std::unordered_map<code_label_ptr, uint32_t> label_begin_use;
+        std::unordered_map<code_label_ptr, std::vector<uint32_t>> label_dependents;
+        std::vector<inst_label_v> flat_requests;
+
+        // flatten the instruction containers
         for (const code_container_ptr& code_container : section_code_containers)
         {
             std::vector<inst_label_v> segments = code_container->get_instructions();
-            for (auto& label_code_variant : segments)
-            {
-                std::visit([&base_offset, runtime_base](auto&& arg)
-                {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
-                    {
-                        codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&base_offset](auto&& inner_arg)
-                        {
-                            using InnerT = std::decay_t<decltype(inner_arg)>;
-                            if constexpr (std::is_same_v<InnerT, codec::recompile_chunk>)
-                            {
-                                base_offset += inner_arg(base_offset).size();
-                            }
-                            else
-                            {
-                                codec::enc::req request;
-                                if constexpr (std::is_same_v<InnerT, codec::recompile_promise>)
-                                    request = inner_arg(base_offset);
-                                else if constexpr (std::is_same_v<InnerT, codec::enc::req>)
-                                    request = inner_arg;
-
-                                attempt_instruction_fix(request);
-                                base_offset += codec::compile_absolute(request, base_offset).size();
-                            }
-                        }, dynamic_inst);
-                    }
-                    else if constexpr (std::is_same_v<T, code_label_ptr>)
-                    {
-                        const code_label_ptr& label = arg;
-                        label->set_address(runtime_base, base_offset);
-                    }
-                }, label_code_variant);
-            }
+            flat_requests.append_range(segments);
         }
 
-    RECOMPILE:
+        // pre allocate memory reserved for instruction
+        // maximum length can only be 15 bytes, however we may get large sets of instructions which will allocate more memory
+        std::unordered_map<uint32_t, std::vector<uint8_t>> compiled_instructions(flat_requests.size());
+        for (auto i = 0; i < flat_requests.size(); i++)
+        {
+            auto& vec = compiled_instructions[i];
+            vec.reserve(15);
+        }
 
-        std::vector<uint8_t> compiled_section;
-        compiled_section.reserve(base_offset - base_address);
+        // here we must do two things to optimize future compilation
+        // initialize label occurances
+        // compile static instructions which in most cases take up majority of the compilation
+        for (auto i = 0; i < flat_requests.size(); i++)
+        {
+            auto label_code_variant = flat_requests[i];
+            std::visit([&](auto&& arg)
+            {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, code_label_ptr>)
+                {
+                    const code_label_ptr& label = arg;
+                    if (!label_begin_use.contains(label))
+                        label_begin_use[label] = i;
+                }
+                else if constexpr (std::is_same_v<T, dynamic_instruction>)
+                {
+                    dynamic_instruction dynamic_inst = arg;
+                    std::visit([&](auto&& req_arg)
+                    {
+                        using T = std::decay_t<decltype(req_arg)>;
+                        if constexpr (!std::is_same_v<T, recompile_chunk>)
+                        {
+                            codec::enc::req request;
+                            if constexpr (std::is_same_v<T, codec::enc::req>)
+                                request = req_arg;
+
+                            attempt_instruction_fix(request);
+
+                            if (!codec::has_relative_operand(request))
+                            {
+                                const std::vector<uint8_t> compiled = codec::compile_absolute(request, 0);
+                                compiled_instructions[i].assign(compiled.begin(), compiled.end());
+                            }
+                        }
+                    }, dynamic_inst);
+                }
+            }, label_code_variant);
+        }
+
+        std::unordered_map<uint32_t, uint32_t> request_sizes;
 
         base_offset = base_address;
-        for (const code_container_ptr& code_container : section_code_containers)
+        for (uint32_t i = 0; i < flat_requests.size(); i++)
         {
-            std::vector<inst_label_v> segments = code_container->get_instructions();
-            for (inst_label_v& label_code_variant : segments)
+            auto& label_code_variant = flat_requests[i];
+
+            code_label_ptr relocated_label = nullptr;
+            std::visit([&](auto&& arg)
             {
-                bool force_recompile = false;
-                std::visit([&base_offset, &compiled_section, &force_recompile, base_address, runtime_base](auto&& arg)
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, dynamic_instruction>)
                 {
-                    using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
+                    dynamic_instruction dynamic_inst = arg;
+                    std::visit([&](auto&& arg)
                     {
-                        codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&base_offset, &compiled_section](auto&& arg)
+                        std::vector<uint8_t> compiled;
+
+                        using T = std::decay_t<decltype(arg)>;
+                        if constexpr (std::is_same_v<T, recompile_chunk>)
                         {
-                            std::vector<uint8_t> compiled;
-
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, codec::recompile_chunk>)
-                            {
-                                compiled = arg(base_offset);
-                                base_offset += compiled.size();
-                            }
+                            compiled = arg(base_offset);
+                            base_offset += compiled.size();
+                        }
+                        else
+                        {
+                            codec::enc::req request;
+                            if constexpr (std::is_same_v<T, recompile_promise>)
+                                request = arg(base_offset);
+                            else if constexpr (std::is_same_v<T, codec::enc::req>)
+                                request = arg;
                             else
-                            {
-                                codec::enc::req request;
-                                if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                    request = arg(base_offset);
-                                else if constexpr (std::is_same_v<T, codec::enc::req>)
-                                    request = arg;
-                                else
-                                    __debugbreak();
+                                __debugbreak();
 
-                                attempt_instruction_fix(request);
+                            attempt_instruction_fix(request);
 
-                                compiled = codec::compile_absolute(request, 0);
-                                base_offset += compiled.size();
-                            }
+                            compiled = codec::compile_absolute(request, 0);
+                            base_offset += compiled.size();
+                        }
 
-                            compiled_section.append_range(compiled);
-                        }, dynamic_inst);
-                    }
-                    else if constexpr (std::is_same_v<T, code_label_ptr>)
-                    {
-                        const code_label_ptr& label = arg;
-                        if (label->get_relative_address() != base_offset)
-                            force_recompile = true;
 
-                        label->set_address(runtime_base, base_offset);
-                    }
-                }, label_code_variant);
+                    }, dynamic_inst);
+                }
+                else if constexpr (std::is_same_v<T, code_label_ptr>)
+                {
+                    const code_label_ptr& label = arg;
+                    if (label->get_relative_address() != base_offset)
+                        relocated_label = label;
 
-                if (force_recompile)
-                    goto RECOMPILE;
+                    label->set_address(runtime_base, base_offset);
+                }
+            }, label_code_variant);
+
+            if (relocated_label)
+            {
+                // this means that whatever instructions where before it, change in size
+                // which caused this label to shift in position
+                // we want to check where the first occurance of this label is.
+
+                uint32_t first_occurance = label_begin_use[relocated_label];
+                if (first_occurance < i)
+                {
+                    // this means that the first occurance of this was before this label was declared,
+                    // this means we have to go back and recompile all prior instructions
+
+                    i = first_occurance;
+                }
+
+                /*
+                 * code <- label 2
+                 * label 1
+                 * code <- label 1
+                 * label 2
+                 * code <- label 1
+                 * code <- label 2
+                 */
             }
         }
 

@@ -63,6 +63,8 @@ namespace eagle::codec
     std::vector<std::string> print_queue(const std::vector<enc::req>& queue, uint32_t address);
 
     bool has_relative_operand(dec::inst_info& decode);
+    bool has_relative_operand(enc::req& encode);
+
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst& instruction, const dec::operand* operands, uint32_t rva, int8_t operand = -1);
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode, uint32_t rva, int8_t operand = -1);
 

@@ -406,6 +406,21 @@ namespace eagle::codec
         return false;
     }
 
+    bool has_relative_operand(enc::req& encode)
+    {
+        for (int i = 0; i < encode.operand_count; i++)
+        {
+            const enc::op& op = encode.operands[i];
+            if (op.type == ZYDIS_OPERAND_TYPE_MEMORY)
+            {
+                if (op.mem.base == ZYDIS_REGISTER_RIP)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     std::pair<uint64_t, uint8_t> calc_relative_rva(
         const dec::inst& instruction,
         const dec::operand* operands,

@@ -5,12 +5,13 @@
 
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/compiler/code_label.h"
+#include "eaglevm-core/compiler/models/defs.h"
 
 namespace eagle::asmb
 {
     using code_container_ptr = std::shared_ptr<class code_container>;
     using inline_code_gen = std::function<std::vector<uint8_t>(uint64_t)>;
-    using inst_label_v = std::variant<codec::dynamic_instruction, code_label_ptr, std::vector<uint8_t>>;
+    using inst_label_v = std::variant<dynamic_instruction, code_label_ptr, std::vector<uint8_t>>;
 
     class code_container
     {
@@ -24,9 +25,9 @@ namespace eagle::asmb
         std::string get_name();
         [[nodiscard]] bool get_is_named() const;
 
-        void add(const codec::dynamic_instruction& instruction);
-        void add(const std::vector<codec::dynamic_instruction>& instruction);
-        void add(std::vector<codec::dynamic_instruction>& instruction);
+        void add(const dynamic_instruction& instruction);
+        void add(const std::vector<dynamic_instruction>& instruction);
+        void add(std::vector<dynamic_instruction>& instruction);
 
         void bind_start(const code_label_ptr& code_label);
         void bind(const code_label_ptr& code_label);

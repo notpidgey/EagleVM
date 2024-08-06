@@ -24,17 +24,17 @@ namespace eagle::asmb
         return is_named;
     }
 
-    void code_container::add(const codec::dynamic_instruction& instruction)
+    void code_container::add(const dynamic_instruction& instruction)
     {
         function_segments.emplace_back(instruction);
     }
 
-    void code_container::add(const std::vector<codec::dynamic_instruction>& instruction)
+    void code_container::add(const std::vector<dynamic_instruction>& instruction)
     {
         function_segments.append_range(instruction);
     }
 
-    void code_container::add(std::vector<codec::dynamic_instruction>& instruction)
+    void code_container::add(std::vector<dynamic_instruction>& instruction)
     {
         function_segments.append_range(instruction);
     }
