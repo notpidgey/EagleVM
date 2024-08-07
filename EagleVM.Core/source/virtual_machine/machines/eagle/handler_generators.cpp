@@ -123,13 +123,15 @@ namespace eagle::virt::eg
         });
 
         // setup register mapings
-        std::array<reg, 16> gprs = regs->get_gpr64_regs();
+        std::array<reg, 16> gprs = register_manager::get_gpr64_regs();
         if (settings->shuffle_push_order)
             std::ranges::shuffle(gprs, util::ran_device::get().gen);
 
         for (const auto& gpr : gprs)
         {
-            reg target_reg = regs_64_context->get_any();
+            scope_register_manager scope = regs_64_context->create_scope();
+            reg target_reg = scope.reserve();
+
             auto [disp, _] = regs->get_stack_displacement(gpr);
 
             container->add(encode(m_mov, ZREG(target_reg), ZMEMBD(VREGS, disp, 8)));
@@ -166,18 +168,19 @@ namespace eagle::virt::eg
         container->add(encode(m_mov, ZREG(rsp), ZREG(VREGS)));
 
         // restore context
-        std::array<reg, 16> gprs = regs->get_gpr64_regs();
+        std::array<reg, 16> gprs = register_manager::get_gpr64_regs();
         if (settings->shuffle_push_order)
             std::ranges::shuffle(gprs, util::ran_device::get().gen);
 
         for (const auto& gpr : gprs)
         {
-            reg target_reg = regs_64_context->get_any();
-            auto [disp, _] = regs->get_stack_displacement(gpr);
+            scope_register_manager scope = regs_64_context->create_scope();
+            reg target_reg = scope.reserve();
 
             container->add(encode(m_xor, ZREG(target_reg), ZREG(target_reg)));
-
             call_vm_handler(container, std::get<0>(load_register(gpr, target_reg)));
+
+            auto [disp, _] = regs->get_stack_displacement(gpr);
             container->add(encode(m_mov, ZMEMBD(VREGS, disp, 8), ZREG(target_reg)));
         }
 

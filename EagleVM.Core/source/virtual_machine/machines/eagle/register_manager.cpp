@@ -112,10 +112,9 @@ namespace eagle::virt::eg
             {
                 uint16_t point;
                 do
-                {
                     point = util::ran_device::get().gen_8() % 64; // generates random number between 0 and 63
-                }
                 while (std::ranges::find(points, point) != points.end());
+
                 points.push_back(point);
             }
 
@@ -148,7 +147,6 @@ namespace eagle::virt::eg
             {
                 // this is a filler register, we just want to increment current byte
                 current_byte++;
-
                 continue;
             }
 

@@ -204,7 +204,9 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
     {
         ir::ir_size target_size = cmd->get_read_size();
-        reg target_temp = reg_64_container->get_any();
+
+        scope_register_manager scope = reg_64_container->create_scope();
+        reg target_temp = scope.reserve();
 
         // pop address
         call_pop(block, target_temp);
@@ -221,7 +223,8 @@ namespace eagle::virt::eg
         const ir::ir_size value_size = cmd->get_value_size();
         const ir::ir_size write_size = cmd->get_write_size();
 
-        const std::vector<reg> temps = reg_64_container->get_any_multiple(2);
+        scope_register_manager scope = reg_64_container->create_scope();
+        const std::vector<reg> temps = scope.reserve_multiple(2);
 
         const reg temp_value = get_bit_version(temps[0], to_reg_size(value_size));
         const reg temp_address = temps[1];
@@ -249,8 +252,8 @@ namespace eagle::virt::eg
         }
         else
         {
-            const reg temp = reg_64_container->get_any();
-            call_pop(block, temp);
+            scope_register_manager scope = reg_64_container->create_scope();
+            call_pop(block, scope.reserve());
         }
     }
 
@@ -277,7 +280,8 @@ namespace eagle::virt::eg
             }
             case ir::info_type::immediate:
             {
-                const reg temp_reg = reg_64_container->get_any();
+                scope_register_manager scope = reg_64_container->create_scope();
+                const reg temp_reg = scope.reserve();
                 block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(cmd->get_value_immediate())));
 
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
@@ -286,7 +290,9 @@ namespace eagle::virt::eg
             case ir::info_type::address:
             {
                 const uint64_t constant = cmd->get_value_immediate();
-                const reg temp_reg = reg_64_container->get_any();
+
+                scope_register_manager scope = reg_64_container->create_scope();
+                const reg temp_reg = scope.reserve();
 
                 block->add(encode(m_lea, ZREG(temp_reg), ZMEMBD(VBASE, constant, 8)));
                 call_push(block, temp_reg);
@@ -320,7 +326,8 @@ namespace eagle::virt::eg
         const ir::ir_size ir_target_size = cmd->get_target();
         const reg_size target_size = to_reg_size(ir_target_size);
 
-        reg temp_reg = reg_64_container->get_any();
+        scope_register_manager scope = reg_64_container->create_scope();
+        const reg temp_reg = scope.reserve();
         call_pop(block, get_bit_version(temp_reg, current_size));
 
         // mov eax/ax/al, VTEMP
@@ -384,7 +391,7 @@ namespace eagle::virt::eg
         else
         {
             block->add(RECOMPILE_CHUNK([=](uint64_t)
-                {
+            {
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
@@ -397,7 +404,7 @@ namespace eagle::virt::eg
                 address_gen.push_back(encode(m_ret));
 
                 return codec::compile_queue(address_gen);
-                }));
+            }));
         }
 
         block->bind(ret);
