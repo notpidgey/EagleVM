@@ -100,15 +100,15 @@ namespace eagle::virt::eg
 
     void register_manager::create_mappings()
     {
-        const std::array<codec::reg, 16> avail_regs = get_gpr64_regs();
-        for (auto avail_reg : avail_regs)
+        std::vector<std::pair<codec::reg, reg_range>> register_points;
+        for (auto avail_reg : get_gpr64_regs())
         {
             std::vector<uint16_t> points;
             points.push_back(0); // starting point
             points.push_back(64); // ending point (inclusive)
 
-            constexpr auto numRanges = 64;
-            for (uint16_t i = 0; i < numRanges - 1; ++i)
+            constexpr auto num_ranges = 64;
+            for (uint16_t i = 0; i < num_ranges - 1; ++i)
             {
                 uint16_t point;
                 do
@@ -125,90 +125,76 @@ namespace eagle::virt::eg
             // form the inclusive ranges
             std::vector<reg_range> register_ranges;
             for (size_t i = 0; i < points.size() - 1; ++i)
-                register_ranges.emplace_back(points[i], points[i + 1]);
-
-            for (const auto& [first, last] : register_ranges)
             {
-                const auto length = last - first;
+                reg_range reg_range = { points[i], points[i + 1] };
+                register_points.emplace_back(avail_reg, reg_range);
+            }
+        }
 
-                auto find_avail_range = [](
-                    const std::vector<reg_range>& occupied_ranges,
-                    const uint16_t range_length,
-                    const uint16_t max_bit
-                ) -> std::optional<reg_range>
-                {
-                    std::vector<uint16_t> potential_starts;
-                    for (uint16_t start = 0; start <= max_bit - range_length; ++start)
-                        potential_starts.push_back(start);
+        constexpr uint16_t register_point_size = 16 * 64;
+        constexpr uint16_t register_mappings_size = 16 * 128;
 
-                    // Shuffle the potential start points to randomize the search
-                    std::ranges::shuffle(potential_starts, util::ran_device::get().gen);
+        // fill in missing bytes we are about to fill into xmm registers
+        for (auto i = 0; i < register_mappings_size - register_point_size; i++)
+            register_points.emplace_back(codec::reg::none, reg_range{ });
 
-                    for (const uint16_t start : potential_starts)
-                    {
-                        bool available = true;
-                        for (const auto& [fst, snd] : occupied_ranges)
-                        {
-                            if (!(start + range_length <= fst || start >= snd))
-                            {
-                                available = false;
-                                break;
-                            }
-                        }
+        // shuffle the register ranges
+        // std::ranges::shuffle(register_points, util::ran_device::get().gen);
 
-                        if (available)
-                        {
-                            return reg_range{ start, start + range_length };
-                        }
-                    }
+        uint32_t current_byte = 0;
+        for (auto [src_reg, src_map] : register_points)
+        {
+            if (src_reg == codec::reg::none)
+            {
+                // this is a filler register, we just want to increment current byte
+                current_byte++;
 
-                    return std::nullopt;
-                };
+                continue;
+            }
 
-                // Shuffle the keys in dest_register_map to iterate in random order
-                std::vector<codec::reg> dest_regs;
+            // legitimate register that we want to map source <-> dest
+            // first we want to check if this mapping will cross over the 64 byte boundary of an xmm register
+            const uint16_t xmm_low = current_byte / 64;
+            const uint16_t xmm_high = (current_byte + (src_map.second - src_map.first) - 1) / 64;
 
-                for (const auto& reg : dest_register_map | std::views::keys) dest_regs.push_back(reg);
-                std::ranges::shuffle(dest_regs, util::ran_device::get().gen);
+            auto occupy_range = [&](codec::reg reg_dest, codec::reg reg_src, reg_range& range_src)
+            {
+                const uint16_t range_size = range_src.second - range_src.first;
+                const uint16_t dest_start = current_byte % 128;
+                const uint16_t dest_end = dest_start + range_size;
 
-                bool range_mapped = false;
-                for (const auto& dest_reg : dest_regs)
-                {
-                    auto& occ_ranges = dest_register_map[dest_reg];
-                    if (std::optional<reg_range> found_range = find_avail_range(occ_ranges, length, get_reg_size(dest_reg)))
-                    {
-                        // insert into source registers
-                        std::vector<reg_mapped_range>& source_register = source_register_map[avail_reg];
-                        if (get_reg_class(dest_reg) == codec::xmm_128)
-                        {
-                            // check for cross boundary
-                            auto [from, to] = found_range.value();
-                            if (from <= 63 && to > 64)
-                            {
-                                // write across boundary
-                                // this means we need to create two different ones
+                auto& source_register = source_register_map[reg_src];
+                source_register.emplace_back(
+                    reg_range{ range_src.first, range_src.second },
+                    reg_range{ dest_start, dest_end },
+                    reg_dest
+                );
 
-                                source_register.push_back({ { first, first + (64 - from) }, { from, 64 }, dest_reg });
-                                source_register.push_back({ { first + (64 - from), last }, { 64, to }, dest_reg });
-                            }
-                            else
-                            {
-                                source_register.push_back({ { first, last }, found_range.value(), dest_reg });
-                            }
-                        }
-                        else
-                        {
-                            source_register.push_back({ { first, last }, found_range.value(), dest_reg });
-                        }
+                auto& dest_register = dest_register_map[reg_dest];
+                dest_register.emplace_back(dest_start, dest_end);
 
-                        occ_ranges.push_back(found_range.value());
+                current_byte += range_size;
+            };
 
-                        range_mapped = true;
-                        break; // exit loop once a valid range is found
-                    }
-                }
+            if (xmm_low == xmm_high)
+            {
+                // we are not writing across a boundary so we are fine
+                const codec::reg current_register = static_cast<codec::reg>(codec::xmm0 + xmm_low / 2);
+                occupy_range(current_register, src_reg, src_map);
+            }
+            else
+            {
+                // we have a cross boundary
+                const codec::reg first_register = static_cast<codec::reg>(codec::xmm0 + xmm_low / 2);
+                const codec::reg last_register = static_cast<codec::reg>(codec::xmm0 + xmm_high / 2);
 
-                VM_ASSERT(range_mapped, "unable to find valid range to map registers");
+                const uint16_t dest_midpoint = xmm_high * 64;
+                const uint16_t src_midpoint = src_map.first + (dest_midpoint - current_byte);
+                reg_range first_range = { src_map.first, src_midpoint };
+                reg_range second_range = { src_midpoint, src_map.second };
+
+                occupy_range(first_register, src_reg, first_range);
+                occupy_range(last_register, src_reg, second_range);
             }
         }
     }
