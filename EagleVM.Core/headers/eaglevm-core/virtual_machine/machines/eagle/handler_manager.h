@@ -150,6 +150,8 @@ namespace eagle::virt::eg
         void store_register_internal(codec::reg source_register, const asmb::code_container_ptr& out,
             const std::vector<reg_mapped_range>& ranges_required) const;
 
+        static void trim_ranges(std::vector<reg_mapped_range>& ranges_required, codec::reg target);
+
         [[nodiscard]] std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
         void create_vm_return(const asmb::code_container_ptr& container) const;
         static codec::reg_size load_store_index_size(uint8_t index);

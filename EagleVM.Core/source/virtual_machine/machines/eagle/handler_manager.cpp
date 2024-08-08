@@ -66,7 +66,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        trim_ranges(ranges_required, register_to_load);
 
         if (is_upper_8(register_to_load))
         {
@@ -79,6 +79,8 @@ namespace eagle::virt::eg
                 s_to -= 8;
             }
         }
+
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         load_register_internal(target_register, out, ranges_required);
         return { label, load_destination };
@@ -96,7 +98,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_load);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        trim_ranges(ranges_required, register_to_load);
 
         complex_load_info load_info;
         if (is_upper_8(register_to_load))
@@ -116,6 +118,8 @@ namespace eagle::virt::eg
         {
             load_info = generate_complex_load_info(0, static_cast<uint16_t>(destination->get_store_size()));
         }
+
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         ranges_required = apply_complex_mapping(load_info, ranges_required);
         load_register_internal(destination->get_store_register(), out, ranges_required);
@@ -297,7 +301,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        trim_ranges(ranges_required, register_to_store_into);
 
         if (is_upper_8(register_to_store_into))
         {
@@ -310,6 +314,8 @@ namespace eagle::virt::eg
                 s_to -= 8;
             }
         }
+
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         store_register_internal(source, out, ranges_required);
         return { label, source };
@@ -329,7 +335,7 @@ namespace eagle::virt::eg
         // find the mapped ranges required to build the register that we want
         // shuffle the ranges because we will rebuild it at random
         std::vector<reg_mapped_range> ranges_required = get_relevant_ranges(register_to_store_into);
-        // std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
+        trim_ranges(ranges_required, register_to_store_into);
 
         if (is_upper_8(register_to_store_into))
         {
@@ -342,6 +348,8 @@ namespace eagle::virt::eg
                 s_to -= 8;
             }
         }
+
+        std::ranges::shuffle(ranges_required, util::ran_device::get().gen);
 
         ranges_required = apply_complex_mapping(load_info, ranges_required);
         store_register_internal(source, out, ranges_required);
@@ -466,6 +474,41 @@ namespace eagle::virt::eg
         }
 
         create_vm_return(out);
+    }
+
+    void handler_manager::trim_ranges(std::vector<reg_mapped_range>& ranges_required, const reg target)
+    {
+        uint16_t significant_start = 0;
+        uint16_t significant_end = get_reg_size(target);
+
+        if (is_upper_8(target))
+        {
+            significant_start += 8;
+            significant_end += 8;
+        }
+
+        for (auto& [source_range, dest_range, dest_reg] : ranges_required)
+        {
+            auto [ds, de] = dest_range;
+            auto [ss, se] = source_range;
+
+            const uint16_t overlap_start = std::max(ss, significant_start);
+            const uint16_t overlap_end = std::min(se, significant_end);
+
+            if (overlap_start < overlap_end)
+            {
+                // There is an overlap, adjust the ranges
+                const uint16_t shift = overlap_start - ss;
+
+                // Adjust destination range
+                dest_range.first = ds + shift;
+                dest_range.second = dest_range.first + (overlap_end - overlap_start);
+
+                // Adjust source range
+                source_range.first = overlap_start;
+                source_range.second = overlap_end;
+            }
+        }
     }
 
     complex_load_info handler_manager::generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit)
@@ -770,9 +813,9 @@ namespace eagle::virt::eg
         {
             const auto& [source_range, _, _1] = mapping;
 
-            const auto start = std::get<0>(source_range);
-            const auto end = std::get<1>(source_range);
-            if (start >= min_bit && end <= max_bit)
+            const uint16_t start = std::get<0>(source_range);
+            const uint16_t end = std::get<1>(source_range);
+            if (std::max(start, min_bit) <= std::min(end, max_bit))
                 ranges_required.push_back(mapping);
         }
 

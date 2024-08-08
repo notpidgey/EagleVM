@@ -11,7 +11,7 @@
 
 namespace eagle::virt::eg
 {
-    using reg_range = std::pair<uint32_t, uint32_t>;
+    using reg_range = std::pair<uint16_t, uint16_t>;
 
     struct reg_mapped_range
     {

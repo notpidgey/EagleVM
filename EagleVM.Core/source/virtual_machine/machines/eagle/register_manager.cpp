@@ -107,27 +107,30 @@ namespace eagle::virt::eg
             points.push_back(0); // starting point
             points.push_back(64); // ending point (inclusive)
 
-            constexpr auto num_ranges = 64;
-            for (uint16_t i = 0; i < num_ranges - 1; ++i)
-            {
-                uint16_t point;
-                do
-                    point = util::ran_device::get().gen_8() % 64; // generates random number between 0 and 63
-                while (std::ranges::find(points, point) != points.end());
+            constexpr auto num_ranges = 2;
+            //for (uint16_t i = 0; i < num_ranges - 1; ++i)
+            //{
+            //    uint16_t point;
+            //    do
+            //        point = util::ran_device::get().gen_8() % 64; // generates random number between 0 and 63
+            //    while (std::ranges::find(points, point) != points.end());
+//
+            //    points.push_back(point);
+            //}
+//
+            //// sort the points
+            //std::ranges::sort(points);
+//
+            //// form the inclusive ranges
+            //std::vector<reg_range> register_ranges;
+            //for (size_t i = 0; i < points.size() - 1; ++i)
+            //{
+            //    reg_range reg_range = { points[i], points[i + 1] };
+            //    register_points.emplace_back(avail_reg, reg_range);
+            //}
 
-                points.push_back(point);
-            }
-
-            // sort the points
-            std::ranges::sort(points);
-
-            // form the inclusive ranges
-            std::vector<reg_range> register_ranges;
-            for (size_t i = 0; i < points.size() - 1; ++i)
-            {
-                reg_range reg_range = { points[i], points[i + 1] };
-                register_points.emplace_back(avail_reg, reg_range);
-            }
+            register_points.emplace_back(avail_reg, reg_range{0, 32});
+            register_points.emplace_back(avail_reg, reg_range{32, 64});
         }
 
         constexpr uint16_t register_point_size = 16 * 64;
