@@ -29,6 +29,7 @@ namespace eagle::virt
     {
     public:
         explicit register_context(const std::vector<codec::reg>& stores, codec::reg_class target_size);
+        void reset();
 
         std::unordered_set<codec::reg> get_all_availiable();
 

@@ -60,6 +60,12 @@ namespace eagle::virt
             avaliable_stores.insert(store);
     }
 
+    void register_context::reset()
+    {
+        avaliable_stores.insert_range(blocked_stores);
+        blocked_stores.clear();
+    }
+
     std::unordered_set<codec::reg> register_context::get_all_availiable()
     {
         return avaliable_stores;

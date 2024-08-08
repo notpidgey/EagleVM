@@ -65,8 +65,8 @@ namespace eagle::virt::eg
             handle_cmd(code, command);
         }
 
-        reg_64_container = std::make_shared<register_context>(reg_man->get_unreserved_temp(), gpr_64);
-        reg_128_container = std::make_shared<register_context>(reg_man->get_unreserved_temp_xmm(), xmm_128);
+        reg_64_container->reset();
+        reg_128_container->reset();
 
         return code;
     }

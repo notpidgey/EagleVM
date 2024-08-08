@@ -164,14 +164,13 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     run_container container(ins, outs);
     container.set_run_area(run_space, run_space_size);
 
+    spdlog::get("console")->info("starting {} run at {:x} {:x} bytes", instr.c_str(), run_space, virtualized_instruction.size());
 #ifdef _DEBUG
-    if (bp)
+    if(bp)
         __debugbreak();
 #endif
 
-    spdlog::get("console")->info("starting {} run at {:x} {:x} bytes", instr.c_str(), run_space, virtualized_instruction.size());
     auto [result_context, output_target] = container.run(bp);
-
     VirtualFree(reinterpret_cast<void*>(run_space), 0, MEM_RELEASE);
 
     // result_context is being set in the exception handler
@@ -262,7 +261,7 @@ int main(int argc, char* argv[])
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
-        auto entry_path = entry.path();
+        std::filesystem::path entry_path = entry.path();
         entry_path.make_preferred();
 
         std::string file_name = entry_path.stem().string();
