@@ -12,6 +12,8 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
     bool test_ran = false;
     RtlCaptureContext(&safe_context);
 
+    memset(&safe_context.Rax, 0, 16);
+
     add_veh();
     if (!test_ran)
     {

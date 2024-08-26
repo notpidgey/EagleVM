@@ -637,6 +637,8 @@ namespace eagle::virt::eg
         scope_register_manager scope_64 = regs_64_context->create_scope();
         reg resultant = scope_64.reserve();
 
+        out->add(encode(m_xor, ZREG(resultant), ZREG(resultant)));
+
         const uint16_t relevant_bits = static_cast<uint16_t>(source->get_store_size());
         int16_t irrelevant_range_max = 0;
         for(auto& [orig_range, curr_range] : mappings)
@@ -662,6 +664,8 @@ namespace eagle::virt::eg
         }
 
         out->add(encode(m_mov, ZREG(source->get_store_register()), ZREG(resultant)));
+        create_vm_return(out);
+
         return label;
     }
 
