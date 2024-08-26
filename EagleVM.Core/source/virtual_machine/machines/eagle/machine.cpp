@@ -81,29 +81,30 @@ namespace eagle::virt::eg
         reg_64_container->assign(load_destination);
 
         // load into storage
-        if (!settings->complex_temp_loading)
+        if (settings->complex_temp_loading)
         {
-            auto [handler_res, working_reg_res, complex_mapping] = han_man->
+            auto [handler_load, working_reg_res, complex_mapping] = han_man->
                 load_register_complex(register_to_load, load_destination);
 
             // load storage <- target_reg
-            han_man->call_vm_handler(block, handler_res);
+            han_man->call_vm_handler(block, handler_load);
 
             // resolve target_reg
-            han_man->resolve_complexity(load_destination, complex_mapping);
+            const auto handler_resolve = han_man->resolve_complexity(load_destination, complex_mapping);
+            han_man->call_vm_handler(block, handler_resolve);
 
             // push target_reg
             call_push(block, load_destination);
         }
         else
         {
-            auto [handler_res, working_reg_res] = han_man->
+            auto [handler_load, working_reg_res] = han_man->
                 load_register(register_to_load, load_destination);
 
             block->add(encode(m_xor, ZREG(load_destination->get_store_register()), ZREG(load_destination->get_store_register())));
 
             // load storage <- target_reg
-            han_man->call_vm_handler(block, handler_res);
+            han_man->call_vm_handler(block, handler_load);
 
             // push target_reg
             call_push(block, load_destination);

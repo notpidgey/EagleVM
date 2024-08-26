@@ -226,6 +226,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
 int main(int argc, char* argv[])
 {
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
     // give .handlers and .run_section execute permissions
     // the fact that i have to do this is so extremely cooked
     // i mean its literally DOOMED

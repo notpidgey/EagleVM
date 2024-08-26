@@ -41,6 +41,9 @@ namespace eagle::virt::eg
         for (auto& container : register_load_handlers | std::views::keys)
             handlers.push_back(container);
 
+        for (auto& container : complex_resolve_handlers | std::views::keys)
+            handlers.push_back(container);
+
         for (auto& container : register_store_handlers | std::views::keys)
             handlers.push_back(container);
 

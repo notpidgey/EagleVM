@@ -104,7 +104,6 @@ namespace eagle::virt::eg
         if (is_upper_8(register_to_load))
         {
             load_info = generate_complex_load_info(8, 16);
-
             for (reg_mapped_range& mapping : ranges_required)
             {
                 auto& [source_range,dest_range, dest_reg] = mapping;
@@ -514,23 +513,22 @@ namespace eagle::virt::eg
     complex_load_info handler_manager::generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit)
     {
         std::vector<uint16_t> points;
-        points.push_back(0); // starting point
-        points.push_back(64); // ending point (inclusive)
+        points.push_back(0);
+        points.push_back(64);
 
-        constexpr auto min_complex = 5;
-        constexpr auto max_complex = 15;
+        const auto min_complex = 64 / (end_bit - start_bit);
+        const auto max_complex = 32;
 
         std::uniform_int_distribution<uint64_t> num_ranges_dist(min_complex, max_complex);
-        const auto num_ranges = util::ran_device::get().gen_dist(num_ranges_dist);
+        const uint16_t num_ranges = util::ran_device::get().gen_dist(num_ranges_dist);
 
         for (auto i = 0; i < num_ranges - 1; ++i)
         {
             uint16_t point;
             do
-            {
-                point = util::ran_device::get().gen_8() % (end_bit - start_bit);
-            }
+                point = util::ran_device::get().gen_8() % 64;
             while (std::ranges::find(points, point) != points.end());
+
             points.push_back(point);
         }
 
@@ -633,15 +631,14 @@ namespace eagle::virt::eg
 
         complex_resolve_handlers.push_back(handler);
 
-        const uint16_t relevant_bits = static_cast<uint16_t>(source->get_store_size());
-        int16_t irrelevant_range_max = 15;
-
         std::vector<std::pair<reg_range, reg_range>> mappings = load_info.complex_mapping;
         std::ranges::shuffle(mappings, util::get_ran_device().gen);
 
         scope_register_manager scope_64 = regs_64_context->create_scope();
         reg resultant = scope_64.reserve();
 
+        const uint16_t relevant_bits = static_cast<uint16_t>(source->get_store_size());
+        int16_t irrelevant_range_max = 0;
         for(auto& [orig_range, curr_range] : mappings)
         {
             scope_register_manager inner_scope_64 = regs_64_context->create_scope();
@@ -650,23 +647,21 @@ namespace eagle::virt::eg
             auto [orig_start, orig_end] = orig_range;
             auto [curr_start, curr_end] = curr_range;
 
-            if(orig_start <= relevant_bits || irrelevant_range_max--)
+            if(orig_start <= relevant_bits || irrelevant_range_max-- > 0)
             {
-                // step 1: clear necessary orig bits
                 out->add({
-                    encode(m_mov, ZREG(temp_value_holder), ZIMMS(source->get_store_register())),
+                    // step 1: clear necessary orig bits
+                    encode(m_mov, ZREG(temp_value_holder), ZREG(source->get_store_register())),
                     encode(m_shl, ZREG(temp_value_holder), ZIMMS(64 - curr_end)),
                     encode(m_shr, ZREG(temp_value_holder), ZIMMS(64 - curr_end + curr_start)),
 
-                    encode(m_shl, ZREG(resultant), ZIMMS(64 - orig_end)),
-                    encode(m_shr, ZREG(resultant), ZIMMS(64 - orig_end + orig_start)),
+                    encode(m_shl, ZREG(temp_value_holder), ZIMMS(orig_start)),
                     encode(m_or, ZREG(resultant), ZREG(temp_value_holder)),
-
-                    encode(m_rol, ZREG(resultant), ZIMMS(curr_start))
                 });
             }
         }
 
+        out->add(encode(m_mov, ZREG(source->get_store_register()), ZREG(resultant)));
         return label;
     }
 
