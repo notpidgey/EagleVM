@@ -131,6 +131,8 @@ namespace eagle::virt::eg
         const asmb::code_container_ptr& out,
         const std::vector<reg_mapped_range>& ranges_required) const
     {
+        out->add(encode(m_xor, ZREG(load_destination), ZREG(load_destination)));
+
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
         {
@@ -632,7 +634,7 @@ namespace eagle::virt::eg
         complex_resolve_handlers.push_back(handler);
 
         std::vector<std::pair<reg_range, reg_range>> mappings = load_info.complex_mapping;
-        std::ranges::shuffle(mappings, util::get_ran_device().gen);
+        // std::ranges::shuffle(mappings, util::get_ran_device().gen);
 
         scope_register_manager scope_64 = regs_64_context->create_scope();
         reg resultant = scope_64.reserve();
