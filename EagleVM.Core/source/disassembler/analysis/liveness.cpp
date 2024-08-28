@@ -139,7 +139,7 @@ namespace eagle::dasm::analysis
                             op.reg.value == ZYDIS_REGISTER_FLAGS)
                             continue;
 
-                        auto reg = get_bit_version(static_cast<codec::reg>(op.reg.value), codec::bit_64);
+                        auto reg = static_cast<codec::reg>(op.reg.value);
                         if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ && !def.contains(reg))
                             handle_register(reg, true);
                         if (op.actions & ZYDIS_OPERAND_ACTION_MASK_WRITE && !use.contains(reg))
