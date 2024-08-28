@@ -744,6 +744,9 @@ namespace eagle::virt::eg
     {
         VM_ASSERT(label != nullptr, "code cannot be an invalid code label");
         const asmb::code_label_ptr return_label = asmb::code_label::create("caller return");
+        const asmb::code_label_ptr begin_label = asmb::code_label::create("caller " + label->get_name());
+
+        container->bind(begin_label);
 
         // lea VCS, [VCS - 8]       ; allocate space for new return address
         // mov [VCS], code_label    ; place return rva on the stack
