@@ -7,7 +7,7 @@
 #include "eaglevm-core/pe/packer/pe_packer.h"
 
 #include "eaglevm-core/disassembler/disassembler.h"
-#include "eaglevm-core/disassembler/liveness.h"
+#include "eaglevm-core/disassembler/analysis/liveness.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
@@ -177,20 +177,20 @@ int main(int argc, char* argv[])
         dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(instructions, rva_inst_begin, rva_inst_end);
         dasm->generate_blocks();
 
-        dasm::liveness_anal anal(dasm);
-        anal.compute_use_def();
-        anal.analyze(dasm->blocks.back());
+        dasm::analysis::liveness seg_live(dasm);
+        seg_live.compute_use_def();
+        seg_live.analyze(dasm->blocks.back());
 
         for (auto& block : dasm->blocks)
         {
-            printf("block 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
+            printf("\nblock 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
             printf("in: \n");
 
-            for (auto& item : anal.in[block])
+            for (auto& item : seg_live.in[block])
                 printf("\t%s\n", codec::reg_to_string(item));
 
-            printf("\nout: \n");
-            for (auto& item : anal.out[block])
+            printf("out: \n");
+            for (auto& item : seg_live.out[block])
                 printf("\t%s\n", codec::reg_to_string(item));
         }
 

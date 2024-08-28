@@ -4,16 +4,16 @@
 #include <utility>
 #include "eaglevm-core/disassembler/disassembler.h"
 
-namespace eagle::dasm
+namespace eagle::dasm::analysis
 {
     using reg_set = std::set<codec::reg>;
-    class liveness_anal
+    class liveness
     {
     public:
         std::unordered_map<basic_block_ptr, reg_set> in;
         std::unordered_map<basic_block_ptr, reg_set> out;
 
-        explicit liveness_anal(segment_dasm_ptr segment);
+        explicit liveness(segment_dasm_ptr segment);
 
         void analyze(const basic_block_ptr& exit_block);
         void compute_use_def();

@@ -1,16 +1,15 @@
-#include "eaglevm-core/disassembler/liveness.h"
-
+#include "eaglevm-core/disassembler/analysis/liveness.h"
 #include <ranges>
 #include <unordered_set>
 
-namespace eagle::dasm
+namespace eagle::dasm::analysis
 {
-    liveness_anal::liveness_anal(segment_dasm_ptr segment)
+    liveness::liveness(segment_dasm_ptr segment)
         : segment(std::move(segment))
     {
     }
 
-    void liveness_anal::analyze(const basic_block_ptr& exit_block)
+    void liveness::analyze(const basic_block_ptr& exit_block)
     {
         bool changed = true;
         while (changed)
@@ -66,7 +65,7 @@ namespace eagle::dasm
         // profit??
     }
 
-    void liveness_anal::compute_use_def()
+    void liveness::compute_use_def()
     {
         for (auto& block : segment->blocks)
         {
@@ -78,6 +77,61 @@ namespace eagle::dasm
                 for (int i = 0; i < instruction.operand_count; i++)
                 {
                     codec::dec::operand op = operands[i];
+                    auto handle_register = [&](codec::reg reg, bool read)
+                    {
+                        // trying to write a lower 32 bit register
+                        // this means we have to clear the upper 32 bits which is another write
+                        if (!read && !use.contains(reg) && get_reg_class(reg) == codec::gpr_32)
+                            def.insert(get_bit_version(reg, codec::bit_64));
+
+                        bool first = true;
+                        while (reg != ZYDIS_REGISTER_NONE)
+                        {
+                            auto width = static_cast<uint16_t>(get_reg_size(reg));
+                            if (width == 8 && !first)
+                            {
+                                // check for low, high
+                                // we want to add the other part of the register
+                                codec::reg reg_part = codec::reg::none;
+                                if (reg >= ZYDIS_REGISTER_AL && reg <= ZYDIS_REGISTER_BL)
+                                    reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg + 4));
+                                else if (reg >= ZYDIS_REGISTER_AH && reg <= ZYDIS_REGISTER_BH)
+                                    reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg - 4));
+
+                                if (reg_part != codec::reg::none)
+                                {
+                                    if (read && !def.contains(reg_part))
+                                        use.insert(reg_part);
+                                    if (!read && !use.contains(reg_part))
+                                        def.insert(reg_part);
+                                }
+                            }
+
+                            // we wan
+                            if (read && !def.contains(reg))
+                            {
+                                if (def.contains(reg))
+                                    break; // all the parts are going to exist already
+
+                                use.insert(reg);
+                            }
+                            if (!read && !use.contains(reg))
+                            {
+                                if (use.contains(reg))
+                                    break; // all the parts are going to exist already
+
+                                def.insert(reg);
+                            }
+
+                            if (reg == ZYDIS_REGISTER_RSP) break;
+
+                            width /= 2;
+                            reg = get_bit_version(reg, static_cast<codec::reg_size>(width));
+
+                            first = false;
+                        }
+                    };
+
                     if (op.type == ZYDIS_OPERAND_TYPE_REGISTER)
                     {
                         if (op.reg.value == ZYDIS_REGISTER_RIP ||
@@ -87,9 +141,9 @@ namespace eagle::dasm
 
                         auto reg = get_bit_version(static_cast<codec::reg>(op.reg.value), codec::bit_64);
                         if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ && !def.contains(reg))
-                            use.insert(reg);
+                            handle_register(reg, true);
                         if (op.actions & ZYDIS_OPERAND_ACTION_MASK_WRITE && !use.contains(reg))
-                            def.insert(reg);
+                            handle_register(reg, false);
                     }
                     else if (op.type == ZYDIS_OPERAND_TYPE_MEMORY)
                     {
@@ -97,9 +151,9 @@ namespace eagle::dasm
                         auto reg2 = get_bit_version(static_cast<codec::reg>(op.mem.index), codec::bit_64);
 
                         if (reg != ZYDIS_REGISTER_NONE && !def.contains(reg))
-                            use.insert(reg);
+                            handle_register(reg, true);
                         if (reg2 != ZYDIS_REGISTER_NONE && !def.contains(reg2))
-                            use.insert(reg2);
+                            handle_register(reg2, true);
                     }
                 }
             }
