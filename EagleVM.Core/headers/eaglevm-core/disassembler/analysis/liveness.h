@@ -15,11 +15,15 @@ namespace eagle::dasm::analysis
 
         explicit liveness(segment_dasm_ptr segment);
 
-        void analyze(const basic_block_ptr& exit_block);
+        void analyze_cross_liveness(const basic_block_ptr& exit_block);
+        std::vector<std::pair<reg_set, reg_set>> analyze_block_liveness(const basic_block_ptr& block);
+
         void compute_use_def();
 
     private:
         segment_dasm_ptr segment;
         std::unordered_map<basic_block_ptr, std::pair<reg_set, reg_set>> block_use_def;
+
+        static void compute_use_def(codec::dec::inst_info inst_info, reg_set& use, reg_set& def);
     };
 }

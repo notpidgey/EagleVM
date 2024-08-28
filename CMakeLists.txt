@@ -140,6 +140,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/disassembler/disassembler.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/models/block_end_reason.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/models/block_jump_location.h"
+	"EagleVM.Core/headers/eaglevm-core/obfuscation/block.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/math/mba_math.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/mba.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/mba_gen.h"

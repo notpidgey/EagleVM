@@ -21,7 +21,7 @@ int main(int argc, char* argv[])
 {
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
 
-    eagle::pe::pe_parser parser = eagle::pe::pe_parser(executable);
+    pe::pe_parser parser = pe::pe_parser(executable);
     if (!parser.read_file())
     {
         std::printf("[!] failed to read file: %s\n", executable);
@@ -150,6 +150,7 @@ int main(int argc, char* argv[])
     asmb::section_manager vm_section(false);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
 
+    codec::setup_decoder();
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
     {
         constexpr uint8_t call_size_64 = 6;
@@ -179,19 +180,39 @@ int main(int argc, char* argv[])
 
         dasm::analysis::liveness seg_live(dasm);
         seg_live.compute_use_def();
-        seg_live.analyze(dasm->blocks.back());
+        seg_live.analyze_cross_liveness(dasm->blocks.back());
 
-        for (auto& block : dasm->blocks)
+        for (int j = 0; j < dasm->blocks.size(); j++)
         {
+            dasm::basic_block_ptr& block = dasm->blocks[j];
             printf("\nblock 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
-            printf("in: \n");
 
+            printf("in: \n");
             for (auto& item : seg_live.in[block])
-                printf("\t%s\n", codec::reg_to_string(item));
+                printf("\t%s\n", reg_to_string(item));
 
             printf("out: \n");
             for (auto& item : seg_live.out[block])
-                printf("\t%s\n", codec::reg_to_string(item));
+                printf("\t%s\n", reg_to_string(item));
+
+            auto block_liveness = seg_live.analyze_block_liveness(block);
+
+            printf("insts: \n");
+            for (size_t idx = 0; auto& inst : block->decoded_insts)
+            {
+                std::string inst_string = codec::instruction_to_string(inst);
+                printf("\t%i. %s\n", idx, inst_string.c_str());
+
+                printf("\tin: \n");
+                for (auto& item : block_liveness[idx].first)
+                    printf("\t\t%s\n", reg_to_string(item));
+
+                printf("\tout: \n");
+                for (auto& item : block_liveness[idx].second)
+                    printf("\t\t%s\n", reg_to_string(item));
+
+                idx++;
+            }
         }
 
         std::printf("\t[>] dasm found %llu basic blocks\n", dasm->blocks.size());
