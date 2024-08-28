@@ -32,7 +32,7 @@ namespace eagle::virt
 
     std::vector<codec::reg> scope_register_manager::reserve_multiple(const uint8_t count)
     {
-        std::vector<codec::reg> result(count);
+        std::vector<codec::reg> result;
         for(auto i = 0; i < count; i++)
             result.push_back(reserve());
 
