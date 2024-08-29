@@ -193,14 +193,35 @@ namespace eagle::dasm::analysis
             }
             else if (op.type == ZYDIS_OPERAND_TYPE_MEMORY)
             {
-                auto reg = get_bit_version(static_cast<codec::reg>(op.mem.base), codec::bit_64);
-                auto reg2 = get_bit_version(static_cast<codec::reg>(op.mem.index), codec::bit_64);
+                codec::reg reg = static_cast<codec::reg>(op.mem.base);
+                codec::reg reg2 = static_cast<codec::reg>(op.mem.index);
 
                 if (reg != ZYDIS_REGISTER_NONE && !def.contains(reg))
                     handle_register(reg, true);
                 if (reg2 != ZYDIS_REGISTER_NONE && !def.contains(reg2))
                     handle_register(reg2, true);
             }
+
+            // if (inst.mnemonic == ZYDIS_MNEMONIC_CALL)
+            // {
+            //     // volatile regs
+            //     auto volatile_regs = {
+            //         ZYDIS_REGISTER_RAX,
+            //         ZYDIS_REGISTER_RCX,
+            //         ZYDIS_REGISTER_RDX,
+
+            //         ZYDIS_REGISTER_R8,
+            //         ZYDIS_REGISTER_R9,
+            //         ZYDIS_REGISTER_R10,
+            //         ZYDIS_REGISTER_R11,
+            //     };
+
+            //     for (auto& reg : volatile_regs)
+            //     {
+            //         handle_register(static_cast<codec::reg>(reg), true);
+            //         handle_register(static_cast<codec::reg>(reg), false);
+            //     }
+            // }
         }
     }
 }
