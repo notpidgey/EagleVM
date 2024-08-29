@@ -120,64 +120,84 @@ namespace eagle::dasm::analysis
     void liveness::compute_use_def(codec::dec::inst_info inst_info, reg_set& use, reg_set& def)
     {
         auto& [inst, operands] = inst_info;
+        auto handle_register = [&](codec::reg reg, const bool read)
+        {
+            // trying to write a lower 32 bit register
+            // this means we have to clear the upper 32 bits which is another write
+            if (!read && get_reg_class(reg) == codec::gpr_32)
+                def.insert(get_bit_version(reg, codec::bit_64));
+
+            bool first = true;
+            while (reg != ZYDIS_REGISTER_NONE)
+            {
+                bool success = true;
+
+                auto width = static_cast<uint16_t>(get_reg_size(reg));
+                if (width == 8 && !first)
+                {
+                    // check for low, high
+                    // we want to add the other part of the register
+                    codec::reg reg_part = codec::reg::none;
+                    if (reg >= ZYDIS_REGISTER_AL && reg <= ZYDIS_REGISTER_BL)
+                        reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg + 4));
+                    else if (reg >= ZYDIS_REGISTER_AH && reg <= ZYDIS_REGISTER_BH)
+                        reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg - 4));
+
+                    if (reg_part != codec::reg::none)
+                    {
+                        if (read) success = use.insert(reg_part).second;
+                        if (!read) success = def.insert(reg_part).second;
+                    }
+                }
+
+                if (!success) break;
+
+                if (read) success = use.insert(reg).second;
+                if (!read) success = def.insert(reg).second;
+
+                if (reg == ZYDIS_REGISTER_RSP || !success) break;
+
+                width /= 2;
+                reg = get_bit_version(reg, static_cast<codec::reg_size>(width));
+
+                first = false;
+            }
+        };
+
+        if (inst.mnemonic == ZYDIS_MNEMONIC_CALL)
+        {
+            // massive assumption that the calling conventions are perfect
+            auto read_volatile_regs = {
+                ZYDIS_REGISTER_RCX,
+                ZYDIS_REGISTER_RDX,
+
+                ZYDIS_REGISTER_R8,
+                ZYDIS_REGISTER_R9,
+
+                ZYDIS_REGISTER_RSP
+            };
+
+            for (auto& reg : read_volatile_regs)
+                handle_register(static_cast<codec::reg>(reg), true);
+
+            auto written_volatile_regs = {
+                ZYDIS_REGISTER_RAX,
+                ZYDIS_REGISTER_RCX,
+                ZYDIS_REGISTER_RDX,
+
+                ZYDIS_REGISTER_R8,
+                ZYDIS_REGISTER_R9,
+                ZYDIS_REGISTER_R10,
+                ZYDIS_REGISTER_R11,
+            };
+
+            for (auto& reg : written_volatile_regs)
+                handle_register(static_cast<codec::reg>(reg), false);
+        }
+
         for (int i = 0; i < inst.operand_count; i++)
         {
             codec::dec::operand op = operands[i];
-            auto handle_register = [&](codec::reg reg, const bool read)
-            {
-                // trying to write a lower 32 bit register
-                // this means we have to clear the upper 32 bits which is another write
-                if (!read && !use.contains(reg) && get_reg_class(reg) == codec::gpr_32)
-                    def.insert(get_bit_version(reg, codec::bit_64));
-
-                bool first = true;
-                while (reg != ZYDIS_REGISTER_NONE)
-                {
-                    auto width = static_cast<uint16_t>(get_reg_size(reg));
-                    if (width == 8 && !first)
-                    {
-                        // check for low, high
-                        // we want to add the other part of the register
-                        codec::reg reg_part = codec::reg::none;
-                        if (reg >= ZYDIS_REGISTER_AL && reg <= ZYDIS_REGISTER_BL)
-                            reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg + 4));
-                        else if (reg >= ZYDIS_REGISTER_AH && reg <= ZYDIS_REGISTER_BH)
-                            reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg - 4));
-
-                        if (reg_part != codec::reg::none)
-                        {
-                            if (read && !def.contains(reg_part))
-                                use.insert(reg_part);
-                            if (!read && !use.contains(reg_part))
-                                def.insert(reg_part);
-                        }
-                    }
-
-                    // we wan
-                    if (read && !def.contains(reg))
-                    {
-                        if (def.contains(reg))
-                            break; // all the parts are going to exist already
-
-                        use.insert(reg);
-                    }
-                    if (!read && !use.contains(reg))
-                    {
-                        if (use.contains(reg))
-                            break; // all the parts are going to exist already
-
-                        def.insert(reg);
-                    }
-
-                    if (reg == ZYDIS_REGISTER_RSP) break;
-
-                    width /= 2;
-                    reg = get_bit_version(reg, static_cast<codec::reg_size>(width));
-
-                    first = false;
-                }
-            };
-
             if (op.type == ZYDIS_OPERAND_TYPE_REGISTER)
             {
                 if (op.reg.value == ZYDIS_REGISTER_RIP ||
@@ -185,43 +205,22 @@ namespace eagle::dasm::analysis
                     op.reg.value == ZYDIS_REGISTER_FLAGS)
                     continue;
 
-                auto reg = static_cast<codec::reg>(op.reg.value);
-                if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ && !def.contains(reg))
+                const auto reg = static_cast<codec::reg>(op.reg.value);
+                if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ)
                     handle_register(reg, true);
-                if (op.actions & ZYDIS_OPERAND_ACTION_MASK_WRITE && !use.contains(reg))
+                if (op.actions & ZYDIS_OPERAND_ACTION_MASK_WRITE)
                     handle_register(reg, false);
             }
             else if (op.type == ZYDIS_OPERAND_TYPE_MEMORY)
             {
-                codec::reg reg = static_cast<codec::reg>(op.mem.base);
-                codec::reg reg2 = static_cast<codec::reg>(op.mem.index);
+                const codec::reg reg = static_cast<codec::reg>(op.mem.base);
+                const codec::reg reg2 = static_cast<codec::reg>(op.mem.index);
 
-                if (reg != ZYDIS_REGISTER_NONE && !def.contains(reg))
+                if (reg != ZYDIS_REGISTER_NONE)
                     handle_register(reg, true);
-                if (reg2 != ZYDIS_REGISTER_NONE && !def.contains(reg2))
+                if (reg2 != ZYDIS_REGISTER_NONE)
                     handle_register(reg2, true);
             }
-
-            // if (inst.mnemonic == ZYDIS_MNEMONIC_CALL)
-            // {
-            //     // volatile regs
-            //     auto volatile_regs = {
-            //         ZYDIS_REGISTER_RAX,
-            //         ZYDIS_REGISTER_RCX,
-            //         ZYDIS_REGISTER_RDX,
-
-            //         ZYDIS_REGISTER_R8,
-            //         ZYDIS_REGISTER_R9,
-            //         ZYDIS_REGISTER_R10,
-            //         ZYDIS_REGISTER_R11,
-            //     };
-
-            //     for (auto& reg : volatile_regs)
-            //     {
-            //         handle_register(static_cast<codec::reg>(reg), true);
-            //         handle_register(static_cast<codec::reg>(reg), false);
-            //     }
-            // }
         }
     }
 }
