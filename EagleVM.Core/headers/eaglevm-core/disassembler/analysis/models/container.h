@@ -8,6 +8,15 @@ namespace eagle::dasm::analysis
     class reg_set_container
     {
     public:
+        friend reg_set_container& operator|(const reg_set_container& regs, const reg_set_container& other)
+        {
+            reg_set_container container;
+            for (int i = 0; i < get_size(); i++)
+                container.register_state[i] = regs.register_state[i] | other.register_state[i];
+
+            return container;
+        }
+
         reg_set_container& operator|=(const reg_set_container& regs)
         {
             for (int i = 0; i < get_size(); i++)
@@ -16,12 +25,13 @@ namespace eagle::dasm::analysis
             return *this;
         }
 
-        reg_set_container& operator-(const reg_set_container& regs) const
+        friend reg_set_container& operator-(const reg_set_container& regs, const reg_set_container& other)
         {
+            reg_set_container container;
             for (int i = 0; i < get_size(); i++)
-                register_state[i] &= ~regs.register_state[i];
+                container.register_state[i] = regs.register_state[i] & ~other.register_state[i];
 
-            return *this;
+            return container;
         }
 
         reg_set_container& operator-=(const reg_set_container& regs)

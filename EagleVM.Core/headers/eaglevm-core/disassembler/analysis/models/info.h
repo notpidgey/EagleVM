@@ -26,18 +26,22 @@ namespace eagle::dasm::analysis
             return ret;
         }
 
-        liveness_info& operator-(const liveness_info& def_set)
+        friend liveness_info& operator-(const liveness_info& def_set, const liveness_info& def_set_other)
         {
-            this->r64 -= def_set.r64;
-            this->r512 -= def_set.r512;
-            return *this;
+            liveness_info info;
+            info.r64 = def_set.r64 - def_set_other.r64;
+            info.r512 = def_set.r512 - def_set_other.r512;
+
+            return info;
         }
 
-        liveness_info& operator|(const liveness_info& diff)
+        friend liveness_info& operator|(const liveness_info& diff, const liveness_info& def_set_other)
         {
-            this->r64 |= diff.r64;
-            this->r512 |= diff.r512;
-            return *this;
+            liveness_info info;
+            info.r64 = diff.r64 | def_set_other.r64;
+            info.r512 = diff.r512 | def_set_other.r512;
+
+            return info;
         }
 
         liveness_info& operator|=(const liveness_info& diff)

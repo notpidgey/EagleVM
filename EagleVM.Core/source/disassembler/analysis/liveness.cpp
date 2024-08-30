@@ -115,41 +115,8 @@ namespace eagle::dasm::analysis
             if (!read && get_reg_class(reg) == codec::gpr_32)
                 def.insert_register(get_bit_version(reg, codec::bit_64));
 
-            bool first = true;
-            while (reg != ZYDIS_REGISTER_NONE)
-            {
-                bool success = true;
-
-                auto width = static_cast<uint16_t>(get_reg_size(reg));
-                if (width == 8 && !first)
-                {
-                    // check for low, high
-                    // we want to add the other part of the register
-                    codec::reg reg_part = codec::reg::none;
-                    if (reg >= ZYDIS_REGISTER_AL && reg <= ZYDIS_REGISTER_BL)
-                        reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg + 4));
-                    else if (reg >= ZYDIS_REGISTER_AH && reg <= ZYDIS_REGISTER_BH)
-                        reg_part = static_cast<codec::reg>(static_cast<uint16_t>(reg - 4));
-
-                    if (reg_part != codec::reg::none)
-                    {
-                        if (read) success = use.insert_register(reg_part);
-                        if (!read) success = def.insert_register(reg_part);
-                    }
-                }
-
-                if (!success) break;
-
-                if (read) success = use.insert_register(reg);
-                if (!read) success = def.insert_register(reg);
-
-                if (reg == ZYDIS_REGISTER_RSP || !success) break;
-
-                width /= 2;
-                reg = get_bit_version(reg, static_cast<codec::reg_size>(width));
-
-                first = false;
-            }
+            if (read) use.insert_register(reg);
+            if (!read) def.insert_register(reg);
         };
 
         if (inst.mnemonic == ZYDIS_MNEMONIC_CALL)
