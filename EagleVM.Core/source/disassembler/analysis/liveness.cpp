@@ -18,8 +18,6 @@ namespace eagle::dasm::analysis
             for (auto i = segment->blocks.size(); i--;)
             {
                 const basic_block_ptr& block = segment->blocks[i];
-                if (block == exit_block)
-                    continue;
 
                 auto search_jump = [this](const std::pair<uint64_t, block_jump_location> location) ->
                     std::optional<basic_block_ptr>

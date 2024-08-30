@@ -217,19 +217,17 @@ int main(int argc, char* argv[])
             for (size_t idx = 0; auto& inst : block->decoded_insts)
             {
                 std::string inst_string = codec::instruction_to_string(inst);
-                printf("\t%i. %s\n", idx, inst_string.c_str());
+                printf("\t%llu. %s\n", idx, inst_string.c_str());
 
                 printf("\tin: \n");
-                dasm::analysis::liveness_info& item = seg_live.live[block].first;
                 for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
-                    if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                    if (auto res = block_liveness[idx].first.get_gpr64(static_cast<codec::reg>(k)))
                         printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
                             uint8_to_bitstring(res).c_str());
 
                 printf("\tout: \n");
-                item = seg_live.live[block].second;
                 for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
-                    if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                    if (auto res = block_liveness[idx].second.get_gpr64(static_cast<codec::reg>(k)))
                         printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
                             uint8_to_bitstring(res).c_str());
 
