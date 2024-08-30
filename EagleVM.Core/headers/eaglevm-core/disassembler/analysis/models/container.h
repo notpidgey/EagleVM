@@ -10,24 +10,23 @@ namespace eagle::dasm::analysis
     public:
         reg_set_container& operator|=(const reg_set_container& regs)
         {
-            for (int i = 0; i < TCount; i++)
+            for (int i = 0; i < get_size(); i++)
                 register_state[i] |= regs.register_state[i];
 
             return *this;
         }
 
-        reg_set_container operator-(const reg_set_container& regs) const
+        reg_set_container& operator-(const reg_set_container& regs) const
         {
-            reg_set_container result = *this;
-            for (int i = 0; i < TCount; i++)
-                result.register_state[i] &= ~regs.register_state[i];
+            for (int i = 0; i < get_size(); i++)
+                register_state[i] &= ~regs.register_state[i];
 
-            return result;
+            return *this;
         }
 
         reg_set_container& operator-=(const reg_set_container& regs)
         {
-            for (int i = 0; i < TCount; i++)
+            for (int i = 0; i < get_size(); i++)
                 register_state[i] &= ~regs.register_state[i];
 
             return *this;
@@ -35,7 +34,7 @@ namespace eagle::dasm::analysis
 
         bool operator==(const reg_set_container& regs) const
         {
-            for (int i = 0; i < TCount; i++)
+            for (int i = 0; i < get_size(); i++)
                 if (register_state[i] != regs.register_state[i])
                     return false;
             return true;
@@ -64,5 +63,11 @@ namespace eagle::dasm::analysis
         }
 
         uint64_t register_state[(TBits * TCount / 8) / 64] = { };
+
+    private:
+        static constexpr uint16_t get_size()
+        {
+            return (TBits * TCount / 8) / 64;
+        }
     };
 }
