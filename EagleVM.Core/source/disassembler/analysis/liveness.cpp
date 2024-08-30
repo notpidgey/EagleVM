@@ -31,43 +31,39 @@ namespace eagle::dasm::analysis
                 };
 
                 // OUT[B]
-                std::set<codec::reg> new_out;
+                liveness_info new_out = { };
                 switch (block->get_end_reason())
                 {
                     case block_conditional_jump:
                         if (auto search = search_jump(segment->get_jump(block, false)))
-                            new_out.insert_range(in[search.value()]);
+                            new_out |= live[search.value()].first;
                     case block_end:
                     case block_jump:
                         if (auto search = search_jump(segment->get_jump(block, true)))
-                            new_out.insert_range(in[search.value()]);
+                            new_out |= live[search.value()].first;
                         break;
                 }
 
                 // IN[B]
                 auto [use_set, def_set] = block_use_def[block];
 
-                std::set<codec::reg> diff;
-                std::ranges::set_difference(new_out, def_set, std::inserter(diff, diff.begin()));
+                const liveness_info diff = new_out - def_set;
+                liveness_info new_in = use_set | diff;
 
-                std::set<codec::reg> new_in;
-                new_in.insert_range(use_set);
-                new_in.insert_range(diff);
-
-                if (new_out != out[block] || new_in != in[block])
+                if (new_out != live[block].second || new_in != live[block].first)
                     changed = true;
 
-                in[block] = new_in;
-                out[block] = new_out;
+                live[block].first = new_in;
+                live[block].second = new_out;
             }
         }
 
         // profit??
     }
 
-    std::vector<std::pair<reg_set, reg_set>> liveness::analyze_block_liveness(const basic_block_ptr& block)
+    std::vector<std::pair<liveness_info, liveness_info>> liveness::analyze_block_liveness(const basic_block_ptr& block)
     {
-        std::vector<std::pair<reg_set, reg_set>> instruction_live(block->decoded_insts.size());
+        std::vector<std::pair<liveness_info, liveness_info>> instruction_live(block->decoded_insts.size());
 
         bool changed = true;
         while (changed)
@@ -76,22 +72,16 @@ namespace eagle::dasm::analysis
             for (auto i = block->decoded_insts.size(); i--;)
             {
                 // OUT[B]
-                std::set<codec::reg> new_out;
-                if (i == block->decoded_insts.size() - 1)
-                    new_out.insert_range(out[block]);
-                else
-                    new_out.insert_range(instruction_live[i + 1].first);
+                liveness_info new_out;
+                if (i == block->decoded_insts.size() - 1) new_out = live[block].second;
+                else new_out = instruction_live[i + 1].first;
 
                 // IN[B]
-                std::set<codec::reg> use_set, def_set;
+                liveness_info use_set, def_set;
                 compute_use_def(block->decoded_insts[i], use_set, def_set);
 
-                std::set<codec::reg> diff;
-                std::ranges::set_difference(new_out, def_set, std::inserter(diff, diff.begin()));
-
-                std::set<codec::reg> new_in;
-                new_in.insert_range(use_set);
-                new_in.insert_range(diff);
+                const liveness_info diff = new_out - def_set;
+                liveness_info new_in = use_set | diff;
 
                 if (new_in != instruction_live[i].first || new_out != instruction_live[i].second)
                     changed = true;
@@ -107,9 +97,7 @@ namespace eagle::dasm::analysis
     {
         for (auto& block : segment->blocks)
         {
-            std::set<codec::reg> use;
-            std::set<codec::reg> def;
-
+            liveness_info use, def = {};
             for (const auto& decoded_inst : block->decoded_insts)
                 compute_use_def(decoded_inst, use, def);
 
@@ -117,7 +105,7 @@ namespace eagle::dasm::analysis
         }
     }
 
-    void liveness::compute_use_def(codec::dec::inst_info inst_info, reg_set& use, reg_set& def)
+    void liveness::compute_use_def(codec::dec::inst_info inst_info, liveness_info& use, liveness_info& def)
     {
         auto& [inst, operands] = inst_info;
         auto handle_register = [&](codec::reg reg, const bool read)
@@ -125,7 +113,7 @@ namespace eagle::dasm::analysis
             // trying to write a lower 32 bit register
             // this means we have to clear the upper 32 bits which is another write
             if (!read && get_reg_class(reg) == codec::gpr_32)
-                def.insert(get_bit_version(reg, codec::bit_64));
+                def.insert_register(get_bit_version(reg, codec::bit_64));
 
             bool first = true;
             while (reg != ZYDIS_REGISTER_NONE)
@@ -145,15 +133,15 @@ namespace eagle::dasm::analysis
 
                     if (reg_part != codec::reg::none)
                     {
-                        if (read) success = use.insert(reg_part).second;
-                        if (!read) success = def.insert(reg_part).second;
+                        if (read) success = use.insert_register(reg_part);
+                        if (!read) success = def.insert_register(reg_part);
                     }
                 }
 
                 if (!success) break;
 
-                if (read) success = use.insert(reg).second;
-                if (!read) success = def.insert(reg).second;
+                if (read) success = use.insert_register(reg);
+                if (!read) success = def.insert_register(reg);
 
                 if (reg == ZYDIS_REGISTER_RSP || !success) break;
 

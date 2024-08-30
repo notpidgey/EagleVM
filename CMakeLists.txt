@@ -136,6 +136,8 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/compiler/code_label.h"
 	"EagleVM.Core/headers/eaglevm-core/compiler/section_manager.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/liveness.h"
+	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/models/container.h"
+	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/models/info.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/basic_block.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/disassembler.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/models/block_end_reason.h"

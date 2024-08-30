@@ -45,6 +45,12 @@ namespace eagle::codec
         return get_bit_version(static_cast<reg>(input_reg), target_size);
     }
 
+    reg get_largest_enclosing(reg input_reg)
+    {
+        zydis_register result = ZydisRegisterGetLargestEnclosing(ZYDIS_MACHINE_MODE_LONG_64, static_cast<zydis_register>(input_reg));
+        return static_cast<reg>(result);
+    }
+
     reg_class get_max_size(reg input_reg)
     {
         const zydis_register zy_register = static_cast<zydis_register>(input_reg);

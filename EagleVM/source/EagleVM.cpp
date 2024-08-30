@@ -187,13 +187,29 @@ int main(int argc, char* argv[])
             dasm::basic_block_ptr& block = dasm->blocks[j];
             printf("\nblock 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
 
+            auto uint8_to_bitstring = [](const uint8_t value) -> std::string
+            {
+                std::string result;
+                for (int i = 7; i >= 0; --i)
+                {
+                    result += (value & (1 << i)) ? '1' : '0';
+                }
+                return result;
+            };
+
             printf("in: \n");
-            for (auto& item : seg_live.in[block])
-                printf("\t%s\n", reg_to_string(item));
+            dasm::analysis::liveness_info& item = seg_live.live[block].first;
+            for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
+                if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
+                        uint8_to_bitstring(res).c_str());
 
             printf("out: \n");
-            for (auto& item : seg_live.out[block])
-                printf("\t%s\n", reg_to_string(item));
+            item = seg_live.live[block].second;
+            for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
+                if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
+                        uint8_to_bitstring(res).c_str());
 
             auto block_liveness = seg_live.analyze_block_liveness(block);
 
@@ -204,12 +220,18 @@ int main(int argc, char* argv[])
                 printf("\t%i. %s\n", idx, inst_string.c_str());
 
                 printf("\tin: \n");
-                for (auto& item : block_liveness[idx].first)
-                    printf("\t\t%s\n", reg_to_string(item));
+                dasm::analysis::liveness_info& item = seg_live.live[block].first;
+                for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
+                    if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
+                            uint8_to_bitstring(res).c_str());
 
                 printf("\tout: \n");
-                for (auto& item : block_liveness[idx].second)
-                    printf("\t\t%s\n", reg_to_string(item));
+                item = seg_live.live[block].second;
+                for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
+                    if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
+                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
+                            uint8_to_bitstring(res).c_str());
 
                 idx++;
             }
