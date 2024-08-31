@@ -6,6 +6,7 @@ namespace eagle::dasm::analysis
 {
     using reg64_set = reg_set_container<64, 16, ZYDIS_REGISTER_RAX>;
     using reg512_set = reg_set_container<512, 16, ZYDIS_REGISTER_ZMM0>;
+    using eflags_set = reg_set_container<32 * 8, 1>;
 
     class liveness_info
     {
@@ -20,40 +21,53 @@ namespace eagle::dasm::analysis
                 ret = r512.insert(reg);
             else if (largest_class == ZYDIS_REGCLASS_GPR64)
                 ret = r64.insert(reg);
+            else if (largest_class == ZYDIS_REGISTER_RFLAGS)
+                ret = flags.insert(reg);
             else
-                VM_ASSERT("unknown regclass found");
+            VM_ASSERT("unknown regclass found");
 
             return ret;
         }
 
-        friend liveness_info& operator-(const liveness_info& def_set, const liveness_info& def_set_other)
+        void insert_flags(const uint64_t data)
+        {
+            for (int i = 0; i < 64; i++)
+                if (data << i & 1)
+                    flags.insert_byte(i);
+        }
+
+        friend liveness_info& operator-(const liveness_info& first, const liveness_info& second)
         {
             liveness_info info;
-            info.r64 = def_set.r64 - def_set_other.r64;
-            info.r512 = def_set.r512 - def_set_other.r512;
+            info.r64 = first.r64 - second.r64;
+            info.r512 = first.r512 - second.r512;
+            info.flags = first.flags - second.flags;
 
             return info;
         }
 
-        friend liveness_info& operator|(const liveness_info& diff, const liveness_info& def_set_other)
+        friend liveness_info& operator|(const liveness_info& first, const liveness_info& second)
         {
             liveness_info info;
-            info.r64 = diff.r64 | def_set_other.r64;
-            info.r512 = diff.r512 | def_set_other.r512;
+            info.r64 = first.r64 | second.r64;
+            info.r512 = first.r512 | second.r512;
+            info.flags = first.flags | second.flags;
 
             return info;
         }
 
-        liveness_info& operator|=(const liveness_info& diff)
+        liveness_info& operator|=(const liveness_info& first)
         {
-            this->r64 |= diff.r64;
-            this->r512 |= diff.r512;
+            this->r64 |= first.r64;
+            this->r512 |= first.r512;
+            this->flags |= first.flags;
+
             return *this;
         }
 
-        bool operator==(const liveness_info& second) const
+        bool operator==(const liveness_info& other) const
         {
-            return this->r64 == second.r64 && this->r512 == second.r512;
+            return this->r64 == other.r64 && this->r512 == other.r512 && this->flags == other.flags;
         }
 
         [[nodiscard]] uint8_t get_gpr64(const codec::reg reg) const
@@ -62,8 +76,20 @@ namespace eagle::dasm::analysis
             return r64.register_state[idx / 8] >> idx * 8;
         }
 
+        [[nodiscard]] uint8_t get_zmm512(const codec::reg reg) const
+        {
+            const auto idx = reg - ZYDIS_REGISTER_ZMM0;
+            return r512.register_state[idx / 8] >> idx * 8;
+        }
+
+        uint64_t get_flags() const
+        {
+            return flags.register_state[0];
+        }
+
     private:
         reg64_set r64;
         reg512_set r512;
+        eflags_set flags;
     };
 }
