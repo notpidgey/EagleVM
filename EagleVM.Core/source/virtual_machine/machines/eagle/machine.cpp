@@ -74,43 +74,46 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
         // we want to load this register onto the stack
-        const reg register_to_load = cmd->get_reg();
-        const reg_size reg_size = get_reg_size(register_to_load);
+        const reg load_reg = cmd->get_reg();
+        const reg_size load_reg_size = get_reg_size(load_reg);
 
-        const ir::discrete_store_ptr load_destination = ir::discrete_store::create(to_ir_size(reg_size));
-        reg_64_container->assign(load_destination);
+        const ir::discrete_store_ptr dest = ir::discrete_store::create(to_ir_size(load_reg_size));
+        reg_64_container->assign(dest);
 
-        // load into storage
-        if (settings->complex_temp_loading)
+        if (get_reg_class(load_reg) == seg)
         {
-            auto [handler_load, working_reg_res, complex_mapping] = han_man->
-                load_register_complex(register_to_load, load_destination);
-
-            // load storage <- target_reg
-            han_man->call_vm_handler(block, handler_load);
-
-            // resolve target_reg
-            const auto handler_resolve = han_man->resolve_complexity(load_destination, complex_mapping);
-            han_man->call_vm_handler(block, handler_resolve);
-
-            // push target_reg
-            call_push(block, load_destination);
+            block->add(encode(m_mov, ZREG(dest->get_store_register()), ZREG(load_reg)));
         }
         else
         {
-            auto [handler_load, working_reg_res] = han_man->
-                load_register(register_to_load, load_destination);
+            // load into storage
+            if (settings->complex_temp_loading)
+            {
+                auto [handler_load, working_reg_res, complex_mapping] = han_man->
+                    load_register_complex(load_reg, dest);
 
-            block->add(encode(m_xor, ZREG(load_destination->get_store_register()), ZREG(load_destination->get_store_register())));
+                // load storage <- target_reg
+                han_man->call_vm_handler(block, handler_load);
 
-            // load storage <- target_reg
-            han_man->call_vm_handler(block, handler_load);
+                // resolve target_reg
+                const auto handler_resolve = han_man->resolve_complexity(dest, complex_mapping);
+                han_man->call_vm_handler(block, handler_resolve);
+            }
+            else
+            {
+                auto [handler_load, working_reg_res] = han_man->
+                    load_register(load_reg, dest);
 
-            // push target_reg
-            call_push(block, load_destination);
+                block->add(encode(m_xor, ZREG(dest->get_store_register()), ZREG(dest->get_store_register())));
+
+                // load storage <- target_reg
+                han_man->call_vm_handler(block, handler_load);
+            }
         }
 
-        reg_64_container->release(load_destination);
+        // push target_reg
+        call_push(block, dest);
+        reg_64_container->release(dest);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)

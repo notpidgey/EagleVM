@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
             {
                 std::string result;
                 for (int k = sig_bits - 1; k >= 0; --k)
-                    result += (value & (1 << k)) ? '1' : '0';
+                    result += value & 1 << k ? '1' : '0';
 
                 return result;
             };
@@ -224,7 +224,7 @@ int main(int argc, char* argv[])
                         printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
                             bitfield_to_bitstring(res, 8).c_str());
 
-                if(auto res = block_liveness[idx].first.get_flags())
+                if (auto res = block_liveness[idx].first.get_flags())
                     printf("\t\trflags:%s\n", bitfield_to_bitstring(res, 32).c_str());
 
                 printf("\tout: \n");
@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
                         printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
                             bitfield_to_bitstring(res, 8).c_str());
 
-                if(auto res = block_liveness[idx].second.get_flags())
+                if (auto res = block_liveness[idx].second.get_flags())
                     printf("\t\trflags:%s\n", bitfield_to_bitstring(res, 32).c_str());
 
                 idx++;
