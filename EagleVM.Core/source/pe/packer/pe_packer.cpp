@@ -69,17 +69,17 @@ namespace eagle::pe
                 auto a_section = std::get<0>(a);
                 auto b_section = std::get<0>(b);
 
-                return a_section.PointerToRawData < b_section.PointerToRawData;
+                return a_section.ptr_raw_data < b_section.ptr_raw_data;
             });
 
             for (auto& [header, data] : generator->sections)
             {
-                const std::string section_name = pe_generator::section_name(header);
+                const auto section_name = header.name.to_string();
                 if (section_name != ".vmcode" && section_name != ".vmdata" && section_name != ".text")
                     continue;
 
-                header.Characteristics |= IMAGE_SCN_MEM_WRITE;
-                const uint32_t section_rva = header.VirtualAddress;
+                header.characteristics.mem_write = 1;
+                const uint32_t section_rva = header.virtual_address;
 
                 asmb::code_label_ptr rel_label = asmb::code_label::create();
                 container->bind(rel_label);

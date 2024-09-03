@@ -1,6 +1,7 @@
 #include "eaglevm-core/pe/pe_generator.h"
 
 #include <cassert>
+#include <ranges>
 
 #include "eaglevm-core/util/random.h"
 #include "eaglevm-core/util/assert.h"
@@ -14,7 +15,7 @@ namespace eagle::pe
         ///
 
         // copy dos header
-        PIMAGE_DOS_HEADER existing_dos_header = parser->get_dos_header();
+        const auto existing_dos_header = parser->get_dos_headers();
         memcpy(&dos_header, existing_dos_header, sizeof(IMAGE_DOS_HEADER));
 
         //
@@ -22,7 +23,10 @@ namespace eagle::pe
         //
 
         // copy dos stub
-        dos_stub = parser->get_dos_stub();
+        const uint8_t* start = reinterpret_cast<uint8_t*>(parser->get_dos_headers()) + sizeof(IMAGE_DOS_HEADER);
+        const uint8_t* end = reinterpret_cast<uint8_t*>(parser->get_nt_headers());
+        dos_stub = std::vector<uint8_t>(end - start, 0);
+        std::copy(start, end, dos_stub.begin());
 
         // remove rich header (TODO)
         // memset(&dos_stub + 0x80, 0, sizeof dos_stub - 0x80);
@@ -32,7 +36,7 @@ namespace eagle::pe
         //
 
         // copy nt header
-        PIMAGE_NT_HEADERS existing_nt_header = parser->get_nt_header();
+        const auto existing_nt_header = parser->get_nt_headers();
         memcpy(&nt_headers, existing_nt_header, sizeof(IMAGE_NT_HEADERS));
 
         // signature
@@ -52,13 +56,12 @@ namespace eagle::pe
         //
 
         // copy section headers
-        std::vector<PIMAGE_SECTION_HEADER> existing_sections = parser->get_sections();
-        for (PIMAGE_SECTION_HEADER section : existing_sections)
+        for (win::section_header_t section : parser->get_nt_headers()->sections())
         {
-            std::vector<uint8_t> data(section->SizeOfRawData, 0);
-            memcpy(data.data(), parser->get_base() + section->PointerToRawData, section->SizeOfRawData);
+            std::vector<uint8_t> data(section.size_raw_data, 0);
+            memcpy(data.data(), parser->raw_to_ptr(section.ptr_raw_data), section.size_raw_data);
 
-            sections.push_back({*section, data});
+            sections.emplace_back(section, data);
         }
 
         // shitty fix but this should stop references from getting reallocated
@@ -67,13 +70,9 @@ namespace eagle::pe
 
     generator_section_t& pe_generator::add_section(const char* name)
     {
-        generator_section_t new_section = {};
-        auto& section_name = std::get<0>(new_section).Name;
-        auto name_length = strlen(name);
-        for (size_t i = 0; i < (std::min)(_countof(section_name), name_length); i++)
-        {
-            section_name[i] = name[i];
-        }
+        generator_section_t new_section = { };
+        for (auto i = 0; i < sizeof(new_section.first.name.short_name); i++)
+            new_section.first.name.short_name[i] = name[i];
 
         sections.push_back(new_section);
         nt_headers.FileHeader.NumberOfSections++;
@@ -111,8 +110,8 @@ namespace eagle::pe
         for (auto& [section, data] : sections)
         {
             // calculate the start and end virtual addresses of the section
-            uint32_t section_start_va = section.VirtualAddress;
-            uint32_t section_end_va = section_start_va + section.Misc.VirtualSize;
+            uint32_t section_start_va = section.virtual_address;
+            uint32_t section_end_va = section_start_va + section.virtual_size;
 
             // iterate over va_ignore
             for (auto& [va, bytes] : va_ignore)
@@ -171,8 +170,8 @@ namespace eagle::pe
     {
         std::erase_if(sections, [section_name](const auto& section)
         {
-            const IMAGE_SECTION_HEADER pe = std::get<0>(section);
-            return strcmp(reinterpret_cast<const char*>(pe.Name), section_name) == 0;
+            const win::section_header_t pe = std::get<0>(section);
+            return pe.name.equals(section_name);
         });
 
         // make sure sections are properly sorted before updating raw offsets
@@ -181,22 +180,22 @@ namespace eagle::pe
             auto a_section = std::get<0>(a);
             auto b_section = std::get<0>(b);
 
-            return a_section.PointerToRawData < b_section.PointerToRawData;
+            return a_section.ptr_raw_data < b_section.ptr_raw_data;
         });
 
         // walk each section in "sections and upddate the PointerToRawData so that there are not gaps between the previous section
-        uint32_t current_offset = std::get<0>(sections.front()).PointerToRawData;
-        for (auto& [section, _] : sections)
+        uint32_t current_offset = std::get<0>(sections.front()).ptr_raw_data;
+        for (auto& section : sections | std::views::keys)
         {
-            section.PointerToRawData = current_offset;
-            current_offset += align_file(section.SizeOfRawData);
+            section.ptr_raw_data = current_offset;
+            current_offset += align_file(section.size_raw_data);
         }
     }
 
     std::string pe_generator::section_name(const IMAGE_SECTION_HEADER& section)
     {
         // NOTE: the section.Name is not guaranteed to be null-terminated
-        char name[sizeof(section.Name) + 1] = {};
+        char name[sizeof(section.Name) + 1] = { };
         memcpy(name, section.Name, sizeof(section.Name));
         return name;
     }
@@ -210,13 +209,13 @@ namespace eagle::pe
             auto a_section = std::get<0>(a);
             auto b_section = std::get<0>(b);
 
-            return a_section.VirtualAddress < b_section.VirtualAddress;
+            return a_section.virtual_address < b_section.virtual_address;
         });
 
         auto last_section = std::get<0>(sections.back());
-        uint32_t binary_virtual_size = last_section.VirtualAddress + last_section.Misc.VirtualSize;
+        uint32_t binary_virtual_size = last_section.virtual_address + last_section.virtual_size;
 
-        printf("[+] section alignment: 0x%X, file alignment: 0x%X\n",
+        printf("[+] section alignment: 0x%lu, file alignment: 0x%lu\n",
             nt_headers.OptionalHeader.SectionAlignment,
             nt_headers.OptionalHeader.FileAlignment
         );
@@ -225,59 +224,60 @@ namespace eagle::pe
         nt_headers.OptionalHeader.SizeOfImage = align_section(binary_virtual_size);
         nt_headers.FileHeader.NumberOfSections = static_cast<uint16_t>(sections.size());
 
-        const auto header_size = align_file((uint32_t)(
+        const auto header_size = align_file(
             sizeof(dos_header) +
             dos_stub.size() +
             sizeof(nt_headers) +
             sections.size() * sizeof(IMAGE_SECTION_HEADER)
-        ));
+        );
 
         if (header_size > nt_headers.OptionalHeader.SizeOfHeaders)
         {
-            printf("[!] adjusting sections to grow header (0x%X -> 0x%X)\n",
+            printf("[!] adjusting sections to grow header (0x%lu -> 0x%X)\n",
                 nt_headers.OptionalHeader.SizeOfHeaders,
                 header_size
             );
 
             const auto delta = header_size - nt_headers.OptionalHeader.SizeOfHeaders;
             nt_headers.OptionalHeader.SizeOfHeaders = header_size;
-            for (auto& [section, _] : sections)
+
+            for (auto& section : sections | std::views::keys)
             {
                 // TODO: confirm that there are no file offsets used in any of the data directories
-                section.PointerToRawData += delta;
+                section.ptr_raw_data += delta;
             }
         }
 
         // write the headers to the file
         std::ofstream protected_binary(save_path, std::ios::binary);
-        protected_binary.write((char*)&dos_header, sizeof(dos_header));
-        protected_binary.write((char*)dos_stub.data(), dos_stub.size());
-        protected_binary.write((char*)&nt_headers, sizeof(nt_headers));
+        protected_binary.write(reinterpret_cast<char*>(&dos_header), sizeof(dos_header));
+        protected_binary.write(reinterpret_cast<char*>(dos_stub.data()), dos_stub.size());
+        protected_binary.write(reinterpret_cast<char*>(&nt_headers), sizeof(nt_headers));
 
         for (auto& [section, data] : sections)
         {
-            auto name = section_name(section);
-            const auto aligned_offset = align_file(section.PointerToRawData);
+            auto name = section.name.to_string();
+            const auto aligned_offset = align_file(section.ptr_raw_data);
 
-            if (aligned_offset != section.PointerToRawData)
+            if (aligned_offset != section.ptr_raw_data)
             {
                 printf("[!] section %s has invalid offset alignment -> 0x%X (adjusting)\n",
-                    name.c_str(),
-                    section.PointerToRawData
+                    name.data(),
+                    section.ptr_raw_data
                 );
 
-                section.PointerToRawData = aligned_offset;
+                section.ptr_raw_data = aligned_offset;
             }
 
-            const auto aligned_size = align_file(section.SizeOfRawData);
-            if (aligned_size != section.SizeOfRawData)
+            const auto aligned_size = align_file(section.size_raw_data);
+            if (aligned_size != section.size_raw_data)
             {
                 printf("[!] section %s has invalid size alignment -> 0x%X (adjusting)\n",
-                    name.c_str(),
-                    section.SizeOfRawData
+                    name.data(),
+                    section.size_raw_data
                 );
 
-                section.SizeOfRawData = aligned_size;
+                section.size_raw_data = aligned_size;
             }
 
             const auto data_size = static_cast<uint32_t>(data.size());
@@ -285,7 +285,7 @@ namespace eagle::pe
             if (aligned_size != aligned_data_size)
             {
                 printf("[!] section %s size (0x%X) inconsistent with data size (0x%X -> 0x%X)\n",
-                    name.c_str(),
+                    name.data(),
                     aligned_size,
                     data_size,
                     aligned_data_size
@@ -294,10 +294,10 @@ namespace eagle::pe
                 __debugbreak();
             }
 
-            if (section.Misc.VirtualSize == 0)
+            if (section.virtual_size == 0)
             {
                 printf("[!] section %s has virtual size of 0\n",
-                    name.c_str()
+                    name.data()
                 );
             }
 
@@ -310,7 +310,7 @@ namespace eagle::pe
             auto a_section = std::get<0>(a);
             auto b_section = std::get<0>(b);
 
-            return a_section.PointerToRawData < b_section.PointerToRawData;
+            return a_section.ptr_raw_data < b_section.ptr_raw_data;
         });
 
         // make sure the header is padded correctly
@@ -327,14 +327,14 @@ namespace eagle::pe
             // sanity checks
             const auto current_offset = static_cast<uint32_t>(protected_binary.tellp());
             printf("[+] section %s -> 0x%X bytes (current offset: 0x%X)\n",
-                section_name(section).c_str(),
-                section.SizeOfRawData,
+                section.name.to_string().data(),
+                section.size_raw_data,
                 current_offset
             );
 
-            if (current_offset != section.PointerToRawData)
+            if (current_offset != section.ptr_raw_data)
             {
-                printf("[!] expected file offset 0x%X, got 0x%X\n", section.PointerToRawData, current_offset);
+                printf("[!] expected file offset 0x%X, got 0x%X\n", section.ptr_raw_data, current_offset);
                 __debugbreak();
             }
 
@@ -345,10 +345,10 @@ namespace eagle::pe
 
             // write the data
             printf("    writing 0x%zX data bytes\n", data.size());
-            protected_binary.write((char*)data.data(), data.size());
+            protected_binary.write(reinterpret_cast<char*>(data.data()), data.size());
 
             // align the section
-            const auto padding_size = (uint32_t)section.SizeOfRawData - (uint32_t)data.size();
+            const auto padding_size = section.size_raw_data - static_cast<uint32_t>(data.size());
             if (padding_size > 0)
             {
                 printf("    writing 0x%X padding bytes\n", padding_size);
@@ -363,13 +363,13 @@ namespace eagle::pe
         // find section where rva is located
         auto section = std::ranges::find_if(sections, [rva](const auto& section)
         {
-            auto section_start = std::get<0>(section).VirtualAddress;
-            auto section_end = section_start + std::get<0>(section).Misc.VirtualSize;
+            auto section_start = std::get<0>(section).virtual_address;
+            auto section_end = section_start + std::get<0>(section).virtual_size;
 
             return rva >= section_start && rva < section_end;
         });
 
-        uint32_t offset = rva - std::get<0>(*section).VirtualAddress;
+        uint32_t offset = rva - std::get<0>(*section).virtual_address;
         std::vector<uint8_t>& section_buffer = std::get<1>(*section);
 
         std::fill_n(section_buffer.begin() + offset, size, 0);
@@ -400,8 +400,8 @@ namespace eagle::pe
         // given debug_data.VirtualAddress enumerate sections to find the section that contains the debug data
         for (auto& [section, data] : sections)
         {
-            const uint32_t section_start_va = section.VirtualAddress;
-            const uint32_t section_end_va = section_start_va + section.Misc.VirtualSize;
+            const uint32_t section_start_va = section.virtual_address;
+            const uint32_t section_end_va = section_start_va + section.virtual_size;
 
             if (debug_data.VirtualAddress >= section_start_va && debug_data.VirtualAddress < section_end_va)
             {
@@ -415,7 +415,7 @@ namespace eagle::pe
                     if (debug_entry->Type != IMAGE_DEBUG_TYPE_CODEVIEW)
                         continue;
 
-                    uint8_t* pdb_data = data.data() + debug_entry->PointerToRawData - section.PointerToRawData;
+                    uint8_t* pdb_data = data.data() + debug_entry->PointerToRawData - section.ptr_raw_data;
                     memset(pdb_data, 0, debug_entry->SizeOfData);
 
                     debug_entry->PointerToRawData = target_raw;

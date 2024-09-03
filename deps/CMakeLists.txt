@@ -40,6 +40,16 @@ endif()
 add_subdirectory(spdlog)
 set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
 
+# Subdirectory: linux-pe
+set(CMKR_CMAKE_FOLDER ${CMAKE_FOLDER})
+if(CMAKE_FOLDER)
+	set(CMAKE_FOLDER "${CMAKE_FOLDER}/linux-pe")
+else()
+	set(CMAKE_FOLDER linux-pe)
+endif()
+add_subdirectory(linux-pe)
+set(CMAKE_FOLDER ${CMKR_CMAKE_FOLDER})
+
 # Target: bigint
 add_library(bigint INTERFACE)
 

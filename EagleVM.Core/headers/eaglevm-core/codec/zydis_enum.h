@@ -207,6 +207,13 @@ namespace eagle::codec
         ip = ZYDIS_REGISTER_IP,
         eip = ZYDIS_REGISTER_EIP,
         rip = ZYDIS_REGISTER_RIP,
+
+        es = ZYDIS_REGISTER_ES,
+        cs = ZYDIS_REGISTER_CS,
+        ss = ZYDIS_REGISTER_SS,
+        ds = ZYDIS_REGISTER_DS,
+        fs = ZYDIS_REGISTER_FS,
+        gs = ZYDIS_REGISTER_GS,
     };
 
     using zyids_mnemonic = ZydisMnemonic;
@@ -2019,6 +2026,8 @@ namespace eagle::codec
         xmm_128 = ZYDIS_REGCLASS_XMM,
         ymm_256 = ZYDIS_REGCLASS_YMM,
         zmm_512 = ZYDIS_REGCLASS_ZMM,
+
+        seg = ZYDIS_REGCLASS_SEGMENT,
     };
 
     enum op_type

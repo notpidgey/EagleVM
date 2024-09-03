@@ -73,6 +73,9 @@ namespace eagle::codec
         auto encoder = create_encode_request(mnemonic);
         (add_op(encoder, std::forward<decltype(args)>(args)), ...);
 
+        // if(encoder.operands[0].reg.value == ZYDIS_REGISTER_NONE && encoder.operands[1].reg.value == ZYDIS_REGISTER_NONE && encoder.operand_count == 2)
+        //     __debugbreak();
+
         return encoder;
     }
 

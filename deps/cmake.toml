@@ -8,6 +8,8 @@ ZYDIS_BUILD_EXAMPLES = false
 
 [subdir.spdlog]
 
+[subdir.linux-pe]
+
 [target.bigint]
 type = "interface"
 include-directories = ["bigint"]

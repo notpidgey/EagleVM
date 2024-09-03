@@ -90,7 +90,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/obfuscation/mba/variable/mba_xy.cpp"
 	"EagleVM.Core/source/pe/packer/pe_packer.cpp"
 	"EagleVM.Core/source/pe/pe_generator.cpp"
-	"EagleVM.Core/source/pe/pe_parser.cpp"
 	"EagleVM.Core/source/util/random.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/block.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/base_command.cpp"
@@ -154,7 +153,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/pe/models/stub.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/packer/pe_packer.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/pe_generator.h"
-	"EagleVM.Core/headers/eaglevm-core/pe/pe_parser.h"
 	"EagleVM.Core/headers/eaglevm-core/util/assert.h"
 	"EagleVM.Core/headers/eaglevm-core/util/random.h"
 	"EagleVM.Core/headers/eaglevm-core/util/util.h"
@@ -253,7 +251,7 @@ target_include_directories(EagleVMCore PUBLIC
 
 target_link_libraries(EagleVMCore PUBLIC
 	Zydis
-	bigint
+	linux-pe
 )
 
 if(MSVC) # msvc

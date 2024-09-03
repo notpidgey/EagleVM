@@ -75,17 +75,22 @@ namespace eagle::virt::eg
     {
         // we want to load this register onto the stack
         const reg load_reg = cmd->get_reg();
-        const reg_size load_reg_size = get_reg_size(load_reg);
 
-        const ir::discrete_store_ptr dest = ir::discrete_store::create(to_ir_size(load_reg_size));
-        reg_64_container->assign(dest);
-
+        ir::discrete_store_ptr dest = nullptr;
         if (get_reg_class(load_reg) == seg)
         {
+            dest = ir::discrete_store::create(ir::ir_size::bit_64);
+            reg_64_container->assign(dest);
+
             block->add(encode(m_mov, ZREG(dest->get_store_register()), ZREG(load_reg)));
         }
         else
         {
+            const reg_size load_reg_size = get_reg_size(load_reg);
+
+            dest = ir::discrete_store::create(to_ir_size(load_reg_size));
+            reg_64_container->assign(dest);
+
             // load into storage
             if (settings->complex_temp_loading)
             {
@@ -210,16 +215,17 @@ namespace eagle::virt::eg
         ir::ir_size target_size = cmd->get_read_size();
 
         scope_register_manager scope = reg_64_container->create_scope();
-        reg target_temp = scope.reserve();
+        reg temp = scope.reserve();
+        reg target_temp = get_bit_version(temp, static_cast<reg_size>(target_size));
 
         // pop address
-        call_pop(block, target_temp);
+        call_pop(block, temp);
 
         // mov temp, [address]
         block->add(encode(m_mov, ZREG(target_temp), ZMEMBD(target_temp, 0, TOB(target_size))));
 
         // push
-        call_push(block, get_bit_version(target_temp, to_reg_size(target_size)));
+        call_push(block, get_bit_version(temp, to_reg_size(target_size)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd)
