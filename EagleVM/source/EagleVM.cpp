@@ -105,8 +105,10 @@ int main(int argc, char* argv[])
         }
 
         const auto exception_data_dir = parser->get_nt_headers()->optional_header.data_directories.exception_directory;
+        const auto exception_data_dir_count = exception_data_dir.size / sizeof(win::runtime_function_t);
+
         win::runtime_function_t* exception_dir = parser->rva_to_ptr<win::runtime_function_t>(exception_data_dir.rva);
-        for (int i = 0; i < exception_data_dir.size / sizeof(win::runtime_function_t); i++)
+        for (int i = 0; i < exception_data_dir_count; i++)
         {
             auto runtime_func = &exception_dir[i];
             auto res = std::ranges::find_if(marked_function,
