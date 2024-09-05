@@ -2,6 +2,7 @@
 #include "eaglevm-core/codec/zydis_defs.h"
 
 #include "eaglevm-core/util/assert.h"
+#include "Zydis/Internal/FormatterBase.h"
 
 namespace eagle::codec
 {
@@ -42,6 +43,12 @@ namespace eagle::codec
     reg get_bit_version(zydis_register input_reg, const reg_class target_size)
     {
         return get_bit_version(static_cast<reg>(input_reg), target_size);
+    }
+
+    reg get_largest_enclosing(reg input_reg)
+    {
+        zydis_register result = ZydisRegisterGetLargestEnclosing(ZYDIS_MACHINE_MODE_LONG_64, static_cast<zydis_register>(input_reg));
+        return static_cast<reg>(result);
     }
 
     reg_class get_max_size(reg input_reg)
@@ -271,6 +278,11 @@ namespace eagle::codec
             buffer, sizeof(buffer), 0x140000000, ZYAN_NULL);
 
         return std::string(buffer);
+    }
+
+    const char* reg_to_string(reg reg)
+    {
+        return ZydisRegisterGetString(static_cast<ZydisRegister>(reg));
     }
 
     std::vector<uint8_t> compile(enc::req& request)

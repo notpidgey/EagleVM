@@ -78,6 +78,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/compiler/code_container.cpp"
 	"EagleVM.Core/source/compiler/code_label.cpp"
 	"EagleVM.Core/source/compiler/section_manager.cpp"
+	"EagleVM.Core/source/disassembler/analysis/liveness.cpp"
 	"EagleVM.Core/source/disassembler/basic_block.cpp"
 	"EagleVM.Core/source/disassembler/disassembler.cpp"
 	"EagleVM.Core/source/obfuscation/mba/math/mba_math.cpp"
@@ -89,7 +90,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/obfuscation/mba/variable/mba_xy.cpp"
 	"EagleVM.Core/source/pe/packer/pe_packer.cpp"
 	"EagleVM.Core/source/pe/pe_generator.cpp"
-	"EagleVM.Core/source/pe/pe_parser.cpp"
 	"EagleVM.Core/source/util/random.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/block.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/base_command.cpp"
@@ -120,6 +120,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/x86/handlers/sub.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/x86/util.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/base_machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_generators.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_manager.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/machine.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/register_manager.cpp"
@@ -133,10 +134,14 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/compiler/code_container.h"
 	"EagleVM.Core/headers/eaglevm-core/compiler/code_label.h"
 	"EagleVM.Core/headers/eaglevm-core/compiler/section_manager.h"
+	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/liveness.h"
+	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/models/container.h"
+	"EagleVM.Core/headers/eaglevm-core/disassembler/analysis/models/info.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/basic_block.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/disassembler.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/models/block_end_reason.h"
 	"EagleVM.Core/headers/eaglevm-core/disassembler/models/block_jump_location.h"
+	"EagleVM.Core/headers/eaglevm-core/obfuscation/block.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/math/mba_math.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/mba.h"
 	"EagleVM.Core/headers/eaglevm-core/obfuscation/mba/mba_gen.h"
@@ -148,7 +153,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/pe/models/stub.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/packer/pe_packer.h"
 	"EagleVM.Core/headers/eaglevm-core/pe/pe_generator.h"
-	"EagleVM.Core/headers/eaglevm-core/pe/pe_parser.h"
 	"EagleVM.Core/headers/eaglevm-core/util/assert.h"
 	"EagleVM.Core/headers/eaglevm-core/util/random.h"
 	"EagleVM.Core/headers/eaglevm-core/util/util.h"
@@ -200,8 +204,12 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/op_signature.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/util.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/base_machine.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_regenerate.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_shuffle.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_swap.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/machine.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/obfuscation/avx_pass.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/settings.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
@@ -243,7 +251,7 @@ target_include_directories(EagleVMCore PUBLIC
 
 target_link_libraries(EagleVMCore PUBLIC
 	Zydis
-	bigint
+	linux-pe
 )
 
 if(MSVC) # msvc

@@ -2,6 +2,11 @@
 
 namespace eagle::util
 {
+    ran_device& get_ran_device()
+    {
+        return ran_device::get();
+    }
+
     ran_device::ran_device()
     {
 #ifdef _DEBUG

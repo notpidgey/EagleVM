@@ -87,6 +87,7 @@ namespace eagle::dasm
                     {
                         k++;
                     }
+
                     curr_rva += inst.instruction.length;
                 }
 
@@ -106,29 +107,20 @@ namespace eagle::dasm
         return blocks[0];
     }
 
-    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block_ptr block, bool last)
+    std::pair<uint64_t, block_jump_location> segment_dasm::get_jump(const basic_block_ptr& block, const bool last) const
     {
         block_end_reason end_reason = block->get_end_reason();
-        if (last)
-            end_reason = block_end;
-
+        if (last) end_reason = block_end;
         switch (end_reason)
         {
             case block_end:
             {
                 return { block->end_rva_inc, get_jump_location(block->end_rva_inc) };
             }
+            case block_conditional_jump:
             case block_jump:
             {
-                auto last_inst = block->decoded_insts.back();
-                const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
-
-                auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);
-                return { target_rva, get_jump_location(target_rva) };
-            }
-            case block_conditional_jump:
-            {
-                auto last_inst = block->decoded_insts.back();
+                const auto last_inst = block->decoded_insts.back();
                 const uint64_t last_inst_rva = block->end_rva_inc - last_inst.instruction.length;
 
                 auto [target_rva, _] = codec::calc_relative_rva(last_inst, last_inst_rva);

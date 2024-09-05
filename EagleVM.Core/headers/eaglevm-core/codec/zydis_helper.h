@@ -27,6 +27,7 @@ namespace eagle::codec
     reg get_bit_version(reg input_reg, const reg_size target_size);
     reg get_bit_version(reg input_reg, reg_class target_size);
     reg get_bit_version(zydis_register input_reg, reg_class target_size);
+    reg get_largest_enclosing(reg input_reg);
 
     bool is_upper_8(reg reg);
 
@@ -52,6 +53,7 @@ namespace eagle::codec
 
     std::string instruction_to_string(const dec::inst_info& decode);
     std::string operand_to_string(const dec::inst_info& decode, int index);
+    const char* reg_to_string(reg reg);
 
     std::vector<uint8_t> compile(enc::req& request);
     std::vector<uint8_t> compile_absolute(enc::req& request, uint32_t address);
@@ -70,6 +72,9 @@ namespace eagle::codec
     {
         auto encoder = create_encode_request(mnemonic);
         (add_op(encoder, std::forward<decltype(args)>(args)), ...);
+
+        // if(encoder.operands[0].reg.value == ZYDIS_REGISTER_NONE && encoder.operands[1].reg.value == ZYDIS_REGISTER_NONE && encoder.operand_count == 2)
+        //     __debugbreak();
 
         return encoder;
     }

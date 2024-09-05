@@ -12,7 +12,7 @@ namespace eagle::dasm
 
         basic_block_ptr generate_blocks();
 
-        std::pair<uint64_t, block_jump_location> get_jump(const basic_block_ptr block, bool last = false);
+        std::pair<uint64_t, block_jump_location> get_jump(const basic_block_ptr& block, bool last = false) const;
         block_jump_location get_jump_location(uint64_t rva) const;
 
         basic_block_ptr get_block(uint64_t rva) const;

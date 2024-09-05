@@ -7,12 +7,11 @@
 #include <fstream>
 
 #include <Windows.h>
-#include "eaglevm-core/pe/pe_parser.h"
+#include <linuxpe>
 
 namespace eagle::pe
 {
-    using generator_section_t = std::pair<IMAGE_SECTION_HEADER, std::vector<uint8_t>>;
-
+    using generator_section_t = std::pair<win::section_header_t, std::vector<uint8_t>>;
     class pe_generator
     {
     public:
@@ -20,7 +19,7 @@ namespace eagle::pe
         IMAGE_NT_HEADERS nt_headers{};
         std::vector<generator_section_t> sections;
 
-        explicit pe_generator(pe_parser* pe_parser)
+        explicit pe_generator(win::image_x64_t* pe_parser)
         {
             parser = pe_parser;
             dos_header = {};
@@ -57,9 +56,8 @@ namespace eagle::pe
         uint32_t align_file(uint32_t value) const;
 
     private:
-        pe_parser* parser;
+        win::image_x64_t* parser;
 
-        // TODO: probably just make these public? why does it even matter
         std::vector<uint8_t> dos_stub;
 
         std::vector<std::pair<uint32_t, uint32_t>> va_ignore;

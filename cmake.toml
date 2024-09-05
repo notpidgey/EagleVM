@@ -28,7 +28,7 @@ sources = [
     "EagleVM.Core/**.h"
 ]
 compile-features = ["cxx_std_23"]
-link-libraries = ["Zydis", "bigint"]
+link-libraries = ["Zydis", "linux-pe"]
 msvc.compile-options = ["/MP", "/permissive-", "/sdl", "/W4", "/Zc:inline", "/Zc:wchar_t", "$<$<CONFIG:Debug>:/FC;/JMC>", "$<$<NOT:$<CONFIG:Debug>>:/Gy;/O1;/Os>"]
 msvc.link-options = ["/INCREMENTAL:NO"]
 

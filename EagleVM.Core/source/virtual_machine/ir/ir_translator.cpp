@@ -30,7 +30,7 @@ namespace eagle::ir
         }
 
         std::vector<preopt_block_ptr> result;
-        for (dasm::basic_block_ptr block : dasm->blocks)
+        for (const dasm::basic_block_ptr& block : dasm->blocks)
             if (split)
                 result.push_back(translate_block_split(block));
             else
@@ -305,10 +305,10 @@ namespace eagle::ir
                         current_block->add_command(std::make_shared<cmd_vm_enter>());
 
                         previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
-                        current_state = vm_block;
                     }
 
                     current_block->copy_from(result_block);
+                    current_state = vm_block;
                 }
             }
 
@@ -573,7 +573,7 @@ namespace eagle::ir
                 {
                     // this means all exits are of the same vm
                     const size_t command_count = preopt_exit->get_command_count();
-                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 commands");
+                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
 
                     if (command_count == 2)
                     {

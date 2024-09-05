@@ -58,7 +58,7 @@ namespace eagle::ir
 
     base_command_ptr& block_ir::get_command_back()
     {
-        VM_ASSERT(!commands.empty(), "commands cannot be empty");
+        VM_ASSERT(!commands.empty(), "obfuscation cannot be empty");
         return commands.back();
     }
 

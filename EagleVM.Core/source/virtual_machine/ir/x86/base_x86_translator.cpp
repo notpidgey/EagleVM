@@ -101,9 +101,14 @@ namespace eagle::ir::lifter
                 block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
             }
         }
-        else
+        else if (op_mem.base != ZYDIS_REGISTER_NONE)
         {
             block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.base)));
+        }
+        else
+        {
+            // selector
+            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.segment)));
         }
 
         //2. load the index register and multiply by scale

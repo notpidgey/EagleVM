@@ -24,7 +24,7 @@ namespace eagle::virt::eg
         explicit machine(const settings_ptr& settings_info);
         static machine_ptr create(const settings_ptr& settings_info);
 
-        virtual asmb::code_container_ptr lift_block(const ir::block_ptr& block) override;
+        asmb::code_container_ptr lift_block(const ir::block_ptr& block) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd) override;
@@ -47,20 +47,21 @@ namespace eagle::virt::eg
         settings_ptr settings;
         register_manager_ptr reg_man;
         inst_handlers_ptr han_man;
-        register_context_ptr reg_ctx;
 
-        // destination,
-        std::unordered_map<asmb::code_label_ptr, asmb::code_label_ptr> jump_table;
+        register_context_ptr reg_64_container;
+        register_context_ptr reg_128_container;
+
+        std::unordered_map<ir::discrete_store_ptr, complex_load_info> store_complex_load_info;
 
         void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
 
         void call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared);
-        void call_push(const asmb::code_container_ptr& block, const codec::reg target_reg);
+        void call_push(const asmb::code_container_ptr& block, codec::reg target_reg);
 
         void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const;
         void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, codec::reg_size size) const;
-        void call_pop(const asmb::code_container_ptr& block, const codec::reg target_reg) const;
+        void call_pop(const asmb::code_container_ptr& block, codec::reg target_reg) const;
 
-        codec::reg reg_vm_to_register(ir::reg_vm store) const;
+        [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
     };
 }

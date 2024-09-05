@@ -164,14 +164,13 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     run_container container(ins, outs);
     container.set_run_area(run_space, run_space_size);
 
+    spdlog::get("console")->info("starting {} run at {:x} {:x} bytes", instr.c_str(), run_space, virtualized_instruction.size());
 #ifdef _DEBUG
-    if (bp)
+    if(bp)
         __debugbreak();
 #endif
 
-    spdlog::get("console")->info("starting {} run at {:x} {:x} bytes", instr.c_str(), run_space, virtualized_instruction.size());
     auto [result_context, output_target] = container.run(bp);
-
     VirtualFree(reinterpret_cast<void*>(run_space), 0, MEM_RELEASE);
 
     // result_context is being set in the exception handler
@@ -227,6 +226,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
 int main(int argc, char* argv[])
 {
+    SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
     // give .handlers and .run_section execute permissions
     // the fact that i have to do this is so extremely cooked
     // i mean its literally DOOMED
@@ -253,17 +254,16 @@ int main(int argc, char* argv[])
     virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
     machine_settings->randomize_working_register = false;
     machine_settings->single_vm_handlers = false;
-    machine_settings->single_register_handlers = false;
 
-    machine_settings->shuffle_push_order = true;
-    machine_settings->shuffle_vm_gpr_order = true;
-    machine_settings->shuffle_vm_xmm_order = true;
+    machine_settings->shuffle_push_order = false;
+    machine_settings->shuffle_vm_gpr_order = false;
+    machine_settings->shuffle_vm_xmm_order = false;
     machine_settings->relative_addressing = false;
 
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
-        auto entry_path = entry.path();
+        std::filesystem::path entry_path = entry.path();
         entry_path.make_preferred();
 
         std::string file_name = entry_path.stem().string();
@@ -282,7 +282,12 @@ int main(int argc, char* argv[])
         std::atomic_uint32_t failed = 0;
 
         std::atomic_uint32_t task_id;
-        std::for_each(std::execution::par, data.begin(), data.end(), [&](auto& n)
+#ifdef _DEBUG
+        auto execution_policy = std::execution::seq;
+#else
+        auto execution_policy = std::execution::par_unseq;
+#endif
+        std::for_each(execution_policy, data.begin(), data.end(), [&](auto& n)
         {
             const auto current_task_id = task_id++;
             process_entry(machine_settings, n, &passed, &failed, current_task_id);
