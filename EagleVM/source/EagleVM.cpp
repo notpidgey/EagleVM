@@ -341,6 +341,32 @@ int main(int argc, char* argv[])
             if (preopt_block->get_original_block() == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
+        // testing to check that liveness is valid
+        for (const auto& preopt_block : preopt)
+        {
+            auto block_in = seg_live.live[preopt_block->get_original_block()].first;
+            auto& ir_body = preopt_block->get_body();
+
+            std::shared_ptr<ir::block_ir> false_load = std::make_shared<ir::block_ir>(false);
+            for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
+            {
+                if (0 == block_in.get_gpr64(static_cast<codec::reg>(k)))
+                {
+                    // register is completely free on entre
+                    false_load->add_command(std::make_shared<ir::cmd_push>(UINT16_MAX));
+                    false_load->add_command(std::make_shared<ir::cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                }
+            }
+
+            auto next_cmd_type = ir_body[0]->get_command(0)->get_command_type();
+            if (next_cmd_type == ir::command_type::vm_exec_x86 || next_cmd_type == ir::command_type::vm_exec_dynamic_x86)
+                false_load->add_command(std::make_shared<ir::cmd_vm_exit>());
+
+            false_load->add_command(std::make_shared<ir::cmd_branch>(ir_body[0], ir::exit_condition::jmp));
+
+            ir_body.insert(ir_body.begin(), false_load);
+        }
+
         assert(entry_block != nullptr, "could not find matching preopt block for entry block");
 
         // if we want, we can do a little optimzation which will rewrite the preopt blocks

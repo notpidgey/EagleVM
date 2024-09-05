@@ -65,7 +65,7 @@ namespace eagle::ir
         block_ptr get_head();
         void clear_head();
 
-        std::vector<block_ptr> get_body();
+        std::vector<block_ptr>& get_body();
         block_ptr get_tail();
 
         void add_body(const block_ptr& block);

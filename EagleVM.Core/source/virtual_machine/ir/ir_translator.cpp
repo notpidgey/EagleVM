@@ -742,7 +742,7 @@ namespace eagle::ir
         head = nullptr;
     }
 
-    std::vector<block_ptr> preopt_block::get_body()
+    std::vector<block_ptr>& preopt_block::get_body()
     {
         return body;
     }
