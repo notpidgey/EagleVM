@@ -154,9 +154,7 @@ namespace eagle::virt::eg
                 if constexpr (std::is_same_v<T, ir::vmexit_rva>)
                 {
                     const ir::vmexit_rva vmexit_rva = arg;
-                    const uint64_t rva = vmexit_rva;
-
-                    block->add(RECOMPILE(encode(mnemonic, ZJMPI(rva))));
+                    block->add(RECOMPILE(encode(mnemonic, ZJMPI(vmexit_rva))));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_ptr>)
                 {
