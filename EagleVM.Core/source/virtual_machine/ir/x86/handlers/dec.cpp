@@ -48,20 +48,20 @@ namespace eagle::ir::lifter
 
     void dec::finalize_translate_to_virtual()
     {
-        block->add_command(std::make_shared<cmd_rflags_load>());
+        block->push_back(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
-        block->add_command(std::make_shared<cmd_rflags_store>());
+        block->push_back(std::make_shared<cmd_rflags_store>());
 
         codec::dec::operand first_op = operands[0];
         if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
-            block->add_command(std::make_shared<cmd_context_store>(reg));
+            block->push_back(std::make_shared<cmd_context_store>(reg));
         }
         else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
         {
             ir_size value_size = static_cast<ir_size>(first_op.size);
-            block->add_command(std::make_shared<cmd_mem_write>(value_size, value_size));
+            block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
     }
 }

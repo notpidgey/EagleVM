@@ -26,7 +26,7 @@ namespace eagle::ir
     public:
         explicit ir_translator(dasm::segment_dasm_ptr seg_dasm);
 
-        std::vector<preopt_block_ptr> translate(bool split);
+        std::vector<preopt_block_ptr> translate();
         std::vector<block_vm_id> flatten(
             const std::vector<preopt_vm_id>& block_vms,
             std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
@@ -42,35 +42,18 @@ namespace eagle::ir
 
     private:
         dasm::segment_dasm_ptr dasm;
-
         std::unordered_map<dasm::basic_block_ptr, preopt_block_ptr> bb_map;
 
-        preopt_block_ptr translate_block(dasm::basic_block_ptr bb);
         preopt_block_ptr translate_block_split(dasm::basic_block_ptr bb);
-
         exit_condition get_exit_condition(codec::mnemonic mnemonic);
-
         static void handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, uint64_t current_rva);
     };
 
     class preopt_block
     {
     public:
-        void init(dasm::basic_block_ptr block);
+        void init(const dasm::basic_block_ptr& block);
 
-        bool has_head() const;
-        block_ptr get_entry();
-
-        dasm::basic_block_ptr get_original_block() const;
-        block_ptr get_head();
-        void clear_head();
-
-        std::vector<block_ptr>& get_body();
-        block_ptr get_tail();
-
-        void add_body(const block_ptr& block);
-
-    private:
         dasm::basic_block_ptr original_block = nullptr;
 
         block_ptr head;

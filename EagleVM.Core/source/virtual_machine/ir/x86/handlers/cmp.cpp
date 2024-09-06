@@ -52,9 +52,9 @@ namespace eagle::ir::lifter
 {
     void cmp::finalize_translate_to_virtual()
     {
-        block->add_command(std::make_shared<cmd_rflags_load>());
+        block->push_back(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
-        block->add_command(std::make_shared<cmd_rflags_store>());
+        block->push_back(std::make_shared<cmd_rflags_store>());
     }
 
     translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
@@ -75,14 +75,14 @@ namespace eagle::ir::lifter
             // 1. REX.W + 3D id	CMP RAX, imm32
             // 2. REX.W + 81 /7 id	CMP r/m64, imm32
 
-            block->add_command(std::make_shared<cmd_push>(op_imm.value.u, imm_size));
-            block->add_command(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
+            block->push_back(std::make_shared<cmd_push>(op_imm.value.u, imm_size));
+            block->push_back(std::make_shared<cmd_sx>(ir_size::bit_64, ir_size::bit_32));
 
             stack_displacement += static_cast<uint16_t>(TOB(ir_size::bit_64));
         }
         else
         {
-            block->add_command(std::make_shared<cmd_push>(op_imm.value.u, imm_size_target));
+            block->push_back(std::make_shared<cmd_push>(op_imm.value.u, imm_size_target));
 
             stack_displacement += static_cast<uint16_t>(TOB(imm_size_target));
         }

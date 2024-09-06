@@ -50,7 +50,7 @@ namespace eagle::virt::eg
 
     asmb::code_container_ptr machine::lift_block(const ir::block_ptr& block)
     {
-        const size_t command_count = block->get_command_count();
+        const size_t command_count = block->size();
 
         const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + std::to_string(command_count), true);
         if (block_context.contains(block))
@@ -61,7 +61,7 @@ namespace eagle::virt::eg
 
         for (size_t i = 0; i < command_count; i++)
         {
-            const ir::base_command_ptr command = block->get_command(i);
+            const ir::base_command_ptr command = block->at(i);
             handle_cmd(code, command);
         }
 

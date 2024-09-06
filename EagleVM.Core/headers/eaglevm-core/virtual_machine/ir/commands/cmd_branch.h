@@ -55,6 +55,11 @@ namespace eagle::ir
         il_exit_result& get_condition_default();
         il_exit_result& get_condition_special();
 
+        bool branch_visits(vmexit_rva rva);
+        bool branch_visits(const block_ptr& block);
+
+        void rewrite_branch(const il_exit_result& search, const il_exit_result& target);
+
     private:
         std::vector<il_exit_result> info;
         exit_condition condition;

@@ -73,9 +73,9 @@ namespace eagle::ir::lifter
         //    VM_ASSERT(status == translate_status::success, "failed to virtualized operand");
         //}
 
-        block->add_command(std::make_shared<cmd_rflags_load>());
+        block->push_back(std::make_shared<cmd_rflags_load>());
         base_x86_translator::finalize_translate_to_virtual();
-        block->add_command(std::make_shared<cmd_rflags_store>());
+        block->push_back(std::make_shared<cmd_rflags_store>());
 
         codec::dec::operand first_op = operands[0];
         switch (inst.operand_count_visible)
@@ -94,7 +94,7 @@ namespace eagle::ir::lifter
                 // product of op1 and op2 is already on stack
                 // store in op0
 
-                block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
+                block->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
 
                 break;
             }

@@ -37,20 +37,20 @@ namespace eagle::ir::lifter
         ir_size size = get_op_width();
 
         discrete_store_ptr store = discrete_store::create(size);
-        block->add_command(std::make_shared<cmd_pop>(store, size));
+        block->push_back(std::make_shared<cmd_pop>(store, size));
 
         auto first_op = operands[0];
         switch (first_op.type)
         {
             case ZYDIS_OPERAND_TYPE_MEMORY:
             {
-                block->add_command(std::make_shared<cmd_mem_write>(size, size));
+                block->push_back(std::make_shared<cmd_mem_write>(size, size));
                 break;
             }
             case ZYDIS_OPERAND_TYPE_REGISTER:
             {
                 codec::reg target_reg = static_cast<codec::reg>(first_op.reg.value);
-                block->add_command(std::make_shared<cmd_context_store>(target_reg));
+                block->push_back(std::make_shared<cmd_context_store>(target_reg));
 
                 break;
             }

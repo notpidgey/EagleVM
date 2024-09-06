@@ -12,7 +12,7 @@
 namespace eagle::ir::lifter
 {
     base_x86_translator::base_x86_translator(codec::dec::inst_info decode, const uint64_t rva)
-        : block(std::make_shared<block_ir>(false)), orig_rva(rva), inst(decode.instruction)
+        : block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
@@ -68,12 +68,12 @@ namespace eagle::ir::lifter
             );
         }
 
-        block->add_command(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
+        block->push_back(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
     }
 
     translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
-        block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_reg.value)));
+        block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_reg.value)));
         return translate_status::success;
     }
 
@@ -87,28 +87,28 @@ namespace eagle::ir::lifter
         if (op_mem.base == ZYDIS_REGISTER_RIP)
         {
             auto [target, _] = codec::calc_relative_rva(inst, operands, orig_rva, idx);
-            block->add_command(std::make_shared<cmd_push>(target));
+            block->push_back(std::make_shared<cmd_push>(target));
 
             goto HANDLE_MEM_ACTION;
         }
 
         if (op_mem.base == ZYDIS_REGISTER_RSP)
         {
-            block->add_command(std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64));
+            block->push_back(std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64));
             if (stack_displacement)
             {
-                block->add_command(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
-                block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                block->push_back(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
+                block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
             }
         }
         else if (op_mem.base != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.base)));
+            block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.base)));
         }
         else
         {
             // selector
-            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.segment)));
+            block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.segment)));
         }
 
         //2. load the index register and multiply by scale
@@ -116,18 +116,18 @@ namespace eagle::ir::lifter
         //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.index)));
+            block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.index)));
         }
 
         if (op_mem.scale != 0)
         {
-            block->add_command(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_imul, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
+            block->push_back(std::make_shared<cmd_handler_call>(codec::m_imul, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         if (op_mem.disp.has_displacement)
@@ -136,8 +136,8 @@ namespace eagle::ir::lifter
             // we can do this with some trickery using LEA so we dont modify rflags
 
             // subtract displacement value
-            block->add_command(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
-            block->add_command(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
+            block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
         }
 
         // for memory operands we will only ever need one kind of action
@@ -156,7 +156,7 @@ namespace eagle::ir::lifter
             {
                 // by default, this will be dereferenced and we will get the value at the address,
                 const ir_size target_size = static_cast<ir_size>(inst.operand_width);
-                block->add_command(std::make_shared<cmd_mem_read>(target_size));
+                block->push_back(std::make_shared<cmd_mem_read>(target_size));
 
                 stack_displacement += static_cast<uint16_t>(target_size);
                 break;
@@ -170,7 +170,7 @@ namespace eagle::ir::lifter
                 ir_size size = static_cast<ir_size>(operands[idx].size);
 
                 discrete_store_ptr store = discrete_store::create(ir_size::bit_64);
-                block->add_command({
+                block->push_back({
                     std::make_shared<cmd_pop>(store, ir_size::bit_64),
                     std::make_shared<cmd_push>(store, ir_size::bit_64),
                     std::make_shared<cmd_push>(store, ir_size::bit_64),
@@ -194,7 +194,7 @@ namespace eagle::ir::lifter
     translate_status base_x86_translator::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
         const ir_size target_size = static_cast<ir_size>(inst.operand_width);
-        block->add_command(std::make_shared<cmd_push>(op_imm.value.u, target_size));
+        block->push_back(std::make_shared<cmd_push>(op_imm.value.u, target_size));
 
         stack_displacement += static_cast<uint16_t>(target_size);
         return translate_status::success;

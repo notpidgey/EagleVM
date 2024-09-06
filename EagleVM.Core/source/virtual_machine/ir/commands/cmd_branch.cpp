@@ -31,4 +31,50 @@ namespace eagle::ir
     {
         return info.front();
     }
+
+    bool cmd_branch::branch_visits(const vmexit_rva rva)
+    {
+        auto check_block = [&](const il_exit_result& exit_result) -> bool
+        {
+            if (std::holds_alternative<vmexit_rva>(exit_result))
+            {
+                const vmexit_rva exit_rva = std::get<vmexit_rva>(exit_result);
+                return exit_rva == rva;
+            }
+
+            return false;
+        };
+
+        return check_block(get_condition_default()) | check_block(get_condition_special());
+    }
+
+    bool cmd_branch::branch_visits(const block_ptr& block)
+    {
+        auto check_block = [&](const il_exit_result& exit_result) -> bool
+        {
+            if (std::holds_alternative<block_ptr>(exit_result))
+            {
+                const block_ptr exit_block = std::get<block_ptr>(exit_result);
+                return exit_block == block;
+            }
+
+            return false;
+        };
+
+        return check_block(get_condition_default()) | check_block(get_condition_special());
+    }
+
+    void cmd_branch::rewrite_branch(const il_exit_result& search, const il_exit_result& target)
+    {
+        auto check_block = [&](il_exit_result& exit_result)
+        {
+            if (search == exit_result)
+                exit_result = target;
+
+            return false;
+        };
+
+        check_block(get_condition_default());
+        check_block(get_condition_special());
+    }
 }
