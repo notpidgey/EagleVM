@@ -16,4 +16,12 @@ namespace eagle::ir
     {
         return size;
     }
+
+    bool cmd_pop::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_pop>(other);
+        return base_command::is_similar(other) &&
+            get_destination_reg() == cmd->get_destination_reg() &&
+            get_size() == cmd->get_size();
+    }
 }

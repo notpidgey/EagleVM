@@ -66,8 +66,7 @@ namespace eagle::ir
         iterator erase(const const_iterator& pos)
         {
             auto it = commands_.erase(pos);
-            if (pos == commands_.end() - 1)
-                update_exit();
+            update_exit();
 
             return it;
         }

@@ -12,6 +12,13 @@ namespace eagle::ir
             const std::unique_ptr<dasm::analysis::liveness>& liveness
         );
 
-    private:
+        /**
+         * combines list of ir instructions into a single block
+         * existing sequence of instructions will be replaced across all blocks into a single handler call
+         * @param blocks ir blocks containing
+         */
+        static void create_merged_handlers(
+            const std::vector<block_ptr>& blocks
+        );
     };
 }

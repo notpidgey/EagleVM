@@ -12,6 +12,8 @@ namespace eagle::ir
         codec::reg get_reg() const;
         codec::reg_size get_value_size() const;
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
     private:
         codec::reg dest;
         codec::reg_size size;

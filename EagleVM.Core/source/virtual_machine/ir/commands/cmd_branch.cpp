@@ -12,7 +12,7 @@ namespace eagle::ir
         : base_command(command_type::vm_branch), condition(condition)
     {
         VM_ASSERT(result_info.size() <= 2, "cannot have more than 2 exiting branches");
-        for(auto& exit : result_info)
+        for (auto& exit : result_info)
             info.push_back(exit);
     }
 
@@ -76,5 +76,14 @@ namespace eagle::ir
 
         check_block(get_condition_default());
         check_block(get_condition_special());
+    }
+
+    bool cmd_branch::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_branch>(other);
+        return condition == cmd->get_condition() &&
+            get_condition_default() == cmd->get_condition_default() &&
+            get_condition_special() == cmd->get_condition_special() &&
+            base_command::is_similar(other);
     }
 }

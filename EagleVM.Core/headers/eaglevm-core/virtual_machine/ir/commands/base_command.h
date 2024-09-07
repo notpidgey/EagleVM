@@ -50,6 +50,11 @@ namespace eagle::ir
         std::shared_ptr<base_command> release(const discrete_store_ptr& store);
         std::vector<discrete_store_ptr> get_release_list();
 
+        virtual bool is_similar(const std::shared_ptr<base_command>& other)
+        {
+            return other->get_command_type() == get_command_type();
+        }
+
     protected:
         command_type command;
 

@@ -25,6 +25,8 @@ namespace eagle::ir
         x86_operand_sig get_x86_signature();
         handler_sig get_handler_signature();
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
     private:
         call_type call_type = call_type::none;
         codec::mnemonic mnemonic;

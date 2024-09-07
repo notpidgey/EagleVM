@@ -44,8 +44,124 @@ namespace eagle::ir
             const auto back_command_type = ir_body.back()->at(ir_body.size() - 2)->get_command_type();
             if (back_command_type != command_type::vm_exec_dynamic_x86 && back_command_type != command_type::vm_exec_x86)
             {
-
             }
+        }
+    }
+
+    struct command_node_info_t
+    {
+        bool last = false;
+        uint16_t instruction_index = 0;
+        block_ptr block = nullptr;
+    };
+
+    class trie_node_t : public std::enable_shared_from_this<trie_node_t>
+    {
+    public:
+        size_t depth;
+
+        base_command_ptr command = nullptr;
+        std::vector<command_node_info_t> similar_commands;
+        std::vector<std::shared_ptr<trie_node_t>> children;
+
+        std::weak_ptr<trie_node_t> parent;
+
+        void add_children(const block_ptr& block, const uint16_t idx)
+        {
+            if (block->size() == idx)
+                return;
+
+            const auto cmd = block->at(idx);
+            if (cmd->get_command_type() == command_type::vm_enter ||
+                cmd->get_command_type() == command_type::vm_exit)
+                return;
+
+            if (const auto existing_child = find_similar_child(block->at(idx)))
+                update_existing_child(existing_child, block, idx);
+            else
+                add_new_child(block, idx);
+        }
+
+        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_longest_path(const size_t min_child_size)
+        {
+            if (children.empty())
+            {
+                if (similar_commands.size() >= min_child_size)
+                    return std::make_pair(1, shared_from_this());
+
+                return std::nullopt;
+            }
+
+            std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
+            for (const auto& child : children)
+            {
+                const auto result_pair = child->find_longest_path(min_child_size);
+                if (result_pair)
+                {
+                    auto& [child_depth, found_child] = *result_pair;
+                    if (!max_path || child_depth > max_path->first)
+                        max_path = result_pair;
+                }
+            }
+
+            if (max_path)
+            {
+                if (similar_commands.size() >= min_child_size)
+                    return std::make_pair(max_path->first + 1, shared_from_this());
+
+                return max_path;
+            }
+
+            return std::nullopt;
+        }
+
+    private:
+        trie_node_t* find_similar_child(const base_command_ptr& command) const
+        {
+            for (const auto& child : children)
+                if (child->command->get_command_type() == command->get_command_type() &&
+                    child->command->is_similar(command))
+                    return child.get();
+
+            return nullptr;
+        }
+
+        static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx)
+        {
+            child->similar_commands.emplace_back(block->size() - 1 == idx, idx, block);
+            child->add_children(block, idx + 1);
+        }
+
+        void add_new_child(block_ptr block, uint16_t idx)
+        {
+            const auto new_child = std::make_shared<trie_node_t>();
+            new_child->parent = weak_from_this();
+            new_child->command = block->at(idx);
+            new_child->depth = depth + 1;
+            new_child->similar_commands.emplace_back(block->size() - 1 == idx, idx, block);
+            new_child->add_children(block, idx + 1);
+
+            children.emplace_back(std::move(new_child));
+        }
+    };
+
+    void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
+    {
+        const std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>();
+        root_node->depth = 0;
+
+        for (const block_ptr& block : blocks)
+        {
+            for (int i = 0; i < block->size(); i++)
+                root_node->add_children(block, i);
+        }
+
+        // test
+        auto result = root_node->find_longest_path(4);
+        if (result)
+        {
+            // good
+            auto val = result.value();
         }
     }
 }

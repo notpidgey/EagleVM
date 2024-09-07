@@ -11,4 +11,11 @@ namespace eagle::ir
     {
         return size;
     }
+
+    bool cmd_mem_read::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_mem_read>(other);
+        return base_command::is_similar(other) &&
+            get_read_size() == cmd->get_read_size();
+    }
 }

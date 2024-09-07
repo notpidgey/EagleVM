@@ -59,6 +59,7 @@ namespace eagle::ir
         bool branch_visits(const block_ptr& block);
 
         void rewrite_branch(const il_exit_result& search, const il_exit_result& target);
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
     private:
         std::vector<il_exit_result> info;

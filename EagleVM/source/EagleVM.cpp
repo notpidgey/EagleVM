@@ -11,6 +11,7 @@
 #include "eaglevm-core/disassembler/analysis/liveness.h"
 #include "eaglevm-core/pe/models/stub.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+#include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
 
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
@@ -333,7 +334,7 @@ int main(int argc, char* argv[])
         uint32_t vm_index = 0;
         std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
         for (const auto& preopt_block : preopt)
-            block_vm_ids[preopt_block] = vm_index++;
+            block_vm_ids[preopt_block] = vm_index;
 
         // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
@@ -347,6 +348,14 @@ int main(int argc, char* argv[])
         // or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::flat_block_vmid> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+
+        // obfuscation pass
+        std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;
+        for (auto& [block, vmid] : vm_blocks)
+            vm_id_map[vmid].append_range(block);
+
+        for (auto& [vmid, vmid_blocks] : vm_id_map)
+            ir::obfuscator::create_merged_handlers(vmid_blocks);
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();

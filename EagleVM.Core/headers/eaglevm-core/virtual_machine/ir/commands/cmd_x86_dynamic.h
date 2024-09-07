@@ -9,30 +9,13 @@ namespace eagle::ir
     class cmd_x86_dynamic : public base_command
     {
     public:
-        // TODO: make this a template constructor
+        explicit cmd_x86_dynamic(codec::mnemonic mnemonic, const variant_op& op1, const variant_op& op2);
+        explicit cmd_x86_dynamic(codec::mnemonic mnemonic, const variant_op& op1);
 
-        explicit cmd_x86_dynamic(const codec::mnemonic mnemonic, const variant_op& op1, const variant_op& op2)
-            : base_command(command_type::vm_exec_dynamic_x86), mnemonic(mnemonic)
-        {
-            operands.push_back(op1);
-            operands.push_back(op2);
-        }
+        codec::mnemonic get_mnemonic() const;
+        std::vector<variant_op> get_operands();
 
-        explicit cmd_x86_dynamic(const codec::mnemonic mnemonic, const variant_op& op1)
-            : base_command(command_type::vm_exec_dynamic_x86), mnemonic(mnemonic)
-        {
-            operands.push_back(op1);
-        }
-
-        codec::mnemonic get_mnemonic() const
-        {
-            return mnemonic;
-        }
-
-        std::vector<variant_op> get_operands()
-        {
-            return operands;
-        }
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
     private:
         codec::mnemonic mnemonic;

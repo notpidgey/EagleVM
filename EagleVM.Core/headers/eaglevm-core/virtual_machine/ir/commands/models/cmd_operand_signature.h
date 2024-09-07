@@ -14,6 +14,11 @@ namespace eagle::ir
 
         codec::op_type operand_type;
         codec::reg_size operand_size;
+
+        bool operator==(const x86_operand& other) const
+        {
+            return operand_type == other.operand_type && operand_size == other.operand_size;
+        }
     };
 
     using x86_operand_sig = std::vector<x86_operand>;

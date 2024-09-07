@@ -18,19 +18,18 @@ namespace eagle::ir
         explicit cmd_push(uint64_t immediate);
 
         info_type get_push_type() const;
+        ir_size get_size() const;
 
         discrete_store_ptr get_value_temp_register();
         reg_vm get_value_register() const;
         uint64_t get_value_immediate() const;
 
-        ir_size get_size() const;
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
     private:
-        std::variant<discrete_store_ptr, reg_vm, uint64_t> value;
-
         info_type type;
         ir_size size;
 
-        // std::optional<modifier> modifier = std::nullopt;
+        std::variant<discrete_store_ptr, reg_vm, uint64_t> value;
     };
 }

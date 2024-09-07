@@ -277,8 +277,11 @@ namespace eagle::ir
             // move heads to first body block
             if (preopt->head)
             {
+                first_body->insert(first_body->begin(), preopt->head->at(0));
+
                 // at this point we determined the head is relevant
-                for (auto i = preopt->head->size(); i--;)
+                // we can ignore last since its a branch
+                for (auto i = preopt->head->size() - 1; i--;)
                     first_body->insert(first_body->begin(), preopt->head->at(i));
             }
 
@@ -420,7 +423,7 @@ namespace eagle::ir
         return nullptr;
     }
 
-    preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block_ptr basic_block)
+    preopt_block_ptr ir_translator::map_preopt_block(const dasm::basic_block_ptr& basic_block)
     {
         return bb_map[basic_block];
     }

@@ -13,6 +13,8 @@ namespace eagle::ir
         discrete_store_ptr get_destination_reg();
         ir_size get_size() const;
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
     private:
         discrete_store_ptr dest_reg;
         ir_size size;

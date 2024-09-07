@@ -38,7 +38,7 @@ namespace eagle::ir
         );
 
         dasm::basic_block_ptr map_basic_block(const preopt_block_ptr& preopt_target);
-        preopt_block_ptr map_preopt_block(dasm::basic_block_ptr basic_block);
+        preopt_block_ptr map_preopt_block(const dasm::basic_block_ptr& basic_block);
 
     private:
         dasm::segment_dasm_ptr dasm;

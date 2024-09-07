@@ -22,4 +22,12 @@ namespace eagle::ir
     {
         return size;
     }
+
+    bool cmd_context_store::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_context_store>(other);
+        return base_command::is_similar(other) &&
+            get_reg() == cmd->get_reg() &&
+            get_value_size() == cmd->get_value_size();
+    }
 }

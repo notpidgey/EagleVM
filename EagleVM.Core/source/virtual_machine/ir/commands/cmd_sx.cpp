@@ -16,4 +16,12 @@ namespace eagle::ir
     {
         return current;
     }
+
+    bool cmd_sx::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_sx>(other);
+        return base_command::is_similar(other) &&
+            get_target() == cmd->get_target() &&
+            get_current() == cmd->get_current();
+    }
 }
