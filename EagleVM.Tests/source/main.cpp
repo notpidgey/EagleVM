@@ -115,7 +115,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // if we want, we can do a little optimzation which will rewrite the preopt blocks
     // or we could simply ir_trans.flatten()
     std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-    std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+    std::vector<ir::flat_block_vmid> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
     // initialize block code labels
     std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;

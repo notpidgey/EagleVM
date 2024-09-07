@@ -19,7 +19,7 @@ namespace eagle::ir
     using preopt_block_vec = std::vector<preopt_block_ptr>;
 
     using preopt_vm_id = std::pair<preopt_block_ptr, uint32_t>;
-    using block_vm_id = std::pair<std::vector<block_ptr>, uint32_t>;
+    using flat_block_vmid = std::pair<std::vector<block_ptr>, uint32_t>;
 
     class ir_translator
     {
@@ -27,14 +27,14 @@ namespace eagle::ir
         explicit ir_translator(dasm::segment_dasm_ptr seg_dasm);
 
         std::vector<preopt_block_ptr> translate();
-        std::vector<block_vm_id> flatten(
-            const std::vector<preopt_vm_id>& block_vms,
+        std::vector<flat_block_vmid> flatten(
+            std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
             std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
         );
-        std::vector<block_vm_id> optimize(
-            const std::vector<preopt_vm_id>& block_vms,
+        std::vector<flat_block_vmid> optimize(
+            std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
             std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
-            const std::vector<preopt_block_ptr>& extern_call_blocks = { }
+            const std::vector<preopt_block_ptr>& extern_call_blocks
         );
 
         dasm::basic_block_ptr map_basic_block(const preopt_block_ptr& preopt_target);
@@ -43,6 +43,18 @@ namespace eagle::ir
     private:
         dasm::segment_dasm_ptr dasm;
         std::unordered_map<dasm::basic_block_ptr, preopt_block_ptr> bb_map;
+
+        void optimize_heads(
+            std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+            std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+            const std::vector<preopt_block_ptr>& extern_call_blocks
+        );
+
+        void optimize_same_vm(
+            std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+            std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+            const std::vector<preopt_block_ptr>& extern_call_blocks
+        );
 
         preopt_block_ptr translate_block_split(dasm::basic_block_ptr bb);
         exit_condition get_exit_condition(codec::mnemonic mnemonic);

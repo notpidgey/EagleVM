@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
     std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
-    asmb::section_manager vm_section(false);
+    asmb::section_manager vm_section(true);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
 
     codec::setup_decoder();
@@ -331,9 +331,9 @@ int main(int argc, char* argv[])
         // here we assign vms to each block
         // for the current example we can assign a unique vm to each block
         uint32_t vm_index = 0;
-        std::vector<ir::preopt_vm_id> block_vm_ids;
+        std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
         for (const auto& preopt_block : preopt)
-            block_vm_ids.emplace_back(preopt_block, vm_index++);
+            block_vm_ids[preopt_block] = vm_index++;
 
         // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
@@ -346,7 +346,7 @@ int main(int argc, char* argv[])
         // if we want, we can do a little optimzation which will rewrite the preopt blocks
         // or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-        std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+        std::vector<ir::flat_block_vmid> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
