@@ -61,7 +61,7 @@ namespace eagle::ir
         size_t depth;
 
         base_command_ptr command = nullptr;
-        std::vector<command_node_info_t> similar_commands;
+        std::unordered_map<block_ptr, std::vector<command_node_info_t>> similar_commands;
         std::vector<std::shared_ptr<trie_node_t>> children;
 
         std::weak_ptr<trie_node_t> parent;
@@ -82,11 +82,11 @@ namespace eagle::ir
                 add_new_child(block, idx);
         }
 
-        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_longest_path(const size_t min_child_size)
+        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_longest_path(const size_t min_child_size, const size_t min_depth)
         {
             if (children.empty())
             {
-                if (similar_commands.size() >= min_child_size)
+                if (similar_commands.size() >= min_child_size && depth >= min_depth)
                     return std::make_pair(1, shared_from_this());
 
                 return std::nullopt;
@@ -95,7 +95,7 @@ namespace eagle::ir
             std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
             for (const auto& child : children)
             {
-                const auto result_pair = child->find_longest_path(min_child_size);
+                const auto result_pair = child->find_longest_path(min_child_size, min_depth);
                 if (result_pair)
                 {
                     auto& [child_depth, found_child] = *result_pair;
@@ -106,7 +106,7 @@ namespace eagle::ir
 
             if (max_path)
             {
-                if (similar_commands.size() >= min_child_size)
+                if (similar_commands.size() >= min_child_size && depth >= min_depth)
                     return std::make_pair(max_path->first + 1, shared_from_this());
 
                 return max_path;
@@ -128,7 +128,7 @@ namespace eagle::ir
 
         static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx)
         {
-            child->similar_commands.emplace_back(block->size() - 1 == idx, idx, block);
+            child->similar_commands[block].emplace_back(block->size() - 1 == idx, idx, block);
             child->add_children(block, idx + 1);
         }
 
@@ -138,17 +138,18 @@ namespace eagle::ir
             new_child->parent = weak_from_this();
             new_child->command = block->at(idx);
             new_child->depth = depth + 1;
-            new_child->similar_commands.emplace_back(block->size() - 1 == idx, idx, block);
+            new_child->similar_commands[block].emplace_back(block->size() - 1 == idx, idx, block);
             new_child->add_children(block, idx + 1);
 
             children.emplace_back(std::move(new_child));
         }
+
     };
 
     void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
     {
         const std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>();
-        root_node->depth = 0;
+        root_node->depth = 1;
 
         for (const block_ptr& block : blocks)
         {
@@ -157,7 +158,7 @@ namespace eagle::ir
         }
 
         // test
-        auto result = root_node->find_longest_path(4);
+        auto result = root_node->find_longest_path(4, 4);
         if (result)
         {
             // good
