@@ -195,10 +195,8 @@ namespace eagle::ir
         }
 
         // test
-        auto result = root_node->find_path_max_child(4, 4);
-        if (result)
+        if (const auto result = root_node->find_path_max_similar(5))
         {
-            // good
             auto val = result.value();
         }
     }
