@@ -43,7 +43,7 @@ namespace eagle::ir
             return block_info;
 
         const block_ptr entry = block_info->head;
-        block_ptr current_block = std::make_shared<block_ir>(vm_block);
+        block_ptr current_block = std::make_shared<block_ir>(unassigned);
         const block_ptr exit = block_info->tail;
 
         //
@@ -277,8 +277,6 @@ namespace eagle::ir
             // move heads to first body block
             if (preopt->head)
             {
-                first_body->insert(first_body->begin(), preopt->head->at(0));
-
                 // at this point we determined the head is relevant
                 // we can ignore last since its a branch
                 for (auto i = preopt->head->size() - 1; i--;)
@@ -289,6 +287,8 @@ namespace eagle::ir
             for (const auto& seek_preopt : block_vm_ids | std::views::keys)
             {
                 const auto tail_branch = seek_preopt->tail->get_branch();
+                VM_ASSERT(tail_branch, "tail branch cannot be null");
+
                 tail_branch->rewrite_branch(head, preopt->body.front());
             }
         }
