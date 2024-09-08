@@ -55,6 +55,13 @@ namespace eagle::ir
         block_ptr block = nullptr;
     };
 
+    enum class search_option
+    {
+        option_none,
+        option_depth,
+        option_children
+    };
+
     class trie_node_t : public std::enable_shared_from_this<trie_node_t>
     {
     public:
@@ -82,11 +89,44 @@ namespace eagle::ir
                 add_new_child(block, idx);
         }
 
-        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_longest_path(const size_t min_child_size, const size_t min_depth)
+        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_similar(const size_t min_depth)
         {
             if (children.empty())
             {
-                if (similar_commands.size() >= min_child_size && depth >= min_depth)
+                if (depth >= min_depth)
+                    return std::make_pair(this->similar_commands.size(), shared_from_this());
+
+                return std::nullopt;
+            }
+
+            std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
+            for (const auto& child : children)
+            {
+                if (const auto result_pair = child->find_path_max_similar(min_depth))
+                {
+                    auto& [similar_count, found_child] = *result_pair;
+                    if (!max_path || similar_count > max_path->first)
+                        max_path = result_pair;
+                }
+            }
+
+            if (max_path)
+            {
+                // we want to check if the current node meets the conditions better
+                if (depth >= min_depth && max_path->first < similar_commands.size())
+                    return std::make_pair(this->similar_commands.size(), shared_from_this());
+            }
+
+            return max_path;
+        }
+
+        std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_depth(const size_t min_child_size)
+        {
+            // we reached a leaf
+            if (children.empty())
+            {
+                // check constraints
+                if (similar_commands.size() >= min_child_size)
                     return std::make_pair(1, shared_from_this());
 
                 return std::nullopt;
@@ -95,8 +135,7 @@ namespace eagle::ir
             std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
             for (const auto& child : children)
             {
-                const auto result_pair = child->find_longest_path(min_child_size, min_depth);
-                if (result_pair)
+                if (const auto result_pair = child->find_path_max_depth(min_child_size))
                 {
                     auto& [child_depth, found_child] = *result_pair;
                     if (!max_path || child_depth > max_path->first)
@@ -104,15 +143,7 @@ namespace eagle::ir
                 }
             }
 
-            if (max_path)
-            {
-                if (similar_commands.size() >= min_child_size && depth >= min_depth)
-                    return std::make_pair(max_path->first + 1, shared_from_this());
-
-                return max_path;
-            }
-
-            return std::nullopt;
+            return max_path;
         }
 
     private:
@@ -144,6 +175,12 @@ namespace eagle::ir
             children.emplace_back(std::move(new_child));
         }
 
+        size_t count_unoverlapped(block_ptr block)
+        {
+            for (auto& [block, commands] : similar_commands)
+            {
+            }
+        }
     };
 
     void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
@@ -158,7 +195,7 @@ namespace eagle::ir
         }
 
         // test
-        auto result = root_node->find_longest_path(4, 4);
+        auto result = root_node->find_path_max_child(4, 4);
         if (result)
         {
             // good
