@@ -73,7 +73,7 @@ namespace eagle::ir
         {
         }
 
-        void add_children(const block_ptr& block, const uint16_t idx)
+        void add_children(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t> previous = nullptr)
         {
             if (block->size() == idx)
                 return;
@@ -84,9 +84,46 @@ namespace eagle::ir
                 return;
 
             if (const auto existing_child = find_similar_child(block->at(idx)))
-                update_existing_child(existing_child, block, idx);
+                update_existing_child(existing_child, block, idx, previous);
             else
-                add_new_child(block, idx);
+                add_new_child(block, idx, previous);
+        }
+
+        void remove_branch(std::shared_ptr<command_node_info_t> node)
+        {
+            auto current = node;
+            while (current && !current->previous.expired()) {
+                const auto prev = current->previous.lock();
+                prev->next.reset();
+                current = prev;
+            }
+
+            current = node;
+            while (current && !current->next.expired()) {
+                const auto next = current->next.lock();
+                next->previous.reset();
+                current = next;
+            }
+
+            if (const auto parent = this->parent.lock()) {
+                for (auto& [block, block_similars] : parent->similar_commands) {
+                    auto it = std::ranges::find_if(block_similars,
+                        [&node](const auto& cmd_info) { return cmd_info == node; });
+                    if (it != block_similars.end()) {
+                        block_similars.erase(it);
+                        break;
+                    }
+                }
+            }
+
+            // Clean up empty entries in similar_commands
+            for (auto it = similar_commands.begin(); it != similar_commands.end();) {
+                if (it->second.empty()) {
+                    it = similar_commands.erase(it);
+                } else {
+                    ++it;
+                }
+            }
         }
 
         std::vector<command_node_removal_t> get_branch()
@@ -95,8 +132,8 @@ namespace eagle::ir
             branch.reserve(similar_commands.size());
 
             for (auto& [block, block_similars] : similar_commands)
-                for (const auto& similar_idx : block_similars)
-                    branch.emplace_back(block, similar_idx - depth, depth + 1);
+                for (const auto& similar : block_similars)
+                    branch.emplace_back(block, similar->instruction_index - depth, depth + 1);
 
             return branch;
         }
@@ -163,7 +200,7 @@ namespace eagle::ir
         size_t depth;
 
         base_command_ptr command = nullptr;
-        std::unordered_map<block_ptr, std::vector<command_node_info_t>> similar_commands;
+        std::unordered_map<block_ptr, std::vector<std::shared_ptr<command_node_info_t>>> similar_commands;
 
         std::weak_ptr<trie_node_t> parent;
         std::vector<std::shared_ptr<trie_node_t>> children;
@@ -178,7 +215,8 @@ namespace eagle::ir
             return nullptr;
         }
 
-        static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx)
+        static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx,
+            const std::shared_ptr<command_node_info_t>& previous)
         {
             // Check if this block already has an entry in similar_commands
             const auto it = child->similar_commands.find(block);
@@ -187,7 +225,7 @@ namespace eagle::ir
                 const auto& entries = it->second;
                 for (const auto& entry : entries)
                 {
-                    if (entry.instruction_index <= idx)
+                    if (entry->instruction_index <= idx)
                     {
                         // We've found an existing entry that starts at or before this index
                         // Don't add a new entry to prevent overlap
@@ -196,19 +234,30 @@ namespace eagle::ir
                 }
             }
 
-            child->similar_commands[block].emplace_back(idx, block);
-            child->add_children(block, idx + 1);
+            std::shared_ptr<command_node_info_t> child_command_info = std::make_shared<command_node_info_t>
+                (block, idx, std::weak_ptr(previous), std::weak_ptr<command_node_info_t>());
+
+            child->similar_commands[block].push_back(std::move(child_command_info));
+            child->add_children(block, idx + 1, child_command_info);
+
+            if (previous)
+                previous->next = child_command_info;
         }
 
-        void add_new_child(block_ptr block, uint16_t idx)
+        void add_new_child(block_ptr block, uint16_t idx, const std::shared_ptr<command_node_info_t>& previous)
         {
-            const auto new_child = std::make_shared<trie_node_t>(depth + 1);
+            const std::shared_ptr<trie_node_t> new_child = std::make_shared<trie_node_t>(depth + 1);
+            const std::shared_ptr<command_node_info_t> child_command_info = std::make_shared<command_node_info_t>
+                (block, idx, std::weak_ptr(previous), std::weak_ptr<command_node_info_t>());
+
             new_child->parent = weak_from_this();
             new_child->command = block->at(idx);
-            new_child->similar_commands[block].emplace_back(idx, block);
-            new_child->add_children(block, idx + 1);
-
+            new_child->similar_commands[block].push_back(child_command_info);
+            new_child->add_children(block, idx + 1, child_command_info);
             children.emplace_back(std::move(new_child));
+
+            if (previous)
+                previous->next = child_command_info;
         }
     };
 
@@ -229,6 +278,8 @@ namespace eagle::ir
 
             for (auto& item : branch)
                 root_node->
+
+
 
         }
     }
