@@ -48,30 +48,30 @@ namespace eagle::ir
         }
     }
 
-    struct command_node_info_t
+    struct command_node_removal_t
     {
-        bool last = false;
-        uint16_t instruction_index = 0;
-        block_ptr block = nullptr;
+        block_ptr block;
+
+        size_t start_idx;
+        size_t size;
     };
 
-    enum class search_option
+    struct command_node_info_t
     {
-        option_none,
-        option_depth,
-        option_children
+        block_ptr block = nullptr;
+        uint16_t instruction_index = 0;
+
+        std::weak_ptr<command_node_info_t> previous;
+        std::weak_ptr<command_node_info_t> next;
     };
 
     class trie_node_t : public std::enable_shared_from_this<trie_node_t>
     {
     public:
-        size_t depth;
-
-        base_command_ptr command = nullptr;
-        std::unordered_map<block_ptr, std::vector<command_node_info_t>> similar_commands;
-        std::vector<std::shared_ptr<trie_node_t>> children;
-
-        std::weak_ptr<trie_node_t> parent;
+        explicit trie_node_t(const size_t depth)
+            : depth(depth)
+        {
+        }
 
         void add_children(const block_ptr& block, const uint16_t idx)
         {
@@ -89,12 +89,24 @@ namespace eagle::ir
                 add_new_child(block, idx);
         }
 
+        std::vector<command_node_removal_t> get_branch()
+        {
+            std::vector<command_node_removal_t> branch;
+            branch.reserve(similar_commands.size());
+
+            for (auto& [block, block_similars] : similar_commands)
+                for (const auto& similar_idx : block_similars)
+                    branch.emplace_back(block, similar_idx - depth, depth + 1);
+
+            return branch;
+        }
+
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_similar(const size_t min_depth)
         {
             if (children.empty())
             {
                 if (depth >= min_depth)
-                    return std::make_pair(this->similar_commands.size(), shared_from_this());
+                    return std::make_pair(similar_commands.size(), shared_from_this());
 
                 return std::nullopt;
             }
@@ -113,8 +125,9 @@ namespace eagle::ir
             if (max_path)
             {
                 // we want to check if the current node meets the conditions better
-                if (depth >= min_depth && max_path->first < similar_commands.size())
-                    return std::make_pair(this->similar_commands.size(), shared_from_this());
+                auto current_similar = similar_commands.size();
+                if (depth >= min_depth && max_path->first < current_similar)
+                    return std::make_pair(current_similar, shared_from_this());
             }
 
             return max_path;
@@ -147,6 +160,14 @@ namespace eagle::ir
         }
 
     private:
+        size_t depth;
+
+        base_command_ptr command = nullptr;
+        std::unordered_map<block_ptr, std::vector<command_node_info_t>> similar_commands;
+
+        std::weak_ptr<trie_node_t> parent;
+        std::vector<std::shared_ptr<trie_node_t>> children;
+
         trie_node_t* find_similar_child(const base_command_ptr& command) const
         {
             for (const auto& child : children)
@@ -159,35 +180,41 @@ namespace eagle::ir
 
         static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx)
         {
-            child->similar_commands[block].emplace_back(block->size() - 1 == idx, idx, block);
+            // Check if this block already has an entry in similar_commands
+            const auto it = child->similar_commands.find(block);
+            if (it != child->similar_commands.end())
+            {
+                const auto& entries = it->second;
+                for (const auto& entry : entries)
+                {
+                    if (entry.instruction_index <= idx)
+                    {
+                        // We've found an existing entry that starts at or before this index
+                        // Don't add a new entry to prevent overlap
+                        return;
+                    }
+                }
+            }
+
+            child->similar_commands[block].emplace_back(idx, block);
             child->add_children(block, idx + 1);
         }
 
         void add_new_child(block_ptr block, uint16_t idx)
         {
-            const auto new_child = std::make_shared<trie_node_t>();
+            const auto new_child = std::make_shared<trie_node_t>(depth + 1);
             new_child->parent = weak_from_this();
             new_child->command = block->at(idx);
-            new_child->depth = depth + 1;
-            new_child->similar_commands[block].emplace_back(block->size() - 1 == idx, idx, block);
+            new_child->similar_commands[block].emplace_back(idx, block);
             new_child->add_children(block, idx + 1);
 
             children.emplace_back(std::move(new_child));
-        }
-
-        size_t count_unoverlapped(block_ptr block)
-        {
-            for (auto& [block, commands] : similar_commands)
-            {
-            }
         }
     };
 
     void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
     {
-        const std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>();
-        root_node->depth = 1;
-
+        const std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>(0);
         for (const block_ptr& block : blocks)
         {
             for (int i = 0; i < block->size(); i++)
@@ -195,9 +222,14 @@ namespace eagle::ir
         }
 
         // test
-        if (const auto result = root_node->find_path_max_similar(5))
+        if (const auto result = root_node->find_path_max_similar(4))
         {
-            auto val = result.value();
+            auto [similar, leaf] = result.value();
+            auto branch = leaf->get_branch();
+
+            for (auto& item : branch)
+                root_node->
+
         }
     }
 }
