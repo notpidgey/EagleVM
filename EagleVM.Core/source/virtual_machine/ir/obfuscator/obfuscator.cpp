@@ -1,4 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
+
+#include <ranges>
+
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
 namespace eagle::ir
@@ -63,6 +66,8 @@ namespace eagle::ir
 
         std::weak_ptr<command_node_info_t> previous;
         std::weak_ptr<command_node_info_t> next;
+
+        std::weak_ptr<class trie_node_t> current_node;
     };
 
     class trie_node_t : public std::enable_shared_from_this<trie_node_t>
@@ -89,51 +94,43 @@ namespace eagle::ir
                 add_new_child(block, idx, previous);
         }
 
-        void remove_branch(std::shared_ptr<command_node_info_t> node)
+        static void remove_branch(const std::shared_ptr<command_node_info_t>& start_node)
         {
-            auto current = node;
-            while (current && !current->previous.expired()) {
-                const auto prev = current->previous.lock();
-                prev->next.reset();
-                current = prev;
+            // erase backwards
+            std::weak_ptr current = start_node;
+            while (auto cmd = current.lock())
+            {
+                const std::shared_ptr node = cmd->current_node.lock();
+
+                auto& command_vec = node->similar_commands[cmd->block];
+                const auto found_cmd = std::ranges::find(command_vec, cmd);
+                node->similar_commands[cmd->block].erase(found_cmd);
+
+                current = start_node->previous;
             }
 
-            current = node;
-            while (current && !current->next.expired()) {
-                const auto next = current->next.lock();
-                next->previous.reset();
-                current = next;
-            }
+            // erase forwards
+            current = start_node->next;
+            while (auto cmd = current.lock())
+            {
+                const std::shared_ptr node = cmd->current_node.lock();
 
-            if (const auto parent = this->parent.lock()) {
-                for (auto& [block, block_similars] : parent->similar_commands) {
-                    auto it = std::ranges::find_if(block_similars,
-                        [&node](const auto& cmd_info) { return cmd_info == node; });
-                    if (it != block_similars.end()) {
-                        block_similars.erase(it);
-                        break;
-                    }
-                }
-            }
+                auto& command_vec = node->similar_commands[cmd->block];
+                const auto found_cmd = std::ranges::find(command_vec, cmd);
+                node->similar_commands[cmd->block].erase(found_cmd);
 
-            // Clean up empty entries in similar_commands
-            for (auto it = similar_commands.begin(); it != similar_commands.end();) {
-                if (it->second.empty()) {
-                    it = similar_commands.erase(it);
-                } else {
-                    ++it;
-                }
+                current = start_node->next;
             }
         }
 
-        std::vector<command_node_removal_t> get_branch()
+        std::vector<std::shared_ptr<command_node_info_t>> get_branch()
         {
-            std::vector<command_node_removal_t> branch;
+            std::vector<std::shared_ptr<command_node_info_t>> branch;
             branch.reserve(similar_commands.size());
 
-            for (auto& [block, block_similars] : similar_commands)
+            for (auto& block_similars : similar_commands | std::views::values)
                 for (const auto& similar : block_similars)
-                    branch.emplace_back(block, similar->instruction_index - depth, depth + 1);
+                    branch.push_back(similar);
 
             return branch;
         }
@@ -205,17 +202,17 @@ namespace eagle::ir
         std::weak_ptr<trie_node_t> parent;
         std::vector<std::shared_ptr<trie_node_t>> children;
 
-        trie_node_t* find_similar_child(const base_command_ptr& command) const
+        std::shared_ptr<trie_node_t> find_similar_child(const base_command_ptr& command) const
         {
             for (const auto& child : children)
                 if (child->command->get_command_type() == command->get_command_type() &&
                     child->command->is_similar(command))
-                    return child.get();
+                    return child;
 
             return nullptr;
         }
 
-        static void update_existing_child(trie_node_t* child, block_ptr block, uint16_t idx,
+        void update_existing_child(const std::shared_ptr<trie_node_t>& child, const block_ptr& block, const uint16_t idx,
             const std::shared_ptr<command_node_info_t>& previous)
         {
             // Check if this block already has an entry in similar_commands
@@ -234,30 +231,38 @@ namespace eagle::ir
                 }
             }
 
-            std::shared_ptr<command_node_info_t> child_command_info = std::make_shared<command_node_info_t>
-                (block, idx, std::weak_ptr(previous), std::weak_ptr<command_node_info_t>());
+            const std::shared_ptr<command_node_info_t> cmd_info = std::make_shared<command_node_info_t>();
+            cmd_info->block = block;
+            cmd_info->instruction_index = idx;
+            cmd_info->previous = std::weak_ptr(previous);
+            cmd_info->next = std::weak_ptr<command_node_info_t>();
+            cmd_info->current_node = child;
 
-            child->similar_commands[block].push_back(std::move(child_command_info));
-            child->add_children(block, idx + 1, child_command_info);
+            child->similar_commands[block].push_back(std::move(cmd_info));
+            child->add_children(block, idx + 1, cmd_info);
 
             if (previous)
-                previous->next = child_command_info;
+                previous->next = cmd_info;
         }
 
-        void add_new_child(block_ptr block, uint16_t idx, const std::shared_ptr<command_node_info_t>& previous)
+        void add_new_child(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t>& previous)
         {
             const std::shared_ptr<trie_node_t> new_child = std::make_shared<trie_node_t>(depth + 1);
-            const std::shared_ptr<command_node_info_t> child_command_info = std::make_shared<command_node_info_t>
-                (block, idx, std::weak_ptr(previous), std::weak_ptr<command_node_info_t>());
+            const std::shared_ptr<command_node_info_t> cmd_info = std::make_shared<command_node_info_t>();
+            cmd_info->block = block;
+            cmd_info->instruction_index = idx;
+            cmd_info->previous = std::weak_ptr(previous);
+            cmd_info->next = std::weak_ptr<command_node_info_t>();
+            cmd_info->current_node = new_child;
 
             new_child->parent = weak_from_this();
             new_child->command = block->at(idx);
-            new_child->similar_commands[block].push_back(child_command_info);
-            new_child->add_children(block, idx + 1, child_command_info);
+            new_child->similar_commands[block].push_back(cmd_info);
+            new_child->add_children(block, idx + 1, cmd_info);
             children.emplace_back(std::move(new_child));
 
             if (previous)
-                previous->next = child_command_info;
+                previous->next = cmd_info;
         }
     };
 
@@ -274,13 +279,11 @@ namespace eagle::ir
         if (const auto result = root_node->find_path_max_similar(4))
         {
             auto [similar, leaf] = result.value();
-            auto branch = leaf->get_branch();
+            const auto branch = leaf->get_branch();
 
+            // remove all related commands because we are combining it into a handler
             for (auto& item : branch)
-                root_node->
-
-
-
+                leaf->remove_branch(item);
         }
     }
 }
