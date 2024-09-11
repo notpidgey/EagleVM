@@ -1,5 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
 
+#include <deque>
 #include <ranges>
 
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
@@ -73,12 +74,14 @@ namespace eagle::ir
     class trie_node_t : public std::enable_shared_from_this<trie_node_t>
     {
     public:
+        size_t depth;
+
         explicit trie_node_t(const size_t depth)
             : depth(depth)
         {
         }
 
-        void add_children(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t> previous = nullptr)
+        void add_children(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t>& previous = nullptr)
         {
             if (block->size() == idx)
                 return;
@@ -94,32 +97,37 @@ namespace eagle::ir
                 add_new_child(block, idx, previous);
         }
 
-        static void remove_branch(const std::shared_ptr<command_node_info_t>& start_node)
+        void erase_forwards(const block_ptr& ptr, const size_t start_idx)
         {
-            // erase backwards
-            std::weak_ptr current = start_node;
-            while (auto cmd = current.lock())
-            {
-                const std::shared_ptr node = cmd->current_node.lock();
-
-                auto& command_vec = node->similar_commands[cmd->block];
-                const auto found_cmd = std::ranges::find(command_vec, cmd);
-                node->similar_commands[cmd->block].erase(found_cmd);
-
-                current = start_node->previous;
-            }
-
             // erase forwards
-            current = start_node->next;
-            while (auto cmd = current.lock())
+            std::deque<std::shared_ptr<trie_node_t>> search_nodes;
+            search_nodes.emplace_back(shared_from_this());
+
+            while (search_nodes.empty())
             {
-                const std::shared_ptr node = cmd->current_node.lock();
+                const auto layer_nodes = search_nodes.size();
+                for (auto i = 0; i < layer_nodes; i++)
+                {
+                    std::unordered_set<std::shared_ptr<trie_node_t>> next_layer;
 
-                auto& command_vec = node->similar_commands[cmd->block];
-                const auto found_cmd = std::ranges::find(command_vec, cmd);
-                node->similar_commands[cmd->block].erase(found_cmd);
+                    const std::shared_ptr<trie_node_t> search_node = search_nodes.front();
+                    auto& block_commands = search_node->similar_commands[ptr];
+                    for (auto j = 0; j < block_commands.size();)
+                    {
+                        const auto cmd = block_commands[j];
+                        if (cmd->instruction_index >= start_idx)
+                            block_commands.erase(block_commands.begin() + j);
+                        else
+                            j++;
 
-                current = start_node->next;
+                        if (const auto next = cmd->next.lock())
+                            next_layer.insert(next->current_node.lock());
+                    }
+
+
+                    search_nodes.insert(search_nodes.end(), next_layer.begin(), next_layer.end());
+                    search_nodes.pop_front();
+                }
             }
         }
 
@@ -194,8 +202,6 @@ namespace eagle::ir
         }
 
     private:
-        size_t depth;
-
         base_command_ptr command = nullptr;
         std::unordered_map<block_ptr, std::vector<std::shared_ptr<command_node_info_t>>> similar_commands;
 
@@ -238,7 +244,7 @@ namespace eagle::ir
             cmd_info->next = std::weak_ptr<command_node_info_t>();
             cmd_info->current_node = child;
 
-            child->similar_commands[block].push_back(std::move(cmd_info));
+            child->similar_commands[block].push_back(cmd_info);
             child->add_children(block, idx + 1, cmd_info);
 
             if (previous)
@@ -259,7 +265,7 @@ namespace eagle::ir
             new_child->command = block->at(idx);
             new_child->similar_commands[block].push_back(cmd_info);
             new_child->add_children(block, idx + 1, cmd_info);
-            children.emplace_back(std::move(new_child));
+            children.emplace_back(new_child);
 
             if (previous)
                 previous->next = cmd_info;
@@ -283,7 +289,7 @@ namespace eagle::ir
 
             // remove all related commands because we are combining it into a handler
             for (auto& item : branch)
-                leaf->remove_branch(item);
+                root_node->erase_forwards(item->block, item->instruction_index - leaf->depth);
         }
     }
 }
