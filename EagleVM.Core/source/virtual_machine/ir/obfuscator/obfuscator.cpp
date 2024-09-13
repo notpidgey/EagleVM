@@ -101,9 +101,13 @@ namespace eagle::ir
         {
             // erase forwards
             std::deque<std::shared_ptr<trie_node_t>> search_nodes;
-            search_nodes.emplace_back(shared_from_this());
+            if (depth == 0) // root node
+                for (auto& child : children)
+                    search_nodes.emplace_back(child);
+            else
+                search_nodes.emplace_back(shared_from_this());
 
-            while (search_nodes.empty())
+            while (!search_nodes.empty())
             {
                 const auto layer_nodes = search_nodes.size();
                 for (auto i = 0; i < layer_nodes; i++)
@@ -281,8 +285,8 @@ namespace eagle::ir
                 root_node->add_children(block, i);
         }
 
-        // test
-        if (const auto result = root_node->find_path_max_similar(4))
+        size_t result_count = 0;
+        while (const auto result = root_node->find_path_max_depth(4))
         {
             auto [similar, leaf] = result.value();
             const auto branch = leaf->get_branch();
@@ -290,6 +294,10 @@ namespace eagle::ir
             // remove all related commands because we are combining it into a handler
             for (auto& item : branch)
                 root_node->erase_forwards(item->block, item->instruction_index - leaf->depth);
+
+            result_count++;
         }
+
+        __debugbreak();
     }
 }
