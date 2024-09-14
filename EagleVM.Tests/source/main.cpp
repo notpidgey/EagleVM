@@ -95,7 +95,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     dasm->generate_blocks();
 
     ir::ir_translator ir_trans(dasm);
-    ir::preopt_block_vec preopt = ir_trans.translate(true);
+    ir::preopt_block_vec preopt = ir_trans.translate();
 
     // here we assign vms to each block
     // for the current example we can assign a unique vm to each block
@@ -106,8 +106,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
-    for (const auto& preopt_block : preopt)
-        if (preopt_block->get_original_block() == dasm->get_block(0))
+    for (const std::shared_ptr<ir::preopt_block>& preopt_block : preopt)
+        if (preopt_block->original_block == dasm->get_block(0))
             entry_block = preopt_block;
 
     assert(entry_block != nullptr, "could not find matching preopt block for entry block");

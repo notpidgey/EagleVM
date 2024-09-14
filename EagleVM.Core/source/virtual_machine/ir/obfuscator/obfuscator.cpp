@@ -115,6 +115,12 @@ namespace eagle::ir
                     std::unordered_set<std::shared_ptr<trie_node_t>> next_layer;
 
                     const std::shared_ptr<trie_node_t> search_node = search_nodes.front();
+                    if (!search_node->similar_commands.contains(ptr))
+                    {
+                        search_nodes.pop_front();
+                        continue;
+                    }
+
                     auto& block_commands = search_node->similar_commands[ptr];
                     for (auto j = 0; j < block_commands.size();)
                     {
@@ -181,17 +187,9 @@ namespace eagle::ir
 
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_depth(const size_t min_child_size)
         {
-            // we reached a leaf
-            if (children.empty())
-            {
-                // check constraints
-                if (similar_commands.size() >= min_child_size)
-                    return std::make_pair(1, shared_from_this());
-
-                return std::nullopt;
-            }
-
             std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
+
+            // Check all children
             for (const auto& child : children)
             {
                 if (const auto result_pair = child->find_path_max_depth(min_child_size))
@@ -200,6 +198,13 @@ namespace eagle::ir
                     if (!max_path || child_depth > max_path->first)
                         max_path = result_pair;
                 }
+            }
+
+            // Check the current node
+            if (count_similar_commands() >= min_child_size)
+            {
+                if (!max_path || depth > max_path->first)
+                    max_path = std::make_pair(depth, shared_from_this());
             }
 
             return max_path;
@@ -274,6 +279,15 @@ namespace eagle::ir
             if (previous)
                 previous->next = cmd_info;
         }
+
+        size_t count_similar_commands() const
+        {
+            size_t total = 0;
+            for (const auto& cmd_infos : similar_commands | std::views::values)
+                total += cmd_infos.size();
+
+            return total;
+        }
     };
 
     void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
@@ -293,7 +307,7 @@ namespace eagle::ir
 
             // remove all related commands because we are combining it into a handler
             for (auto& item : branch)
-                root_node->erase_forwards(item->block, item->instruction_index - leaf->depth);
+                root_node->erase_forwards(item->block, item->instruction_index - leaf->depth + 1);
 
             result_count++;
         }
