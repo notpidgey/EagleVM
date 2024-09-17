@@ -10,12 +10,14 @@
 
 #include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/codec/zydis_helper.h"
+#include "eaglevm-core/disassembler/analysis/liveness.h"
 
 namespace eagle::ir
 {
-    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm)
+    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness)
     {
         dasm = seg_dasm;
+        dasm_liveness = liveness;
     }
 
     std::vector<preopt_block_ptr> ir_translator::translate()
@@ -61,6 +63,7 @@ namespace eagle::ir
         const dasm::block_end_reason end_reason = bb->get_end_reason();
         const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
 
+        const auto liveness = dasm_liveness->analyze_block(bb);
         for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
         {
             // use il x86 translator to translate the instruction to il
@@ -91,7 +94,7 @@ namespace eagle::ir
                 target_handler = handler_gen->get_handler_id(il_operands);
             }
 
-            bool translate_sucess = target_handler != std::nullopt;
+            bool translate_success = target_handler != std::nullopt;
             if (target_handler)
             {
                 // we know that a valid handler exists for this instruction
@@ -103,17 +106,22 @@ namespace eagle::ir
                 auto create_lifter = instruction_lifters[mnemonic];
                 const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
 
-                translate_sucess = lifter->translate_to_il(current_rva);
-                if (translate_sucess)
+                translate_success = lifter->translate_to_il(current_rva);
+                if (translate_success)
                 {
                     // append basic block
                     block_ptr result_block = lifter->get_block();
+                    auto out_liveness = std::get<1>(liveness[i]);
+                    auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
+
+                    auto relevant_out = inst_flags_liveness - out_liveness;
+                    auto relevant_out_flags = relevant_out.get_flags();
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
                     if (current_block->get_block_state() == x86_block)
                     {
-                        // the current block is a x86 block
+                        // the current block is an x86 block
                         const block_ptr previous = current_block;
                         block_info->body.push_back(current_block);
 
@@ -128,7 +136,7 @@ namespace eagle::ir
                 }
             }
 
-            if (!translate_sucess)
+            if (!translate_success)
             {
                 if (current_block->get_block_state() == vm_block)
                 {

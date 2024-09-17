@@ -4,6 +4,7 @@
 #include "commands/cmd_branch.h"
 
 #include "eaglevm-core/disassembler/basic_block.h"
+#include "eaglevm-core/disassembler/analysis/liveness.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
 
@@ -24,7 +25,7 @@ namespace eagle::ir
     class ir_translator
     {
     public:
-        explicit ir_translator(dasm::segment_dasm_ptr seg_dasm);
+        explicit ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness);
 
         std::vector<preopt_block_ptr> translate();
         std::vector<flat_block_vmid> flatten(
@@ -42,6 +43,7 @@ namespace eagle::ir
 
     private:
         dasm::segment_dasm_ptr dasm;
+        dasm::analysis::liveness* dasm_liveness;
         std::unordered_map<dasm::basic_block_ptr, preopt_block_ptr> bb_map;
 
         void optimize_heads(

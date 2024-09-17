@@ -7,6 +7,7 @@
 #include "eaglevm-core/codec/zydis_helper.h"
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
+#include "eaglevm-core/virtual_machine/ir/x86/models/flags.h"
 
 namespace eagle::ir::lifter
 {
@@ -27,9 +28,9 @@ namespace eagle::ir::lifter
     {
     public:
         virtual ~base_x86_translator() = default;
-        explicit base_x86_translator( codec::dec::inst_info decode, uint64_t rva);
+        explicit base_x86_translator(codec::dec::inst_info decode, uint64_t rva);
 
-        virtual bool translate_to_il(uint64_t original_rva);
+        virtual bool translate_to_il(uint64_t original_rva, x86_cpu_flag flags = NONE);
         block_ptr get_block();
 
     protected:

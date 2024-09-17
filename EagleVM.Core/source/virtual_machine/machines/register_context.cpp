@@ -66,7 +66,12 @@ namespace eagle::virt
         blocked_stores.clear();
     }
 
-    std::unordered_set<codec::reg> register_context::get_all_availiable()
+    uint16_t register_context::get_available_count() const
+    {
+        return avaliable_stores.size();
+    }
+
+    std::unordered_set<codec::reg> register_context::get_all_available()
     {
         return avaliable_stores;
     }

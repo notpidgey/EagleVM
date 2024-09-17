@@ -18,7 +18,7 @@ namespace eagle::ir::lifter
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    bool base_x86_translator::translate_to_il(uint64_t original_rva)
+    bool base_x86_translator::translate_to_il(uint64_t original_rva, x86_cpu_flag flags)
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {

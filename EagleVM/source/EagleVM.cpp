@@ -263,7 +263,7 @@ int main(int argc, char* argv[])
         dasm->generate_blocks();
 
         dasm::analysis::liveness seg_live(dasm);
-        seg_live.compute_use_def();
+        seg_live.compute_blocks_use_def();
         seg_live.analyze_cross_liveness(dasm->blocks.back());
 
         for (auto& block : dasm->blocks)
@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
                     printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
                         bitfield_to_bitstring(res, 8).c_str());
 
-            auto block_liveness = seg_live.analyze_block_liveness(block);
+            auto block_liveness = seg_live.analyze_block(block);
 
             printf("insts: \n");
             for (size_t idx = 0; auto& inst : block->decoded_insts)
@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
         std::printf("[>] dasm found %llu basic blocks\n", dasm->blocks.size());
         std::cout << std::endl;
 
-        ir::ir_translator ir_trans(dasm);
+        ir::ir_translator ir_trans(dasm, &seg_live);
         ir::preopt_block_vec preopt = ir_trans.translate();
 
         // here we assign vms to each block
@@ -354,8 +354,8 @@ int main(int argc, char* argv[])
         for (auto& [block, vmid] : vm_blocks)
             vm_id_map[vmid].append_range(block);
 
-        for (auto& [vmid, vmid_blocks] : vm_id_map)
-            ir::obfuscator::create_merged_handlers(vmid_blocks);
+        //for (auto& [vmid, vmid_blocks] : vm_id_map)
+        //    ir::obfuscator::create_merged_handlers(vmid_blocks);
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
@@ -378,7 +378,7 @@ int main(int argc, char* argv[])
                 block_labels[block] = asmb::code_label::create();
 
         asmb::code_label_ptr entry_point = asmb::code_label::create();
-        for (const auto& [blocks, vm_id] : vm_blocks)
+        for (const auto& [vm_id, blocks] : vm_id_map)
         {
             // we create a new machine based off of the same settings to make things more annoying
             // but the same machine could be used :)

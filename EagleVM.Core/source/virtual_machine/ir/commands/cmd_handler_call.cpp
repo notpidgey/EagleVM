@@ -34,6 +34,16 @@ namespace eagle::ir
         return h_sig;
     }
 
+    x86_cpu_flag cmd_handler_call::get_relevant_flag() const
+    {
+        return relevant_flags;
+    }
+
+    void cmd_handler_call::set_relevant_flags(const x86_cpu_flag flags)
+    {
+        relevant_flags = flags;
+    }
+
     bool cmd_handler_call::is_similar(const std::shared_ptr<base_command>& other)
     {
         const auto cmd = std::static_pointer_cast<cmd_handler_call>(other);

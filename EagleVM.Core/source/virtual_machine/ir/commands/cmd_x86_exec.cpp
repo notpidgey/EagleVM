@@ -20,20 +20,6 @@ namespace eagle::ir
 
     bool cmd_x86_exec::is_similar(const std::shared_ptr<base_command>& other)
     {
-        const auto cmd = std::static_pointer_cast<cmd_x86_exec>(other);
-
-        auto req1 = get_request();
-        auto req2 = get_request();
-
-        bool is_same = false;
-        if (std::holds_alternative<codec::enc::req>(req1) && std::holds_alternative<codec::enc::req>(req2))
-        {
-            codec::enc::req r1 = std::get<codec::enc::req>(req1);
-            codec::enc::req r2 = std::get<codec::enc::req>(req2);
-
-            is_same = !memcmp(&r1, &r2, sizeof(r1));
-        }
-
-        return is_same && base_command::is_similar(other);
+        return false;
     }
 }
