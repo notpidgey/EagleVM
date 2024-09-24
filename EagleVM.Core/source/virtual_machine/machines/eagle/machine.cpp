@@ -61,8 +61,15 @@ namespace eagle::virt::eg
 
         for (size_t i = 0; i < command_count; i++)
         {
+            const auto cnt = reg_64_container->get_available_count();
+
             const ir::base_command_ptr command = block->at(i);
+            if (command->unique_id == 3083)
+                __debugbreak();
+
             handle_cmd(code, command);
+
+            VM_ASSERT(cnt == reg_64_container->get_available_count(), "register was not deallocated");
         }
 
         reg_64_container->reset();

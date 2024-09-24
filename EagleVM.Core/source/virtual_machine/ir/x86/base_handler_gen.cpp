@@ -2,7 +2,7 @@
 
 namespace eagle::ir::handler
 {
-    ir_insts base_handler_gen::gen_handler(const std::string& target_handler_id)
+    ir_insts base_handler_gen::gen_handler(const uint64_t target_handler_id)
     {
         std::optional<handler_sig> something = std::nullopt;
         for(const auto& [size, handler_id] : build_options)
@@ -26,7 +26,7 @@ namespace eagle::ir::handler
         return { };
     }
 
-    std::optional<std::string> base_handler_gen::get_handler_id(const op_params& target_operands)
+    std::optional<uint64_t> base_handler_gen::get_handler_id(const op_params& target_operands)
     {
         const auto target_operands_len = target_operands.size();
         for (const auto& [entries, handler_id] : valid_operands)
@@ -59,7 +59,7 @@ namespace eagle::ir::handler
         return std::nullopt;
     }
 
-    std::optional<std::string> base_handler_gen::get_handler_id(const handler_params& target_build)
+    std::optional<uint64_t> base_handler_gen::get_handler_id(const handler_params& target_build)
     {
         for(auto [params, handler_id] : build_options)
             if(params == target_build)
@@ -68,7 +68,7 @@ namespace eagle::ir::handler
         return std::nullopt;
     }
 
-    std::optional<handler_build> base_handler_gen::get_handler_build(const std::string& target_handler_id) const
+    std::optional<handler_build> base_handler_gen::get_handler_build(uint64_t target_handler_id) const
     {
         for (handler_build entry : build_options)
             if (entry.handler_id == target_handler_id)

@@ -2,27 +2,9 @@
 
 namespace eagle::ir
 {
-    cmd_x86_dynamic::cmd_x86_dynamic(const codec::mnemonic mnemonic, const variant_op& op1, const variant_op& op2)
-        : base_command(command_type::vm_exec_dynamic_x86), mnemonic(mnemonic)
+    cmd_x86_dynamic::cmd_x86_dynamic(const codec::mnemonic mnemonic, std::initializer_list<variant_op> ops)
+        : base_command(command_type::vm_exec_dynamic_x86), mnemonic(mnemonic), operands(ops)
     {
-        operands.push_back(op1);
-        operands.push_back(op2);
-    }
-
-    cmd_x86_dynamic::cmd_x86_dynamic(const codec::mnemonic mnemonic, const variant_op& op1)
-        : base_command(command_type::vm_exec_dynamic_x86), mnemonic(mnemonic)
-    {
-        operands.push_back(op1);
-    }
-
-    codec::mnemonic cmd_x86_dynamic::get_mnemonic() const
-    {
-        return mnemonic;
-    }
-
-    std::vector<variant_op> cmd_x86_dynamic::get_operands()
-    {
-        return operands;
     }
 
     bool cmd_x86_dynamic::is_similar(const std::shared_ptr<base_command>& other)

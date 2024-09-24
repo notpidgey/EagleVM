@@ -211,6 +211,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/flags.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/handler_build.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/handler_op.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/hash_string.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/lift_action.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/models/op_signature.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/x86/util.h"

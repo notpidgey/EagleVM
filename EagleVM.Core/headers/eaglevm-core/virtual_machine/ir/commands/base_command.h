@@ -35,10 +35,14 @@ namespace eagle::ir
     class base_command : public std::enable_shared_from_this<base_command>
     {
     public:
+        virtual ~base_command() = default;
         explicit base_command(const command_type command)
             : command(command)
         {
             static uint32_t id = 0;
+
+            if (id == 3083)
+                __debugbreak();
 
             unique_id = id;
             unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
@@ -55,12 +59,11 @@ namespace eagle::ir
             return other->get_command_type() == get_command_type();
         }
 
-    protected:
-        command_type command;
-
         uint32_t unique_id;
         std::string unique_id_string;
 
+    protected:
+        command_type command;
         std::vector<discrete_store_ptr> release_list;
 
     private:

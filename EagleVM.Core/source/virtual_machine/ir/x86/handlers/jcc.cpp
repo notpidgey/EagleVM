@@ -1,5 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/jcc.h"
 
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
+#define HS(x) hash_string::hash(x)
+
 namespace eagle::ir
 {
     namespace handler
@@ -35,9 +38,100 @@ namespace eagle::ir
             };
         }
 
-        ir_insts jcc::gen_handler(handler_sig signature)
+        ir_insts jcc::gen_handler(const uint64_t target_handler_id)
         {
-            switch(signature.)
+            // method inspired by vmprotect 2
+            // https://blog.back.engineering/21/06/2021/#vmemu-virtual-branching
+
+            const discrete_store_ptr branch_one = discrete_store::create(ir_size::bit_64);
+            const discrete_store_ptr branch_two = discrete_store::create(ir_size::bit_64);
+            const discrete_store_ptr flags = discrete_store::create(ir_size::bit_64);
+
+            auto create_default_flag = [&](uint32_t flag) -> ir_insts
+            {
+                unsigned long bit_idx = 0;
+                _BitScanForward(&bit_idx, flag);
+
+                uint8_t shift_count = 0;
+                codec::mnemonic shift_dir = codec::m_shr;
+                if (bit_idx < 8)
+                {
+                    shift_count = 8 - bit_idx;
+                    shift_dir = codec::m_shl;
+                }
+                else
+                {
+                    shift_count = bit_idx - 8;
+                }
+
+                return {
+                    std::make_shared<cmd_rflags_push>(),
+
+                    std::make_shared<cmd_rflags_load>(),
+                    std::make_shared<cmd_pop>(flags, ir_size::bit_64),
+
+                    // get the relevant flag
+                    std::make_shared<cmd_x86_dynamic>(codec::m_and, flags, flag),
+                    std::make_shared<cmd_x86_dynamic>(shift_dir, flags, shift_count),
+
+                    std::make_shared<cmd_x86_dynamic>(codec::m_mov, flags, [vsp + flags * 1]),
+                    std::make_shared<cmd_x86_dynamic>(codec::m_add, reg_vm::vsp, 0x10),
+
+                    std::make_shared<cmd_rflags_pop>(),
+                    std::make_shared<cmd_x86_dynamic>(codec::m_jmp, flags)
+                };
+            };
+
+            switch (target_handler_id)
+            {
+                // Overflow and no overflow cases
+                case HS("jo rel32"):
+                case HS("jno rel32"):
+                    return create_default_flag(ZYDIS_CPUFLAG_OF);
+
+                // Sign and no sign cases
+                case HS("js rel32"):
+                case HS("jns rel32"):
+                    return create_default_flag(ZYDIS_CPUFLAG_SF);
+
+                // Equal (zero) and not equal (not zero) cases
+                case HS("je rel32"):
+                case HS("jne rel32"):
+                return create_default_flag(ZYDIS_CPUFLAG_ZF);
+
+                // Carry and no carry cases
+                case HS("jc rel32"):
+                case HS("jnc rel32"):
+                return create_default_flag(ZYDIS_CPUFLAG_CF);
+
+                // Below and not below (above or equal) cases
+                case HS("jb rel32"):
+                case HS("jnb rel32"):
+                    return ...;
+
+                // Less and not less (greater or equal) cases
+                case HS("jl rel32"):
+                case HS("jnl rel32"):
+                    return ...;
+
+                // Less or equal and not less or equal (greater) cases
+                case HS("jle rel32"):
+                case HS("jnle rel32"):
+                    // Add specific handler code if needed
+                    break;
+
+                // Jump if CX/ECX is zero cases
+                case HS("jcxz rel32"):
+                case HS("jecxz rel32"):
+                    // Add specific handler code if needed
+                    break;
+
+                default:
+                    return base_handler_gen::gen_handler(target_handler_id);
+            }
+
+            // Return handler or perform additional logic here if needed
+            return ir_insts();
         }
     }
 

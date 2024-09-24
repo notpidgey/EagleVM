@@ -8,7 +8,7 @@ namespace eagle::ir::handler
     {
     public:
         jcc();
-        ir_insts gen_handler(handler_sig signature) override;
+        ir_insts gen_handler(uint64_t target_handler_id) override;
     };
 }
 
