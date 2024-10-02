@@ -115,6 +115,8 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> build_push();
         std::vector<asmb::code_container_ptr> build_pop();
 
+        std::vector<asmb::code_container_ptr> build_jcc();
+
     private:
         std::weak_ptr<machine> machine_inst;
         settings_ptr settings;
@@ -131,6 +133,9 @@ namespace eagle::virt::eg
 
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_push;
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_pop;
+
+        using jcc_mask_expected = std::pair<uint32_t, uint32_t>;
+        std::unordered_map<jcc_mask_expected, tagged_handler_data_pair> vm_jcc;
 
         std::vector<tagged_handler_data_pair> register_load_handlers;
         std::vector<tagged_handler_data_pair> register_store_handlers;

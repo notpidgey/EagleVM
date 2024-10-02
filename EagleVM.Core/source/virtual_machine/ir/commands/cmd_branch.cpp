@@ -2,14 +2,14 @@
 
 namespace eagle::ir
 {
-    cmd_branch::cmd_branch(const il_exit_result& result_info, const exit_condition condition)
-        : base_command(command_type::vm_branch), condition(condition)
+    cmd_branch::cmd_branch(const il_exit_result& result_info)
+        : base_command(command_type::vm_branch), condition(exit_condition::jmp), inverted(false)
     {
         info.push_back(result_info);
     }
 
-    cmd_branch::cmd_branch(const std::vector<il_exit_result>& result_info, const exit_condition condition)
-        : base_command(command_type::vm_branch), condition(condition)
+    cmd_branch::cmd_branch(const std::vector<il_exit_result>& result_info, const exit_condition condition, const bool invert)
+        : base_command(command_type::vm_branch), condition(condition), inverted(invert)
     {
         VM_ASSERT(result_info.size() <= 2, "cannot have more than 2 exiting branches");
         for (auto& exit : result_info)
@@ -30,6 +30,11 @@ namespace eagle::ir
     il_exit_result& cmd_branch::get_condition_special()
     {
         return info.front();
+    }
+
+    bool cmd_branch::get_inverted()
+    {
+        return inverted;
     }
 
     bool cmd_branch::branch_visits(const vmexit_rva rva)

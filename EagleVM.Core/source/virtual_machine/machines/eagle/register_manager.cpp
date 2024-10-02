@@ -108,6 +108,7 @@ namespace eagle::virt::eg
             points.push_back(64); // ending point (inclusive)
 
             constexpr auto num_ranges = 2;
+            //  TODO: remove all these comments?
             //for (uint16_t i = 0; i < num_ranges - 1; ++i)
             //{
             //    uint16_t point;

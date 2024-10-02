@@ -52,7 +52,7 @@ namespace eagle::ir
         // entry
         //
         entry->push_back(std::make_shared<cmd_vm_enter>());
-        entry->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+        entry->push_back(std::make_shared<cmd_branch>(current_block));
 
         //
         // body
@@ -128,7 +128,7 @@ namespace eagle::ir
                         current_block = std::make_shared<block_ir>(vm_block);
                         current_block->push_back(std::make_shared<cmd_vm_enter>());
 
-                        previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+                        previous->push_back(std::make_shared<cmd_branch>(current_block));
                     }
 
                     current_block->set_block_state(vm_block);
@@ -146,7 +146,7 @@ namespace eagle::ir
 
                     current_block = std::make_shared<block_ir>(x86_block);
                     previous->push_back(std::make_shared<cmd_vm_exit>());
-                    previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+                    previous->push_back(std::make_shared<cmd_branch>(current_block));
                 }
 
                 // handler does not exist
@@ -157,7 +157,7 @@ namespace eagle::ir
         }
 
         // jump to exiting block
-        current_block->push_back(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
+        current_block->push_back(std::make_shared<cmd_branch>(exit));
         block_info->body.push_back(current_block);
 
         //
@@ -167,8 +167,8 @@ namespace eagle::ir
             exit->push_back(std::make_shared<cmd_vm_exit>());
 
         std::vector<il_exit_result> exits;
-        exit_condition condition = exit_condition::none;
 
+        std::pair condition = { exit_condition::none, false };
         switch (end_reason)
         {
             case dasm::block_jump:
@@ -180,7 +180,7 @@ namespace eagle::ir
                 else
                     exits.emplace_back(bb_map[dasm->get_block(target)]->head);
 
-                condition = exit_condition::jmp;
+                condition = { exit_condition::jmp, false };
                 break;
             }
             case dasm::block_conditional_jump:
@@ -209,7 +209,12 @@ namespace eagle::ir
             }
         }
 
-        exit->push_back(std::make_shared<cmd_branch>(exits, condition));
+        exit->push_back(std::make_shared<cmd_branch>(
+            exits,
+            std::get<0>(condition),
+            std::get<1>(condition)
+        ));
+
         return block_info;
     }
 
@@ -436,58 +441,58 @@ namespace eagle::ir
         return bb_map[basic_block];
     }
 
-    exit_condition ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
+    std::pair<exit_condition, bool> ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
     {
         switch (mnemonic)
         {
-            case codec::m_jb:
-                return exit_condition::jb;
-            case codec::m_jbe:
-                return exit_condition::jbe;
-            case codec::m_jcxz:
-                return exit_condition::jcxz;
-            case codec::m_jecxz:
-                return exit_condition::jecxz;
-            case codec::m_jknzd:
-                return exit_condition::jknzd;
-            case codec::m_jkzd:
-                return exit_condition::jkzd;
-            case codec::m_jl:
-                return exit_condition::jl;
-            case codec::m_jle:
-                return exit_condition::jle;
-            case codec::m_jmp:
-                return exit_condition::jmp;
-            case codec::m_jnb:
-                return exit_condition::jnb;
-            case codec::m_jnbe:
-                return exit_condition::jnbe;
-            case codec::m_jnl:
-                return exit_condition::jnl;
-            case codec::m_jnle:
-                return exit_condition::jnle;
-            case codec::m_jno:
-                return exit_condition::jno;
-            case codec::m_jnp:
-                return exit_condition::jnp;
-            case codec::m_jns:
-                return exit_condition::jns;
-            case codec::m_jnz:
-                return exit_condition::jnz;
-            case codec::m_jo:
-                return exit_condition::jo;
-            case codec::m_jp:
-                return exit_condition::jp;
-            case codec::m_jrcxz:
-                return exit_condition::jrcxz;
-            case codec::m_js:
-                return exit_condition::js;
-            case codec::m_jz:
-                return exit_condition::jz;
+            // Overflow flag (OF)
+            case codec::m_jo: return { exit_condition::jo, false };
+            case codec::m_jno: return { exit_condition::jo, true };
+
+            // Sign flag (SF)
+            case codec::m_js: return { exit_condition::js, false };
+            case codec::m_jns: return { exit_condition::js, true };
+
+            // Zero flag (ZF)
+            case codec::m_jz: return { exit_condition::je, false };
+            case codec::m_jnz: return { exit_condition::je, true };
+
+            // Carry flag (CF)
+            case codec::m_jb: return { exit_condition::jb, false };
+            case codec::m_jnb: return { exit_condition::jb, true };
+
+            // Carry or Zero flag (CF or ZF)
+            case codec::m_jbe: return { exit_condition::jbe, false };
+            case codec::m_jnbe: return { exit_condition::jbe, true };
+
+            // Sign flag not equal to Overflow flag (SF != OF)
+            case codec::m_jl: return { exit_condition::jl, false };
+            case codec::m_jnl: return { exit_condition::jl, true };
+
+            // Zero flag or Sign flag not equal to Overflow flag (ZF or SF != OF)
+            case codec::m_jle: return { exit_condition::jle, false };
+            case codec::m_jnle: return { exit_condition::jle, true };
+
+            // Parity flag (PF)
+            case codec::m_jp: return { exit_condition::jp, false };
+            case codec::m_jnp: return { exit_condition::jp, true };
+
+            // CX/ECX/RCX register is zero
+            case codec::m_jcxz: return { exit_condition::jcxz, false };
+            case codec::m_jecxz: return { exit_condition::jecxz, false };
+            case codec::m_jrcxz: return { exit_condition::jrcxz, false };
+
+            // Unconditional jump
+            case codec::m_jmp: return { exit_condition::jmp, false };
+
+            // Conditions not in the enum, might need to be added
+            case codec::m_jknzd: return { exit_condition::none, false };
+            case codec::m_jkzd: return { exit_condition::none, false };
+
             default:
             {
                 VM_ASSERT("invalid conditional jump reached");
-                return exit_condition::none;
+                return { exit_condition::none, false };
             }
         }
     }

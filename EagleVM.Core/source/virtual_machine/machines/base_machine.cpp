@@ -138,6 +138,9 @@ namespace eagle::virt
             case ir::command_type::vm_branch:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_branch>(command));
                 break;
+            case ir::command_type::vm_jcc:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_jcc>(command));
+                break;
         }
     }
 

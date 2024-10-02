@@ -13,4 +13,5 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_sx.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_jcc.h"
 

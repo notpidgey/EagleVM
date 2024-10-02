@@ -59,7 +59,7 @@ namespace eagle::ir
         );
 
         preopt_block_ptr translate_block_split(dasm::basic_block_ptr bb);
-        exit_condition get_exit_condition(codec::mnemonic mnemonic);
+        static std::pair<exit_condition, bool> get_exit_condition(codec::mnemonic mnemonic);
         static void handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, uint64_t current_rva);
     };
 

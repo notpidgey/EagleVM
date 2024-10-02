@@ -152,8 +152,7 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        std::vector<std::pair<dynamic_instruction, asmb::code_label_ptr>> blah;
-        auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
+        auto write_jump = [&](ir::il_exit_result jump, const mnemonic mnemonic)
         {
             std::visit([&]<typename exit_type>(exit_type&& arg)
             {
@@ -175,6 +174,115 @@ namespace eagle::virt::eg
             }, jump);
         };
 
+        auto write_basic_jmp = [&](auto jcc_mask, bool pop_targets = true)
+        {
+            long index;
+            _BitScanForward(&index, jcc_mask);
+
+            mnemonic mnemonic;
+            if (index > 3)
+                mnemonic = m_shl;
+            else
+                mnemonic = m_shr;
+
+            auto scope = reg_64_container->create_scope();
+            auto [temp, actual] = scope.reserve<2>();
+
+            block->add({
+                // move the current flags to a register
+                encode(m_mov, ZREG(actual), ZMEMBD(rsp, -8, 8)),
+
+                // push the current flags so they dont get replaced
+                encode(m_pushfq),
+
+                // calculate single flag and move to bit 8
+                encode(m_mov, ZREG(temp), ZREG(actual)),
+                encode(m_and, ZREG(temp), ZIMMS(jcc_mask)),
+                encode(mnemonic, ZREG(temp), ZIMMS(std::abs(8 - index))),
+                encode(m_mov, ZREG(temp), ZMEMBI(VSP, temp, 1, 8)),
+
+                // restore current flags
+                encode(m_popfq),
+
+                // restore vm flags
+                encode(m_mov, ZMEMBD(rsp, -8, 8), ZREG(actual)),
+            });
+
+            if (pop_targets)
+            {
+                // pop results
+                block->add(
+                    encode(m_lea, ZREG(VSP), ZMEMBD(VSP, 2 * 8, 8))
+                );
+            }
+
+            block->add(
+                encode(m_jmp, ZREG(temp))
+            );
+        };
+
+        auto write_compare_jump = [&](auto flag_mask_one, auto flag_mask_two, bool pop_targets = true)
+        {
+            long index_first;
+            _BitScanForward(&index_first, flag_mask_one);
+
+            mnemonic mnemonic_first;
+            if (index_first > 3)
+                mnemonic_first = m_shl;
+            else
+                mnemonic_first = m_shr;
+
+            long index_second;
+            _BitScanForward(&index_second, flag_mask_two);
+
+            mnemonic mnemonic_second;
+            if (index_second > 3)
+                mnemonic_second = m_shl;
+            else
+                mnemonic_second = m_shr;
+
+            auto scope = reg_64_container->create_scope();
+            auto [temp_first, temp_second, actual] = scope.reserve<3>();
+
+            block->add({
+                // move the current flags to a register
+                encode(m_mov, ZREG(actual), ZMEMBD(rsp, -8, 8)),
+
+                // push the current flags so they don't get replaced
+                encode(m_pushfq),
+
+                // calculate single flag and move to bit 8
+                encode(m_mov, ZREG(temp_first), ZREG(actual)),
+                encode(m_and, ZREG(temp_first), ZIMMS(flag_mask_one)),
+                encode(mnemonic_first, ZREG(temp_first), ZIMMS(std::abs(8 - index_first))),
+
+                // calculate single flag and move to bit 8
+                encode(m_mov, ZREG(temp_second), ZREG(actual)),
+                encode(m_and, ZREG(temp_second), ZIMMS(flag_mask_two)),
+                encode(mnemonic_second, ZREG(temp_second), ZIMMS(std::abs(8 - index_second))),
+
+                encode(m_xor, ZREG(temp_first), ZREG(temp_second)),
+
+                // restore current flags
+                encode(m_popfq),
+
+                // restore vm flags
+                encode(m_mov, ZMEMBD(rsp, -8, 8), ZREG(actual)),
+            });
+
+            if (pop_targets)
+            {
+                // pop results
+                block->add(
+                    encode(m_lea, ZREG(VSP), ZMEMBD(VSP, 2 * 8, 8))
+                );
+            }
+
+            block->add(
+                encode(m_jmp, ZREG(temp_first))
+            );
+        };
+
         switch (cmd->get_condition())
         {
             case ir::exit_condition::jmp:
@@ -184,19 +292,46 @@ namespace eagle::virt::eg
 
                 break;
             }
+            case ir::exit_condition::jo:
+            {
+                write_basic_jmp(ZYDIS_CPUFLAG_OF);
+                break;
+            }
+            case ir::exit_condition::js:
+                write_basic_jmp(ZYDIS_CPUFLAG_SF);
+                break;
+            case ir::exit_condition::je:
+                write_basic_jmp(ZYDIS_CPUFLAG_ZF);
+                break;
+            case ir::exit_condition::jb:
+                write_basic_jmp(ZYDIS_CPUFLAG_CF);
+                break;
+            case ir::exit_condition::jbe:
+                write_basic_jmp(ZYDIS_CPUFLAG_CF, false);
+                write_basic_jmp(ZYDIS_CPUFLAG_ZF, true);
+                break;
+            case ir::exit_condition::jl:
+                write_basic_jmp(ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
+                break;
+            case ir::exit_condition::jle:
+                // requires jl to be implemented
+                break;
+            case ir::exit_condition::jp:
+                write_basic_jmp(ZYDIS_CPUFLAG_PF);
+                break;
+            case ir::exit_condition::jcxz:
+                // custom check if 0
+                break;
+            case ir::exit_condition::jecxz:
+                // custom check if 0
+                break;
+            case ir::exit_condition::jrcxz:
+                // custom check if 0
+                break;
             case ir::exit_condition::none:
             {
                 VM_ASSERT("invalid exit condition");
                 break;
-            }
-            default:
-            {
-                // conditional
-                const ir::il_exit_result conditional_jump = cmd->get_condition_special();
-                write_jump(conditional_jump, to_jump_mnemonic(cmd->get_condition()));
-
-                const ir::il_exit_result jump = cmd->get_condition_default();
-                write_jump(jump, m_jmp);
             }
         }
     }

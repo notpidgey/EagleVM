@@ -8,6 +8,7 @@
 namespace eagle::virt
 {
     using register_context_ptr = std::shared_ptr<class register_context>;
+
     class scope_register_manager
     {
     public:
@@ -15,6 +16,17 @@ namespace eagle::virt
         ~scope_register_manager();
 
         codec::reg reserve();
+
+        template <uint8_t U>
+        std::array<codec::reg, U> reserve()
+        {
+            std::array<codec::reg, U> arr = { };
+            for (auto i = 0; i < U; i++)
+                arr[i] = reserve();
+
+            return arr;
+        }
+
         std::vector<codec::reg> reserve_multiple(uint8_t count);
 
         void release(codec::reg reg);

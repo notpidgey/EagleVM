@@ -30,6 +30,7 @@ namespace eagle::ir
 
         vm_sx,
         vm_branch,
+        vm_jcc,
     };
 
     std::string command_to_string(command_type cmd);

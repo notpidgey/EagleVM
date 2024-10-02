@@ -33,7 +33,7 @@ namespace eagle::virt
     std::vector<codec::reg> scope_register_manager::reserve_multiple(const uint8_t count)
     {
         std::vector<codec::reg> result;
-        for(auto i = 0; i < count; i++)
+        for (auto i = 0; i < count; i++)
             result.push_back(reserve());
 
         return result;
@@ -49,7 +49,7 @@ namespace eagle::virt
 
     void scope_register_manager::release(const std::vector<codec::reg>& regs)
     {
-        for(const auto reg : regs)
+        for (const auto reg : regs)
             release(reg);
     }
 

@@ -21,6 +21,6 @@ namespace eagle::ir::lifter
         virtual bool translate_to_il(uint64_t original_rva, x86_cpu_flag flags = NONE);
 
     private:
-        static exit_condition get_exit_condition(const codec::mnemonic mnemonic);
+        static std::pair<exit_condition, bool> get_exit_condition(const codec::mnemonic mnemonic);
     };
 }
