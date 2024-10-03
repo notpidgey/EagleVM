@@ -152,188 +152,11 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        auto write_jump = [&](ir::il_exit_result jump, const mnemonic mnemonic)
-        {
-            std::visit([&]<typename exit_type>(exit_type&& arg)
-            {
-                using T = std::decay_t<exit_type>;
-                if constexpr (std::is_same_v<T, ir::vmexit_rva>)
-                {
-                    const ir::vmexit_rva vmexit_rva = arg;
-                    block->add(RECOMPILE(encode(mnemonic, ZJMPI(vmexit_rva))));
-                }
-                else if constexpr (std::is_same_v<T, ir::block_ptr>)
-                {
-                    const ir::block_ptr& target = arg;
+        // TODO: implement a real handler to do this instead of doing a pop
+        const auto reg_address = reg_64_container->get_any();
+        call_push(block, reg_address);
 
-                    const asmb::code_label_ptr label = get_block_label(target);
-                    VM_ASSERT(label != nullptr, "block contains missing context");
-
-                    block->add(RECOMPILE(encode(mnemonic, ZJMPR(label))));
-                }
-            }, jump);
-        };
-
-        auto write_basic_jmp = [&](auto jcc_mask, bool pop_targets = true)
-        {
-            long index;
-            _BitScanForward(&index, jcc_mask);
-
-            mnemonic mnemonic;
-            if (index > 3)
-                mnemonic = m_shl;
-            else
-                mnemonic = m_shr;
-
-            auto scope = reg_64_container->create_scope();
-            auto [temp, actual] = scope.reserve<2>();
-
-            block->add({
-                // move the current flags to a register
-                encode(m_mov, ZREG(actual), ZMEMBD(rsp, -8, 8)),
-
-                // push the current flags so they dont get replaced
-                encode(m_pushfq),
-
-                // calculate single flag and move to bit 8
-                encode(m_mov, ZREG(temp), ZREG(actual)),
-                encode(m_and, ZREG(temp), ZIMMS(jcc_mask)),
-                encode(mnemonic, ZREG(temp), ZIMMS(std::abs(8 - index))),
-                encode(m_mov, ZREG(temp), ZMEMBI(VSP, temp, 1, 8)),
-
-                // restore current flags
-                encode(m_popfq),
-
-                // restore vm flags
-                encode(m_mov, ZMEMBD(rsp, -8, 8), ZREG(actual)),
-            });
-
-            if (pop_targets)
-            {
-                // pop results
-                block->add(
-                    encode(m_lea, ZREG(VSP), ZMEMBD(VSP, 2 * 8, 8))
-                );
-            }
-
-            block->add(
-                encode(m_jmp, ZREG(temp))
-            );
-        };
-
-        auto write_compare_jump = [&](auto flag_mask_one, auto flag_mask_two, bool pop_targets = true)
-        {
-            long index_first;
-            _BitScanForward(&index_first, flag_mask_one);
-
-            mnemonic mnemonic_first;
-            if (index_first > 3)
-                mnemonic_first = m_shl;
-            else
-                mnemonic_first = m_shr;
-
-            long index_second;
-            _BitScanForward(&index_second, flag_mask_two);
-
-            mnemonic mnemonic_second;
-            if (index_second > 3)
-                mnemonic_second = m_shl;
-            else
-                mnemonic_second = m_shr;
-
-            auto scope = reg_64_container->create_scope();
-            auto [temp_first, temp_second, actual] = scope.reserve<3>();
-
-            block->add({
-                // move the current flags to a register
-                encode(m_mov, ZREG(actual), ZMEMBD(rsp, -8, 8)),
-
-                // push the current flags so they don't get replaced
-                encode(m_pushfq),
-
-                // calculate single flag and move to bit 8
-                encode(m_mov, ZREG(temp_first), ZREG(actual)),
-                encode(m_and, ZREG(temp_first), ZIMMS(flag_mask_one)),
-                encode(mnemonic_first, ZREG(temp_first), ZIMMS(std::abs(8 - index_first))),
-
-                // calculate single flag and move to bit 8
-                encode(m_mov, ZREG(temp_second), ZREG(actual)),
-                encode(m_and, ZREG(temp_second), ZIMMS(flag_mask_two)),
-                encode(mnemonic_second, ZREG(temp_second), ZIMMS(std::abs(8 - index_second))),
-
-                encode(m_xor, ZREG(temp_first), ZREG(temp_second)),
-
-                // restore current flags
-                encode(m_popfq),
-
-                // restore vm flags
-                encode(m_mov, ZMEMBD(rsp, -8, 8), ZREG(actual)),
-            });
-
-            if (pop_targets)
-            {
-                // pop results
-                block->add(
-                    encode(m_lea, ZREG(VSP), ZMEMBD(VSP, 2 * 8, 8))
-                );
-            }
-
-            block->add(
-                encode(m_jmp, ZREG(temp_first))
-            );
-        };
-
-        switch (cmd->get_condition())
-        {
-            case ir::exit_condition::jmp:
-            {
-                const ir::il_exit_result jump = cmd->get_condition_default();
-                write_jump(jump, m_jmp);
-
-                break;
-            }
-            case ir::exit_condition::jo:
-            {
-                write_basic_jmp(ZYDIS_CPUFLAG_OF);
-                break;
-            }
-            case ir::exit_condition::js:
-                write_basic_jmp(ZYDIS_CPUFLAG_SF);
-                break;
-            case ir::exit_condition::je:
-                write_basic_jmp(ZYDIS_CPUFLAG_ZF);
-                break;
-            case ir::exit_condition::jb:
-                write_basic_jmp(ZYDIS_CPUFLAG_CF);
-                break;
-            case ir::exit_condition::jbe:
-                write_basic_jmp(ZYDIS_CPUFLAG_CF, false);
-                write_basic_jmp(ZYDIS_CPUFLAG_ZF, true);
-                break;
-            case ir::exit_condition::jl:
-                write_basic_jmp(ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
-                break;
-            case ir::exit_condition::jle:
-                // requires jl to be implemented
-                break;
-            case ir::exit_condition::jp:
-                write_basic_jmp(ZYDIS_CPUFLAG_PF);
-                break;
-            case ir::exit_condition::jcxz:
-                // custom check if 0
-                break;
-            case ir::exit_condition::jecxz:
-                // custom check if 0
-                break;
-            case ir::exit_condition::jrcxz:
-                // custom check if 0
-                break;
-            case ir::exit_condition::none:
-            {
-                VM_ASSERT("invalid exit condition");
-                break;
-            }
-        }
+        block->add(encode(m_jmp, ZREG(reg_address)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
@@ -410,50 +233,50 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
     {
         // call ia32 handler for push
-        switch (cmd->get_push_type())
+        auto push_val = cmd->get_value();
+
+        scope_register_manager scope = reg_64_container->create_scope();
+        std::visit([&]<typename exit_type>(exit_type&& arg)
         {
-            case ir::info_type::vm_register:
+            using T = std::decay_t<exit_type>;
+            if constexpr (std::is_same_v<T, uint64_t>)
             {
-                const ir::reg_vm store = cmd->get_value_register();
-                const reg target_reg = reg_vm_to_register(store);
+                const uint64_t immediate_value = arg;
 
-                call_push(block, target_reg);
-                break;
-            }
-            case ir::info_type::vm_temp_register:
-            {
-                const ir::discrete_store_ptr store = cmd->get_value_temp_register();
-                reg_64_container->assign(store);
-
-                call_push(block, store);
-                break;
-            }
-            case ir::info_type::immediate:
-            {
-                scope_register_manager scope = reg_64_container->create_scope();
                 const reg temp_reg = scope.reserve();
-                block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(cmd->get_value_immediate())));
-
+                block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
-                break;
             }
-            case ir::info_type::address:
+            else if constexpr (std::is_same_v<T, ir::block_ptr>)
             {
-                const uint64_t constant = cmd->get_value_immediate();
+                const ir::block_ptr& target = arg;
 
-                scope_register_manager scope = reg_64_container->create_scope();
+                const asmb::code_label_ptr label = get_block_label(target);
+                VM_ASSERT(label != nullptr, "block contains missing context");
+
                 const reg temp_reg = scope.reserve();
-
-                block->add(encode(m_lea, ZREG(temp_reg), ZMEMBD(VBASE, constant, 8)));
-                call_push(block, temp_reg);
-                break;
+                block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
+                call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
             }
-            default:
+            else if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
+            {
+                const ir::discrete_store_ptr& target = arg;
+                VM_ASSERT(target->get_finalized(), "label must be finalized before pushing");
+
+                call_push(block, get_bit_version(target->get_store_register(), to_reg_size(cmd->get_size())));
+            }
+            else if constexpr (std::is_same_v<T, ir::reg_vm>)
+            {
+                const ir::reg_vm& target = arg;
+
+                const auto vm_reg = reg_vm_to_register(target);
+                call_push(block, vm_reg);
+            }
+            else
             {
                 VM_ASSERT("reached invalid stack_type for push command");
-                break;
             }
-        }
+        }, push_val);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr&)
@@ -541,7 +364,7 @@ namespace eagle::virt::eg
         else
         {
             block->add(RECOMPILE_CHUNK([=](uint64_t)
-            {
+                {
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
@@ -554,7 +377,7 @@ namespace eagle::virt::eg
                 address_gen.push_back(encode(m_ret));
 
                 return codec::compile_queue(address_gen);
-            }));
+                }));
         }
 
         block->bind(ret);
@@ -573,33 +396,39 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
     {
-        const mnemonic mnemonic = cmd->get_mnemonic();
-        std::vector<ir::variant_op> operands = cmd->get_operands();
-
-        enc::req request = create_encode_request(mnemonic);
-        for (ir::variant_op& op : operands)
+        const ir::encoder::encoder& encoder = cmd->get_encoder();
+        ir::encoder::val_var_resolver resolver = [this](ir::encoder::val_variant& arg) -> reg
         {
-            std::visit([this]<typename reg_type>(reg_type&& arg)
+            reg result = none;
+            std::visit([&, this]<typename val_type>(val_type&& type_arg)
             {
-                if constexpr (std::is_same_v<std::decay_t<reg_type>, ir::discrete_store_ptr>)
+                if constexpr (std::is_same_v<std::decay_t<val_type>, ir::discrete_store_ptr>)
                 {
-                    const ir::discrete_store_ptr& store = arg;
+                    const ir::discrete_store_ptr& store = type_arg;
                     reg_64_container->assign(store);
-                }
-            }, op);
 
-            std::visit([&request]<typename reg_type>(reg_type&& arg)
-            {
-                using T = std::decay_t<reg_type>;
-                if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
+                    result = store->get_store_register();
+                }
+                else if constexpr (std::is_same_v<std::decay_t<val_type>, ir::reg_vm>)
                 {
-                    const ir::discrete_store_ptr& store = arg;
-                    add_op(request, ZREG(get_bit_version(store->get_store_register(), to_reg_size(store->get_store_size()))));
+                    const ir::reg_vm& store = type_arg;
+                    result = reg_vm_to_register(store);
                 }
-            }, op);
-        }
+                else if constexpr (std::is_same_v<std::decay_t<val_type>, uint64_t>)
+                {
+                    // we should not be translating uint64_t
+                    VM_ASSERT("unknown val_type translated");
+                }
+                else
+                {
+                    VM_ASSERT("unknown val_type translated");
+                }
+            }, arg);
 
-        block->add(request);
+            return result;
+        };
+
+        block->add(encoder.create(resolver));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)

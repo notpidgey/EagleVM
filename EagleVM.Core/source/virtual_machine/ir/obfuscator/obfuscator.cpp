@@ -34,22 +34,7 @@ namespace eagle::ir
                 }
             }
 
-            // false in
-            const auto next_cmd_type = ir_body.front()->at(0)->get_command_type();
-            if (next_cmd_type == command_type::vm_exec_x86 || next_cmd_type == command_type::vm_exec_dynamic_x86)
-                false_in->push_back(std::make_shared<cmd_vm_exit>());
 
-            false_in->push_back(std::make_shared<cmd_branch>(ir_body.front(), exit_condition::jmp));
-            ir_body.insert(ir_body.begin(), false_in);
-
-            // false out
-            // this code is fucking insane
-            VM_ASSERT(ir_body.back()->size() >= 2, "back block must  contain greater than 2 elements");
-
-            const auto back_command_type = ir_body.back()->at(ir_body.size() - 2)->get_command_type();
-            if (back_command_type != command_type::vm_exec_dynamic_x86 && back_command_type != command_type::vm_exec_x86)
-            {
-            }
         }
     }
 

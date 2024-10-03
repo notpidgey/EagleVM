@@ -22,5 +22,7 @@ namespace eagle::ir::lifter
 
     private:
         static std::pair<exit_condition, bool> get_exit_condition(const codec::mnemonic mnemonic);
+        static void write_basic_jump(uint64_t jcc_mask, bool pop_targets = true);
+        static void write_compare_jump(uint64_t flag_mask_one, uint64_t flag_mask_two, bool pop_targets = true);
     };
 }

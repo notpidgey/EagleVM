@@ -10,14 +10,13 @@
 namespace eagle::ir::encoder
 {
     using val_variant = std::variant<std::monostate, reg_vm, discrete_store_ptr, uint64_t>;
+    using val_var_resolver = codec::reg(val_variant&);
 
     class operand
     {
     public:
         virtual ~operand() = default;
-
-        template <typename FunResolve>
-        virtual void build(codec::enc::req& req, FunResolve resolver) = 0;
+        virtual void build(codec::enc::req& req, val_var_resolver& resolver) = 0;
     };
 
     // Operand for memory operations
@@ -37,12 +36,11 @@ namespace eagle::ir::encoder
             VM_ASSERT(size != ir_size::none, "Size must not be empty");
         }
 
-        template <typename FunResolve>
-        void build(codec::enc::req& req, FunResolve resolver) override
+        void build(codec::enc::req& req, const val_var_resolver& resolver) override
         {
             codec::enc::op_mem mem{ };
-            mem.base = resolver(base_);
-            mem.index = resolver(index_);
+            mem.base = static_cast<codec::zydis_register>(resolver(base_));
+            mem.index = static_cast<codec::zydis_register>(resolver(index_));
             mem.scale = scale_;
             mem.size = static_cast<uint16_t>(size_);
 
@@ -65,11 +63,10 @@ namespace eagle::ir::encoder
         {
         }
 
-        template <typename FunResolve>
-        void build(codec::enc::req& req, FunResolve resolver) override
+        void build(codec::enc::req& req, const val_var_resolver& resolver) override
         {
             codec::enc::op_reg op_reg{ };
-            op_reg.value = resolver(reg_);
+            op_reg.value = static_cast<codec::zydis_register>(resolver(reg_));
 
             codec::add_op(req, op_reg);
         }
@@ -87,8 +84,7 @@ namespace eagle::ir::encoder
         {
         }
 
-        template <typename FunResolve>
-        void build(codec::enc::req& req, FunResolve) override
+        void build(codec::enc::req& req, val_var_resolver&) override
         {
             codec::enc::op_imm im{ };
             im.s = imm_;
@@ -110,14 +106,23 @@ namespace eagle::ir::encoder
         {
         }
 
-        template <typename FunResolve>
-        codec::enc::req create(FunResolve resolver)
+        codec::enc::req create(const val_var_resolver& resolver) const
         {
             auto req = encode(mnemonic_);
             for (const auto& op : operands_)
                 op->build(req, resolver);
 
             return req;
+        }
+
+        codec::mnemonic get_mnemonic() const
+        {
+            return mnemonic_;
+        }
+
+        std::vector<std::shared_ptr<operand>> get_operands()
+        {
+            return operands_;
         }
 
     private:
