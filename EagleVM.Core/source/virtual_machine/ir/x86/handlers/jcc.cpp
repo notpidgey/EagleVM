@@ -2,6 +2,7 @@
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
+#include "eaglevm-core/virtual_machine/ir/x86/util.h"
 #define HS(x) hash_string::hash(x)
 
 namespace eagle::ir
@@ -51,33 +52,49 @@ namespace eagle::ir
         bool jcc::translate_to_il(const uint64_t original_rva, const x86_cpu_flag flags)
         {
             const auto [condition, inverted] = get_exit_condition(static_cast<codec::mnemonic>(inst.mnemonic));
-            switch(condition)
+            switch (condition)
             {
-                case exit_condition::none:
-                    break;
                 case exit_condition::jo:
+                    write_basic_jump(ZYDIS_CPUFLAG_OF, { });
                     break;
                 case exit_condition::js:
+                    write_basic_jump(ZYDIS_CPUFLAG_SF, { });
                     break;
                 case exit_condition::je:
+                    write_basic_jump(ZYDIS_CPUFLAG_ZF, { });
                     break;
                 case exit_condition::jb:
+                    write_basic_jump(ZYDIS_CPUFLAG_CF, { });
                     break;
                 case exit_condition::jbe:
+                    write_bitwise_compare(codec::m_or, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_ZF, { });
                     break;
                 case exit_condition::jl:
+                    write_bitwise_compare(codec::m_xor, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF, { });
                     break;
                 case exit_condition::jle:
+                    write_jle()
                     break;
                 case exit_condition::jp:
+                    write_basic_jump(ZYDIS_CPUFLAG_PF, { });
                     break;
                 case exit_condition::jcxz:
+                    write_check_register(codec::reg::cx, { });
                     break;
                 case exit_condition::jecxz:
+                    write_check_register(codec::reg::ecx, { });
                     break;
                 case exit_condition::jrcxz:
+                    write_check_register(codec::reg::rcx, { });
                     break;
                 case exit_condition::jmp:
+                    block->push_back({
+                        std::make_shared<cmd_push>(),
+                        std::make_shared<cmd_branch>()
+                    });
+                    break;
+                default:
+                    VM_ASSERT("invalid jump condition");
                     break;
             }
 
@@ -86,42 +103,43 @@ namespace eagle::ir
             return true;
         }
 
-        std::pair<exit_condition, bool> jcc::get_exit_condition(const codec::mnemonic mnemonic)
+        void jcc::write_basic_jump(uint64_t jcc_mask, std::array<il_exit_result, 2> exits) const
         {
-
-        }
-
-        void jcc::write_basic_jump(uint64_t jcc_mask, bool pop_targets)
-        {
-            std::array<il_exit_result, 2> exits;
-
             long index;
-            _BitScanForward(&index, jcc_mask);
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index), jcc_mask);
 
-            codec::mnemonic mnemonic;
+            base_command_ptr shift_cmd;
             if (index > 3)
-                mnemonic = codec::m_shl;
+                shift_cmd = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
             else
-                mnemonic = codec::m_shr;
+                shift_cmd = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            auto get_push_v = [](il_exit_result& exit) -> push_v
+            {
+                return std::visit([](auto&& arg)
+                {
+                    return push_v{ std::forward<decltype(arg)>(arg) };
+                }, exit);
+            };
 
             block->push_back({
                 // push the two branches
-                std::shared_ptr<cmd_push>(exits[0]),
-                std::shared_ptr<cmd_push>(exits[1]),
+                std::make_shared<cmd_push>(get_push_v(exits[0]), ir_size::bit_64),
+                std::make_shared<cmd_push>(get_push_v(exits[1]), ir_size::bit_64),
 
                 // load current rsp
                 std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
 
                 // load flags onto the stack
-                std::shared_ptr<cmd_rflags_load>(),
+                std::make_shared<cmd_rflags_load>(),
 
                 // mask the single flag
-                std::make_shared<cmd_push>(jcc_mask),
-                // TODO: std::make_shared<cmd_handler_call>( cmd_and )
+                std::make_shared<cmd_push>(jcc_mask, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
 
                 // shift right/left to bit 3
-                std::make_shared<cmd_push>(std::abs(8 - index)),
-                // TODO: std::make_shared<cmd_handler_call>( cmd_sh? )
+                std::make_shared<cmd_push>(std::abs(3 - index), ir_size::bit_64),
+                shift_cmd,
 
                 // add: rsp + disp
                 std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
@@ -134,8 +152,237 @@ namespace eagle::ir
             });
         }
 
-        void jcc::write_compare_jump(uint64_t flag_mask_one, uint64_t flag_mask_two, bool pop_targets)
+        void jcc::write_bitwise_compare(codec::mnemonic mnemonic, uint64_t flag_mask_one, uint64_t flag_mask_two,
+            std::array<il_exit_result, 2> exits) const
         {
+            long index_one;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index_one), flag_mask_one);
+
+            base_command_ptr shift_cmd_one;
+            if (index_one > 3)
+                shift_cmd_one = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd_one = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            long index_two;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index_two), flag_mask_one);
+
+            base_command_ptr shift_cmd_second;
+            if (index_two > 3)
+                shift_cmd_second = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd_second = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            auto get_push_v = [](il_exit_result& exit) -> push_v
+            {
+                return std::visit([](auto&& arg)
+                {
+                    return push_v{ std::forward<decltype(arg)>(arg) };
+                }, exit);
+            };
+
+            block->push_back({
+                // push the two branches
+                std::make_shared<cmd_push>(get_push_v(exits[0]), ir_size::bit_64),
+                std::make_shared<cmd_push>(get_push_v(exits[1]), ir_size::bit_64),
+
+                // load current rsp
+                std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
+
+                /*
+                 * MASK 1
+                 */
+                // load flags onto the stack
+                std::make_shared<cmd_rflags_load>(),
+
+                // mask the single flag
+                std::make_shared<cmd_push>(flag_mask_one, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // shift right/left to bit 3
+                std::make_shared<cmd_push>(std::abs(3 - index_one), ir_size::bit_64),
+                shift_cmd_one,
+
+                /*
+                 * MASK 2
+                */
+                // load flags onto the stack
+                std::make_shared<cmd_rflags_load>(),
+
+                // mask the single flag
+                std::make_shared<cmd_push>(flag_mask_two, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // shift right/left to bit 3
+                std::make_shared<cmd_push>(std::abs(3 - index_one), ir_size::bit_64),
+                shift_cmd_second,
+
+                // and both of the masks
+                std::make_shared<cmd_handler_call>(mnemonic, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // add: rsp + disp
+                std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // read [rsp + disp]
+                std::make_shared<cmd_mem_read>(ir_size::bit_64),
+
+                // jmp to read
+                std::make_shared<cmd_branch>()
+            });
+        }
+
+        void jcc::write_check_register(codec::reg reg, std::array<il_exit_result, 2> exits) const
+        {
+            long index;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index), ZYDIS_CPUFLAG_ZF);
+
+            base_command_ptr shift_cmd;
+            if (index > 3)
+                shift_cmd = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            auto get_push_v = [](il_exit_result& exit) -> push_v
+            {
+                return std::visit([](auto&& arg)
+                {
+                    return push_v{ std::forward<decltype(arg)>(arg) };
+                }, exit);
+            };
+
+            auto target_size = bits_to_ir_size(get_reg_size(reg));
+            block->push_back({
+                // push the two branches
+                std::make_shared<cmd_push>(get_push_v(exits[0]), ir_size::bit_64),
+                std::make_shared<cmd_push>(get_push_v(exits[1]), ir_size::bit_64),
+
+                // load current rsp
+                std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
+
+                // load flags onto the stack
+                std::make_shared<cmd_context_load>(reg),
+                std::make_shared<cmd_push>(0, target_size),
+                std::make_shared<cmd_handler_call>(codec::m_cmp, handler_sig{ target_size, target_size }),
+
+                // load mask for ZF
+                std::make_shared<cmd_push>(ZYDIS_CPUFLAG_ZF, ir_size::bit_64),
+
+                // shift right/left to bit 3
+                std::make_shared<cmd_push>(std::abs(3 - index), ir_size::bit_64),
+                shift_cmd,
+
+                // add: rsp + disp
+                std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // read [rsp + disp]
+                std::make_shared<cmd_mem_read>(ir_size::bit_64),
+
+                // jmp to read
+                std::make_shared<cmd_branch>()
+            });
+        }
+
+        void jcc::write_jle(std::array<il_exit_result, 2> exits) const
+        {
+            long index_one;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index_one), ZYDIS_CPUFLAG_SF);
+
+            base_command_ptr shift_cmd_one;
+            if (index_one > 3)
+                shift_cmd_one = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd_one = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            long index_two;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index_two), ZYDIS_CPUFLAG_OF);
+
+            base_command_ptr shift_cmd_second;
+            if (index_two > 3)
+                shift_cmd_second = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd_second = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            long index_three;
+            _BitScanForward(reinterpret_cast<unsigned long*>(&index_three), ZYDIS_CPUFLAG_ZF);
+
+            base_command_ptr shift_cmd_third;
+            if (index_three > 3)
+                shift_cmd_third = std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+            else
+                shift_cmd_third = std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
+
+            auto get_push_v = [](il_exit_result& exit) -> push_v
+            {
+                return std::visit([](auto&& arg)
+                {
+                    return push_v{ std::forward<decltype(arg)>(arg) };
+                }, exit);
+            };
+
+            block->push_back({
+                // push the two branches
+                std::make_shared<cmd_push>(get_push_v(exits[0]), ir_size::bit_64),
+                std::make_shared<cmd_push>(get_push_v(exits[1]), ir_size::bit_64),
+
+                // load current rsp
+                std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
+
+                /*
+                 * MASK 1
+                 */
+                // load flags onto the stack
+                std::make_shared<cmd_rflags_load>(),
+
+                // mask the single flag
+                std::make_shared<cmd_push>(ZYDIS_CPUFLAG_SF, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // shift right/left to bit 3
+                std::make_shared<cmd_push>(std::abs(3 - index_one), ir_size::bit_64),
+                shift_cmd_one,
+
+                /*
+                 * MASK 2
+                */
+                // load flags onto the stack
+                std::make_shared<cmd_rflags_load>(),
+
+                // mask the single flag
+                std::make_shared<cmd_push>(ZYDIS_CPUFLAG_OF, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // shift right/left to bit 3
+                std::make_shared<cmd_push>(std::abs(3 - index_two), ir_size::bit_64),
+                shift_cmd_second,
+
+                // xor both of the masks
+                std::make_shared<cmd_handler_call>(codec::m_xor, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                /*
+                 * ZF = 1
+                 */
+                // load flags onto the stack
+                std::make_shared<cmd_rflags_load>(),
+
+                // mask the single flag
+                std::make_shared<cmd_push>(ZYDIS_CPUFLAG_ZF, ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                std::make_shared<cmd_push>(std::abs(3 - index_three), ir_size::bit_64),
+                std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // xor both of the masks
+                std::make_shared<cmd_handler_call>(codec::m_xor, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // add: rsp + disp
+                std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+
+                // read [rsp + disp]
+                std::make_shared<cmd_mem_read>(ir_size::bit_64),
+
+                // jmp to read
+                std::make_shared<cmd_branch>()
+            });
         }
     }
 }

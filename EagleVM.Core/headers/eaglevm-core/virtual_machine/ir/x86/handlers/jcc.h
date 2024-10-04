@@ -21,8 +21,12 @@ namespace eagle::ir::lifter
         virtual bool translate_to_il(uint64_t original_rva, x86_cpu_flag flags = NONE);
 
     private:
-        static std::pair<exit_condition, bool> get_exit_condition(const codec::mnemonic mnemonic);
-        static void write_basic_jump(uint64_t jcc_mask, bool pop_targets = true);
-        static void write_compare_jump(uint64_t flag_mask_one, uint64_t flag_mask_two, bool pop_targets = true);
+        std::pair<exit_condition, bool> get_exit_condition(const codec::mnemonic mnemonic);
+
+        void write_basic_compare()
+        void write_basic_jump(uint64_t jcc_mask, std::array<il_exit_result, 2> exits) const;
+        void write_bitwise_compare(codec::mnemonic mnemonic, uint64_t flag_mask_one, uint64_t flag_mask_two, std::array<il_exit_result, 2> exits) const;
+        void write_check_register(codec::reg reg, std::array<il_exit_result, 2> exits) const;
+        void write_jle(std::array<il_exit_result, 2> exits) const;
     };
 }

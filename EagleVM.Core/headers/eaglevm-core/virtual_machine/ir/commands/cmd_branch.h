@@ -57,9 +57,8 @@ namespace eagle::ir
         jmp
     };
 
-    using vmexit_rva = uint64_t;
     using block_ptr = std::shared_ptr<class block_ir>;
-    using il_exit_result = std::variant<vmexit_rva, block_ptr>;
+    using il_exit_result = std::variant<uint64_t, block_ptr>;
 
     class cmd_branch final : public base_command
     {

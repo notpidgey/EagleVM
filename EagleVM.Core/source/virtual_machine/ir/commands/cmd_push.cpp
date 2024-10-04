@@ -7,6 +7,11 @@ namespace eagle::ir
     {
     }
 
+    cmd_push::cmd_push(push_v reg_src, ir_size reg_size)
+        : base_command(command_type::vm_push), size(reg_size), value(reg_src)
+    {
+    }
+
     cmd_push::cmd_push(uint64_t immediate, const ir_size stack_disp)
         : base_command(command_type::vm_push), size(stack_disp), value(immediate)
     {

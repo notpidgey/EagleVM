@@ -156,8 +156,10 @@ namespace eagle::ir
             }
         }
 
+        current_block->push_back(std::make_shared<cmd_push>(exit, ir_size::bit_64));
+
         // jump to exiting block
-        current_block->push_back(std::make_shared<cmd_branch>(exit));
+        current_block->push_back(std::make_shared<cmd_branch>());
         block_info->body.push_back(current_block);
 
         //
