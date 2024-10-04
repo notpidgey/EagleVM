@@ -22,7 +22,7 @@ namespace eagle::ir
     using preopt_vm_id = std::pair<preopt_block_ptr, uint32_t>;
     using flat_block_vmid = std::pair<std::vector<block_ptr>, uint32_t>;
 
-    class ir_translator
+    class ir_translator : std::enable_shared_from_this<ir_translator>
     {
     public:
         explicit ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness);

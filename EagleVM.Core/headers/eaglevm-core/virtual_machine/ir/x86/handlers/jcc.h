@@ -23,10 +23,15 @@ namespace eagle::ir::lifter
     private:
         std::pair<exit_condition, bool> get_exit_condition(const codec::mnemonic mnemonic);
 
-        void write_basic_compare()
-        void write_basic_jump(uint64_t jcc_mask, std::array<il_exit_result, 2> exits) const;
-        void write_bitwise_compare(codec::mnemonic mnemonic, uint64_t flag_mask_one, uint64_t flag_mask_two, std::array<il_exit_result, 2> exits) const;
-        void write_check_register(codec::reg reg, std::array<il_exit_result, 2> exits) const;
-        void write_jle(std::array<il_exit_result, 2> exits) const;
+        void jcc::write_condition_jump(uint64_t flag_mask, const std::array<il_exit_result, 2>& exits) const;
+        void jcc::write_bitwise_condition(codec::mnemonic mnemonic, uint64_t flag_mask_one, uint64_t flag_mask_two,
+            const std::array<il_exit_result, 2>& exits) const;
+        void jcc::write_check_register(codec::reg reg, const std::array<il_exit_result, 2>& exits) const;
+        void jcc::write_jle(const std::array<il_exit_result, 2>& exits) const;
+        void write_flag_operation(uint64_t flag_mask, std::array<il_exit_result, 2> exits,
+            const std::function<std::vector<base_command_ptr>(uint64_t)>& operation_generator) const;
+
+        static auto get_flag_for_condition(exit_condition condition) -> uint64_t;
+        static codec::reg get_register_for_condition(exit_condition condition);
     };
 }
