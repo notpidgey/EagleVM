@@ -7,6 +7,7 @@
 #include "eaglevm-core/disassembler/analysis/liveness.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/x86/base_handler_gen.h"
+#include "models/ir_branch_info.h"
 
 namespace eagle::dasm
 {
@@ -41,6 +42,12 @@ namespace eagle::ir
         dasm::basic_block_ptr map_basic_block(const preopt_block_ptr& preopt_target);
         preopt_block_ptr map_preopt_block(const dasm::basic_block_ptr& basic_block);
 
+        /**
+         *
+         * @param rva can be any rva that is within the target block's bounds (including the rva of the branching instruction)
+         * @return branching information of the found block within the translator's context
+         */
+        branch_info get_branch_info(uint32_t rva);
     private:
         dasm::segment_dasm_ptr dasm;
         dasm::analysis::liveness* dasm_liveness;
@@ -63,9 +70,8 @@ namespace eagle::ir
         static void handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, uint64_t current_rva);
     };
 
-    class preopt_block
+    struct preopt_block
     {
-    public:
         void init(const dasm::basic_block_ptr& block);
 
         dasm::basic_block_ptr original_block = nullptr;

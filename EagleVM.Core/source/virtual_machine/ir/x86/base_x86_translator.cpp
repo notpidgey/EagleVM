@@ -11,8 +11,8 @@
 
 namespace eagle::ir::lifter
 {
-    base_x86_translator::base_x86_translator(codec::dec::inst_info decode, const uint64_t rva)
-        : block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
+    base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator>& translator, codec::dec::inst_info decode, const uint64_t rva)
+        : translator(translator), block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));

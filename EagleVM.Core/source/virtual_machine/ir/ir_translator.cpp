@@ -52,7 +52,7 @@ namespace eagle::ir
         // entry
         //
         entry->push_back(std::make_shared<cmd_vm_enter>());
-        entry->push_back(std::make_shared<cmd_branch>(current_block));
+        entry->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
 
         //
         // body
@@ -128,7 +128,7 @@ namespace eagle::ir
                         current_block = std::make_shared<block_ir>(vm_block);
                         current_block->push_back(std::make_shared<cmd_vm_enter>());
 
-                        previous->push_back(std::make_shared<cmd_branch>(current_block));
+                        previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
                     }
 
                     current_block->set_block_state(vm_block);
@@ -146,7 +146,7 @@ namespace eagle::ir
 
                     current_block = std::make_shared<block_ir>(x86_block);
                     previous->push_back(std::make_shared<cmd_vm_exit>());
-                    previous->push_back(std::make_shared<cmd_branch>(current_block));
+                    previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
                 }
 
                 // handler does not exist
@@ -156,10 +156,8 @@ namespace eagle::ir
             }
         }
 
-        current_block->push_back(std::make_shared<cmd_push>(exit, ir_size::bit_64));
-
         // jump to exiting block
-        current_block->push_back(std::make_shared<cmd_branch>());
+        current_block->push_back(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
         block_info->body.push_back(current_block);
 
         //
@@ -169,8 +167,8 @@ namespace eagle::ir
             exit->push_back(std::make_shared<cmd_vm_exit>());
 
         std::vector<il_exit_result> exits;
+        exit_condition condition = exit_condition::none;
 
-        std::pair condition = { exit_condition::none, false };
         switch (end_reason)
         {
             case dasm::block_jump:
@@ -182,7 +180,7 @@ namespace eagle::ir
                 else
                     exits.emplace_back(bb_map[dasm->get_block(target)]->head);
 
-                condition = { exit_condition::jmp, false };
+                condition = exit_condition::jmp;
                 break;
             }
             case dasm::block_conditional_jump:
@@ -211,12 +209,7 @@ namespace eagle::ir
             }
         }
 
-        exit->push_back(std::make_shared<cmd_branch>(
-            exits,
-            std::get<0>(condition),
-            std::get<1>(condition)
-        ));
-
+        exit->push_back(std::make_shared<cmd_branch>(exits, condition));
         return block_info;
     }
 
@@ -544,6 +537,58 @@ namespace eagle::ir
         {
             current_block->push_back(std::make_shared<cmd_x86_exec>(decoded_inst));
         }
+    }
+
+    branch_info ir_translator::get_branch_info(const uint32_t rva)
+    {
+        branch_info info = { };
+
+        const auto bb = dasm->get_block(rva);
+        switch (bb->get_end_reason())
+        {
+            case dasm::block_jump:
+            case dasm::block_end:
+            {
+                auto [target, type] = dasm->get_jump(bb);
+                if (type == dasm::jump_outside_segment)
+                    info.fallthrough_branch = target;
+                else
+                    info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+
+                info.exit_condition = exit_condition::jmp;
+                info.inverted_condition = false;
+                break;
+            }
+            case dasm::block_conditional_jump:
+            {
+                // case 1 - condition succeed
+                {
+                    auto [target, type] = dasm->get_jump(bb);
+                    if (type == dasm::jump_outside_segment)
+                        info.conditional_branch = target;
+                    else
+                        info.conditional_branch = bb_map[dasm->get_block(target)]->head;
+                }
+
+                // case 2 - fall through
+                {
+                    auto [target, type] = dasm->get_jump(bb, true);
+                    if (type == dasm::jump_outside_segment)
+                        info.fallthrough_branch = target;
+                    else
+                        info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                }
+
+                const auto& [instruction, _] = bb->decoded_insts.back();
+                auto [condition, invert] = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
+
+                info.exit_condition = condition;
+                info.inverted_condition = invert;
+                break;
+            }
+        }
+
+        return info;
     }
 
     void preopt_block::init(const dasm::basic_block_ptr& block)

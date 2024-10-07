@@ -1,7 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
-#define CREATE_LIFTER_GEN(x) [](codec::dec::inst_info decode, const uint64_t rva) \
-{ return std::static_pointer_cast<lifter::base_x86_translator>(std::make_shared<lifter::x>(decode, rva)); }
+#define CREATE_LIFTER_GEN(x) [](const ir_translator_ptr& translator, const codec::dec::inst_info& decode, const uint64_t rva) \
+{ return std::static_pointer_cast<lifter::base_x86_translator>(std::make_shared<lifter::x>(translator, decode, rva)); }
 
 namespace eagle::ir
 {
@@ -20,11 +20,13 @@ namespace eagle::ir
         { codec::m_sub, std::make_shared<handler::sub>() },
     };
 
+    using translator_base = std::shared_ptr<lifter::base_x86_translator>;
+    using ir_translator_ptr = std::shared_ptr<ir_translator>;
+
     std::unordered_map<
         codec::mnemonic,
-        std::function<std::shared_ptr<lifter::base_x86_translator>(codec::dec::inst_info, uint64_t)>
-    >
-    instruction_lifters =
+        std::function<translator_base(const ir_translator_ptr&, const codec::dec::inst_info&, uint64_t)>
+    > instruction_lifters =
     {
         { codec::m_add, CREATE_LIFTER_GEN(add) },
         { codec::m_cmp, CREATE_LIFTER_GEN(cmp) },

@@ -100,8 +100,8 @@ namespace eagle::dasm::analysis
         {
             constexpr auto val = TCount * TBits / 8 / 64.0;
             return static_cast<float>(static_cast<uint16_t>(val)) == val
-               ? static_cast<uint16_t>(val)
-               : static_cast<uint16_t>(val) + (val > 0 ? 1 : 0);
+                       ? static_cast<uint16_t>(val)
+                       : static_cast<uint16_t>(val) + (val > 0 ? 1 : 0);
         }
 
     public:
