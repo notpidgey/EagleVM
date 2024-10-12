@@ -1,33 +1,30 @@
 #include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 
+#include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/handler_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
-#include "eaglevm-core/virtual_machine/ir/block.h"
 
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
 
 #include "eaglevm-core/virtual_machine/machines/util.h"
 
-#define VIP         reg_man->get_vm_reg(register_manager::index_vip)
-#define VSP         reg_man->get_vm_reg(register_manager::index_vsp)
-#define VREGS       reg_man->get_vm_reg(register_manager::index_vregs)
-#define VCS         reg_man->get_vm_reg(register_manager::index_vcs)
-#define VCSRET      reg_man->get_vm_reg(register_manager::index_vcsret)
-#define VBASE       reg_man->get_vm_reg(register_manager::index_vbase)
+#define VIP reg_man->get_vm_reg(register_manager::index_vip)
+#define VSP reg_man->get_vm_reg(register_manager::index_vsp)
+#define VREGS reg_man->get_vm_reg(register_manager::index_vregs)
+#define VCS reg_man->get_vm_reg(register_manager::index_vcs)
+#define VCSRET reg_man->get_vm_reg(register_manager::index_vcsret)
+#define VBASE reg_man->get_vm_reg(register_manager::index_vbase)
 
-#define VTEMP       reg_man->get_reserved_temp(0)
-#define VTEMP2      reg_man->get_reserved_temp(1)
-#define VTEMPX(x)   reg_man->get_reserved_temp(x)
+#define VTEMP reg_man->get_reserved_temp(0)
+#define VTEMP2 reg_man->get_reserved_temp(1)
+#define VTEMPX(x) reg_man->get_reserved_temp(x)
 
 using namespace eagle::codec;
 
 namespace eagle::virt::eg
 {
-    machine::machine(const settings_ptr& settings_info)
-    {
-        settings = settings_info;
-    }
+    machine::machine(const settings_ptr& settings_info) { settings = settings_info; }
 
     machine_ptr machine::create(const settings_ptr& settings_info)
     {
@@ -59,17 +56,34 @@ namespace eagle::virt::eg
             code->bind(label);
         }
 
+        // walk backwards each command to see the last time each discrete_ptr was used
+        // this will tell us when we can free the register
+        std::vector<std::vector<ir::discrete_store_ptr>> store_dead(command_count, {});
+        std::unordered_set<ir::discrete_store_ptr> discovered_stores;
+
+        // as a fair warning, this analysis only cares about the store usage in the current block
+        // so if you are using a store across multiple blocks, you can wish that goodbye because i will not
+        // be implementing that because i do not need it
+        for (auto i = command_count; i--;)
+        {
+            auto ref = block->at(i)->get_use_stores();
+            for (auto& store : ref)
+            {
+                if (!discovered_stores.contains(store))
+                {
+                    store_dead[i].push_back(store);
+                    discovered_stores.insert(store);
+                }
+            }
+        }
+
         for (size_t i = 0; i < command_count; i++)
         {
-            const auto cnt = reg_64_container->get_available_count();
-
             const ir::base_command_ptr command = block->at(i);
-            if (command->unique_id == 3083)
-                __debugbreak();
-
             handle_cmd(code, command);
 
-            VM_ASSERT(cnt == reg_64_container->get_available_count(), "register was not deallocated");
+            for (auto store : store_dead[i])
+                reg_64_container->release(store);
         }
 
         reg_64_container->reset();
@@ -77,6 +91,8 @@ namespace eagle::virt::eg
 
         return code;
     }
+
+    void handle_store_dead(const ir::discrete_store_ptr store) { reg }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
@@ -101,8 +117,7 @@ namespace eagle::virt::eg
             // load into storage
             if (settings->complex_temp_loading)
             {
-                auto [handler_load, working_reg_res, complex_mapping] = han_man->
-                    load_register_complex(load_reg, dest);
+                auto [handler_load, working_reg_res, complex_mapping] = han_man->load_register_complex(load_reg, dest);
 
                 // load storage <- target_reg
                 han_man->call_vm_handler(block, handler_load);
@@ -113,8 +128,7 @@ namespace eagle::virt::eg
             }
             else
             {
-                auto [handler_load, working_reg_res] = han_man->
-                    load_register(load_reg, dest);
+                auto [handler_load, working_reg_res] = han_man->load_register(load_reg, dest);
 
                 block->add(encode(m_xor, ZREG(dest->get_store_register()), ZREG(dest->get_store_register())));
 
@@ -304,10 +318,7 @@ namespace eagle::virt::eg
         call_pop(block, get_bit_version(temp_reg, current_size));
 
         // mov eax/ax/al, VTEMP
-        block->add(encode(m_mov,
-            ZREG(get_bit_version(rax, current_size)),
-            ZREG(get_bit_version(temp_reg, current_size))
-        ));
+        block->add(encode(m_mov, ZREG(get_bit_version(rax, current_size)), ZREG(get_bit_version(temp_reg, current_size))));
 
         // keep upgrading the operand until we get to destination size
         while (current_size != target_size)
@@ -341,10 +352,7 @@ namespace eagle::virt::eg
         }
 
 
-        block->add(encode(m_mov,
-            ZREG(get_bit_version(temp_reg, current_size)),
-            ZREG(get_bit_version(rax, current_size))
-        ));
+        block->add(encode(m_mov, ZREG(get_bit_version(temp_reg, current_size)), ZREG(get_bit_version(rax, current_size))));
 
         call_push(block, get_bit_version(temp_reg, target_size));
     }
@@ -364,20 +372,20 @@ namespace eagle::virt::eg
         else
         {
             block->add(RECOMPILE_CHUNK([=](uint64_t)
-                {
+            {
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
-                address_gen.push_back(encode(m_push, ZIMMU(
-                    static_cast<uint32_t>(address) >= 0x80000000 ?
-                    static_cast<uint64_t>(address) |
-                    0xFF'FF'FF'FF'00'00'00'00 : static_cast<uint32_t>(address))));
+                address_gen.push_back(
+                    encode(m_push,
+                           ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) | 0xFF'FF'FF'FF'00'00'00'00
+                                                                              : static_cast<uint32_t>(address))));
 
                 address_gen.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
                 address_gen.push_back(encode(m_ret));
 
                 return codec::compile_queue(address_gen);
-                }));
+            }));
         }
 
         block->bind(ret);
@@ -431,15 +439,9 @@ namespace eagle::virt::eg
         block->add(encoder.create(resolver));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
-    {
-        block->add(cmd->get_request());
-    }
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) { block->add(cmd->get_request()); }
 
-    std::vector<asmb::code_container_ptr> machine::create_handlers()
-    {
-        return han_man->build_handlers();
-    }
+    std::vector<asmb::code_container_ptr> machine::create_handlers() { return han_man->build_handlers(); }
 
     void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
     {
@@ -609,4 +611,4 @@ namespace eagle::virt::eg
 
         return get_bit_version(reg, to_reg_size(size));
     }
-}
+} // namespace eagle::virt::eg

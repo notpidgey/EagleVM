@@ -19,9 +19,9 @@ namespace eagle::ir
         return shared_from_this();
     }
 
-    std::vector<discrete_store_ptr> base_command::get_release_list()
+    std::vector<discrete_store_ptr> base_command::get_use_stores()
     {
-        return release_list;
+        return { };
     }
 
     std::string base_command::command_to_string(const command_type type)

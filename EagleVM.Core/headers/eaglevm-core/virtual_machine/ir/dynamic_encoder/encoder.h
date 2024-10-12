@@ -12,11 +12,20 @@ namespace eagle::ir::encoder
     using val_variant = std::variant<std::monostate, reg_vm, discrete_store_ptr, uint64_t>;
     using val_var_resolver = codec::reg(val_variant&);
 
+    enum class operand_type
+    {
+        reg,
+        imm,
+        mem
+    };
+
     class operand
     {
     public:
         virtual ~operand() = default;
         virtual void build(codec::enc::req& req, val_var_resolver& resolver) = 0;
+
+        operand_type operand_type;
     };
 
     // Operand for memory operations
@@ -28,12 +37,14 @@ namespace eagle::ir::encoder
             : base_(base), size_(size)
         {
             VM_ASSERT(size != ir_size::none, "Size must not be empty");
+            operand_type = operand_type::mem;
         }
 
         operand_mem(const val_variant& base, const val_variant& index, const uint8_t scale, const ir_size size)
             : base_(base), index_(index), scale_(scale), size_(size)
         {
             VM_ASSERT(size != ir_size::none, "Size must not be empty");
+            operand_type = operand_type::mem;
         }
 
         void build(codec::enc::req& req, const val_var_resolver& resolver) override
@@ -46,6 +57,11 @@ namespace eagle::ir::encoder
 
             codec::add_op(req, mem);
         }
+
+        val_variant get_base() { return base_; }
+        val_variant get_index() { return index_; }
+        uint8_t get_scale() { return scale_ ;}
+        ir_size get_size() { return size_; }
 
     private:
         val_variant base_;
@@ -61,6 +77,7 @@ namespace eagle::ir::encoder
         explicit operand_reg(const val_variant& reg)
             : reg_(reg)
         {
+            operand_type = operand_type::reg;
         }
 
         void build(codec::enc::req& req, const val_var_resolver& resolver) override
@@ -69,6 +86,11 @@ namespace eagle::ir::encoder
             op_reg.value = static_cast<codec::zydis_register>(resolver(reg_));
 
             codec::add_op(req, op_reg);
+        }
+
+        val_variant get_reg()
+        {
+            return reg_;
         }
 
     private:
@@ -82,6 +104,7 @@ namespace eagle::ir::encoder
         explicit operand_imm(const uint64_t imm)
             : imm_(imm)
         {
+            operand_type = operand_type::imm;
         }
 
         void build(codec::enc::req& req, val_var_resolver&) override

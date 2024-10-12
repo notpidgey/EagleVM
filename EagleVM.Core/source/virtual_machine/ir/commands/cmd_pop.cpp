@@ -24,4 +24,9 @@ namespace eagle::ir
             get_destination_reg() == cmd->get_destination_reg() &&
             get_size() == cmd->get_size();
     }
+
+    std::vector<discrete_store_ptr> cmd_pop::get_use_stores()
+    {
+        return { dest_reg };
+    }
 }

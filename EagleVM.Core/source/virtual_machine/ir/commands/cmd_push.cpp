@@ -7,11 +7,6 @@ namespace eagle::ir
     {
     }
 
-    cmd_push::cmd_push(push_v reg_src, ir_size reg_size)
-        : base_command(command_type::vm_push), size(reg_size), value(reg_src)
-    {
-    }
-
     cmd_push::cmd_push(uint64_t immediate, const ir_size stack_disp)
         : base_command(command_type::vm_push), size(stack_disp), value(immediate)
     {
@@ -33,5 +28,13 @@ namespace eagle::ir
         return base_command::is_similar(other) &&
             get_size() == cmd->get_size() &&
             value == cmd->value;
+    }
+
+    std::vector<discrete_store_ptr> cmd_push::get_use_stores()
+    {
+        if (std::holds_alternative<discrete_store_ptr>(value))
+            return { std::get<discrete_store_ptr>(value) };
+
+        return { };
     }
 }

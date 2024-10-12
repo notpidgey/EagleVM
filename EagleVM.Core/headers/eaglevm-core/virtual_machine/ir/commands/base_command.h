@@ -52,7 +52,8 @@ namespace eagle::ir
 
         std::shared_ptr<base_command> release(const std::vector<discrete_store_ptr>& stores);
         std::shared_ptr<base_command> release(const discrete_store_ptr& store);
-        std::vector<discrete_store_ptr> get_release_list();
+
+        virtual std::vector<discrete_store_ptr> get_use_stores();
 
         virtual bool is_similar(const std::shared_ptr<base_command>& other)
         {

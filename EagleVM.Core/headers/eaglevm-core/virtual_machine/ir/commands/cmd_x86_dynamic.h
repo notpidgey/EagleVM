@@ -6,8 +6,6 @@
 
 namespace eagle::ir
 {
-    using variant_op = std::variant<discrete_store_ptr, reg_vm>;
-
     class cmd_x86_dynamic : public base_command
     {
     public:
@@ -19,6 +17,8 @@ namespace eagle::ir
 
         encoder::encoder& get_encoder();
         bool is_similar(const std::shared_ptr<base_command>& other) override;
+
+        std::vector<discrete_store_ptr> get_use_stores() override;
 
     private:
         encoder::encoder encoder;
