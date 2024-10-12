@@ -84,4 +84,4 @@ namespace eagle::ir
     void cmd_branch::set_virtual(bool is_virtual) { this->is_virtual = is_virtual; }
 
     bool cmd_branch::is_virtual() { return this->is_virtual; }
-} // namespace eagle::ir
+}

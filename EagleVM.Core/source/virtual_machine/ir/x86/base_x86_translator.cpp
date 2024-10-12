@@ -12,8 +12,8 @@
 
 namespace eagle::ir::lifter
 {
-    base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator> &translator, codec::dec::inst_info decode,
-                                             const uint64_t rva) :
+    base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator>& translator, codec::dec::inst_info decode,
+        const uint64_t rva) :
         translator(translator), block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
@@ -28,7 +28,7 @@ namespace eagle::ir::lifter
                 continue;
 
             translate_status status = translate_status::unsupported;
-            switch (const codec::dec::operand &operand = operands[i]; operand.type)
+            switch (const codec::dec::operand& operand = operands[i]; operand.type)
             {
                 case ZYDIS_OPERAND_TYPE_UNUSED:
                     break;
@@ -58,7 +58,7 @@ namespace eagle::ir::lifter
 
     void base_x86_translator::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
-        x86_operand_sig operand_sig = {};
+        x86_operand_sig operand_sig = { };
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
             operand_sig.emplace_back(static_cast<codec::op_type>(operands[i].type), static_cast<codec::reg_size>(operands[i].size));
@@ -185,8 +185,12 @@ namespace eagle::ir::lifter
                 ir_size size = static_cast<ir_size>(operands[idx].size);
 
                 discrete_store_ptr store = discrete_store::create(ir_size::bit_64);
-                block->push_back({ std::make_shared<cmd_pop>(store, ir_size::bit_64), std::make_shared<cmd_push>(store, ir_size::bit_64),
-                                   std::make_shared<cmd_push>(store, ir_size::bit_64), std::make_shared<cmd_mem_read>(size) });
+                block->push_back({
+                    std::make_shared<cmd_pop>(store, ir_size::bit_64),
+                    std::make_shared<cmd_push>(store, ir_size::bit_64),
+                    std::make_shared<cmd_push>(store, ir_size::bit_64),
+                    std::make_shared<cmd_mem_read>(size)
+                });
 
                 stack_displacement += static_cast<uint16_t>(TOB(size) + TOB(ir_size::bit_64));
                 break;
@@ -211,7 +215,7 @@ namespace eagle::ir::lifter
         return translate_status::success;
     }
 
-    translate_mem_result base_x86_translator::translate_mem_action(const codec::dec::op_mem &op_mem, uint8_t)
+    translate_mem_result base_x86_translator::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t)
     {
         if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
             return translate_mem_result::address;
@@ -226,4 +230,4 @@ namespace eagle::ir::lifter
         uint8_t width = inst.operand_width;
         return static_cast<ir_size>(width);
     }
-} // namespace eagle::ir::lifter
+}

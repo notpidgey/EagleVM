@@ -40,10 +40,13 @@ namespace eagle::ir::handler
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
-        return { std::make_shared<cmd_pop>(vtemp, target_size), std::make_shared<cmd_pop>(vtemp2, target_size),
-                 std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp2, vtemp) };
+        return {
+            std::make_shared<cmd_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
+            std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp2, vtemp)
+        };
     }
-} // namespace eagle::ir::handler
+}
 
 namespace eagle::ir::lifter
 {
@@ -81,4 +84,4 @@ namespace eagle::ir::lifter
 
         return translate_status::success;
     }
-} // namespace eagle::ir::lifter
+}

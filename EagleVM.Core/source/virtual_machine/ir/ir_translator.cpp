@@ -595,4 +595,4 @@ namespace eagle::ir
         tail = std::make_shared<block_ir>(vm_block);
         original_block = block;
     }
-} // namespace eagle::ir
+}

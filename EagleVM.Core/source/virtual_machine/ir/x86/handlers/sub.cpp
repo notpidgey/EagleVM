@@ -40,14 +40,18 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        return { std::make_shared<cmd_pop>(vtemp, target_size), std::make_shared<cmd_pop>(vtemp2, target_size),
-                 std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp2, vtemp), std::make_shared<cmd_push>(vtemp2, target_size) };
+        return {
+            std::make_shared<cmd_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
+            std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp2, vtemp),
+            std::make_shared<cmd_push>(vtemp2, target_size)
+        };
     }
-} // namespace eagle::ir::handler
+}
 
 namespace eagle::ir::lifter
 {
-    translate_mem_result sub::translate_mem_action(const codec::dec::op_mem &op_mem, uint8_t idx)
+    translate_mem_result sub::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
     {
         return idx == 0 ? translate_mem_result::both : base_x86_translator::translate_mem_action(op_mem, idx);
     }
@@ -87,4 +91,4 @@ namespace eagle::ir::lifter
             block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
     }
-} // namespace eagle::ir::lifter
+}

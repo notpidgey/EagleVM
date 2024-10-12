@@ -38,14 +38,18 @@ namespace eagle::ir::handler
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
-        return { std::make_shared<cmd_pop>(vtemp, target_size), std::make_shared<cmd_pop>(vtemp2, target_size),
-                 std::make_shared<cmd_x86_dynamic>(codec::m_imul, vtemp, vtemp2), std::make_shared<cmd_push>(vtemp, target_size) };
+        return {
+            std::make_shared<cmd_pop>(vtemp, target_size),
+            std::make_shared<cmd_pop>(vtemp2, target_size),
+            std::make_shared<cmd_x86_dynamic>(codec::m_imul, vtemp, vtemp2),
+            std::make_shared<cmd_push>(vtemp, target_size)
+        };
     }
-} // namespace eagle::ir::handler
+}
 
 namespace eagle::ir::lifter
 {
-    translate_mem_result imul::translate_mem_action(const codec::dec::op_mem &op_mem, const uint8_t idx)
+    translate_mem_result imul::translate_mem_action(const codec::dec::op_mem& op_mem, const uint8_t idx)
     {
         return idx == 1 ? translate_mem_result::value : base_x86_translator::translate_mem_action(op_mem, idx);
     }
@@ -102,4 +106,4 @@ namespace eagle::ir::lifter
     }
 
     bool imul::skip(const uint8_t idx) { return idx == 0 && inst.operand_count_visible == 3; }
-} // namespace eagle::ir::lifter
+}

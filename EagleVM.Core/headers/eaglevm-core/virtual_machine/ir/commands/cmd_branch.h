@@ -88,4 +88,4 @@ namespace eagle::ir
 
         bool is_virtual;
     };
-} // namespace eagle::ir
+}

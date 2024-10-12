@@ -5,16 +5,16 @@ namespace eagle::ir::handler
     ir_insts base_handler_gen::gen_handler(const uint64_t target_handler_id)
     {
         std::optional<handler_sig> something = std::nullopt;
-        for(const auto& [size, handler_id] : build_options)
+        for (const auto& [size, handler_id] : build_options)
         {
-            if(handler_id == target_handler_id)
+            if (handler_id == target_handler_id)
                 something = size;
         }
 
-        if(something == std::nullopt)
+        if (something == std::nullopt)
         {
             VM_ASSERT("invalid target handler id");
-            return {};
+            return { };
         }
 
         return gen_handler(something.value());
@@ -61,8 +61,8 @@ namespace eagle::ir::handler
 
     std::optional<uint64_t> base_handler_gen::get_handler_id(const handler_params& target_build)
     {
-        for(auto [params, handler_id] : build_options)
-            if(params == target_build)
+        for (auto [params, handler_id] : build_options)
+            if (params == target_build)
                 return handler_id;
 
         return std::nullopt;
