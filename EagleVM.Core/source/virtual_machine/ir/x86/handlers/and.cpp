@@ -7,24 +7,24 @@ namespace eagle::ir::handler
 {
     ands::ands()
     {
-        valid_operands = {
-            { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "ands 8,8" },
-            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "ands 16,16" },
-            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "ands 32,32" },
-            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "ands 64,64" },
+        valid_operand = {
+            { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "and 8,8" },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "and 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "and 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_none, codec::bit_64 } }, "and 64,64" },
 
             // sign extended handlers
-            { { { codec::op_none, codec::bit_16 }, { codec::op_imm, codec::bit_8 } }, "ands 16,16" },
-            { { { codec::op_none, codec::bit_32 }, { codec::op_imm, codec::bit_8 } }, "ands 32,32" },
-            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_8 } }, "ands 64,64" },
-            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_32 } }, "ands 64,64" },
+            { { { codec::op_none, codec::bit_16 }, { codec::op_imm, codec::bit_8 } }, "and 16,16" },
+            { { { codec::op_none, codec::bit_32 }, { codec::op_imm, codec::bit_8 } }, "and 32,32" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_8 } }, "and 64,64" },
+            { { { codec::op_none, codec::bit_64 }, { codec::op_imm, codec::bit_32 } }, "and 64,64" },
         };
 
         build_options = {
-            { { ir_size::bit_8, ir_size::bit_8 }, "ands 8,8" },
-            { { ir_size::bit_16, ir_size::bit_16 }, "ands 16,16" },
-            { { ir_size::bit_32, ir_size::bit_32 }, "ands 32,32" },
-            { { ir_size::bit_64, ir_size::bit_64 }, "ands 64,64" },
+            { { ir_size::bit_8, ir_size::bit_8 }, "and 8,8" },
+            { { ir_size::bit_16, ir_size::bit_16 }, "and 16,16" },
+            { { ir_size::bit_32, ir_size::bit_32 }, "and 32,32" },
+            { { ir_size::bit_64, ir_size::bit_64 }, "and 64,64" },
         };
     }
 
@@ -47,7 +47,7 @@ namespace eagle::ir::handler
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
             std::make_shared<cmd_pop>(vtemp2, target_size),
-            make_dyn(codec::m_and, vtemp2, vtemp),
+            make_dyn(codec::m_and, encoder::reg(vtemp2), encoder::reg(vtemp)),
             std::make_shared<cmd_push>(vtemp2, target_size)
         };
     }
