@@ -40,18 +40,14 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp2, vtemp),
-            std::make_shared<cmd_push>(vtemp2, target_size)
-        };
+        return { std::make_shared<cmd_pop>(vtemp, target_size), std::make_shared<cmd_pop>(vtemp2, target_size),
+                 std::make_shared<cmd_x86_dynamic>(codec::m_sub, vtemp2, vtemp), std::make_shared<cmd_push>(vtemp2, target_size) };
     }
-}
+} // namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    translate_mem_result sub::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
+    translate_mem_result sub::translate_mem_action(const codec::dec::op_mem &op_mem, uint8_t idx)
     {
         return idx == 0 ? translate_mem_result::both : base_x86_translator::translate_mem_action(op_mem, idx);
     }
@@ -71,18 +67,16 @@ namespace eagle::ir::lifter
         return translate_status::success;
     }
 
-    void sub::finalize_translate_to_virtual()
+    void sub::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
-        block->push_back(std::make_shared<cmd_rflags_load>());
-        base_x86_translator::finalize_translate_to_virtual();
-        block->push_back(std::make_shared<cmd_rflags_store>());
+        base_x86_translator::finalize_translate_to_virtual(flags);
 
         codec::dec::operand first_op = operands[0];
         if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
             // register
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
-            if(static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+            if (static_cast<ir_size>(first_op.size) == ir_size::bit_32)
                 reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
 
             block->push_back(std::make_shared<cmd_context_store>(reg, static_cast<codec::reg_size>(first_op.size)));
@@ -93,4 +87,4 @@ namespace eagle::ir::lifter
             block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
     }
-}
+} // namespace eagle::ir::lifter

@@ -27,7 +27,7 @@ namespace eagle::ir::lifter
         return translate_mem_result::value;
     }
 
-    void push::finalize_translate_to_virtual()
+    void push::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         // dont do anything because the operand encoders automatically push values
         // base_x86_translator::finalize_translate_to_virtual();

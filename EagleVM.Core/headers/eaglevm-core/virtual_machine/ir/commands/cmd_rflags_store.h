@@ -7,17 +7,17 @@ namespace eagle::ir
     class cmd_rflags_store : public base_command
     {
     public:
-        explicit cmd_rflags_store(const uint64_t flag_mask)
-            : base_command(command_type::vm_rflags_store), relevant_flags(flag_mask)
+        explicit cmd_rflags_store(const std::vector<uint8_t>& flag_indexes)
+            : base_command(command_type::vm_rflags_store), relevant_flags(flag_indexes)
         {
         }
 
-        uint64_t get_relevant_flags() const
+        std::vector<uint8_t> get_relevant_flags() const
         {
             return relevant_flags;
         }
 
     private:
-        uint64_t relevant_flags;
+        std::vector<uint8_t> relevant_flags;
     };
 }

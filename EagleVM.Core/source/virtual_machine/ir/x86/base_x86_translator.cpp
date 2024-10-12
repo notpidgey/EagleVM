@@ -1,18 +1,20 @@
 #include "eaglevm-core/virtual_machine/ir/x86/base_x86_translator.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_handler_call.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_mem_read.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_pop.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir::lifter
 {
-    base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator>& translator, codec::dec::inst_info decode, const uint64_t rva)
-        : translator(translator), block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
+    base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator> &translator, codec::dec::inst_info decode,
+                                             const uint64_t rva) :
+        translator(translator), block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
@@ -26,7 +28,7 @@ namespace eagle::ir::lifter
                 continue;
 
             translate_status status = translate_status::unsupported;
-            switch (const codec::dec::operand& operand = operands[i]; operand.type)
+            switch (const codec::dec::operand &operand = operands[i]; operand.type)
             {
                 case ZYDIS_OPERAND_TYPE_UNUSED:
                     break;
@@ -48,27 +50,40 @@ namespace eagle::ir::lifter
                 return false;
         }
 
-        finalize_translate_to_virtual();
+        finalize_translate_to_virtual(flags);
         return true;
     }
 
-    block_ptr base_x86_translator::get_block()
-    {
-        return block;
-    }
+    block_ptr base_x86_translator::get_block() { return block; }
 
-    void base_x86_translator::finalize_translate_to_virtual()
+    void base_x86_translator::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
-        x86_operand_sig operand_sig = { };
+        x86_operand_sig operand_sig = {};
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
-            operand_sig.emplace_back(
-                static_cast<codec::op_type>(operands[i].type),
-                static_cast<codec::reg_size>(operands[i].size)
-            );
+            operand_sig.emplace_back(static_cast<codec::op_type>(operands[i].type), static_cast<codec::reg_size>(operands[i].size));
         }
 
         block->push_back(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
+
+        if (flags == 0)
+            return;
+
+        uint32_t flag_bits = flags;
+        std::vector<uint8_t> enabled_bits;
+
+        int index = 0;
+        while (flag_bits != 0)
+        {
+            if (flag_bits & 1)
+                enabled_bits.push_back(index);
+
+            flag_bits >>= 1;
+            index++;
+        }
+
+        block->push_back(std::make_shared<cmd_rflags_store>(enabled_bits));
+        block->push_back(std::make_shared<cmd_pop>(discrete_store::create(ir_size::bit_64), ir_size::bit_64));
     }
 
     translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
@@ -111,9 +126,9 @@ namespace eagle::ir::lifter
             block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.segment)));
         }
 
-        //2. load the index register and multiply by scale
-        //mov VTEMP, imm    ;
-        //jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
+        // 2. load the index register and multiply by scale
+        // mov VTEMP, imm    ;
+        // jmp VM_LOAD_REG   ; load value of INDEX reg to the top of the VSTACK
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
             block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_mem.index)));
@@ -170,12 +185,8 @@ namespace eagle::ir::lifter
                 ir_size size = static_cast<ir_size>(operands[idx].size);
 
                 discrete_store_ptr store = discrete_store::create(ir_size::bit_64);
-                block->push_back({
-                    std::make_shared<cmd_pop>(store, ir_size::bit_64),
-                    std::make_shared<cmd_push>(store, ir_size::bit_64),
-                    std::make_shared<cmd_push>(store, ir_size::bit_64),
-                    std::make_shared<cmd_mem_read>(size)
-                });
+                block->push_back({ std::make_shared<cmd_pop>(store, ir_size::bit_64), std::make_shared<cmd_push>(store, ir_size::bit_64),
+                                   std::make_shared<cmd_push>(store, ir_size::bit_64), std::make_shared<cmd_mem_read>(size) });
 
                 stack_displacement += static_cast<uint16_t>(TOB(size) + TOB(ir_size::bit_64));
                 break;
@@ -200,7 +211,7 @@ namespace eagle::ir::lifter
         return translate_status::success;
     }
 
-    translate_mem_result base_x86_translator::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t)
+    translate_mem_result base_x86_translator::translate_mem_action(const codec::dec::op_mem &op_mem, uint8_t)
     {
         if (op_mem.type == ZYDIS_MEMOP_TYPE_AGEN)
             return translate_mem_result::address;
@@ -208,14 +219,11 @@ namespace eagle::ir::lifter
         return translate_mem_result::value;
     }
 
-    bool base_x86_translator::skip(const uint8_t idx)
-    {
-        return false;
-    }
+    bool base_x86_translator::skip(const uint8_t idx) { return false; }
 
     ir_size base_x86_translator::get_op_width() const
     {
         uint8_t width = inst.operand_width;
         return static_cast<ir_size>(width);
     }
-}
+} // namespace eagle::ir::lifter

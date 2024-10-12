@@ -18,7 +18,7 @@ namespace eagle::ir::lifter
     {
         using base_x86_translator::base_x86_translator;
 
-        void finalize_translate_to_virtual() override;
+        void finalize_translate_to_virtual(x86_cpu_flag flags) override;
         translate_status encode_operand(codec::dec::op_imm op_imm, uint8_t idx) override;
     };
 }

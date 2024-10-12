@@ -3,14 +3,14 @@
 #include <ranges>
 #include <unordered_set>
 
-#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
-#include "eaglevm-core/virtual_machine/ir/commands/include.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
+#include "eaglevm-core/virtual_machine/ir/commands/include.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
-#include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/disassembler/analysis/liveness.h"
+#include "eaglevm-core/disassembler/disassembler.h"
 
 namespace eagle::ir
 {
@@ -52,7 +52,7 @@ namespace eagle::ir
         // entry
         //
         entry->push_back(std::make_shared<cmd_vm_enter>());
-        entry->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+        entry->push_back(std::make_shared<cmd_branch>(current_block));
 
         //
         // body
@@ -61,10 +61,9 @@ namespace eagle::ir
         // we calculate skips here because a basic block might end with a jump
         // we will handle that manually instead of letting the il translator handle this
         const dasm::block_end_reason end_reason = bb->get_end_reason();
-        const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
 
         const auto liveness = dasm_liveness->analyze_block(bb);
-        for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
+        for (uint32_t i = 0; i < bb->decoded_insts.size(); i++)
         {
             // use il x86 translator to translate the instruction to il
             auto decoded_inst = bb->decoded_insts[i];
@@ -73,22 +72,33 @@ namespace eagle::ir
             std::vector<handler_op> il_operands;
             handler::base_handler_gen_ptr handler_gen = nullptr;
 
-            std::optional<std::string> target_handler = std::nullopt;
+            std::optional<uint64_t> target_handler = std::nullopt;
 
             codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
             if (instruction_handlers.contains(mnemonic))
             {
                 // first we verify if there is even a valid handler for this inustruction
                 // we do this by checking the handler generator for this specific handler
+
+                // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
+                // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
+                // codec::m_jmp mnemonic which will be the way we select it here
+                if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
+                    mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
+                    mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
+                    mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
+                    mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
+                    mnemonic == codec::m_js || mnemonic == codec::m_jz)
+                {
+                    mnemonic = codec::m_jmp;
+                }
+
                 handler_gen = instruction_handlers[mnemonic];
 
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
                     auto op = ops[j];
-                    il_operands.emplace_back(
-                        static_cast<codec::op_type>(op.type),
-                        static_cast<codec::reg_size>(op.size)
-                    );
+                    il_operands.emplace_back(static_cast<codec::op_type>(op.type), static_cast<codec::reg_size>(op.size));
                 }
 
                 target_handler = handler_gen->get_handler_id(il_operands);
@@ -104,7 +114,7 @@ namespace eagle::ir
                 const uint64_t current_rva = bb->get_index_rva(i);
 
                 auto create_lifter = instruction_lifters[mnemonic];
-                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
+                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(shared_from_this(), decoded_inst, current_rva);
 
                 translate_success = lifter->translate_to_il(current_rva);
                 if (translate_success)
@@ -128,7 +138,7 @@ namespace eagle::ir
                         current_block = std::make_shared<block_ir>(vm_block);
                         current_block->push_back(std::make_shared<cmd_vm_enter>());
 
-                        previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+                        previous->push_back(std::make_shared<cmd_branch>(current_block));
                     }
 
                     current_block->set_block_state(vm_block);
@@ -146,7 +156,7 @@ namespace eagle::ir
 
                     current_block = std::make_shared<block_ir>(x86_block);
                     previous->push_back(std::make_shared<cmd_vm_exit>());
-                    previous->push_back(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+                    previous->push_back(std::make_shared<cmd_branch>(current_block));
                 }
 
                 // handler does not exist
@@ -156,8 +166,32 @@ namespace eagle::ir
             }
         }
 
-        // jump to exiting block
-        current_block->push_back(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
+        // every jcc/jmp is garuanteed to get processed if its at the end of the block
+        // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
+        if (bb->get_end_reason() == dasm::block_end)
+        {
+            // add a branch to make sure we account for this case
+            // where there's on instruction to virtualize
+            il_exit_result target_exit;
+
+            auto [target, type] = dasm->get_jump(bb);
+            if (type == dasm::jump_outside_segment)
+                target_exit = target;
+            else
+                target_exit = bb_map[dasm->get_block(target)]->head;
+
+            current_block->push_back(std::make_shared<cmd_branch>(target_exit));
+        }
+
+        // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
+        ir::cmd_branch_ptr branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+        VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
+
+        // we want to jump to the exit block now
+        current_block->pop_back();
+        current_block->push_back(std::make_shared<cmd_branch>(exit));
+
+        // add as final block_info body
         block_info->body.push_back(current_block);
 
         //
@@ -166,57 +200,13 @@ namespace eagle::ir
         if (current_block->get_block_state() == vm_block)
             exit->push_back(std::make_shared<cmd_vm_exit>());
 
-        std::vector<il_exit_result> exits;
-        exit_condition condition = exit_condition::none;
+        exit->push_back(branch_cmd);
 
-        switch (end_reason)
-        {
-            case dasm::block_jump:
-            case dasm::block_end:
-            {
-                auto [target, type] = dasm->get_jump(bb);
-                if (type == dasm::jump_outside_segment)
-                    exits.emplace_back(target);
-                else
-                    exits.emplace_back(bb_map[dasm->get_block(target)]->head);
-
-                condition = exit_condition::jmp;
-                break;
-            }
-            case dasm::block_conditional_jump:
-            {
-                // case 1 - condition succeed
-                {
-                    auto [target, type] = dasm->get_jump(bb);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->head);
-                }
-
-                // case 2 - fall through
-                {
-                    auto [target, type] = dasm->get_jump(bb, true);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->head);
-                }
-
-                const auto& [instruction, _] = bb->decoded_insts.back();
-                condition = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
-                break;
-            }
-        }
-
-        exit->push_back(std::make_shared<cmd_branch>(exits, condition));
         return block_info;
     }
 
-    std::vector<flat_block_vmid> ir_translator::flatten(
-        std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
-        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
-    )
+    std::vector<flat_block_vmid> ir_translator::flatten(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker)
     {
         // for now we just flatten
         std::vector<flat_block_vmid> block_groups;
@@ -254,11 +244,9 @@ namespace eagle::ir
         return block_groups;
     }
 
-    std::vector<flat_block_vmid> ir_translator::optimize(
-        std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+    std::vector<flat_block_vmid> ir_translator::optimize(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
-        const std::vector<preopt_block_ptr>& extern_call_blocks
-    )
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
         optimize_heads(block_vm_ids, block_tracker, extern_call_blocks);
         optimize_same_vm(block_vm_ids, block_tracker, extern_call_blocks);
@@ -266,11 +254,9 @@ namespace eagle::ir
         return flatten(block_vm_ids, block_tracker);
     }
 
-    void ir_translator::optimize_heads(
-        std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+    void ir_translator::optimize_heads(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
-        const std::vector<preopt_block_ptr>& extern_call_blocks
-    )
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
         // check each preopt block to see if vmenter head is even necessary
         for (const auto& preopt : block_vm_ids | std::views::keys)
@@ -302,11 +288,9 @@ namespace eagle::ir
         }
     }
 
-    void ir_translator::optimize_same_vm(
-        std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+    void ir_translator::optimize_same_vm(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
-        const std::vector<preopt_block_ptr>& extern_call_blocks
-    )
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
         // remove vm enter block if every reference to vm enter block uses the same vm
         for (const auto& [preopt_block, vm_id] : block_vm_ids)
@@ -395,12 +379,11 @@ namespace eagle::ir
                     const block_ptr exit_block = std::get<block_ptr>(exit_result);
                     for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
                     {
-                        const bool contains =
-                            search_preopt_block->head == exit_block ||
-                            search_preopt_block->tail == exit_block ||
+                        const bool contains = search_preopt_block->head == exit_block || search_preopt_block->tail == exit_block ||
                             std::ranges::find(search_preopt_block->body, exit_block) != search_preopt_block->body.end();
 
-                        if (contains) return search_vm_id == vm_id;
+                        if (contains)
+                            return search_vm_id == vm_id;
                     }
                 }
 
@@ -431,58 +414,77 @@ namespace eagle::ir
         return nullptr;
     }
 
-    preopt_block_ptr ir_translator::map_preopt_block(const dasm::basic_block_ptr& basic_block)
-    {
-        return bb_map[basic_block];
-    }
+    preopt_block_ptr ir_translator::map_preopt_block(const dasm::basic_block_ptr& basic_block) { return bb_map[basic_block]; }
 
     std::pair<exit_condition, bool> ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
     {
         switch (mnemonic)
         {
             // Overflow flag (OF)
-            case codec::m_jo: return { exit_condition::jo, false };
-            case codec::m_jno: return { exit_condition::jo, true };
+            case codec::m_jo:
+                return { exit_condition::jo, false };
+            case codec::m_jno:
+                return { exit_condition::jo, true };
 
             // Sign flag (SF)
-            case codec::m_js: return { exit_condition::js, false };
-            case codec::m_jns: return { exit_condition::js, true };
+            case codec::m_js:
+                return { exit_condition::js, false };
+            case codec::m_jns:
+                return { exit_condition::js, true };
 
             // Zero flag (ZF)
-            case codec::m_jz: return { exit_condition::je, false };
-            case codec::m_jnz: return { exit_condition::je, true };
+            case codec::m_jz:
+                return { exit_condition::je, false };
+            case codec::m_jnz:
+                return { exit_condition::je, true };
 
             // Carry flag (CF)
-            case codec::m_jb: return { exit_condition::jb, false };
-            case codec::m_jnb: return { exit_condition::jb, true };
+            case codec::m_jb:
+                return { exit_condition::jb, false };
+            case codec::m_jnb:
+                return { exit_condition::jb, true };
 
             // Carry or Zero flag (CF or ZF)
-            case codec::m_jbe: return { exit_condition::jbe, false };
-            case codec::m_jnbe: return { exit_condition::jbe, true };
+            case codec::m_jbe:
+                return { exit_condition::jbe, false };
+            case codec::m_jnbe:
+                return { exit_condition::jbe, true };
 
             // Sign flag not equal to Overflow flag (SF != OF)
-            case codec::m_jl: return { exit_condition::jl, false };
-            case codec::m_jnl: return { exit_condition::jl, true };
+            case codec::m_jl:
+                return { exit_condition::jl, false };
+            case codec::m_jnl:
+                return { exit_condition::jl, true };
 
             // Zero flag or Sign flag not equal to Overflow flag (ZF or SF != OF)
-            case codec::m_jle: return { exit_condition::jle, false };
-            case codec::m_jnle: return { exit_condition::jle, true };
+            case codec::m_jle:
+                return { exit_condition::jle, false };
+            case codec::m_jnle:
+                return { exit_condition::jle, true };
 
             // Parity flag (PF)
-            case codec::m_jp: return { exit_condition::jp, false };
-            case codec::m_jnp: return { exit_condition::jp, true };
+            case codec::m_jp:
+                return { exit_condition::jp, false };
+            case codec::m_jnp:
+                return { exit_condition::jp, true };
 
             // CX/ECX/RCX register is zero
-            case codec::m_jcxz: return { exit_condition::jcxz, false };
-            case codec::m_jecxz: return { exit_condition::jecxz, false };
-            case codec::m_jrcxz: return { exit_condition::jrcxz, false };
+            case codec::m_jcxz:
+                return { exit_condition::jcxz, false };
+            case codec::m_jecxz:
+                return { exit_condition::jecxz, false };
+            case codec::m_jrcxz:
+                return { exit_condition::jrcxz, false };
 
             // Unconditional jump
-            case codec::m_jmp: return { exit_condition::jmp, false };
+            case codec::m_jmp:
+                return { exit_condition::jmp, false };
 
             // Conditions not in the enum, might need to be added
-            case codec::m_jknzd: return { exit_condition::none, false };
-            case codec::m_jkzd: return { exit_condition::none, false };
+            case codec::m_jknzd:
+                return { exit_condition::none, false };
+            case codec::m_jkzd:
+                return { exit_condition::none, false };
 
             default:
             {
@@ -497,41 +499,37 @@ namespace eagle::ir
         if (codec::has_relative_operand(decoded_inst))
         {
             auto [target_address, op_i] = codec::calc_relative_rva(decoded_inst, current_rva);
-            current_block->push_back(
-                std::make_shared<cmd_x86_exec>
-                (
-                    [decoded_inst, target_address, op_i](const uint32_t rva)
+            current_block->push_back(std::make_shared<cmd_x86_exec>(
+                [decoded_inst, target_address, op_i](const uint32_t rva)
+                {
+                    // Decode instruction to an encode request
+                    codec::enc::req encode_request = codec::decode_to_encode(decoded_inst);
+                    codec::enc::op& op = encode_request.operands[op_i];
+
+                    // Adjust the operand based on its type
+                    switch (op.type)
                     {
-                        // Decode instruction to an encode request
-                        codec::enc::req encode_request = codec::decode_to_encode(decoded_inst);
-                        codec::enc::op& op = encode_request.operands[op_i];
-
-                        // Adjust the operand based on its type
-                        switch (op.type)
+                        case ZYDIS_OPERAND_TYPE_MEMORY:
                         {
-                            case ZYDIS_OPERAND_TYPE_MEMORY:
-                            {
-                                // Adjust memory displacement
-                                op.mem.displacement = target_address - rva;
-                                break;
-                            }
-                            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                            {
-                                // Adjust immediate value
-                                op.imm.s = target_address - rva;
-                                break;
-                            }
-                            default:
-                            {
-                                // Break on unexpected operand type
-                                __debugbreak();
-                            }
+                            // Adjust memory displacement
+                            op.mem.displacement = target_address - rva;
+                            break;
                         }
-
-                        return encode_request;
+                        case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                        {
+                            // Adjust immediate value
+                            op.imm.s = target_address - rva;
+                            break;
+                        }
+                        default:
+                        {
+                            // Break on unexpected operand type
+                            __debugbreak();
+                        }
                     }
-                )
-            );
+
+                    return encode_request;
+                }));
         }
         else
         {
@@ -597,4 +595,4 @@ namespace eagle::ir
         tail = std::make_shared<block_ir>(vm_block);
         original_block = block;
     }
-}
+} // namespace eagle::ir

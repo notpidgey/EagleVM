@@ -63,23 +63,29 @@ namespace eagle::ir
     class cmd_branch final : public base_command
     {
     public:
-        explicit cmd_branch(const il_exit_result& result_fallthrough);
-        cmd_branch(const il_exit_result& result_fallthrough, const il_exit_result& result_conditional, exit_condition condition, bool invert_condition);
+        explicit cmd_branch(const il_exit_result &result_fallthrough);
+        cmd_branch(const il_exit_result &result_fallthrough, const il_exit_result &result_conditional, exit_condition condition,
+                   bool invert_condition);
 
         [[nodiscard]] exit_condition get_condition() const;
-        il_exit_result& get_condition_default();
-        il_exit_result& get_condition_special();
+        il_exit_result &get_condition_default();
+        il_exit_result &get_condition_special();
 
         bool branch_visits(uint64_t rva);
-        bool branch_visits(const block_ptr& block);
+        bool branch_visits(const block_ptr &block);
 
-        void rewrite_branch(const il_exit_result& search, const il_exit_result& target);
-        bool is_similar(const std::shared_ptr<base_command>& other) override;
+        void rewrite_branch(const il_exit_result &search, const il_exit_result &target);
+        bool is_similar(const std::shared_ptr<base_command> &other) override;
+
+        void set_virtual(bool is_virtual);
+        bool is_virtual();
 
     private:
         std::vector<il_exit_result> info;
-        exit_condition condition;
 
+        exit_condition condition;
         bool invert_condition;
+
+        bool is_virtual;
     };
-}
+} // namespace eagle::ir

@@ -32,7 +32,7 @@ namespace eagle::ir::lifter
         return operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER;
     }
 
-    void pop::finalize_translate_to_virtual()
+    void pop::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         ir_size size = get_op_width();
 

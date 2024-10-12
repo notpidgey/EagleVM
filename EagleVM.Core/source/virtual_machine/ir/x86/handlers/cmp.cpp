@@ -40,22 +40,14 @@ namespace eagle::ir::handler
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
 
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp2, vtemp)
-        };
+        return { std::make_shared<cmd_pop>(vtemp, target_size), std::make_shared<cmd_pop>(vtemp2, target_size),
+                 std::make_shared<cmd_x86_dynamic>(codec::m_cmp, vtemp2, vtemp) };
     }
-}
+} // namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    void cmp::finalize_translate_to_virtual()
-    {
-        block->push_back(std::make_shared<cmd_rflags_load>());
-        base_x86_translator::finalize_translate_to_virtual();
-        block->push_back(std::make_shared<cmd_rflags_store>());
-    }
+    void cmp::finalize_translate_to_virtual(x86_cpu_flag flags) { base_x86_translator::finalize_translate_to_virtual(flags); }
 
     translate_status cmp::encode_operand(codec::dec::op_imm op_imm, uint8_t idx)
     {
@@ -89,4 +81,4 @@ namespace eagle::ir::lifter
 
         return translate_status::success;
     }
-}
+} // namespace eagle::ir::lifter

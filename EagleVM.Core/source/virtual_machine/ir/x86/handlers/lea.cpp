@@ -33,7 +33,7 @@ namespace eagle::ir::lifter
         return translate_mem_result::address;
     }
 
-    void lea::finalize_translate_to_virtual()
+    void lea::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         // because of our LEA implementation we do not want to call a handler
         // a handler would serve no purpose the way this IL is setup

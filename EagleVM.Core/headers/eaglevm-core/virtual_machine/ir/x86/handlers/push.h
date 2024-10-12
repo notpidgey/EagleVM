@@ -18,6 +18,6 @@ namespace eagle::ir::lifter
         using base_x86_translator::base_x86_translator;
 
         translate_mem_result translate_mem_result();
-        void finalize_translate_to_virtual() override;
+        void finalize_translate_to_virtual(x86_cpu_flag flags) override;
     };
 }

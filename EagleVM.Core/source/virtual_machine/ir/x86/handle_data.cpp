@@ -17,7 +17,7 @@ namespace eagle::ir
         { codec::m_movsx, std::make_shared<handler::movsx>() },
         { codec::m_pop, std::make_shared<handler::pop>() },
         { codec::m_push, std::make_shared<handler::push>() },
-        { codec::m_sub, std::make_shared<handler::sub>() },
+        { codec::m_jmp, std::make_shared<handler::jcc>() },
     };
 
     using translator_base = std::shared_ptr<lifter::base_x86_translator>;
@@ -39,5 +39,6 @@ namespace eagle::ir
         { codec::m_pop, CREATE_LIFTER_GEN(pop) },
         { codec::m_push, CREATE_LIFTER_GEN(push) },
         { codec::m_sub, CREATE_LIFTER_GEN(sub) },
+        { codec::m_jmp, CREATE_LIFTER_GEN(jcc) },
     };
 }

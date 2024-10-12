@@ -54,7 +54,7 @@ namespace eagle::ir::lifter
         return base_x86_translator::translate_mem_action(op_mem, idx);
     }
 
-    void movsx::finalize_translate_to_virtual()
+    void movsx::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         codec::dec::operand first_op = operands[0];
 

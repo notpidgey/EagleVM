@@ -14,6 +14,8 @@ namespace eagle::ir
         jcc::jcc()
         {
             build_options = {
+                { { ir_size::bit_32 }, "jmp rel32" },
+
                 { { ir_size::bit_32 }, "jo rel32" },
                 { { ir_size::bit_32 }, "jno rel32" },
 
@@ -45,8 +47,7 @@ namespace eagle::ir
             // method inspired by vmprotect 2
             // https://blog.back.engineering/21/06/2021/#vmemu-virtual-branching
 
-            const exit_condition condition = static_cast<exit_condition>(target_handler_id);
-            switch (condition)
+            switch (const exit_condition condition = static_cast<exit_condition>(target_handler_id))
             {
                 case exit_condition::jo:
                 case exit_condition::js:
@@ -75,6 +76,8 @@ namespace eagle::ir
             }
 
             //                 std::make_shared<cmd_jmp>()
+
+            return commands;
         }
 
         void jcc::write_condition_jump(const uint64_t flag_mask) const

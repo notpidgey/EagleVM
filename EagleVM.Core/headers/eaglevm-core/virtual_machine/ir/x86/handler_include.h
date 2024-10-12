@@ -10,4 +10,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/pop.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/push.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/sub.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/jcc.h"
 
