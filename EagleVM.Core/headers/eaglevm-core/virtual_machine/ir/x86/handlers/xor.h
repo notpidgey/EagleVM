@@ -4,17 +4,17 @@
 
 namespace eagle::ir::handler
 {
-    class xor : public base_handler_gen
+    class x_or : public base_handler_gen
     {
     public:
-        xor();
+        x_or();
         ir_insts gen_handler(handler_sig signature) override;
     };
-} // namespace eagle::ir::handler
+}
 
 namespace eagle::ir::lifter
 {
-    class xor : public base_x86_translator
+    class x_or : public base_x86_translator
     {
         using base_x86_translator::base_x86_translator;
 
@@ -22,4 +22,4 @@ namespace eagle::ir::lifter
         translate_status encode_operand(codec::dec::op_imm op_imm, uint8_t idx) override;
         void finalize_translate_to_virtual(x86_cpu_flag flags) override;
     };
-} // namespace eagle::ir::lifter
+}
