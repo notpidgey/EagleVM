@@ -37,7 +37,7 @@ namespace eagle::ir::handler
 
         // the way this is done is far slower than it used to be
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
-        // in andsition, it gives room for mapping x86 context into random places as well
+        // in addition, it gives room for mapping x86 context into random places as well
 
         const discrete_store_ptr vtemp = discrete_store::create(target_size);
         const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
