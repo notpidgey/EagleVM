@@ -7,17 +7,23 @@ namespace eagle::ir
     class cmd_rflags_store : public base_command
     {
     public:
-        explicit cmd_rflags_store(const std::vector<uint8_t>& flag_indexes)
-            : base_command(command_type::vm_rflags_store), relevant_flags(flag_indexes)
+        explicit cmd_rflags_store(x86_cpu_flag relevant_flags)
+            : base_command(command_type::vm_rflags_store), relevant_flags(relevant_flags)
         {
         }
 
-        std::vector<uint8_t> get_relevant_flags() const
+        x86_cpu_flag get_relevant_flags() const
         {
             return relevant_flags;
         }
 
+        bool is_similar(const base_command_ptr& other) override
+        {
+            const auto cmd = std::static_pointer_cast<cmd_rflags_store>(other);
+            return get_relevant_flags() == cmd->get_relevant_flags();
+        }
+
     private:
-        std::vector<uint8_t> relevant_flags;
+        x86_cpu_flag relevant_flags;
     };
 }

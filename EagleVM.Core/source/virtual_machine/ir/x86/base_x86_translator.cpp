@@ -66,23 +66,9 @@ namespace eagle::ir::lifter
 
         block->push_back(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
 
-        if (flags == 0)
-            return;
+        if (flags != 0)
+            block->push_back(std::make_shared<cmd_rflags_store>(flags));
 
-        uint32_t flag_bits = flags;
-        std::vector<uint8_t> enabled_bits;
-
-        int index = 0;
-        while (flag_bits != 0)
-        {
-            if (flag_bits & 1)
-                enabled_bits.push_back(index);
-
-            flag_bits >>= 1;
-            index++;
-        }
-
-        block->push_back(std::make_shared<cmd_rflags_store>(enabled_bits));
         block->push_back(std::make_shared<cmd_pop>(discrete_store::create(ir_size::bit_64), ir_size::bit_64));
     }
 

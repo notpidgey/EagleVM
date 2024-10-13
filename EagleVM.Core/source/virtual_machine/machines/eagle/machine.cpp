@@ -363,9 +363,16 @@ namespace eagle::virt::eg
         han_man->call_vm_handler(block, vm_rflags_load);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr&)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr& store)
     {
         const asmb::code_label_ptr vm_rflags_store = han_man->get_rflags_store();
+
+        auto scope = reg_64_container->create_scope();
+        auto reserved = scope.reserve();
+
+        block->add(encode(m_mov, ZREG(reserved), ZIMMS(store->get_relevant_flags())));
+        call_push(block, reserved);
+
         han_man->call_vm_handler(block, vm_rflags_store);
     }
 

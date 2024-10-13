@@ -2,6 +2,8 @@
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_enter.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_exit.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
