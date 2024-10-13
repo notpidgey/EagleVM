@@ -2,13 +2,13 @@
 
 namespace eagle::ir
 {
-    cmd_branch::cmd_branch(const il_exit_result& result_fallthrough) :
+    cmd_branch::cmd_branch(const ir_exit_result& result_fallthrough) :
         base_command(command_type::vm_branch), condition(exit_condition::jmp), invert_condition(false), virtual_branch(false)
     {
         info.push_back(result_fallthrough);
     }
 
-    cmd_branch::cmd_branch(const il_exit_result& result_fallthrough, const il_exit_result& result_conditional, const exit_condition condition,
+    cmd_branch::cmd_branch(const ir_exit_result& result_fallthrough, const ir_exit_result& result_conditional, const exit_condition condition,
         const bool invert_condition) :
         base_command(command_type::vm_branch), condition(condition), invert_condition(invert_condition), virtual_branch(false)
     {
@@ -19,18 +19,18 @@ namespace eagle::ir
 
     exit_condition cmd_branch::get_condition() const { return condition; }
 
-    il_exit_result& cmd_branch::get_condition_default()
+    ir_exit_result& cmd_branch::get_condition_default()
     {
         // the default condition which is always a fall through to the next bb or jmp
         // will be at the back
         return info.back();
     }
 
-    il_exit_result& cmd_branch::get_condition_special() { return info.front(); }
+    ir_exit_result& cmd_branch::get_condition_special() { return info.front(); }
 
     bool cmd_branch::branch_visits(const uint64_t rva)
     {
-        auto check_block = [&](const il_exit_result& exit_result) -> bool
+        auto check_block = [&](const ir_exit_result& exit_result) -> bool
         {
             if (std::holds_alternative<uint64_t>(exit_result))
             {
@@ -41,12 +41,12 @@ namespace eagle::ir
             return false;
         };
 
-        return check_block(get_condition_default()) | check_block(get_condition_special());
+        return check_block(get_condition_default()) || check_block(get_condition_special());
     }
 
     bool cmd_branch::branch_visits(const block_ptr& block)
     {
-        auto check_block = [&](const il_exit_result& exit_result) -> bool
+        auto check_block = [&](const ir_exit_result& exit_result) -> bool
         {
             if (std::holds_alternative<block_ptr>(exit_result))
             {
@@ -57,12 +57,12 @@ namespace eagle::ir
             return false;
         };
 
-        return check_block(get_condition_default()) | check_block(get_condition_special());
+        return check_block(get_condition_default()) || check_block(get_condition_special());
     }
 
-    void cmd_branch::rewrite_branch(const il_exit_result& search, const il_exit_result& target)
+    void cmd_branch::rewrite_branch(const ir_exit_result& search, const ir_exit_result& target)
     {
-        auto check_block = [&](il_exit_result& exit_result)
+        auto check_block = [&](ir_exit_result& exit_result)
         {
             if (search == exit_result)
                 exit_result = target;
@@ -84,4 +84,5 @@ namespace eagle::ir
     void cmd_branch::set_virtual(const bool is_virtual) { this->virtual_branch = is_virtual; }
 
     bool cmd_branch::is_virtual() const { return this->virtual_branch; }
+    bool cmd_branch::is_inverted() { return invert_condition; }
 }

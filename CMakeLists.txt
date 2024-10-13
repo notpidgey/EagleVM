@@ -106,7 +106,6 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_x86_dynamic.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_x86_exec.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/models/cmd_type.cpp"
-	"EagleVM.Core/source/virtual_machine/ir/dynamic_encoder/encoder.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/ir_translator.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/obfuscator/models/command_trie.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/obfuscator/obfuscator.cpp"

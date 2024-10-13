@@ -172,7 +172,7 @@ namespace eagle::ir
         {
             // add a branch to make sure we account for this case
             // where there's on instruction to virtualize
-            il_exit_result target_exit;
+            ir_exit_result target_exit;
 
             auto [target, type] = dasm->get_jump(bb);
             if (type == dasm::jump_outside_segment)
@@ -350,7 +350,7 @@ namespace eagle::ir
                 // we found that we can replace each branch to the block with a branch to the body
                 for (const auto& branch_ref : search_enter_refs)
                 {
-                    auto rewrite_branch = [&](il_exit_result& exit_result)
+                    auto rewrite_branch = [&](ir_exit_result& exit_result)
                     {
                         if (std::holds_alternative<block_ptr>(exit_result))
                             exit_result = redirect_body.front();
@@ -372,7 +372,7 @@ namespace eagle::ir
             const cmd_branch_ptr branch = preopt_exit->get_branch();
 
             // now we want to check if the current vm group has all the exits of this preopt
-            auto is_same_vm = [&](const il_exit_result& exit_result)
+            auto is_same_vm = [&](const ir_exit_result& exit_result)
             {
                 if (std::holds_alternative<block_ptr>(exit_result))
                 {

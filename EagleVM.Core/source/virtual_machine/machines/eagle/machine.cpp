@@ -92,7 +92,7 @@ namespace eagle::virt::eg
         return code;
     }
 
-    void handle_store_dead(const ir::discrete_store_ptr store) { reg }
+    void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) { base_machine::handle_cmd(code, command); }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
@@ -166,11 +166,68 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        // TODO: implement a real handler to do this instead of doing a pop
-        const auto reg_address = reg_64_container->get_any();
-        call_push(block, reg_address);
+        // the inverted condition is useless for now, but im going to keep it here anyways
+        std::unordered_map<ir::exit_condition, std::array<codec::mnemonic, 2>> jcc_lookup =
+        {
+            { ir::exit_condition::jo, { codec::mnemonic::m_jo, codec::mnemonic::m_jno } },
+            { ir::exit_condition::js, { codec::mnemonic::m_js, codec::mnemonic::m_jns } },
+            { ir::exit_condition::je, { codec::mnemonic::m_jz, codec::mnemonic::m_jnz } },
+            { ir::exit_condition::jb, { codec::mnemonic::m_jb, codec::mnemonic::m_jnb } },
+            { ir::exit_condition::jbe, { codec::mnemonic::m_jbe, codec::mnemonic::m_jnbe } },
+            { ir::exit_condition::jl, { codec::mnemonic::m_jl, codec::mnemonic::m_jnl } },
+            { ir::exit_condition::jle, { codec::mnemonic::m_jle, codec::mnemonic::m_jnle } },
+            { ir::exit_condition::jp, { codec::mnemonic::m_jp, codec::mnemonic::m_jnp } },
 
-        block->add(encode(m_jmp, ZREG(reg_address)));
+            { ir::exit_condition::jcxz, { codec::mnemonic::m_jcxz, codec::mnemonic::m_invalid } },
+            { ir::exit_condition::jecxz, { codec::mnemonic::m_jecxz, codec::mnemonic::m_invalid } },
+            { ir::exit_condition::jrcxz, { codec::mnemonic::m_jrcxz, codec::mnemonic::m_invalid } },
+
+            { ir::exit_condition::jmp, { codec::mnemonic::m_jmp, codec::mnemonic::m_invalid } }
+        };
+
+        ir::exit_condition cmd_condition = cmd->get_condition();
+        std::vector<ir::ir_exit_result> push_order =
+            cmd_condition != ir::exit_condition::jmp
+                ? std::vector<ir::ir_exit_result>{ cmd->get_condition_special(), cmd->get_condition_default() }
+                : std::vector<ir::ir_exit_result>{ cmd->get_condition_default() };
+
+        // if the condition is inverted, we want the opposite branches to be taken
+        if (cmd_condition != ir::exit_condition::jmp && cmd->is_inverted())
+            std::swap(push_order[0], push_order[1]);
+
+        // push all
+        for (ir::ir_exit_result& cmd : push_order)
+        {
+            std::visit([&](auto&& arg) {
+                scope_register_manager scope = reg_64_container->create_scope();
+                const reg temp_reg = scope.reserve();
+
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, uint64_t>)
+                {
+                    uint64_t immediate_value = arg;
+
+                    block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
+                    call_push(block, get_bit_version(temp_reg, reg_size::bit_64));
+                }
+                else if constexpr (std::is_same_v<T, ir::block_ptr>)
+                {
+                    ir::block_ptr target = arg;
+
+                    const asmb::code_label_ptr label = get_block_label(target);
+                    VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+
+                    block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
+                    call_push(block, get_bit_version(temp_reg, reg_size::bit_64));
+                }
+                else
+                    VM_ASSERT("unimplemented exit result");
+            }, cmd);
+        }
+
+        // this is a hacky solution but the exit condition maps to an actual handler id.
+        // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
+        han_man->call_vm_handler(block, han_man->get_instruction_handler(codec::m_jmp, uint64_t(cmd_condition)));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
@@ -211,7 +268,7 @@ namespace eagle::virt::eg
         const ir::ir_size write_size = cmd->get_write_size();
 
         scope_register_manager scope = reg_64_container->create_scope();
-        const std::vector<reg> temps = scope.reserve_multiple(2);
+        const auto temps = scope.reserve<2>();
 
         const reg temp_value = get_bit_version(temps[0], to_reg_size(value_size));
         const reg temp_address = temps[1];
@@ -250,14 +307,15 @@ namespace eagle::virt::eg
         auto push_val = cmd->get_value();
 
         scope_register_manager scope = reg_64_container->create_scope();
-        std::visit([&]<typename exit_type>(exit_type&& arg)
+        std::visit([&]<typename push_type>(push_type&& arg)
         {
-            using T = std::decay_t<exit_type>;
+            using T = std::decay_t<push_type>;
             if constexpr (std::is_same_v<T, uint64_t>)
             {
                 const uint64_t immediate_value = arg;
 
                 const reg temp_reg = scope.reserve();
+
                 block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
             }
@@ -269,6 +327,7 @@ namespace eagle::virt::eg
                 VM_ASSERT(label != nullptr, "block contains missing context");
 
                 const reg temp_reg = scope.reserve();
+
                 block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
             }
@@ -353,7 +412,6 @@ namespace eagle::virt::eg
 
 
         block->add(encode(m_mov, ZREG(get_bit_version(temp_reg, current_size)), ZREG(get_bit_version(rax, current_size))));
-
         call_push(block, get_bit_version(temp_reg, target_size));
     }
 
@@ -376,10 +434,10 @@ namespace eagle::virt::eg
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
-                address_gen.push_back(
-                    encode(m_push,
-                           ZIMMU(static_cast<uint32_t>(address) >= 0x80000000 ? static_cast<uint64_t>(address) | 0xFF'FF'FF'FF'00'00'00'00
-                                                                              : static_cast<uint32_t>(address))));
+                address_gen.push_back(encode(m_push, ZIMMU(
+                    static_cast<uint32_t>(address) >= 0x80000000 ?
+                    static_cast<uint64_t>(address) | 0xFF'FF'FF'FF'00'00'00'00 :
+                    static_cast<uint32_t>(address))));
 
                 address_gen.push_back(encode(m_mov, ZMEMBD(rsp, 4, 4), ZIMMS(static_cast<uint32_t>(address >> 32))));
                 address_gen.push_back(encode(m_ret));
@@ -405,22 +463,21 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
     {
         const ir::encoder::encoder& encoder = cmd->get_encoder();
-        ir::encoder::val_var_resolver resolver = [this](ir::encoder::val_variant& arg) -> reg
+        ir::encoder::val_var_resolver resolver_func = [this](ir::encoder::val_variant& arg) -> reg
         {
-            reg result = none;
-            std::visit([&, this]<typename val_type>(val_type&& type_arg)
+            return std::visit([&, this]<typename val_type>(val_type&& type_arg)
             {
                 if constexpr (std::is_same_v<std::decay_t<val_type>, ir::discrete_store_ptr>)
                 {
                     const ir::discrete_store_ptr& store = type_arg;
                     reg_64_container->assign(store);
 
-                    result = store->get_store_register();
+                    return store->get_store_register();
                 }
                 else if constexpr (std::is_same_v<std::decay_t<val_type>, ir::reg_vm>)
                 {
                     const ir::reg_vm& store = type_arg;
-                    result = reg_vm_to_register(store);
+                    return reg_vm_to_register(store);
                 }
                 else if constexpr (std::is_same_v<std::decay_t<val_type>, uint64_t>)
                 {
@@ -430,25 +487,17 @@ namespace eagle::virt::eg
                 else
                 {
                     VM_ASSERT("unknown val_type translated");
+                    return none;
                 }
             }, arg);
-
-            return result;
         };
 
-        block->add(encoder.create(resolver));
+        block->add(encoder.create(resolver_func));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) { block->add(cmd->get_request()); }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers() { return han_man->build_handlers(); }
-
-    void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
-    {
-        base_machine::handle_cmd(code, command);
-        for (ir::discrete_store_ptr& res : command->get_release_list())
-            reg_64_container->release(res);
-    }
 
     void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared)
     {

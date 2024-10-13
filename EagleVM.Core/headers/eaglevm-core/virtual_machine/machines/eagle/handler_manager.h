@@ -60,7 +60,7 @@ namespace eagle::virt::eg
 
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
-        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint64_t handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
 
         asmb::code_label_ptr get_vm_enter();
@@ -99,8 +99,7 @@ namespace eagle::virt::eg
             const complex_load_info& load_info);
 
         static complex_load_info generate_complex_load_info(const uint16_t start_bit, const uint16_t end_bit);
-        static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info,
-            const std::vector<reg_mapped_range>& register_ranges);
+        static std::vector<reg_mapped_range> apply_complex_mapping(const complex_load_info& load_info, const std::vector<reg_mapped_range>& register_ranges);
 
         asmb::code_label_ptr resolve_complexity(const ir::discrete_store_ptr& source, const complex_load_info& load_info);
 
@@ -135,7 +134,7 @@ namespace eagle::virt::eg
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_pop;
 
         using jcc_mask_expected = std::pair<uint32_t, uint32_t>;
-        std::unordered_map<jcc_mask_expected, tagged_handler_data_pair> vm_jcc;
+        std::unordered_map<ir::exit_condition, tagged_handler_data_pair> vm_jcc;
 
         std::vector<tagged_handler_data_pair> register_load_handlers;
         std::vector<tagged_handler_data_pair> register_store_handlers;
@@ -146,7 +145,7 @@ namespace eagle::virt::eg
         uint16_t vm_stack_regs;
         uint16_t vm_call_stack;
 
-        using tagged_handler_id = std::pair<codec::mnemonic, std::string>;
+        using tagged_handler_id = std::pair<codec::mnemonic, uint64_t>;
         using tagged_handler_label = std::pair<tagged_handler_id, asmb::code_label_ptr>;
         std::vector<tagged_handler_label> tagged_instruction_handlers;
 

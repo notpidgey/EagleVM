@@ -11,16 +11,15 @@ namespace eagle::ir::handler
         ir_insts gen_handler(uint64_t target_handler_id) override;
 
     private:
-        void write_condition_jump(uint64_t flag_mask) const;
-        void write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const;
-        void write_check_register(codec::reg reg) const;
-        void write_jle() const;
+        ir_insts write_condition_jump(uint64_t flag_mask) const;
+        ir_insts write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const;
+        ir_insts write_check_register(codec::reg reg) const;
+        ir_insts write_jle() const;
 
-        void write_flag_operation(const std::function<std::vector<base_command_ptr>()>& operation_generator) const;
+        ir_insts write_flag_operation(const std::function<std::vector<base_command_ptr>()>& operation_generator) const;
 
-        __forceinline static std::vector<base_command_ptr> load_isolated_flag(uint64_t flag_mask);
-
-        static auto get_flag_for_condition(exit_condition condition) -> uint64_t;
+        static ir_insts load_isolated_flag(uint64_t flag_mask);
+        static uint64_t get_flag_for_condition(exit_condition condition);
         static codec::reg get_register_for_condition(exit_condition condition);
     };
 }

@@ -67,7 +67,7 @@ namespace eagle::virt::pidg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        auto write_jump = [&](ir::il_exit_result jump, mnemonic mnemonic)
+        auto write_jump = [&](ir::ir_exit_result jump, mnemonic mnemonic)
         {
             std::visit([&]<typename exit_type>(exit_type&& arg)
             {
@@ -95,7 +95,7 @@ namespace eagle::virt::pidg
         {
             case ir::exit_condition::jmp:
             {
-                const ir::il_exit_result jump = cmd->get_condition_default();
+                const ir::ir_exit_result jump = cmd->get_condition_default();
                 write_jump(jump, m_jmp);
 
                 break;
@@ -108,10 +108,10 @@ namespace eagle::virt::pidg
             default:
             {
                 // conditional
-                const ir::il_exit_result conditional_jump = cmd->get_condition_special();
+                const ir::ir_exit_result conditional_jump = cmd->get_condition_special();
                 write_jump(conditional_jump, to_jump_mnemonic(cmd->get_condition()));
 
-                const ir::il_exit_result jump = cmd->get_condition_default();
+                const ir::ir_exit_result jump = cmd->get_condition_default();
                 write_jump(jump, m_jmp);
             }
         }
@@ -215,6 +215,10 @@ namespace eagle::virt::pidg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
     {
         // call ia32 handler for push
+        std::visit(
+            []() {
+
+        });
         switch (cmd->get_push_type())
         {
             case ir::info_type::vm_register:

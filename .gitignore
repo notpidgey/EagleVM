@@ -460,3 +460,5 @@ test/test_runner
 ## Cmake build files
 cmake-build-debug/*
 cmake-build-release/*
+
+builds/

@@ -47,6 +47,7 @@ namespace eagle::ir
             // method inspired by vmprotect 2
             // https://blog.back.engineering/21/06/2021/#vmemu-virtual-branching
 
+            ir_insts ir_output = { };
             switch (const exit_condition condition = static_cast<exit_condition>(target_handler_id))
             {
                 case exit_condition::jo:
@@ -54,35 +55,34 @@ namespace eagle::ir
                 case exit_condition::je:
                 case exit_condition::jb:
                 case exit_condition::jp:
-                    write_condition_jump(get_flag_for_condition(condition));
+                    ir_output = write_condition_jump(get_flag_for_condition(condition));
                     break;
                 case exit_condition::jbe:
-                    write_bitwise_condition(codec::m_and, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_ZF);
+                    ir_output = write_bitwise_condition(codec::m_and, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_ZF);
                     break;
                 case exit_condition::jl:
-                    write_bitwise_condition(codec::m_xor, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
+                    ir_output = write_bitwise_condition(codec::m_xor, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
                     break;
                 case exit_condition::jle:
-                    write_jle();
+                    ir_output = write_jle();
                     break;
                 case exit_condition::jcxz:
                 case exit_condition::jecxz:
                 case exit_condition::jrcxz:
-                    write_check_register(get_register_for_condition(condition));
+                    ir_output = write_check_register(get_register_for_condition(condition));
                     break;
                 default:
                     VM_ASSERT("invalid jump condition");
                     break;
             }
 
-            //                 std::make_shared<cmd_jmp>()
-
-            return commands;
+            ir_output.push_back(std::make_shared<cmd_jmp>());
+            return ir_output;
         }
 
-        void jcc::write_condition_jump(const uint64_t flag_mask) const
+        ir_insts jcc::write_condition_jump(const uint64_t flag_mask) const
         {
-            write_flag_operation([flag_mask]
+            return write_flag_operation([flag_mask]
             {
                 std::vector<base_command_ptr> command_vec;
                 command_vec += load_isolated_flag(flag_mask);
@@ -91,9 +91,9 @@ namespace eagle::ir
             });
         }
 
-        void jcc::write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const
+        ir_insts jcc::write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const
         {
-            write_flag_operation([flag_mask_one, flag_mask_two, bitwise]
+            return write_flag_operation([flag_mask_one, flag_mask_two, bitwise]
             {
                 std::vector<base_command_ptr> command_vec;
                 command_vec += load_isolated_flag(flag_mask_one);
@@ -104,10 +104,10 @@ namespace eagle::ir
             });
         }
 
-        void jcc::write_check_register(codec::reg reg) const
+        ir_insts jcc::write_check_register(codec::reg reg) const
         {
             auto target_size = bits_to_ir_size(get_reg_size(reg));
-            write_flag_operation([reg, target_size]
+            return write_flag_operation([reg, target_size]
             {
                 return std::vector<base_command_ptr>{
                     std::make_shared<cmd_context_load>(reg),
@@ -118,9 +118,9 @@ namespace eagle::ir
             });
         }
 
-        void jcc::write_jle() const
+        ir_insts jcc::write_jle() const
         {
-            write_flag_operation([]
+            return write_flag_operation([]
             {
                 std::vector<base_command_ptr> command_vec;
                 command_vec += load_isolated_flag(ZYDIS_CPUFLAG_SF);
@@ -134,9 +134,9 @@ namespace eagle::ir
             });
         }
 
-        void jcc::write_flag_operation(const std::function<std::vector<base_command_ptr>()>& operation_generator) const
+        ir_insts jcc::write_flag_operation(const std::function<std::vector<base_command_ptr>()>& operation_generator) const
         {
-            std::vector<base_command_ptr> commands;
+            ir_insts commands;
 
             auto operation_commands = operation_generator();
             commands.insert(commands.end(), operation_commands.begin(), operation_commands.end());
@@ -145,9 +145,11 @@ namespace eagle::ir
                 std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
                 std::make_shared<cmd_mem_read>(ir_size::bit_64),
             });
+
+            return commands;
         }
 
-        std::vector<base_command_ptr> jcc::load_isolated_flag(const uint64_t flag_mask)
+        ir_insts jcc::load_isolated_flag(const uint64_t flag_mask)
         {
             long index;
             _BitScanForward(reinterpret_cast<unsigned long*>(&index), flag_mask);
@@ -156,7 +158,7 @@ namespace eagle::ir
                                        ? std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
                                        : std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
 
-            return std::vector<base_command_ptr>{
+            return ir_insts {
                 std::make_shared<cmd_rflags_load>(),
 
                 // mask the flag
@@ -212,7 +214,7 @@ namespace eagle::ir
 
             branch_info info = translator->get_branch_info(original_rva);
             if (info.exit_condition == exit_condition::jmp)
-                block->push_back(std::make_shared<cmd_branch>(info.fallthrough_branch.value()));
+                block->push_back(std::make_shared<cmd_branch>(*info.fallthrough_branch));
             else
                 block->push_back(std::make_shared<cmd_branch>(*info.fallthrough_branch, *info.conditional_branch, condition,
                     info.inverted_condition));

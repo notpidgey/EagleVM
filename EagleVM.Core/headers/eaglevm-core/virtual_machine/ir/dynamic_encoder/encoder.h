@@ -10,7 +10,7 @@
 namespace eagle::ir::encoder
 {
     using val_variant = std::variant<std::monostate, reg_vm, discrete_store_ptr, uint64_t>;
-    using val_var_resolver = codec::reg(val_variant&);
+    using val_var_resolver = std::function<codec::reg(val_variant&)>;
 
     enum class operand_type
     {
