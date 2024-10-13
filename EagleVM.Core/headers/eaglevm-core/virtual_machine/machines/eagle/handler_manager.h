@@ -5,6 +5,7 @@
 #include "eaglevm-core/compiler/code_container.h"
 
 #include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
+#include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
@@ -62,6 +63,7 @@ namespace eagle::virt::eg
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint64_t handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
+        ir::ir_insts build_instruction_handler(codec::mnemonic mnemonic, uint64_t handler_sig);
 
         asmb::code_label_ptr get_vm_enter();
         asmb::code_label_ptr get_vm_exit();
@@ -114,8 +116,6 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> build_push();
         std::vector<asmb::code_container_ptr> build_pop();
 
-        std::vector<asmb::code_container_ptr> build_jcc();
-
     private:
         std::weak_ptr<machine> machine_inst;
         settings_ptr settings;
@@ -132,9 +132,6 @@ namespace eagle::virt::eg
 
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_push;
         std::unordered_map<codec::reg, tagged_handler_data_pair> vm_pop;
-
-        using jcc_mask_expected = std::pair<uint32_t, uint32_t>;
-        std::unordered_map<ir::exit_condition, tagged_handler_data_pair> vm_jcc;
 
         std::vector<tagged_handler_data_pair> register_load_handlers;
         std::vector<tagged_handler_data_pair> register_store_handlers;

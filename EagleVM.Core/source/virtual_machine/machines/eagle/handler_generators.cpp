@@ -292,45 +292,6 @@ namespace eagle::virt::eg
         return context_stores;
     }
 
-    std::vector<asmb::code_container_ptr> handler_manager::build_jcc()
-    {
-        std::vector<asmb::code_container_ptr> context_stores;
-        for (auto& [jcc_pair, variant_handler] : vm_jcc)
-        {
-            auto [jcc_mask, jcc_expected] = jcc_pair;
-
-            auto& [container, label] = variant_handler;
-            container->bind(label);
-
-            // get the relevent indecies from the mask
-            unsigned long index;
-            std::vector<uint8_t> set_bit_indecies;
-
-            while (jcc_mask != 0)
-            {
-                if (_BitScanForward(&index, jcc_mask))
-                {
-                    set_bit_indecies.push_back(index);
-                    jcc_mask &= ~(1 << index);
-                }
-            }
-
-            scope_register_manager scope = regs_64_context->create_scope();
-
-            auto temp = scope.reserve_multiple(1 + set_bit_indecies.size());
-            auto flag_reg = temp[0];
-
-            container->add({
-                encode(m_mov, ZREG(flag_reg), ZMEMBD(VSP, 0, 8)),
-
-                encode()
-
-                encode(m_mov, ZREG(target_temp), ZMEMBD(VSP, 0, TOB(reg_size))),
-                encode(m_lea, ZREG(VSP), ZMEMBD(VSP, TOB(reg_size), 8)),
-            });
-        }
-    }
-
     std::vector<asmb::code_container_ptr> handler_manager::build_instruction_handlers()
     {
         std::vector<asmb::code_container_ptr> container;

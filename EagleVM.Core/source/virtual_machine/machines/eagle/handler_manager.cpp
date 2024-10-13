@@ -740,6 +740,12 @@ namespace eagle::virt::eg
         return get_instruction_handler(mnemonic, signature);
     }
 
+    ir::ir_insts handler_manager::build_instruction_handler(codec::mnemonic mnemonic, uint64_t handler_sig)
+    {
+        const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
+        return target_mnemonic->gen_handler(handler_sig);
+    }
+
     void handler_manager::call_vm_handler(const asmb::code_container_ptr& container, const asmb::code_label_ptr& label) const
     {
         VM_ASSERT(label != nullptr, "code cannot be an invalid code label");

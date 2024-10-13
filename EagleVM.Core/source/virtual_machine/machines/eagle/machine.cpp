@@ -229,7 +229,10 @@ namespace eagle::virt::eg
 
         // this is a hacky solution but the exit condition maps to an actual handler id.
         // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
-        han_man->call_vm_handler(block, han_man->get_instruction_handler(codec::m_jmp, uint64_t(cmd_condition)));
+        // we also want to inline this so we are inserting it in place
+        ir::ir_insts jcc_instructions = han_man->build_instruction_handler(codec::m_jmp, uint64_t(cmd_condition));
+        for (auto& inst : jcc_instructions)
+            handle_cmd(block, inst);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)

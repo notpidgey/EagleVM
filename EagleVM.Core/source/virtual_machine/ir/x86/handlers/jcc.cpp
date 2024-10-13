@@ -154,21 +154,31 @@ namespace eagle::ir
             long index;
             _BitScanForward(reinterpret_cast<unsigned long*>(&index), flag_mask);
 
-            const auto shift_cmd = index > 3
-                                       ? std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
-                                       : std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 });
-
-            return ir_insts {
+            // mask the flag that we are looking for
+            ir_insts isolated_flag = {
                 std::make_shared<cmd_rflags_load>(),
-
-                // mask the flag
                 std::make_shared<cmd_push>(flag_mask, ir_size::bit_64),
                 std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
-
-                // shift from original flag to bit 3
-                std::make_shared<cmd_push>(index, ir_size::bit_64),
-                shift_cmd
             };
+
+            // move the flag to bit 3 where the value of it will be 0x8
+            auto shift_distance = std::abs(index - 3);
+            if (index > 3)
+            {
+                isolated_flag.append_range(ir_insts{
+                    std::make_shared<cmd_push>(shift_distance, ir_size::bit_64),
+                    std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
+                });
+            }
+            else if (index < 3)
+            {
+                isolated_flag.append_range(ir_insts{
+                    std::make_shared<cmd_push>(shift_distance, ir_size::bit_64),
+                    std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
+                });
+            }
+
+            return isolated_flag;
         }
 
         uint64_t jcc::get_flag_for_condition(const exit_condition condition)

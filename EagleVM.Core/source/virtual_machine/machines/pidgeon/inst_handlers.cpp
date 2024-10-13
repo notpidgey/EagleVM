@@ -487,19 +487,19 @@ namespace eagle::virt::pidg
         for (const ir::x86_operand& entry : operand_sig)
             sig.emplace_back(entry.operand_type, entry.operand_size);
 
-        const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(sig);
-        return handler_id ? get_instruction_handler(mnemonic, handler_id.value()) : nullptr;
+        const std::optional<uint64_t> handler_id = target_mnemonic->get_handler_id(sig);
+        return handler_id ? get_instruction_handler(mnemonic, *handler_id) : nullptr;
     }
 
     asmb::code_label_ptr inst_handlers::get_instruction_handler(const mnemonic mnemonic, const ir::handler_sig& handler_sig)
     {
         const std::shared_ptr<ir::handler::base_handler_gen> target_mnemonic = ir::instruction_handlers[mnemonic];
 
-        const std::optional<std::string> handler_id = target_mnemonic->get_handler_id(handler_sig);
-        return handler_id ? get_instruction_handler(mnemonic, handler_id.value()) : nullptr;
+        const std::optional<uint64_t> handler_id = target_mnemonic->get_handler_id(handler_sig);
+        return handler_id ? get_instruction_handler(mnemonic, *handler_id) : nullptr;
     }
 
-    asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, std::string handler_sig)
+    asmb::code_label_ptr inst_handlers::get_instruction_handler(mnemonic mnemonic, uint64_t handler_sig)
     {
         VM_ASSERT(mnemonic != m_pop, "pop retreival through get_instruction_handler is blocked. use get_pop");
         VM_ASSERT(mnemonic != m_push, "push retreival through get_instruction_handler is blocked. use get_push");

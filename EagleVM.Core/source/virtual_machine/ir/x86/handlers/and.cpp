@@ -7,7 +7,7 @@ namespace eagle::ir::handler
 {
     ands::ands()
     {
-        valid_operand = {
+        valid_operands = {
             { { { codec::op_none, codec::bit_8 }, { codec::op_none, codec::bit_8 } }, "and 8,8" },
             { { { codec::op_none, codec::bit_16 }, { codec::op_none, codec::bit_16 } }, "and 16,16" },
             { { { codec::op_none, codec::bit_32 }, { codec::op_none, codec::bit_32 } }, "and 32,32" },

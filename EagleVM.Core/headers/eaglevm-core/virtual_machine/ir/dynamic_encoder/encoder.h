@@ -124,8 +124,8 @@ namespace eagle::ir::encoder
     {
     public:
         template <typename... Operands>
-        explicit encoder(const codec::mnemonic mnemonic, Operands... ops)
-            : mnemonic_(mnemonic), operands_{ ops... }
+        explicit encoder(const codec::mnemonic mnemonic, Operands... ops) :
+            mnemonic_(mnemonic), operands_(std::vector<std::shared_ptr<operand>>{ ops... })
         {
         }
 
