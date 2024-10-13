@@ -36,19 +36,17 @@ namespace eagle::ir
     {
     public:
         virtual ~base_command() = default;
-        explicit base_command(const command_type command)
-            : command(command)
+        explicit base_command(const command_type command, bool force_inline = false)
+            : command(command), force_inline(force_inline)
         {
             static uint32_t id = 0;
-
-            if (id == 3083)
-                __debugbreak();
 
             unique_id = id;
             unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
         }
 
         command_type get_command_type() const;
+        bool is_inlined();
 
         std::shared_ptr<base_command> release(const std::vector<discrete_store_ptr>& stores);
         std::shared_ptr<base_command> release(const discrete_store_ptr& store);
@@ -66,6 +64,8 @@ namespace eagle::ir
     protected:
         command_type command;
         std::vector<discrete_store_ptr> release_list;
+
+        bool force_inline;
 
     private:
         static std::string command_to_string(command_type type);

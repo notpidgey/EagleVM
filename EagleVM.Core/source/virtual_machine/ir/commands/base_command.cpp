@@ -4,8 +4,9 @@ namespace eagle::ir
 {
     command_type base_command::get_command_type() const
     {
-        return command;
-    }
+        return command; }
+
+    bool base_command::is_inlined() { return force_inline; }
 
     std::shared_ptr<base_command> base_command::release(const std::vector<discrete_store_ptr>& stores)
     {

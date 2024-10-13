@@ -23,7 +23,7 @@ namespace eagle::ir::encoder
     {
     public:
         virtual ~operand() = default;
-        virtual void build(codec::enc::req& req, val_var_resolver& resolver) = 0;
+        virtual void build(codec::enc::req& req, const val_var_resolver& resolver) = 0;
 
         operand_type operand_type;
     };
@@ -107,7 +107,7 @@ namespace eagle::ir::encoder
             operand_type = operand_type::imm;
         }
 
-        void build(codec::enc::req& req, val_var_resolver&) override
+        void build(codec::enc::req& req, const val_var_resolver&) override
         {
             codec::enc::op_imm im{ };
             im.s = imm_;

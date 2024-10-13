@@ -166,7 +166,7 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        // the inverted condition is useless for now, but im going to keep it here anyways
+        // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
         std::unordered_map<ir::exit_condition, std::array<codec::mnemonic, 2>> jcc_lookup =
         {
             { ir::exit_condition::jo, { codec::mnemonic::m_jo, codec::mnemonic::m_jno } },
@@ -196,7 +196,7 @@ namespace eagle::virt::eg
             std::swap(push_order[0], push_order[1]);
 
         // push all
-        for (ir::ir_exit_result& cmd : push_order)
+        for (const ir::ir_exit_result& cmd : push_order)
         {
             std::visit([&](auto&& arg) {
                 scope_register_manager scope = reg_64_container->create_scope();
@@ -221,7 +221,9 @@ namespace eagle::virt::eg
                     call_push(block, get_bit_version(temp_reg, reg_size::bit_64));
                 }
                 else
+                {
                     VM_ASSERT("unimplemented exit result");
+                }
             }, cmd);
         }
 
