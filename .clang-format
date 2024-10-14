@@ -57,3 +57,4 @@ TabWidth: 4
 PointerAlignment: Left
 LambdaBodyIndentation: OuterScope
 AllowShortLambdasOnASingleLine: true
+FixNamespaceComments: false
