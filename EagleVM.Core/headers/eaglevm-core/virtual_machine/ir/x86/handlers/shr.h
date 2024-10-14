@@ -9,6 +9,15 @@ namespace eagle::ir::handler
     public:
         shr();
         ir_insts gen_handler(handler_sig signature) override;
+
+    private:
+        ir_insts compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count, const discrete_store_ptr& flags);
+        ir_insts compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count, const discrete_store_ptr& flags);
+        ir_insts compute_sf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count, const discrete_store_ptr& flags);
+        ir_insts compute_zf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count, const discrete_store_ptr& flags);
+        ir_insts compute_pf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count, const discrete_store_ptr& flags);
+
+        uint8_t flag_index(uint64_t mask);
     };
 }
 

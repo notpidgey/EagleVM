@@ -50,7 +50,7 @@ namespace eagle::ir::handler
             make_dyn(codec::m_and, encoder::reg(vtemp2), encoder::reg(vtemp)),
             std::make_shared<cmd_push>(vtemp2, target_size),
 
-            make_dyn(codec::)
+            // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
         };
     }
 }

@@ -23,13 +23,13 @@ namespace eagle::ir
             {
                 if (0 == block_in.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    false_in->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16()));
+                    false_in->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                     false_in->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
                 }
 
                 if (0 == block_out.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    false_out->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16()));
+                    false_out->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                     false_out->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
                 }
             }

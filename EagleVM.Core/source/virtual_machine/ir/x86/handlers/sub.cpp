@@ -45,6 +45,8 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(vtemp2, target_size),
             make_dyn(codec::m_sub, encoder::reg(vtemp2), encoder::reg(vtemp)),
             std::make_shared<cmd_push>(vtemp2, target_size)
+
+            // The OF, SF, ZF, AF, PF, and CF flags are set according to the result.
         };
     }
 }

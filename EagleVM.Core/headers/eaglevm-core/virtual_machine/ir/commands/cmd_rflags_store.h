@@ -1,4 +1,5 @@
 #pragma once
+#include "eaglevm-core/virtual_machine/ir/x86/models/flags.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_stack.h"
 

@@ -39,16 +39,18 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
+        const discrete_store_ptr p_one = discrete_store::create(target_size);
+        const discrete_store_ptr p_two = discrete_store::create(target_size);
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            make_dyn(codec::m_add, encoder::reg(vtemp2), encoder::reg(vtemp)),
-            std::make_shared<cmd_push>(vtemp2, target_size)
+            std::make_shared<cmd_pop>(p_one, target_size),
+            std::make_shared<cmd_pop>(p_two, target_size),
+            make_dyn(codec::m_add, encoder::reg(p_two), encoder::reg(p_one)),
+            std::make_shared<cmd_push>(p_two, target_size)
+
+            // The OF, SF, ZF, AF, CF, and PF flags are set according to the result.
         };
     }
 }

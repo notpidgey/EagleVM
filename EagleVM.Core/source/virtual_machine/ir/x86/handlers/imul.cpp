@@ -43,6 +43,13 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(vtemp2, target_size),
             make_dyn(codec::m_imul, vtemp, vtemp2),
             std::make_shared<cmd_push>(vtemp, target_size)
+
+            /*
+                For the one operand form of the instruction, the CF and OF flags are set when significant bits are carried into the upper half of the
+                result and cleared when the result fits exactly in the lower half of the result. For the two- and three-operand forms of the instruction,
+                the CF and OF flags are set when the result must be truncated to fit in the destination operand size and cleared when the result fits
+                exactly in the destination operand size. The SF, ZF, AF, and PF flags are undefined.
+            */
         };
     }
 }

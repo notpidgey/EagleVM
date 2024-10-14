@@ -5,8 +5,9 @@
 
 namespace eagle::ir
 {
-    class cmd_jmp final : public base_command
+    class cmd_jmp : public base_command
     {
+    public:
         cmd_jmp();
     };
 }

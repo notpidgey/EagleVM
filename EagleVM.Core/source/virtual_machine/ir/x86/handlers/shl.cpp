@@ -49,6 +49,13 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(vtemp2, target_size),
             make_dyn(codec::m_shl, encoder::reg(vtemp2), encoder::reg(vtemp)),
             std::make_shared<cmd_push>(vtemp2, target_size)
+
+            /*
+                The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions where
+                the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit shifts (see
+                “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is 0, the flags
+                are not affected. For a non-zero count, the AF flag is undefined.
+            */
         };
     }
 }

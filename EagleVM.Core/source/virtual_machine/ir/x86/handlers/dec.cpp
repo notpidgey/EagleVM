@@ -34,7 +34,10 @@ namespace eagle::ir::handler
         return {
             std::make_shared<cmd_pop>(vtemp, target_size),
             make_dyn(codec::m_dec, vtemp),
-            std::make_shared<cmd_push>(vtemp, target_size)
+            std::make_shared<cmd_push>(vtemp, target_size),
+
+            // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
+            std::make_shared<cmd_rflags_load>()
         };
     }
 }
