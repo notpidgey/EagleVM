@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/shr.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
@@ -45,13 +46,6 @@ namespace eagle::ir::handler
 
         const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
 
-        auto TO_IDX = [](uint64_t flag) {
-            unsigned long index = 0;
-            _BitScanForward(&index, flag);
-
-            return index;
-        };
-
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         ir_insts insts = {
@@ -62,27 +56,32 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(shift_value, target_size),
 
             /*
-                The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions where
-                the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit shifts (see
-                “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is 0, the flags
-                are not affected. For a non-zero count, the AF flag is undefined.
+                The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions
+               where the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit
+               shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
+               0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
             std::make_shared<cmd_rflags_load>(),
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             // CF, OF, SF, ZF, PF are all set
             make_dyn(codec::m_and, encoder::reg(flags_result),
-                encoder::imm(~(ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
+                     encoder::imm(~(ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
         };
 
         insts.append_range(compute_cf(target_size, shift_result, shift_value, shift_count, flags_result));
         insts.append_range(compute_of(target_size, shift_result, shift_value, shift_count, flags_result));
-        insts.append_range(compute_sf(target_size, shift_result, shift_value, shift_count, flags_result));
-        insts.append_range(compute_zf(target_size, shift_result, shift_value, shift_count, flags_result));
-        insts.append_range(compute_pf(target_size, shift_result, shift_value, shift_count, flags_result));
+
+        // The SF, ZF, and PF flags are set according to the result.
+        insts.append_range(util::calculate_sf(target_size, flags_result, shift_result));
+        insts.append_range(util::calculate_zf(target_size, flags_result, shift_result));
+        insts.append_range(util::calculate_pf(target_size, flags_result, shift_result));
+
+        return insts;
     }
 
-    ir_insts shr::compute_cf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value, const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    ir_insts shr::compute_cf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
+                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
     {
         //
         // CF = (value >> (shift_count - 1))
@@ -98,14 +97,15 @@ namespace eagle::ir::handler
 
             // CF = (value >> (shift_count - 1))
             make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
-            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(flag_index(ZYDIS_CPUFLAG_CF))),
+            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
             make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
 
             std::make_shared<cmd_pop>(shift_value),
         };
     }
 
-    ir_insts shr::compute_of(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value, const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    ir_insts shr::compute_of(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
+                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
     {
         //
         // OF = MSB(tempDEST)
@@ -116,73 +116,13 @@ namespace eagle::ir::handler
 
             // move most significant bit to the OF position and set it in "flags_result"
             make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm((uint64_t)size - 1)),
+
             // make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
-            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm((flag_index(ZYDIS_CPUFLAG_OF)))),
+            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm((util::flag_index(ZYDIS_CPUFLAG_OF)))),
             make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
 
             std::make_shared<cmd_pop>(shift_value, size),
         };
-    }
-
-    ir_insts shr::compute_sf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value, const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
-    {
-        //
-        // SF = (value >> (bit_size(value) - 1)) AND 1
-        //
-
-        return {
-            std::make_shared<cmd_push>(shift_result, size),
-
-            make_dyn(codec::m_shr, encoder::reg(shift_result), encoder::imm((uint64_t)size - 1)),
-            make_dyn(codec::m_shl, encoder::reg(shift_result), encoder::imm((flag_index(ZYDIS_CPUFLAG_SF)))),
-            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_result)),
-
-            std::make_shared<cmd_pop>(shift_result, size),
-        };
-    }
-
-    ir_insts shr::compute_zf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value, const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
-    {
-        //
-        // ZF = value == 0
-        //
-
-        return {
-            std::make_shared<cmd_push>(shift_result, size),
-
-            make_dyn(codec::m_cmp, encoder::reg(shift_result), encoder::imm(0)),
-            make_dyn(codec::m_cmovz, encoder::reg(shift_result), encoder::imm(ZYDIS_CPUFLAG_ZF)),
-            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_result)),
-
-            std::make_shared<cmd_pop>(shift_result, size),
-        };
-    }
-
-    ir_insts shr::compute_pf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value, const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
-    {
-        //
-        // PF = count_set(value AND 0xFF) % 2
-        //
-
-        return {
-            // count_set(value AND 0xFF)
-            make_dyn(codec::m_and, encoder::reg(shift_result), encoder::imm(0xFF)),
-            make_dyn(codec::m_popcnt, encoder::reg(shift_result), encoder::reg(shift_count)),
-
-            // set PF if 0th bit is set
-            make_dyn(codec::m_test, encoder::reg(shift_count), encoder::imm(1)),
-            make_dyn(codec::m_xor, encoder::reg(shift_count), encoder::reg(shift_count)),
-            make_dyn(codec::m_cmovnz, encoder::reg(shift_count), encoder::imm(ZYDIS_CPUFLAG_PF)),
-            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_count))
-        };
-    }
-
-    uint8_t shr::flag_index(uint64_t mask)
-    {
-        unsigned long index = 0;
-        _BitScanForward(&index, mask);
-
-        return index;
     }
 }
 

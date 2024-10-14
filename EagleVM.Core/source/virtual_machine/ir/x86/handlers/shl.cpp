@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/shl.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
@@ -39,24 +40,44 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in shlition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
+        const discrete_store_ptr shift_count = discrete_store::create(target_size);
+        const discrete_store_ptr shift_value = discrete_store::create(target_size);
+        const discrete_store_ptr shift_result = discrete_store::create(target_size);
+
+        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            make_dyn(codec::m_shl, encoder::reg(vtemp2), encoder::reg(vtemp)),
-            std::make_shared<cmd_push>(vtemp2, target_size)
+        ir_insts insts = {
+            std::make_shared<cmd_pop>(shift_count, target_size),
+            std::make_shared<cmd_pop>(shift_value, target_size),
+            make_dyn(codec::m_mov, encoder::reg(shift_result), encoder::reg(shift_value)),
+            make_dyn(codec::m_shr, encoder::reg(shift_result), encoder::reg(shift_count)),
+            std::make_shared<cmd_push>(shift_value, target_size),
 
             /*
-                The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions where
-                the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit shifts (see
-                “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is 0, the flags
-                are not affected. For a non-zero count, the AF flag is undefined.
+                The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions
+               where the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit
+               shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
+               0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
+            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
+
+            // CF, OF, SF, ZF, PF are all set
+            make_dyn(codec::m_and, encoder::reg(flags_result),
+                     encoder::imm(~(ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
         };
+
+        insts.append_range(compute_cf(target_size, shift_result, shift_value, shift_count, flags_result));
+        insts.append_range(compute_of(target_size, shift_result, shift_value, shift_count, flags_result));
+
+        // The SF, ZF, and PF flags are set according to the result.
+        insts.append_range(util::calculate_sf(target_size, flags_result, shift_result));
+        insts.append_range(util::calculate_zf(target_size, flags_result, shift_result));
+        insts.append_range(util::calculate_pf(target_size, flags_result, shift_result));
+
+        return insts;
     }
 }
 

@@ -35,19 +35,35 @@ namespace eagle::ir::handler
 
         ir_size target_size = signature.front();
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
+        const discrete_store_ptr p_one = discrete_store::create(target_size);
+        const discrete_store_ptr p_two = discrete_store::create(target_size);
+
+        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            make_dyn(codec::m_sub, encoder::reg(vtemp2), encoder::reg(vtemp)),
-            std::make_shared<cmd_push>(vtemp2, target_size)
+        ir_insts insts = {
+            std::make_shared<cmd_pop>(p_one, target_size),
+            std::make_shared<cmd_pop>(p_two, target_size),
+            make_dyn(codec::m_sub, encoder::reg(p_two), encoder::reg(p_one)),
+            std::make_shared<cmd_push>(p_two, target_size),
 
             // The OF, SF, ZF, AF, PF, and CF flags are set according to the result.
+            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
+
+            make_dyn(codec::m_and, encoder::reg(flags_result),
+                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_AF, ZYDIS_CPUFLAG_PF, ZYDIS_CPUFLAG_CF))),
         };
+
+        insts.append_range(util::calculate_of(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_af(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_cf(target_size, flags_result, p_two));
+
+        return insts;
     }
 }
 
