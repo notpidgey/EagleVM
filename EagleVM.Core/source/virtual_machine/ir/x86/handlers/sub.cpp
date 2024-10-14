@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/sub.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
@@ -37,6 +38,7 @@ namespace eagle::ir::handler
 
         const discrete_store_ptr p_one = discrete_store::create(target_size);
         const discrete_store_ptr p_two = discrete_store::create(target_size);
+        const discrete_store_ptr result = discrete_store::create(target_size);
 
         const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
 
@@ -45,7 +47,8 @@ namespace eagle::ir::handler
         ir_insts insts = {
             std::make_shared<cmd_pop>(p_one, target_size),
             std::make_shared<cmd_pop>(p_two, target_size),
-            make_dyn(codec::m_sub, encoder::reg(p_two), encoder::reg(p_one)),
+            make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_two)),
+            make_dyn(codec::m_sub, encoder::reg(result), encoder::reg(p_one)),
             std::make_shared<cmd_push>(p_two, target_size),
 
             // The OF, SF, ZF, AF, PF, and CF flags are set according to the result.
@@ -56,14 +59,30 @@ namespace eagle::ir::handler
                      encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_AF, ZYDIS_CPUFLAG_PF, ZYDIS_CPUFLAG_CF))),
         };
 
-        insts.append_range(util::calculate_of(target_size, flags_result, p_two));
+        insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
+        insts.append_range(compute_af(target_size, result, p_two, p_one, flags_result));
+        insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));
+
         insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
         insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_af(target_size, flags_result, p_two));
         insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_cf(target_size, flags_result, p_two));
 
         return insts;
+    }
+
+    ir_insts compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+                        const discrete_store_ptr& flags)
+    {
+    }
+
+    ir_insts compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+                        const discrete_store_ptr& flags)
+    {
+    }
+
+    ir_insts compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+                        const discrete_store_ptr& flags)
+    {
     }
 }
 
