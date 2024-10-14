@@ -75,19 +75,72 @@ namespace eagle::ir::handler
         return insts;
     }
 
-    ir_insts compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+    ir_insts compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
                         const discrete_store_ptr& flags)
     {
+        return {
+            std::make_shared<cmd_push>(result),
+            std::make_shared<cmd_push>(p_one),
+            std::make_shared<cmd_push>(p_two),
+
+            // a_sign = a >> (size - 1) & 1
+            make_dyn(codec::m_dec, encoder::reg(p_one)),
+            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm((uint64_t)size - 1)),
+
+            // b_sign = b >> (size - 1) & 1
+            make_dyn(codec::m_dec, encoder::reg(p_two)),
+            make_dyn(codec::m_shr, encoder::reg(p_two), encoder::imm((uint64_t)size - 1)),
+
+            // r_sign = r >> (size - 1) & 1
+            make_dyn(codec::m_dec, encoder::reg(result)),
+            make_dyn(codec::m_shr, encoder::reg(result), encoder::imm((uint64_t)size - 1)),
+
+            // a_sign == b_sign AND r_sign == b_sign
+            make_dyn(codec::m_xor, encoder::reg(p_one), encoder::reg(p_two)),
+            make_dyn(codec::m_not, encoder::reg(p_one)),
+            make_dyn(codec::m_xor, encoder::reg(p_two), encoder::reg(result)),
+            make_dyn(codec::m_and, encoder::reg(p_one), encoder::reg(p_two)),
+
+            make_dyn(codec::m_shl, encoder::reg(p_one), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_OF))),
+            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(p_one)),
+
+            std::make_shared<cmd_pop>(p_two),
+            std::make_shared<cmd_pop>(p_one),
+            std::make_shared<cmd_pop>(result),
+        };
     }
 
-    ir_insts compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+    ir_insts compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
                         const discrete_store_ptr& flags)
     {
+        //
+        // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
+        //
+
+        return {
+            std::make_shared<cmd_push>(p_one),
+            std::make_shared<cmd_push>(p_two),
+
+            make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(0xF)),
+            make_dyn(codec::m_and, encoder::reg(p_two), encoder::imm(0xF)),
+
+            make_dyn(codec::m_add, encoder::reg(p_one), encoder::reg(p_two)),
+            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm(4)),
+            make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(1)),
+
+            std::make_shared<cmd_pop>(p_two),
+            std::make_shared<cmd_pop>(p_one),
+        };
     }
 
-    ir_insts compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& count,
+    ir_insts compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
                         const discrete_store_ptr& flags)
     {
+        //
+        // CF = ((A & B) | ((A | B) & ~R)) >> 63
+        //
+
+        return { make_dyn(codec::m_not, encoder::reg(result)), make_dyn(codec::) }
     }
 }
 

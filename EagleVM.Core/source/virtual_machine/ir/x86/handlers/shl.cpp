@@ -52,7 +52,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(shift_count, target_size),
             std::make_shared<cmd_pop>(shift_value, target_size),
             make_dyn(codec::m_mov, encoder::reg(shift_result), encoder::reg(shift_value)),
-            make_dyn(codec::m_shr, encoder::reg(shift_result), encoder::reg(shift_count)),
+            make_dyn(codec::m_shl, encoder::reg(shift_result), encoder::reg(shift_count)),
             std::make_shared<cmd_push>(shift_value, target_size),
 
             /*
