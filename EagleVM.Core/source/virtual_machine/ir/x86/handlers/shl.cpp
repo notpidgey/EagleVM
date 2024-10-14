@@ -79,6 +79,58 @@ namespace eagle::ir::handler
 
         return insts;
     }
+
+    ir_insts shl::compute_cf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
+                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    {
+        //
+        // CF = (value >> (shift_count - 1))
+        //
+
+        return {
+            std::make_shared<cmd_push>(shift_value),
+
+            // value >> (shift_count - 1)
+            make_dyn(codec::m_dec, encoder::reg(shift_count)),
+            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::reg(shift_count)),
+            make_dyn(codec::m_inc, encoder::reg(shift_count)), // restore shift_count
+
+            // CF = (value >> (shift_count - 1))
+            make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
+            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
+            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
+
+            std::make_shared<cmd_pop>(shift_value),
+        };
+    }
+
+    ir_insts shl::compute_of(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
+                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    {
+        //
+        // OF = MSB(tempDEST) XOR CF
+        //
+
+        return {
+            std::make_shared<cmd_push>(shift_value, size),
+            std::make_shared<cmd_push>(shift_count, size),
+
+            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm((uint64_t)size - 1)),
+            make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
+
+            make_dyn(codec::m_mov, encoder::reg(shift_count), encoder::reg(flags_result)),
+            make_dyn(codec::m_and, encoder::reg(shift_count), encoder::imm(ZYDIS_CPUFLAG_CF)),
+            make_dyn(codec::m_shr, encoder::reg(shift_count), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
+            make_dyn(codec::m_xor, encoder::reg(shift_value), encoder::reg(shift_count)),
+
+            // move most significant bit to the OF position and set it in "flags_result"
+            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm((util::flag_index(ZYDIS_CPUFLAG_OF)))),
+            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
+
+            std::make_shared<cmd_pop>(shift_count, size),
+            std::make_shared<cmd_pop>(shift_value, size),
+        };
+    }
 }
 
 namespace eagle::ir::lifter

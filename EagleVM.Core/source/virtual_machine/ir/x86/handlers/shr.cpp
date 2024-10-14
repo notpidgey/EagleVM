@@ -116,8 +116,7 @@ namespace eagle::ir::handler
 
             // move most significant bit to the OF position and set it in "flags_result"
             make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm((uint64_t)size - 1)),
-
-            // make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
+            make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
             make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm((util::flag_index(ZYDIS_CPUFLAG_OF)))),
             make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
 
