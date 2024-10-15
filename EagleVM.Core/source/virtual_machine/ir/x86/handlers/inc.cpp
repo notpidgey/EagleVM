@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/inc.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
@@ -27,14 +28,71 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 1, "invalid signature. must contain 1 operand");
         ir_size target_size = signature.front();
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
+        const discrete_store_ptr p_one = discrete_store::create(target_size);
+        const discrete_store_ptr result = discrete_store::create(target_size);
 
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            make_dyn(codec::m_inc, vtemp),
-            std::make_shared<cmd_push>(vtemp, target_size)
+        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
+
+        ir_insts insts = {
+            std::make_shared<cmd_pop>(p_one, target_size),
+            make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_one)),
+            make_dyn(codec::m_inc, result),
+            std::make_shared<cmd_push>(result, target_size),
 
             // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
+            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
+
+            make_dyn(codec::m_and, encoder::reg(flags_result),
+                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_AF, ZYDIS_CPUFLAG_PF))),
+        };
+
+        insts.append_range(util::calculate_sf(target_size, flags_result, result));
+        insts.append_range(util::calculate_zf(target_size, flags_result, result));
+        insts.append_range(util::calculate_pf(target_size, flags_result, result));
+
+        insts.append_range(compute_of(target_size, result, p_one, flags_result));
+        insts.append_range(compute_af(target_size, result, p_one, flags_result));
+    }
+
+    ir_insts inc::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
+    {
+        uint64_t max = 0;
+        switch (size)
+        {
+            case ir_size::bit_64:
+                max = UINT64_MAX;
+                break;
+            case ir_size::bit_32:
+                max = UINT32_MAX;
+                break;
+            case ir_size::bit_16:
+                max = UINT16_MAX;
+                break;
+            case ir_size::bit_8:
+                max = UINT8_MAX;
+                break;
+        }
+
+        return {
+            std::make_shared<cmd_push>(value, ir_size::bit_64),
+
+            make_dyn(codec::m_cmp, encoder::reg(value), encoder::imm(max)),
+            make_dyn(codec::m_xor, encoder::reg(result), encoder::reg(result)),
+            make_dyn(codec::m_cmovz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_AF)),
+            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
+
+            std::make_shared<cmd_pop>(value, ir_size::bit_64),
+        };
+    }
+
+    ir_insts inc::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
+    {
+        return {
+            make_dyn(codec::m_cmp, encoder::reg(value), encoder::imm(0xF)),
+            make_dyn(codec::m_xor, encoder::reg(result), encoder::reg(result)),
+            make_dyn(codec::m_cmovz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_AF)),
+            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
         };
     }
 }

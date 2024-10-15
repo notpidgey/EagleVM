@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/and.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
@@ -39,19 +40,29 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
+        const discrete_store_ptr p_one = discrete_store::create(target_size);
+        const discrete_store_ptr p_two = discrete_store::create(target_size);
+
+        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            make_dyn(codec::m_and, encoder::reg(vtemp2), encoder::reg(vtemp)),
-            std::make_shared<cmd_push>(vtemp2, target_size),
+        ir_insts insts = {
+            std::make_shared<cmd_pop>(p_one, target_size),
+            std::make_shared<cmd_pop>(p_two, target_size),
+            make_dyn(codec::m_and, encoder::reg(p_two), encoder::reg(p_one)),
+            std::make_shared<cmd_push>(p_two, target_size),
 
             // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
+            make_dyn(codec::m_and, encoder::reg(flags_result),
+                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_PF))),
         };
+
+        insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+
+        return insts;
     }
 }
 

@@ -49,7 +49,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(p_two, target_size),
             make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_two)),
             make_dyn(codec::m_sub, encoder::reg(result), encoder::reg(p_one)),
-            std::make_shared<cmd_push>(p_two, target_size),
+            std::make_shared<cmd_push>(result, target_size),
 
             // The OF, SF, ZF, AF, PF, and CF flags are set according to the result.
             std::make_shared<cmd_rflags_load>(),
@@ -62,9 +62,9 @@ namespace eagle::ir::handler
         insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
         insts.append_range(compute_af(target_size, result, p_two, p_one, flags_result));
 
-        insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_sf(target_size, flags_result, result));
+        insts.append_range(util::calculate_zf(target_size, flags_result, result));
+        insts.append_range(util::calculate_pf(target_size, flags_result, result));
 
         // destructive so it will go last
         insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));
