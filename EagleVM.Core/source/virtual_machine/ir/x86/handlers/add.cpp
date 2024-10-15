@@ -66,11 +66,13 @@ namespace eagle::ir::handler
 
         insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
         insts.append_range(compute_af(target_size, result, p_two, p_one, flags_result));
-        insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));
 
         insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
         insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
         insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+
+        // destructive so it will go last
+        insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));
 
         return insts;
     }
@@ -79,9 +81,9 @@ namespace eagle::ir::handler
                         const discrete_store_ptr& flags)
     {
         return {
-            std::make_shared<cmd_push>(result),
-            std::make_shared<cmd_push>(p_one),
-            std::make_shared<cmd_push>(p_two),
+            std::make_shared<cmd_push>(result, ir_size::bit_64),
+            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
+            std::make_shared<cmd_push>(p_two, ir_size::bit_64),
 
             // a_sign = a >> (size - 1) & 1
             make_dyn(codec::m_dec, encoder::reg(p_one)),
@@ -104,9 +106,9 @@ namespace eagle::ir::handler
             make_dyn(codec::m_shl, encoder::reg(p_one), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_OF))),
             make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(p_one)),
 
-            std::make_shared<cmd_pop>(p_two),
-            std::make_shared<cmd_pop>(p_one),
-            std::make_shared<cmd_pop>(result),
+            std::make_shared<cmd_pop>(p_two, ir_size::bit_64),
+            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
+            std::make_shared<cmd_pop>(result, ir_size::bit_64),
         };
     }
 
@@ -118,8 +120,8 @@ namespace eagle::ir::handler
         //
 
         return {
-            std::make_shared<cmd_push>(p_one),
-            std::make_shared<cmd_push>(p_two),
+            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
+            std::make_shared<cmd_push>(p_two, ir_size::bit_64),
 
             make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(0xF)),
             make_dyn(codec::m_and, encoder::reg(p_two), encoder::imm(0xF)),
@@ -128,8 +130,8 @@ namespace eagle::ir::handler
             make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm(4)),
             make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(1)),
 
-            std::make_shared<cmd_pop>(p_two),
-            std::make_shared<cmd_pop>(p_one),
+            std::make_shared<cmd_pop>(p_two, ir_size::bit_64),
+            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
         };
     }
 
@@ -140,7 +142,23 @@ namespace eagle::ir::handler
         // CF = ((A & B) | ((A | B) & ~R)) >> 63
         //
 
-        return { make_dyn(codec::m_not, encoder::reg(result)), make_dyn(codec::) }
+        return {
+            std::make_shared<cmd_push>(p_one),
+
+            // ((A | B) & ~R)
+            make_dyn(codec::m_or, encoder::reg(p_one), encoder::reg(p_two)),
+            make_dyn(codec::m_not, encoder::reg(result)),
+            make_dyn(codec::m_and, encoder::reg(result), encoder::reg(p_one)),
+
+            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
+
+            // (A & B)
+            make_dyn(codec::m_and, encoder::reg(p_one), encoder::reg(p_two)),
+            make_dyn(codec::m_or, encoder::reg(p_one), encoder::reg(result)),
+
+            // >> 63
+            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm(63)),
+        };
     }
 }
 
