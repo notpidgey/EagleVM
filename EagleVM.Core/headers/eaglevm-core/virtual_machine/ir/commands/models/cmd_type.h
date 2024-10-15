@@ -32,8 +32,18 @@ namespace eagle::ir
 
         vm_branch,
         vm_jmp,
+
+        // bitwise
+        vm_and,
+        vm_or,
+        vm_xor,
+        vm_shl,
+        vm_shr,
+
+        // compare
+        vm_cmp,
+        vm_test
     };
 
     std::string command_to_string(command_type cmd);
 }
-

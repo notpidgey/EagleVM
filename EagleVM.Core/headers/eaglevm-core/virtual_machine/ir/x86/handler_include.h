@@ -1,6 +1,5 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/add.h"
-#include "eaglevm-core/virtual_machine/ir/x86/handlers/cmp.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/dec.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/imul.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/inc.h"

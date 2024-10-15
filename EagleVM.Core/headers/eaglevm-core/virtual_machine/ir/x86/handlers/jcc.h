@@ -12,7 +12,7 @@ namespace eagle::ir::handler
 
     private:
         ir_insts write_condition_jump(uint64_t flag_mask) const;
-        ir_insts write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const;
+        ir_insts write_bitwise_condition(const base_command_ptr& bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const;
         ir_insts write_check_register(codec::reg reg) const;
         ir_insts write_jle() const;
 

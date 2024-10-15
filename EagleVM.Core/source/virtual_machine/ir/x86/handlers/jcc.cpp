@@ -58,10 +58,10 @@ namespace eagle::ir
                     ir_output = write_condition_jump(get_flag_for_condition(condition));
                     break;
                 case exit_condition::jbe:
-                    ir_output = write_bitwise_condition(codec::m_and, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_ZF);
+                    ir_output = write_bitwise_condition(std::make_shared<cmd_and>(ir_size::bit_64), ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_ZF);
                     break;
                 case exit_condition::jl:
-                    ir_output = write_bitwise_condition(codec::m_xor, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
+                    ir_output = write_bitwise_condition(std::make_shared<cmd_xor>(ir_size::bit_64), ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_OF);
                     break;
                 case exit_condition::jle:
                     ir_output = write_jle();
@@ -91,14 +91,14 @@ namespace eagle::ir
             });
         }
 
-        ir_insts jcc::write_bitwise_condition(codec::mnemonic bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const
+        ir_insts jcc::write_bitwise_condition(const base_command_ptr& bitwise, uint64_t flag_mask_one, uint64_t flag_mask_two) const
         {
             return write_flag_operation([flag_mask_one, flag_mask_two, bitwise]
             {
                 std::vector<base_command_ptr> command_vec;
                 command_vec += load_isolated_flag(flag_mask_one);
                 command_vec += load_isolated_flag(flag_mask_two);
-                command_vec.push_back(std::make_shared<cmd_handler_call>(bitwise, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                command_vec.push_back(bitwise);
 
                 return command_vec;
             });
@@ -112,8 +112,7 @@ namespace eagle::ir
                 return std::vector<base_command_ptr>{
                     std::make_shared<cmd_context_load>(reg),
                     std::make_shared<cmd_push>(0, target_size),
-                    std::make_shared<cmd_handler_call>(codec::m_cmp, handler_sig{ target_size, target_size })
-                    // TODO: handle flags result
+                    std::make_shared<cmd_handler_call>(codec::m_cmp, handler_sig{ target_size, target_size }),
                 };
             });
         }
@@ -125,10 +124,10 @@ namespace eagle::ir
                 std::vector<base_command_ptr> command_vec;
                 command_vec += load_isolated_flag(ZYDIS_CPUFLAG_SF);
                 command_vec += load_isolated_flag(ZYDIS_CPUFLAG_OF);
-                command_vec.push_back(std::make_shared<cmd_handler_call>(codec::m_xor, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                command_vec.push_back(std::make_shared<cmd_xor>(ir_size::bit_64));
 
                 command_vec += load_isolated_flag(ZYDIS_CPUFLAG_ZF);
-                command_vec.push_back(std::make_shared<cmd_handler_call>(codec::m_or, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                command_vec.push_back(std::make_shared<cmd_or>(ir_size::bit_64));
 
                 return command_vec;
             });
@@ -158,7 +157,7 @@ namespace eagle::ir
             ir_insts isolated_flag = {
                 std::make_shared<cmd_rflags_load>(),
                 std::make_shared<cmd_push>(flag_mask, ir_size::bit_64),
-                std::make_shared<cmd_handler_call>(codec::m_and, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+                std::make_shared<cmd_and>(ir_size::bit_64),
             };
 
             // move the flag to bit 3 where the value of it will be 0x8
@@ -167,14 +166,14 @@ namespace eagle::ir
             {
                 isolated_flag.append_range(ir_insts{
                     std::make_shared<cmd_push>(shift_distance, ir_size::bit_64),
-                    std::make_shared<cmd_handler_call>(codec::m_shr, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
+                    std::make_shared<cmd_shr>(ir_size::bit_64),
                 });
             }
             else if (index < 3)
             {
                 isolated_flag.append_range(ir_insts{
                     std::make_shared<cmd_push>(shift_distance, ir_size::bit_64),
-                    std::make_shared<cmd_handler_call>(codec::m_shl, handler_sig{ ir_size::bit_64, ir_size::bit_64 })
+                    std::make_shared<cmd_shl>(ir_size::bit_64),
                 });
             }
 
