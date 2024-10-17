@@ -119,6 +119,11 @@ namespace eagle::virt::eg
         static uint8_t index_vbase;
 
         /**
+         * index of VFLAGS
+         */
+        static uint8_t index_vflags;
+
+        /**
         * @return GPR registers in order r0-r15
         */
         static std::array<codec::reg, 16> get_gpr64_regs();

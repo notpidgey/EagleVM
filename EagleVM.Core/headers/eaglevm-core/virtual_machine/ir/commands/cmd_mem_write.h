@@ -21,4 +21,6 @@ namespace eagle::ir
 
         bool value_nearest;
     };
+
+    SHARED_DEFINE(cmd_mem_write);
 }

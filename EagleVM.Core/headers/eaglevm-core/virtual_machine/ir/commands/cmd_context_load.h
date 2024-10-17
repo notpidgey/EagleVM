@@ -19,4 +19,6 @@ namespace eagle::ir
         codec::reg source = codec::reg::none;
         codec::reg_class r_class = codec::reg_class::invalid;
     };
+
+    SHARED_DEFINE(cmd_context_load);
 }

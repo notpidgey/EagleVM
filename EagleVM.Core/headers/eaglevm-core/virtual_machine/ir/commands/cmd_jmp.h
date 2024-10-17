@@ -10,4 +10,6 @@ namespace eagle::ir
     public:
         cmd_jmp();
     };
+
+    SHARED_DEFINE(cmd_jmp);
 }

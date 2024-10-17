@@ -2,27 +2,28 @@
 
 namespace eagle::ir
 {
+    base_command::base_command(const command_type command, const bool force_inline): type(command), force_inline(force_inline)
+    {
+        static uint32_t id = 0;
+
+        unique_id = id;
+        unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
+    }
+
     command_type base_command::get_command_type() const
     {
         return type; }
 
-    bool base_command::is_inlined() { return force_inline; }
-
-    std::shared_ptr<base_command> base_command::release(const std::vector<discrete_store_ptr>& stores)
-    {
-        release_list.append_range(stores);
-        return shared_from_this();
-    }
-
-    std::shared_ptr<base_command> base_command::release(const discrete_store_ptr& store)
-    {
-        release_list.push_back(store);
-        return shared_from_this();
-    }
+    bool base_command::is_inlined() const { return force_inline; }
 
     std::vector<discrete_store_ptr> base_command::get_use_stores()
     {
         return { };
+    }
+
+    bool base_command::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        return other->get_command_type() == get_command_type();
     }
 
     std::string base_command::command_to_string(const command_type type)

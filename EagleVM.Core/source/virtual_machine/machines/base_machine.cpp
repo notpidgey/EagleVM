@@ -138,6 +138,39 @@ namespace eagle::virt
             case ir::command_type::vm_branch:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_branch>(command));
                 break;
+            case ir::command_type::vm_flags_load:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_flags_load>(command));
+                break;
+            case ir::command_type::vm_jmp:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_jmp>(command));
+                break;
+            case ir::command_type::vm_and:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_and>(command));
+                break;
+            case ir::command_type::vm_or:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_or>(command));
+                break;
+            case ir::command_type::vm_xor:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_xor>(command));
+                break;
+            case ir::command_type::vm_shl:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_shl>(command));
+                break;
+            case ir::command_type::vm_shr:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_shr>(command));
+                break;
+            case ir::command_type::vm_add:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_add>(command));
+                break;
+            case ir::command_type::vm_sub:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_sub>(command));
+                break;
+            case ir::command_type::vm_cmp:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_cmp>(command));
+                break;
+            case ir::command_type::none:
+                VM_ASSERT("unexpected command type generated");
+                break;
         }
     }
 
@@ -182,4 +215,4 @@ namespace eagle::virt
 
         return nullptr;
     }
-} // namespace eagle::virt
+}

@@ -15,4 +15,6 @@ namespace eagle::ir
     private:
         ir_size size;
     };
+
+    SHARED_DEFINE(cmd_mem_read);
 }

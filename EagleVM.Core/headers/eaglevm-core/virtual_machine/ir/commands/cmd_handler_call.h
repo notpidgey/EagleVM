@@ -45,4 +45,6 @@ namespace eagle::ir
         // handler signature initialized
         handler_sig h_sig;
     };
+
+    SHARED_DEFINE(cmd_handler_call);
 }

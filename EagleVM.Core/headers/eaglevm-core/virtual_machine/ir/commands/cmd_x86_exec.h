@@ -17,4 +17,6 @@ namespace eagle::ir
     private:
         codec::dynamic_instruction request{ };
     };
+
+    SHARED_DEFINE(cmd_x86_exec);
 }

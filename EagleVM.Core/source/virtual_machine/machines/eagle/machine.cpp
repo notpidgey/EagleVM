@@ -15,6 +15,7 @@
 #define VCS reg_man->get_vm_reg(register_manager::index_vcs)
 #define VCSRET reg_man->get_vm_reg(register_manager::index_vcsret)
 #define VBASE reg_man->get_vm_reg(register_manager::index_vbase)
+#define VFLAGS reg_man->get_vm_reg(register_manager::index_vflags)
 
 #define VTEMP reg_man->get_reserved_temp(0)
 #define VTEMP2 reg_man->get_reserved_temp(1)
@@ -58,7 +59,7 @@ namespace eagle::virt::eg
 
         // walk backwards each command to see the last time each discrete_ptr was used
         // this will tell us when we can free the register
-        std::vector<std::vector<ir::discrete_store_ptr>> store_dead(command_count, {});
+        std::vector<std::vector<ir::discrete_store_ptr>> store_dead(command_count, { });
         std::unordered_set<ir::discrete_store_ptr> discovered_stores;
 
         // as a fair warning, this analysis only cares about the store usage in the current block
@@ -188,43 +189,44 @@ namespace eagle::virt::eg
         ir::exit_condition cmd_condition = cmd->get_condition();
         std::vector<ir::ir_exit_result> push_order =
             cmd_condition != ir::exit_condition::jmp
-                ? std::vector<ir::ir_exit_result>{ cmd->get_condition_special(), cmd->get_condition_default() }
-                : std::vector<ir::ir_exit_result>{ cmd->get_condition_default() };
+                ? std::vector{ cmd->get_condition_special(), cmd->get_condition_default() }
+                : std::vector{ cmd->get_condition_default() };
 
         // if the condition is inverted, we want the opposite branches to be taken
         if (cmd_condition != ir::exit_condition::jmp && cmd->is_inverted())
             std::swap(push_order[0], push_order[1]);
 
         // push all
-        for (const ir::ir_exit_result& cmd : push_order)
+        for (const ir::ir_exit_result& exit_result : push_order)
         {
-            std::visit([&](auto&& arg) {
+            std::visit([&](auto&& arg)
+            {
                 scope_register_manager scope = reg_64_container->create_scope();
                 const reg temp_reg = scope.reserve();
 
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<T, uint64_t>)
                 {
-                    uint64_t immediate_value = arg;
+                    const uint64_t immediate_value = arg;
 
                     block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
-                    call_push(block, get_bit_version(temp_reg, reg_size::bit_64));
+                    call_push(block, get_bit_version(temp_reg, bit_64));
                 }
                 else if constexpr (std::is_same_v<T, ir::block_ptr>)
                 {
-                    ir::block_ptr target = arg;
+                    const ir::block_ptr target = arg;
 
                     const asmb::code_label_ptr label = get_block_label(target);
                     VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
 
                     block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
-                    call_push(block, get_bit_version(temp_reg, reg_size::bit_64));
+                    call_push(block, get_bit_version(temp_reg, bit_64));
                 }
                 else
                 {
                     VM_ASSERT("unimplemented exit result");
                 }
-            }, cmd);
+            }, exit_result);
         }
 
         // this is a hacky solution but the exit condition maps to an actual handler id.
@@ -357,13 +359,13 @@ namespace eagle::virt::eg
         }, push_val);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr&)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_load_ptr&)
     {
         const asmb::code_label_ptr vm_rflags_load = han_man->get_rlfags_load();
         han_man->call_vm_handler(block, vm_rflags_load);
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr& store)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_store_ptr& store)
     {
         const asmb::code_label_ptr vm_rflags_store = han_man->get_rflags_store();
 
@@ -442,7 +444,7 @@ namespace eagle::virt::eg
         else
         {
             block->add(RECOMPILE_CHUNK([=](uint64_t)
-            {
+                {
                 const uint64_t address = vm_enter->get_address();
 
                 std::vector<enc::req> address_gen;
@@ -455,7 +457,7 @@ namespace eagle::virt::eg
                 address_gen.push_back(encode(m_ret));
 
                 return codec::compile_queue(address_gen);
-            }));
+                }));
         }
 
         block->bind(ret);
@@ -507,9 +509,79 @@ namespace eagle::virt::eg
         block->add(encoder.create(resolver_func));
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) { block->add(cmd->get_request()); }
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
+    {
+        block->add(cmd->get_request());
+    }
 
-    std::vector<asmb::code_container_ptr> machine::create_handlers() { return han_man->build_handlers(); }
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load& cmd)
+    {
+        reg flag_reg = reg_man->get_vm_reg(register_manager::index_vflags);
+
+        scope_register_manager scope = reg_64_container->create_scope();
+        reg temp = scope.reserve();
+
+        const uint32_t target_mask = ir::cmd_flags_load::get_flag_index(cmd.get_flag());
+        block->add({
+            encode(m_mov, ZREG(temp), ZREG(flag_reg)),
+            encode(m_and, ZREG(temp), ZIMMU(target_mask)),
+        });
+
+        call_push(block, temp);
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd)
+    {
+        scope_register_manager scope = reg_64_container->create_scope();
+        reg temp = scope.reserve();
+
+        call_pop(block, temp);
+        block->add(encode(m_jmp, ZREG(temp)));
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_and_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_and, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_or_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_or, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_xor_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_xor, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shl_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_and, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shr_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_shr, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_add, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sub_ptr& cmd)
+    {
+        handle_generic_logic_cmd(block, m_sub, cmd->get_size());
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
+    {
+    }
+
+    std::vector<asmb::code_container_ptr> machine::create_handlers()
+    {
+        return han_man->build_handlers();
+    }
 
     void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared)
     {
@@ -672,4 +744,18 @@ namespace eagle::virt::eg
 
         return get_bit_version(reg, to_reg_size(size));
     }
-} // namespace eagle::virt::eg
+
+    void machine::handle_generic_logic_cmd(const asmb::code_container_ptr& block, const mnemonic command, const ir::ir_size size)
+    {
+        scope_register_manager scope = reg_64_container->create_scope();
+        std::array<reg, 2> vals = scope.reserve<2>();
+        for (auto& val : vals) val = get_bit_version(val, to_reg_size(size));
+
+        call_pop(block, vals[1]);
+        call_pop(block, vals[0]);
+
+        block->add(encode(command, ZREG(vals[0]), ZREG(vals[1])));
+
+        call_push(block, vals[0]);
+    }
+}

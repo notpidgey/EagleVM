@@ -21,4 +21,6 @@ namespace eagle::ir
         discrete_store_ptr dest_reg;
         ir_size size;
     };
+
+    SHARED_DEFINE(cmd_pop);
 }

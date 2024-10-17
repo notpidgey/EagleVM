@@ -26,4 +26,6 @@ namespace eagle::ir
     private:
         vm_flags target_load;
     };
+
+    SHARED_DEFINE(cmd_flags_load);
 }

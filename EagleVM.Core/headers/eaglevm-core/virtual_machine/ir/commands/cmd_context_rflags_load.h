@@ -12,4 +12,6 @@ namespace eagle::ir
         {
         }
     };
+
+    SHARED_DEFINE(cmd_context_rflags_load);
 }

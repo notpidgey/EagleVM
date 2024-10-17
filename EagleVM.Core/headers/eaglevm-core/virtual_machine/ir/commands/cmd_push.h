@@ -27,4 +27,6 @@ namespace eagle::ir
         ir_size size;
         push_v value;
     };
+
+    SHARED_DEFINE(cmd_push);
 }

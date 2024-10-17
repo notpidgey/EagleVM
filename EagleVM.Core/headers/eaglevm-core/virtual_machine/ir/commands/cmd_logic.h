@@ -18,7 +18,6 @@ namespace eagle::ir
         ir_size size;
     };
 
-
     // bitwise
     using cmd_and = cmd_arith_base<command_type::vm_and>;
     using cmd_or  = cmd_arith_base<command_type::vm_or>;
@@ -29,4 +28,12 @@ namespace eagle::ir
     // arith
     using cmd_add = cmd_arith_base<command_type::vm_add>;
     using cmd_sub = cmd_arith_base<command_type::vm_sub>;
+
+    SHARED_DEFINE(cmd_and);
+    SHARED_DEFINE(cmd_or);
+    SHARED_DEFINE(cmd_xor);
+    SHARED_DEFINE(cmd_shl);
+    SHARED_DEFINE(cmd_shr);
+    SHARED_DEFINE(cmd_add);
+    SHARED_DEFINE(cmd_sub);
 }

@@ -29,4 +29,6 @@ namespace eagle::ir
     {
         return std::make_shared<cmd_x86_dynamic>(encoder::encoder{ mnemonic, ops... });
     }
+
+    SHARED_DEFINE(cmd_x86_dynamic);
 }

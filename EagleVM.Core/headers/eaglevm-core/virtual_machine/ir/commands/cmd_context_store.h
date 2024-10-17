@@ -18,4 +18,6 @@ namespace eagle::ir
         codec::reg dest;
         codec::reg_size size;
     };
+
+    SHARED_DEFINE(cmd_context_store);
 }

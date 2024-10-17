@@ -90,4 +90,6 @@ namespace eagle::ir
 
         bool virtual_branch;
     };
+
+    SHARED_DEFINE(cmd_branch);
 }

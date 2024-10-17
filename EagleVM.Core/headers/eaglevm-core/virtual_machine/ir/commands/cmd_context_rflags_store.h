@@ -27,4 +27,6 @@ namespace eagle::ir
     private:
         x86_cpu_flag relevant_flags;
     };
+
+    SHARED_DEFINE(cmd_context_rflags_store);
 }

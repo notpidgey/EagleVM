@@ -18,4 +18,6 @@ namespace eagle::ir
         ir_size target;
         ir_size current;
     };
+
+    SHARED_DEFINE(cmd_sx);
 }
