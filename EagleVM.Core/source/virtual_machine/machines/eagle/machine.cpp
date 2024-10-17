@@ -576,6 +576,54 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
     {
+        scope_register_manager scope = reg_64_container->create_scope();
+        std::array<reg, 4> vals = scope.reserve<4>();
+        for (auto& val : vals) val = get_bit_version(val, to_reg_size(cmd->get_size()));
+
+        call_pop(block, vals[1]);
+        call_pop(block, vals[0]);
+
+        for (auto flag : ir::vm_flags_list)
+        {
+            const auto idx = ir::cmd_flags_load::get_flag_index(flag);
+            auto build_cmp = [&](mnemonic mnemonic)
+            {
+                block->add({
+                    // mask off EQ flag
+                    encode(m_mov, ZREG(vals[2]), ZIMMU(~(1ull << idx))),
+                    encode(m_and, ZREG(VFLAGS), ZREG(vals[2])),
+
+                    // clear target register and CMP initial values
+                    encode(m_xor, ZREG(vals[2]), ZREG(vals[2])),
+                    encode(m_cmp, ZREG(vals[0]), ZREG(vals[1])),
+                    encode(m_mov, ZREG(vals[3]), ZIMMU(1ull << idx)),
+                    encode(mnemonic, ZREG(vals[2]), ZREG(vals[3])),
+                    encode(m_or, ZREG(VFLAGS), ZREG(vals[2]))
+                });
+            };
+
+            switch (flag)
+            {
+                case ir::vm_flags::eq:
+                {
+                    // set eq = zf
+                    build_cmp(m_cmovz);
+                    break;
+                }
+                case ir::vm_flags::le:
+                {
+                    // set le = SF <> OF
+                    build_cmp(m_cmovl);
+                    break;
+                }
+                case ir::vm_flags::ge:
+                {
+                    // set ge = ZF = 0 and SF = OF
+                    build_cmp(m_cmovnle);
+                    break;
+                }
+            }
+        }
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()
@@ -583,7 +631,7 @@ namespace eagle::virt::eg
         return han_man->build_handlers();
     }
 
-    void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared)
+    void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const
     {
         reg pushing_register;
         const reg_size size = to_reg_size(shared->get_store_size());
@@ -604,7 +652,7 @@ namespace eagle::virt::eg
         han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
     }
 
-    void machine::call_push(const asmb::code_container_ptr& block, const reg target_reg)
+    void machine::call_push(const asmb::code_container_ptr& block, const reg target_reg) const
     {
         reg pushing_register;
         const reg_size size = get_reg_size(target_reg);

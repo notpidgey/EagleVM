@@ -65,8 +65,8 @@ namespace eagle::virt::eg
 
         void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
 
-        void call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared);
-        void call_push(const asmb::code_container_ptr& block, codec::reg target_reg);
+        void call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const;
+        void call_push(const asmb::code_container_ptr& block, codec::reg target_reg) const;
 
         void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const;
         void call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, codec::reg_size size) const;

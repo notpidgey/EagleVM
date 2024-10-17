@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/codec/zydis_enum.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
@@ -11,6 +13,8 @@ namespace eagle::ir
         le = 1ul << 1, // less than flag
         ge = 1ul << 2, // greater than flag
     };
+
+    constexpr std::array vm_flags_list = { vm_flags::eq, vm_flags::le, vm_flags::ge };
 
     class cmd_flags_load final : public base_command
     {
