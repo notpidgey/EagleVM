@@ -6,7 +6,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_mem_read.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_pop.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
@@ -67,7 +67,7 @@ namespace eagle::ir::lifter
         block->push_back(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
 
         if (flags != 0)
-            block->push_back(std::make_shared<cmd_rflags_store>(flags));
+            block->push_back(std::make_shared<cmd_context_rflags_store>(flags));
 
         block->push_back(std::make_shared<cmd_pop>(discrete_store::create(ir_size::bit_64), ir_size::bit_64));
     }

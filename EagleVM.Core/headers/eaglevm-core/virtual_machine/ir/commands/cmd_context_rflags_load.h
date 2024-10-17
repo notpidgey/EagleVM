@@ -4,11 +4,11 @@
 
 namespace eagle::ir
 {
-    class cmd_rflags_load : public base_command
+    class cmd_context_rflags_load : public base_command
     {
     public:
-        explicit cmd_rflags_load()
-            : base_command(command_type::vm_rflags_load)
+        explicit cmd_context_rflags_load()
+            : base_command(command_type::vm_context_rflags_load)
         {
         }
     };

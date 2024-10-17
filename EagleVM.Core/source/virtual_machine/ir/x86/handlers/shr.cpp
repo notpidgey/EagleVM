@@ -1,8 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/shr.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::ir::handler
 {
@@ -61,7 +61,7 @@ namespace eagle::ir::handler
                shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
                0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
-            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_context_rflags_load>(),
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             // CF, OF, SF, ZF, PF are all set

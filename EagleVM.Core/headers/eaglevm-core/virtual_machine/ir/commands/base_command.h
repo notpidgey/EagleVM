@@ -25,8 +25,8 @@ namespace eagle::ir
     SHARED_DEFINE(cmd_mem_write);
     SHARED_DEFINE(cmd_pop);
     SHARED_DEFINE(cmd_push);
-    SHARED_DEFINE(cmd_rflags_load);
-    SHARED_DEFINE(cmd_rflags_store);
+    SHARED_DEFINE(cmd_context_rflags_load);
+    SHARED_DEFINE(cmd_context_rflags_store);
     SHARED_DEFINE(cmd_sx);
     SHARED_DEFINE(cmd_x86_dynamic);
     SHARED_DEFINE(cmd_x86_exec);
@@ -36,8 +36,8 @@ namespace eagle::ir
     {
     public:
         virtual ~base_command() = default;
-        explicit base_command(const command_type command, bool force_inline = false)
-            : command(command), force_inline(force_inline)
+        explicit base_command(const command_type command, const bool force_inline = false)
+            : type(command), force_inline(force_inline)
         {
             static uint32_t id = 0;
 
@@ -48,11 +48,6 @@ namespace eagle::ir
         command_type get_command_type() const;
         bool is_inlined();
 
-        std::shared_ptr<base_command> release(const std::vector<discrete_store_ptr>& stores);
-        std::shared_ptr<base_command> release(const discrete_store_ptr& store);
-
-        virtual std::vector<discrete_store_ptr> get_use_stores();
-
         virtual bool is_similar(const std::shared_ptr<base_command>& other)
         {
             return other->get_command_type() == get_command_type();
@@ -62,8 +57,7 @@ namespace eagle::ir
         std::string unique_id_string;
 
     protected:
-        command_type command;
-        std::vector<discrete_store_ptr> release_list;
+        command_type type;
 
         bool force_inline;
 

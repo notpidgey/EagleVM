@@ -1,7 +1,7 @@
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::virt
 {
@@ -126,11 +126,11 @@ namespace eagle::virt
             case ir::command_type::vm_exec_dynamic_x86:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_dynamic>(command));
                 break;
-            case ir::command_type::vm_rflags_load:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_rflags_load>(command));
+            case ir::command_type::vm_context_rflags_load:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_context_rflags_load>(command));
                 break;
-            case ir::command_type::vm_rflags_store:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_rflags_store>(command));
+            case ir::command_type::vm_context_rflags_store:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_context_rflags_store>(command));
                 break;
             case ir::command_type::vm_sx:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_sx>(command));

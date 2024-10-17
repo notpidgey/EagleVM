@@ -14,6 +14,8 @@ namespace eagle::ir
         vm_reg_load,
         vm_reg_store,
 
+        vm_flags_load,
+
         vm_push,
         vm_pop,
 
@@ -22,11 +24,11 @@ namespace eagle::ir
 
         vm_context_load,
         vm_context_store,
+        vm_context_rflags_load,
+        vm_context_rflags_store,
 
         vm_exec_x86,
         vm_exec_dynamic_x86,
-        vm_rflags_load,
-        vm_rflags_store,
 
         vm_sx,
 
@@ -40,9 +42,13 @@ namespace eagle::ir
         vm_shl,
         vm_shr,
 
+        // arith
+        vm_add,
+        vm_sub,
+
         // compare
         vm_cmp,
-        vm_test
+        vm_test,
     };
 
     std::string command_to_string(command_type cmd);

@@ -1,8 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/and.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::ir::handler
 {

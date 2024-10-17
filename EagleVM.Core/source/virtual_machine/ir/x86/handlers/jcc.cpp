@@ -1,9 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/jcc.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
 #include "eaglevm-core/virtual_machine/ir/x86/util.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
-
 
 #define HS(x) hash_string::hash(x)
 
@@ -112,7 +110,17 @@ namespace eagle::ir
                 return std::vector<base_command_ptr>{
                     std::make_shared<cmd_context_load>(reg),
                     std::make_shared<cmd_push>(0, target_size),
-                    std::make_shared<cmd_handler_call>(codec::m_cmp, handler_sig{ target_size, target_size }),
+
+                    // compare
+                    std::make_shared<cmd_cmp>(target_size),
+
+                    // load equality flag
+                    std::make_shared<cmd_flags_load>(vm_flags::eq),
+
+                    // shift it to the 3rd index
+                    // TODO: actually check the index of the EQ flag but im going to use my knowledge to assume its location
+                    std::make_shared<cmd_push>(3 - cmd_flags_load::get_flag_index(vm_flags::eq), ir_size::bit_64),
+                    std::make_shared<cmd_shl>(ir_size::bit_64)
                 };
             });
         }
@@ -141,7 +149,7 @@ namespace eagle::ir
             commands.insert(commands.end(), operation_commands.begin(), operation_commands.end());
 
             commands.insert(commands.end(), {
-                std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }),
+                std::make_shared<cmd_add>(ir_size::bit_64),
                 std::make_shared<cmd_mem_read>(ir_size::bit_64),
             });
 
@@ -155,7 +163,7 @@ namespace eagle::ir
 
             // mask the flag that we are looking for
             ir_insts isolated_flag = {
-                std::make_shared<cmd_rflags_load>(),
+                std::make_shared<cmd_context_rflags_load>(),
                 std::make_shared<cmd_push>(flag_mask, ir_size::bit_64),
                 std::make_shared<cmd_and>(ir_size::bit_64),
             };

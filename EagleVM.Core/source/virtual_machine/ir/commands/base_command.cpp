@@ -4,7 +4,7 @@ namespace eagle::ir
 {
     command_type base_command::get_command_type() const
     {
-        return command; }
+        return type; }
 
     bool base_command::is_inlined() { return force_inline; }
 
@@ -55,9 +55,9 @@ namespace eagle::ir
                 return "vm_exec_x86";
             case command_type::vm_exec_dynamic_x86:
                 return "vm_exec_dynamic_x86";
-            case command_type::vm_rflags_load:
+            case command_type::vm_context_rflags_load:
                 return "vm_rflags_load";
-            case command_type::vm_rflags_store:
+            case command_type::vm_context_rflags_store:
                 return "vm_rflags_store";
             case command_type::vm_sx:
                 return "vm_sx";

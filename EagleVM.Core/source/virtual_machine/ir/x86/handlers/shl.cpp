@@ -1,8 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/shl.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::ir::handler
 {
@@ -61,7 +61,7 @@ namespace eagle::ir::handler
                shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
                0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
-            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_context_rflags_load>(),
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             // CF, OF, SF, ZF, PF are all set
@@ -88,7 +88,7 @@ namespace eagle::ir::handler
         //
 
         return {
-            std::make_shared<cmd_push>(shift_value),
+            std::make_shared<cmd_push>(shift_value, ir_size::bit_64),
 
             // value >> (shift_count - 1)
             make_dyn(codec::m_dec, encoder::reg(shift_count)),
@@ -100,7 +100,7 @@ namespace eagle::ir::handler
             make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
             make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
 
-            std::make_shared<cmd_pop>(shift_value),
+            std::make_shared<cmd_pop>(shift_value, ir_size::bit_64),
         };
     }
 
@@ -115,7 +115,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(shift_value, size),
             std::make_shared<cmd_push>(shift_count, size),
 
-            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm((uint64_t)size - 1)),
+            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm(static_cast<uint64_t>(size) - 1)),
             make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
 
             make_dyn(codec::m_mov, encoder::reg(shift_count), encoder::reg(flags_result)),

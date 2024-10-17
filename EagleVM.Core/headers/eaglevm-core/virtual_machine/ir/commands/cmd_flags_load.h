@@ -1,0 +1,29 @@
+#pragma once
+#include "eaglevm-core/codec/zydis_defs.h"
+#include "eaglevm-core/codec/zydis_enum.h"
+#include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
+
+namespace eagle::ir
+{
+    enum class vm_flags
+    {
+        eq = 1ul << 0, // equals flag
+        le = 1ul << 1, // less than flag
+        ge = 1ul << 2, // greater than flag
+    };
+
+    class cmd_flags_load final : public base_command
+    {
+    public:
+        explicit cmd_flags_load(vm_flags flag);
+
+        vm_flags get_flag() const;
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
+        static ir_size get_flag_size();
+        static uint8_t get_flag_index(vm_flags flag);
+
+    private:
+        vm_flags target_load;
+    };
+}

@@ -5,11 +5,11 @@
 
 namespace eagle::ir
 {
-    class cmd_rflags_store : public base_command
+    class cmd_context_rflags_store : public base_command
     {
     public:
-        explicit cmd_rflags_store(x86_cpu_flag relevant_flags)
-            : base_command(command_type::vm_rflags_store), relevant_flags(relevant_flags)
+        explicit cmd_context_rflags_store(const x86_cpu_flag relevant_flags)
+            : base_command(command_type::vm_context_rflags_store), relevant_flags(relevant_flags)
         {
         }
 
@@ -20,7 +20,7 @@ namespace eagle::ir
 
         bool is_similar(const base_command_ptr& other) override
         {
-            const auto cmd = std::static_pointer_cast<cmd_rflags_store>(other);
+            const auto cmd = std::static_pointer_cast<cmd_context_rflags_store>(other);
             return get_relevant_flags() == cmd->get_relevant_flags();
         }
 

@@ -1,8 +1,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/inc.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::ir::handler
 {
@@ -40,7 +40,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(result, target_size),
 
             // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
-            std::make_shared<cmd_rflags_load>(),
+            std::make_shared<cmd_context_rflags_load>(),
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             make_dyn(codec::m_and, encoder::reg(flags_result),
