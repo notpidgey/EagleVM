@@ -170,20 +170,20 @@ namespace eagle::virt::eg
         // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
         std::unordered_map<ir::exit_condition, std::array<codec::mnemonic, 2>> jcc_lookup =
         {
-            { ir::exit_condition::jo, { codec::mnemonic::m_jo, codec::mnemonic::m_jno } },
-            { ir::exit_condition::js, { codec::mnemonic::m_js, codec::mnemonic::m_jns } },
-            { ir::exit_condition::je, { codec::mnemonic::m_jz, codec::mnemonic::m_jnz } },
-            { ir::exit_condition::jb, { codec::mnemonic::m_jb, codec::mnemonic::m_jnb } },
-            { ir::exit_condition::jbe, { codec::mnemonic::m_jbe, codec::mnemonic::m_jnbe } },
-            { ir::exit_condition::jl, { codec::mnemonic::m_jl, codec::mnemonic::m_jnl } },
-            { ir::exit_condition::jle, { codec::mnemonic::m_jle, codec::mnemonic::m_jnle } },
-            { ir::exit_condition::jp, { codec::mnemonic::m_jp, codec::mnemonic::m_jnp } },
+            { ir::exit_condition::jo, { m_jo, m_jno } },
+            { ir::exit_condition::js, { m_js, m_jns } },
+            { ir::exit_condition::je, { m_jz, m_jnz } },
+            { ir::exit_condition::jb, { m_jb, m_jnb } },
+            { ir::exit_condition::jbe, { m_jbe, m_jnbe } },
+            { ir::exit_condition::jl, { m_jl, m_jnl } },
+            { ir::exit_condition::jle, { m_jle, m_jnle } },
+            { ir::exit_condition::jp, { m_jp, m_jnp } },
 
-            { ir::exit_condition::jcxz, { codec::mnemonic::m_jcxz, codec::mnemonic::m_invalid } },
-            { ir::exit_condition::jecxz, { codec::mnemonic::m_jecxz, codec::mnemonic::m_invalid } },
-            { ir::exit_condition::jrcxz, { codec::mnemonic::m_jrcxz, codec::mnemonic::m_invalid } },
+            { ir::exit_condition::jcxz, { m_jcxz, m_invalid } },
+            { ir::exit_condition::jecxz, { m_jecxz, m_invalid } },
+            { ir::exit_condition::jrcxz, { m_jrcxz, m_invalid } },
 
-            { ir::exit_condition::jmp, { codec::mnemonic::m_jmp, codec::mnemonic::m_invalid } }
+            { ir::exit_condition::jmp, { m_jmp, m_invalid } }
         };
 
         ir::exit_condition cmd_condition = cmd->get_condition();
@@ -219,7 +219,7 @@ namespace eagle::virt::eg
                     const asmb::code_label_ptr label = get_block_label(target);
                     VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
 
-                    block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
+                    block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMS(label->get_address()))));
                     call_push(block, get_bit_version(temp_reg, bit_64));
                 }
                 else
@@ -232,7 +232,7 @@ namespace eagle::virt::eg
         // this is a hacky solution but the exit condition maps to an actual handler id.
         // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
         // we also want to inline this so we are inserting it in place
-        ir::ir_insts jcc_instructions = han_man->build_instruction_handler(codec::m_jmp, uint64_t(cmd_condition));
+        const ir::ir_insts jcc_instructions = han_man->build_instruction_handler(m_jmp, static_cast<uint64_t>(cmd_condition));
         for (auto& inst : jcc_instructions)
             handle_cmd(block, inst);
     }
@@ -335,7 +335,7 @@ namespace eagle::virt::eg
 
                 const reg temp_reg = scope.reserve();
 
-                block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMU(label->get_address()))));
+                block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMS(label->get_address()))));
                 call_push(block, get_bit_version(temp_reg, to_reg_size(cmd->get_size())));
             }
             else if constexpr (std::is_same_v<T, ir::discrete_store_ptr>)
@@ -497,6 +497,7 @@ namespace eagle::virt::eg
                 {
                     // we should not be translating uint64_t
                     VM_ASSERT("unknown val_type translated");
+                    return none;
                 }
                 else
                 {
@@ -583,10 +584,10 @@ namespace eagle::virt::eg
         call_pop(block, vals[1]);
         call_pop(block, vals[0]);
 
-        for (auto flag : ir::vm_flags_list)
+        for (const ir::vm_flags flag : ir::vm_flags_list)
         {
-            const auto idx = ir::cmd_flags_load::get_flag_index(flag);
-            auto build_cmp = [&](mnemonic mnemonic)
+            const uint8_t idx = ir::cmd_flags_load::get_flag_index(flag);
+            auto build_flag_load = [&](const mnemonic mnemonic)
             {
                 block->add({
                     // mask off EQ flag
@@ -607,19 +608,19 @@ namespace eagle::virt::eg
                 case ir::vm_flags::eq:
                 {
                     // set eq = zf
-                    build_cmp(m_cmovz);
+                    build_flag_load(m_cmovz);
                     break;
                 }
                 case ir::vm_flags::le:
                 {
                     // set le = SF <> OF
-                    build_cmp(m_cmovl);
+                    build_flag_load(m_cmovl);
                     break;
                 }
                 case ir::vm_flags::ge:
                 {
                     // set ge = ZF = 0 and SF = OF
-                    build_cmp(m_cmovnle);
+                    build_flag_load(m_cmovnle);
                     break;
                 }
             }

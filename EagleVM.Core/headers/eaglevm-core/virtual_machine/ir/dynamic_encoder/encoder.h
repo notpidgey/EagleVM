@@ -60,7 +60,7 @@ namespace eagle::ir::encoder
 
         val_variant get_base() { return base_; }
         val_variant get_index() { return index_; }
-        uint8_t get_scale() { return scale_ ;}
+        uint8_t get_scale() { return scale_; }
         ir_size get_size() { return size_; }
 
     private:
@@ -123,10 +123,15 @@ namespace eagle::ir::encoder
     class encoder
     {
     public:
-        template <typename... Operands>
-        explicit encoder(const codec::mnemonic mnemonic, Operands... ops) :
-            mnemonic_(mnemonic), operands_(std::vector<std::shared_ptr<operand>>{ ops... })
+        explicit encoder(const codec::mnemonic mnemonic) :
+            mnemonic_(mnemonic)
         {
+
+        }
+
+        void add_operand(const std::shared_ptr<operand>& op)
+        {
+            operands_.push_back(op);
         }
 
         codec::enc::req create(const val_var_resolver& resolver) const

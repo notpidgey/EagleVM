@@ -56,7 +56,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             make_dyn(codec::m_and, encoder::reg(flags_result),
-                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_AF, ZYDIS_CPUFLAG_PF, ZYDIS_CPUFLAG_CF))),
+                encoder::imm(~(ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF | ZYDIS_CPUFLAG_CF))),
         };
 
         insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
@@ -72,8 +72,8 @@ namespace eagle::ir::handler
         return insts;
     }
 
-    ir_insts compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-                        const discrete_store_ptr& flags)
+    ir_insts sub::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
+        const discrete_store_ptr& flags)
     {
         return {
             std::make_shared<cmd_push>(result, ir_size::bit_64),
@@ -107,8 +107,8 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-                        const discrete_store_ptr& flags)
+    ir_insts sub::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
+        const discrete_store_ptr& flags)
     {
         //
         // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
@@ -130,15 +130,15 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-                        const discrete_store_ptr& flags)
+    ir_insts sub::compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
+        const discrete_store_ptr& flags)
     {
         //
         // CF = ((A & B) | ((A | B) & ~R)) >> 63
         //
 
         return {
-            std::make_shared<cmd_push>(p_one),
+            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
 
             // ((A | B) & ~R)
             make_dyn(codec::m_or, encoder::reg(p_one), encoder::reg(p_two)),

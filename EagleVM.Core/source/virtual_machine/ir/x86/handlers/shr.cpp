@@ -88,7 +88,7 @@ namespace eagle::ir::handler
         //
 
         return {
-            std::make_shared<cmd_push>(shift_value),
+            std::make_shared<cmd_push>(shift_value, size),
 
             // value >> (shift_count - 1)
             make_dyn(codec::m_dec, encoder::reg(shift_count)),
@@ -100,7 +100,7 @@ namespace eagle::ir::handler
             make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
             make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
 
-            std::make_shared<cmd_pop>(shift_value),
+            std::make_shared<cmd_pop>(shift_value, size),
         };
     }
 

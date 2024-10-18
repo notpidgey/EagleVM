@@ -38,7 +38,7 @@ namespace eagle::ir::handler
         ir_insts insts = {
             std::make_shared<cmd_pop>(p_one, target_size),
             make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_one)),
-            make_dyn(codec::m_dec, result),
+            make_dyn(codec::m_dec, encoder::reg(result)),
             std::make_shared<cmd_push>(result, target_size),
 
             // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
@@ -46,7 +46,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             make_dyn(codec::m_and, encoder::reg(flags_result),
-                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_AF, ZYDIS_CPUFLAG_PF))),
+                encoder::imm(~(ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF))),
         };
 
         insts.append_range(util::calculate_sf(target_size, flags_result, result));
@@ -55,6 +55,8 @@ namespace eagle::ir::handler
 
         insts.append_range(compute_of(target_size, result, p_one, flags_result));
         insts.append_range(compute_af(target_size, result, p_one, flags_result));
+
+        return insts;
     }
 
     ir_insts dec::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)

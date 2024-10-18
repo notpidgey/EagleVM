@@ -303,12 +303,12 @@ namespace eagle::ir
                 continue;
             }
 
-            const std::vector redirect_body = preopt_block->body;
+            const block_ptr redirect_body = preopt_block->body.front();
 
             bool vm_enter_unremovable = false;
             std::vector<cmd_branch_ptr> search_enter_refs;
 
-            // check if there are any external calls
+            // check if there are any external calls to any of the body blocks
             // if there are, we cannot remove vm enter
             for (auto& external : extern_call_blocks)
             {
@@ -353,7 +353,7 @@ namespace eagle::ir
                     auto rewrite_branch = [&](ir_exit_result& exit_result)
                     {
                         if (std::holds_alternative<block_ptr>(exit_result))
-                            exit_result = redirect_body.front();
+                            exit_result = redirect_body;
                     };
 
                     rewrite_branch(branch_ref->get_condition_default());

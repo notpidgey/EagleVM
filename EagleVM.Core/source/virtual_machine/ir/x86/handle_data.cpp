@@ -8,7 +8,6 @@ namespace eagle::ir
     std::unordered_map<codec::mnemonic, std::shared_ptr<handler::base_handler_gen>> instruction_handlers =
     {
         { codec::m_add, std::make_shared<handler::add>() },
-        { codec::m_cmp, std::make_shared<handler::cmp>() },
         { codec::m_dec, std::make_shared<handler::dec>() },
         { codec::m_imul, std::make_shared<handler::imul>() },
         { codec::m_inc, std::make_shared<handler::inc>() },
@@ -29,7 +28,6 @@ namespace eagle::ir
     > instruction_lifters =
     {
         { codec::m_add, CREATE_LIFTER_GEN(add) },
-        { codec::m_cmp, CREATE_LIFTER_GEN(cmp) },
         { codec::m_dec, CREATE_LIFTER_GEN(dec) },
         { codec::m_imul, CREATE_LIFTER_GEN(imul) },
         { codec::m_inc, CREATE_LIFTER_GEN(inc) },

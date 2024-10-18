@@ -104,7 +104,7 @@ namespace eagle::ir
 
         ir_insts jcc::write_check_register(codec::reg reg) const
         {
-            auto target_size = bits_to_ir_size(get_reg_size(reg));
+            auto target_size = static_cast<ir_size>(get_reg_size(reg));
             return write_flag_operation([reg, target_size]
             {
                 return std::vector<base_command_ptr>{
@@ -235,6 +235,8 @@ namespace eagle::ir
             else
                 block->push_back(std::make_shared<cmd_branch>(*info.fallthrough_branch, *info.conditional_branch, condition,
                     info.inverted_condition));
+
+            block->back()->set_inlined(true);
 
             return true;
         }

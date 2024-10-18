@@ -55,7 +55,7 @@ namespace eagle::ir::handler
 
             // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
             make_dyn(codec::m_and, encoder::reg(flags_result),
-                     encoder::imm(~(ZYDIS_CPUFLAG_OF, ZYDIS_CPUFLAG_CF, ZYDIS_CPUFLAG_SF, ZYDIS_CPUFLAG_ZF, ZYDIS_CPUFLAG_PF))),
+                     encoder::imm(~(ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
         };
 
         insts.append_range(util::calculate_sf(target_size, flags_result, p_two));

@@ -39,8 +39,8 @@ namespace eagle::virt::pidg
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd) override;
-        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_load_ptr& cmd) override;
-        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_rflags_store_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_load_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_store_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd) override;

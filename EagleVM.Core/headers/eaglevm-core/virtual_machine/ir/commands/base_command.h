@@ -22,6 +22,7 @@ namespace eagle::ir
         explicit base_command(command_type command, bool force_inline = false);
 
         command_type get_command_type() const;
+        void set_inlined(bool inlined);
         bool is_inlined() const;
 
         virtual std::vector<discrete_store_ptr> get_use_stores();

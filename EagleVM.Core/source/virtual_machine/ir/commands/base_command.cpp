@@ -14,6 +14,7 @@ namespace eagle::ir
     {
         return type; }
 
+    void base_command::set_inlined(const bool inlined) { force_inline = inlined; };
     bool base_command::is_inlined() const { return force_inline; }
 
     std::vector<discrete_store_ptr> base_command::get_use_stores()

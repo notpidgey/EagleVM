@@ -25,9 +25,12 @@ namespace eagle::ir
     };
 
     template <typename... Operands>
-    inline std::shared_ptr<cmd_x86_dynamic> make_dyn(codec::mnemonic mnemonic, Operands... ops)
+    std::shared_ptr<cmd_x86_dynamic> make_dyn(const codec::mnemonic mnemonic, Operands... ops)
     {
-        return std::make_shared<cmd_x86_dynamic>(encoder::encoder{ mnemonic, ops... });
+        encoder::encoder enc{ mnemonic };
+        (enc.add_operand(ops), ...);
+
+        return std::make_shared<cmd_x86_dynamic>(enc);
     }
 
     SHARED_DEFINE(cmd_x86_dynamic);
