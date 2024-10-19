@@ -182,7 +182,7 @@ namespace eagle::ir
         }
 
         // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
-        ir::cmd_branch_ptr branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+        cmd_branch_ptr branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
         VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
 
         // we want to jump to the exit block now

@@ -24,6 +24,7 @@ namespace eagle::ir
     using cmd_xor = cmd_arith_base<command_type::vm_xor>;
     using cmd_shl = cmd_arith_base<command_type::vm_shl>;
     using cmd_shr = cmd_arith_base<command_type::vm_shr>;
+    using cmd_cnt = cmd_arith_base<command_type::vm_cnt>;
 
     // arith
     using cmd_add = cmd_arith_base<command_type::vm_add>;
@@ -34,6 +35,8 @@ namespace eagle::ir
     SHARED_DEFINE(cmd_xor);
     SHARED_DEFINE(cmd_shl);
     SHARED_DEFINE(cmd_shr);
+    SHARED_DEFINE(cmd_cnt);
+
     SHARED_DEFINE(cmd_add);
     SHARED_DEFINE(cmd_sub);
 }

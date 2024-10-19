@@ -41,6 +41,7 @@ namespace eagle::ir
         vm_xor,
         vm_shl,
         vm_shr,
+        vm_cnt,
 
         // arith
         vm_add,

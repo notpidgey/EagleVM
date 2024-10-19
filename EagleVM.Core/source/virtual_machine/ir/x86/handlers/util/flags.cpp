@@ -11,67 +11,56 @@ namespace eagle::ir::handler::util
         return index;
     }
 
-     ir_insts calculate_sf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& value, const bool restore)
+    ir_insts calculate_sf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& value, const bool restore)
     {
-        ir_insts insts;
-        insts.reserve(restore ? 5 : 3);
+        return {
+            std::make_shared<cmd_push>(value, size),
 
-        if (restore)
-            insts.push_back(std::make_shared<cmd_push>(value, size));
+            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+            std::make_shared<cmd_shr>(size),
 
-        insts.append_range(ir_insts{
-            make_dyn(codec::m_shr, encoder::reg(value), encoder::imm((uint64_t)size - 1)),
-            make_dyn(codec::m_shl, encoder::reg(value), encoder::imm((flag_index(ZYDIS_CPUFLAG_SF)))),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(value)),
-        });
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_SF), size),
+            std::make_shared<cmd_shl>(size),
 
-        if (restore)
-            insts.push_back(std::make_shared<cmd_pop>(value, size));
-
-        return insts;
+            // TODO: not correct, rflgs is ir_size::bit_64
+            std::make_shared<cmd_or>(size),
+        };
     }
 
-     ir_insts calculate_zf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
+    ir_insts calculate_zf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
     {
-        ir_insts insts;
-        insts.reserve(restore ? 5 : 3);
+        return {
+            std::make_shared<cmd_push>(result, size),
+            std::make_shared<cmd_push>(0, size),
+            std::make_shared<cmd_cmp>(size),
 
-        if (restore)
-            insts.push_back(std::make_shared<cmd_push>(result, size));
+            std::make_shared<cmd_flags_load>(vm_flags::eq),
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_ZF), size),
+            std::make_shared<cmd_shr>(size),
 
-        insts.append_range(ir_insts{
-            make_dyn(codec::m_cmp, encoder::reg(result), encoder::imm(0)),
-            make_dyn(codec::m_cmovz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_ZF)),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
-        });
-
-        if (restore)
-            insts.push_back(std::make_shared<cmd_pop>(result, size));
-
-        return insts;
+            // TODO: not correct, rflgs is ir_size::bit_64
+            std::make_shared<cmd_or>(size),
+        };
     }
 
-     ir_insts calculate_pf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
+    ir_insts calculate_pf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
     {
-        ir_insts insts;
-        insts.reserve(restore ? 6 : 4);
+        return {
+            std::make_shared<cmd_push>(result, size),
+            std::make_shared<cmd_push>(0xFF, size),
+            std::make_shared<cmd_and>(size),
 
-        if (restore)
-            insts.push_back(std::make_shared<cmd_push>(result, size));
+            // set PF to 1 only if the number of bits is even
+            std::make_shared<cmd_cnt>(size),
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_and>(size),
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_xor>(size),
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_PF), size),
+            std::make_shared<cmd_shr>(size),
 
-        insts.append_range(ir_insts{
-            make_dyn(codec::m_and, encoder::reg(result), encoder::imm(0xFF)),
-            make_dyn(codec::m_popcnt, encoder::reg(result), encoder::reg(result)),
-
-            make_dyn(codec::m_test, encoder::reg(result), encoder::imm(1)),
-            make_dyn(codec::m_xor, encoder::reg(result), encoder::reg(result)),
-            make_dyn(codec::m_cmovnz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_PF)),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
-        });
-
-        if (restore)
-            insts.push_back(std::make_shared<cmd_pop>(result, size));
-
-        return insts;
+            // TODO: not correct, rflgs is ir_size::bit_64
+            std::make_shared<cmd_or>(size),
+        };
     }
 }
