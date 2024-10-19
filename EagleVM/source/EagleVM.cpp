@@ -319,8 +319,8 @@ int main(int argc, char* argv[])
         std::printf("[>] dasm found %llu basic blocks\n", dasm->blocks.size());
         std::cout << std::endl;
 
-        ir::ir_translator ir_trans(dasm, &seg_live);
-        ir::preopt_block_vec preopt = ir_trans.translate();
+        std::shared_ptr ir_trans = std::make_shared<ir::ir_translator>(dasm, &seg_live);
+        ir::preopt_block_vec preopt = ir_trans->translate();
 
         // here we assign vms to each block
         // for the current example we can assign a unique vm to each block
@@ -341,7 +341,7 @@ int main(int argc, char* argv[])
         // if we want, we can do a little optimzation which will rewrite the preopt
         // blocks or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-        std::vector<ir::flat_block_vmid> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+        std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
         // obfuscation pass
         std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;

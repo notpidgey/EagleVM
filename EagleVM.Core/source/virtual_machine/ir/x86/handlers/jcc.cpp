@@ -38,6 +38,12 @@ namespace eagle::ir
                 { { ir_size::bit_32 }, "jcxz rel32" },
                 { { ir_size::bit_32 }, "jecxz rel32" },
             };
+
+            valid_operands = {
+                { { { codec::op_imm, codec::bit_32 } }, "jcc imm32" },
+                { { { codec::op_imm, codec::bit_16 } }, "jcc imm16" },
+                { { { codec::op_imm, codec::bit_8 } }, "jcc imm8" },
+            };
         }
 
         ir_insts jcc::gen_handler(const uint64_t target_handler_id)

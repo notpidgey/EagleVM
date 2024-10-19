@@ -69,38 +69,36 @@ namespace eagle::ir
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            std::vector<handler_op> il_operands;
             handler::base_handler_gen_ptr handler_gen = nullptr;
-
             std::optional<uint64_t> target_handler = std::nullopt;
 
             codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
+
+            // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
+            // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
+            // codec::m_jmp mnemonic which will be the way we select it here
+            if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
+                mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
+                mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
+                mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
+                mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
+                mnemonic == codec::m_js || mnemonic == codec::m_jz)
+            {
+                mnemonic = codec::m_jmp;
+            }
+
             if (instruction_handlers.contains(mnemonic))
             {
                 // first we verify if there is even a valid handler for this inustruction
                 // we do this by checking the handler generator for this specific handler
-
-                // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
-                // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
-                // codec::m_jmp mnemonic which will be the way we select it here
-                if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
-                    mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
-                    mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
-                    mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
-                    mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
-                    mnemonic == codec::m_js || mnemonic == codec::m_jz)
-                {
-                    mnemonic = codec::m_jmp;
-                }
-
-                handler_gen = instruction_handlers[mnemonic];
-
+                std::vector<handler_op> il_operands;
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
                     auto op = ops[j];
                     il_operands.emplace_back(static_cast<codec::op_type>(op.type), static_cast<codec::reg_size>(op.size));
                 }
 
+                handler_gen = instruction_handlers[mnemonic];
                 target_handler = handler_gen->get_handler_id(il_operands);
             }
 
@@ -113,7 +111,7 @@ namespace eagle::ir
                 // now we need to find a lifter
                 const uint64_t current_rva = bb->get_index_rva(i);
 
-                auto create_lifter = instruction_lifters[mnemonic];
+                auto& create_lifter = instruction_lifters[mnemonic];
                 const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(shared_from_this(), decoded_inst, current_rva);
 
                 translate_success = lifter->translate_to_il(current_rva);

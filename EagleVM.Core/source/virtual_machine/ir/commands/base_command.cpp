@@ -12,7 +12,8 @@ namespace eagle::ir
 
     command_type base_command::get_command_type() const
     {
-        return type; }
+        return type;
+    }
 
     void base_command::set_inlined(const bool inlined) { force_inline = inlined; };
     bool base_command::is_inlined() const { return force_inline; }
