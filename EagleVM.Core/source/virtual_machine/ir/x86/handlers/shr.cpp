@@ -48,6 +48,7 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
             std::make_shared<cmd_pop>(shift_count, target_size),
             std::make_shared<cmd_pop>(shift_value, target_size),
@@ -61,12 +62,11 @@ namespace eagle::ir::handler
                shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
                0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_pop>(flags_result, ir_size::bit_64),
 
             // CF, OF, SF, ZF, PF are all set
-            make_dyn(codec::m_and, encoder::reg(flags_result),
-                     encoder::imm(~(ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
+            std::make_shared<cmd_context_rflags_load>(),
+            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
+            std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
         insts.append_range(compute_cf(target_size, shift_result, shift_value, shift_count, flags_result));

@@ -47,6 +47,7 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
             std::make_shared<cmd_pop>(p_one, target_size),
             std::make_shared<cmd_pop>(p_two, target_size),
@@ -54,8 +55,9 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(p_two, target_size),
 
             // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
-            make_dyn(codec::m_and, encoder::reg(flags_result),
-                     encoder::imm(~(ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF))),
+            std::make_shared<cmd_context_rflags_load>(),
+            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
+            std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
         insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
