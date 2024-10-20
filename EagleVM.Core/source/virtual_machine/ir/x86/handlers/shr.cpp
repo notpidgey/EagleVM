@@ -50,11 +50,7 @@ namespace eagle::ir::handler
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
-            std::make_shared<cmd_pop>(shift_count, target_size),
-            std::make_shared<cmd_pop>(shift_value, target_size),
-            make_dyn(codec::m_mov, encoder::reg(shift_result), encoder::reg(shift_value)),
-            make_dyn(codec::m_shr, encoder::reg(shift_result), encoder::reg(shift_count)),
-            std::make_shared<cmd_push>(shift_value, target_size),
+            std::make_shared<cmd_shr>(target_size, false, true),
 
             /*
                 The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions
@@ -81,47 +77,57 @@ namespace eagle::ir::handler
     }
 
     ir_insts shr::compute_cf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
-                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+        const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
     {
         //
         // CF = (value >> (shift_count - 1))
         //
 
+        ir_insts insts;
+        insts.append_range(copy_to_top(size, util::result));
+        insts.append_range(bring_to_top(size, util::param_two, ?));
+
         return {
-            std::make_shared<cmd_push>(shift_value, size),
+            // result = value >> (shift_count - 1)
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_sub>(size),
+            std::make_shared<cmd_shl>(size),
 
-            // value >> (shift_count - 1)
-            make_dyn(codec::m_dec, encoder::reg(shift_count)),
-            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::reg(shift_count)),
-            make_dyn(codec::m_inc, encoder::reg(shift_count)), // restore shift_count
+            // CF = result & 1
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_and>(size),
 
-            // CF = (value >> (shift_count - 1))
-            make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
-            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_CF))),
-            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
+            std::make_shared<cmd_x>(size, ir_size::bit_64),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
 
-            std::make_shared<cmd_pop>(shift_value, size),
+            std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
 
     ir_insts shr::compute_of(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
-                             const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+        const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
     {
         //
         // OF = MSB(tempDEST)
         //
 
-        return {
-            std::make_shared<cmd_push>(shift_value, size),
+        ir_insts insts;
+        insts.append_range(copy_to_top(size, util::param_one));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+            std::make_shared<cmd_shr>(size),
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_and>(size),
+            std::make_shared<cmd_x>(size, ir_size::bit_64),
 
-            // move most significant bit to the OF position and set it in "flags_result"
-            make_dyn(codec::m_shr, encoder::reg(shift_value), encoder::imm((uint64_t)size - 1)),
-            make_dyn(codec::m_and, encoder::reg(shift_value), encoder::imm(1)),
-            make_dyn(codec::m_shl, encoder::reg(shift_value), encoder::imm((util::flag_index(ZYDIS_CPUFLAG_OF)))),
-            make_dyn(codec::m_or, encoder::reg(flags_result), encoder::reg(shift_value)),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
 
-            std::make_shared<cmd_pop>(shift_value, size),
-        };
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 }
 

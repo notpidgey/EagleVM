@@ -8,4 +8,13 @@ namespace eagle::ir::handler::util
    ir_insts calculate_sf(ir_size size, const discrete_store_ptr& result);
    ir_insts calculate_zf(ir_size size, const discrete_store_ptr& result);
    ir_insts calculate_pf(ir_size size, const discrete_store_ptr& result);
+
+   enum top_arg
+   {
+      param_one,
+      param_two,
+      result,
+   };
+
+   ir_insts copy_to_top(ir_size size, top_arg target_arg, uint8_t byte_offset = 0);
 }

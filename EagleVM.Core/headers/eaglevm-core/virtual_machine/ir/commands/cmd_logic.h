@@ -9,18 +9,26 @@ namespace eagle::ir
     class cmd_arith_base final : public base_command
     {
     public:
-        explicit cmd_arith_base(const ir_size size) : base_command(T), size(size) {}
+        explicit cmd_arith_base(const ir_size size, const bool reversed = false, const bool preserve_args = false) : base_command(T), size(size),
+            reversed(reversed), preserved(preserve_args)
+        {
+        }
+
         ir_size get_size() const { return size; }
+        bool get_reversed() const { return reversed; }
+        bool get_preserved() const { return preserved; }
 
         bool is_similar(const std::shared_ptr<base_command>& other) override { return true; }
 
     private:
         ir_size size;
+        bool reversed;
+        bool preserved;
     };
 
     // bitwise
     using cmd_and = cmd_arith_base<command_type::vm_and>;
-    using cmd_or  = cmd_arith_base<command_type::vm_or>;
+    using cmd_or = cmd_arith_base<command_type::vm_or>;
     using cmd_xor = cmd_arith_base<command_type::vm_xor>;
     using cmd_shl = cmd_arith_base<command_type::vm_shl>;
     using cmd_shr = cmd_arith_base<command_type::vm_shr>;

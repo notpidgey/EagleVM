@@ -58,43 +58,52 @@ namespace eagle::ir::handler
 
     ir_insts inc::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
     {
-        uint64_t max = 0;
-        switch (size)
-        {
-            case ir_size::bit_64:
-                max = UINT64_MAX;
-                break;
-            case ir_size::bit_32:
-                max = UINT32_MAX;
-                break;
-            case ir_size::bit_16:
-                max = UINT16_MAX;
-                break;
-            case ir_size::bit_8:
-                max = UINT8_MAX;
-                break;
-        }
+        ir_insts insts;
+        insts.append_range(copy_to_top(size, util::param_two));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+        });
 
-        return {
-            std::make_shared<cmd_push>(value, ir_size::bit_64),
+        insts.append_range(copy_to_top(size, util::result));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+        });
 
-            make_dyn(codec::m_cmp, encoder::reg(value), encoder::imm(max)),
-            make_dyn(codec::m_xor, encoder::reg(result), encoder::reg(result)),
-            make_dyn(codec::m_cmovz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_AF)),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_cmp>(size),
 
-            std::make_shared<cmd_pop>(value, ir_size::bit_64),
-        };
+            std::make_shared<cmd_flags_load>(vm_flags::eq),
+            std::make_shared<cmd_push>(1, ir_size::bit_64),
+            std::make_shared<cmd_xor>(ir_size::bit_64),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 
     ir_insts inc::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
     {
-        return {
-            make_dyn(codec::m_cmp, encoder::reg(value), encoder::imm(0xF)),
-            make_dyn(codec::m_xor, encoder::reg(result), encoder::reg(result)),
-            make_dyn(codec::m_cmovz, encoder::reg(result), encoder::imm(ZYDIS_CPUFLAG_AF)),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(result)),
-        };
+        ir_insts insts;
+        insts.append_range(copy_to_top(size, util::param_two));
+
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(0xF, size),
+            std::make_shared<cmd_and>(size),
+
+            std::make_shared<cmd_push>(0xF, size),
+            std::make_shared<cmd_cmp>(size),
+
+            std::make_shared<cmd_flags_load>(vm_flags::eq),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 }
 

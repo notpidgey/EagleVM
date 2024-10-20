@@ -64,4 +64,9 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
+
+    ir_insts copy_to_top(ir_size size, top_arg target_arg)
+    {
+
+    }
 }
