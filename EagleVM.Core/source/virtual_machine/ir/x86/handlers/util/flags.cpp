@@ -11,23 +11,24 @@ namespace eagle::ir::handler::util
         return index;
     }
 
-    ir_insts calculate_sf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& value, const bool restore)
+    ir_insts calculate_sf(ir_size size, const discrete_store_ptr& value)
     {
         return {
+            // value >> sizeof(value) - 1
             std::make_shared<cmd_push>(value, size),
-
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
             std::make_shared<cmd_shr>(size),
 
+            // value << index_of(ZYDIS_CPUFLAG_SF)
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_SF), size),
             std::make_shared<cmd_shl>(size),
 
-            // TODO: not correct, rflgs is ir_size::bit_64
-            std::make_shared<cmd_or>(size),
+            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
 
-    ir_insts calculate_zf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
+    ir_insts calculate_zf(ir_size size, const discrete_store_ptr& result)
     {
         return {
             std::make_shared<cmd_push>(result, size),
@@ -36,14 +37,14 @@ namespace eagle::ir::handler::util
 
             std::make_shared<cmd_flags_load>(vm_flags::eq),
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_ZF), size),
-            std::make_shared<cmd_shr>(size),
+            std::make_shared<cmd_shl>(size),
 
-            // TODO: not correct, rflgs is ir_size::bit_64
-            std::make_shared<cmd_or>(size),
+            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
 
-    ir_insts calculate_pf(ir_size size, const discrete_store_ptr& flags, const discrete_store_ptr& result, const bool restore)
+    ir_insts calculate_pf(ir_size size, const discrete_store_ptr& result)
     {
         return {
             std::make_shared<cmd_push>(result, size),
@@ -57,10 +58,10 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_xor>(size),
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_PF), size),
-            std::make_shared<cmd_shr>(size),
+            std::make_shared<cmd_shl>(size),
 
-            // TODO: not correct, rflgs is ir_size::bit_64
-            std::make_shared<cmd_or>(size),
+            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
 }

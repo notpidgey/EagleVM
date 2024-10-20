@@ -47,7 +47,7 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        const auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
             std::make_shared<cmd_pop>(p_one, target_size),
             std::make_shared<cmd_pop>(p_two, target_size),
@@ -60,9 +60,9 @@ namespace eagle::ir::handler
             std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
-        insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_sf(target_size, p_two));
+        insts.append_range(util::calculate_zf(target_size, p_two));
+        insts.append_range(util::calculate_pf(target_size, p_two));
 
         return insts;
     }

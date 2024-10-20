@@ -73,9 +73,9 @@ namespace eagle::ir::handler
         insts.append_range(compute_of(target_size, shift_result, shift_value, shift_count, flags_result));
 
         // The SF, ZF, and PF flags are set according to the result.
-        insts.append_range(util::calculate_sf(target_size, flags_result, shift_result));
-        insts.append_range(util::calculate_zf(target_size, flags_result, shift_result));
-        insts.append_range(util::calculate_pf(target_size, flags_result, shift_result));
+        insts.append_range(util::calculate_sf(target_size, shift_result));
+        insts.append_range(util::calculate_zf(target_size, shift_result));
+        insts.append_range(util::calculate_pf(target_size, shift_result));
 
         return insts;
     }

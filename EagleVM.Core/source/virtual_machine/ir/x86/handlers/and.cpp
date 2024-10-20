@@ -60,9 +60,9 @@ namespace eagle::ir::handler
             std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
-        insts.append_range(util::calculate_sf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_zf(target_size, flags_result, p_two));
-        insts.append_range(util::calculate_pf(target_size, flags_result, p_two));
+        insts.append_range(util::calculate_sf(target_size, p_two));
+        insts.append_range(util::calculate_zf(target_size, p_two));
+        insts.append_range(util::calculate_pf(target_size, p_two));
 
         return insts;
     }

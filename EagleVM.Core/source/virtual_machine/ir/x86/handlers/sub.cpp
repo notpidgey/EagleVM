@@ -61,9 +61,9 @@ namespace eagle::ir::handler
         insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
         insts.append_range(compute_af(target_size, result, p_two, p_one, flags_result));
 
-        insts.append_range(util::calculate_sf(target_size, flags_result, result));
-        insts.append_range(util::calculate_zf(target_size, flags_result, result));
-        insts.append_range(util::calculate_pf(target_size, flags_result, result));
+        insts.append_range(util::calculate_sf(target_size, result));
+        insts.append_range(util::calculate_zf(target_size, result));
+        insts.append_range(util::calculate_pf(target_size, result));
 
         // destructive so it will go last
         insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));

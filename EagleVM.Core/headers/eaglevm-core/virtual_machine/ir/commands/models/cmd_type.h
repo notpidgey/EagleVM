@@ -31,6 +31,7 @@ namespace eagle::ir
         vm_exec_dynamic_x86,
 
         vm_sx,
+        vm_x,
 
         vm_branch,
         vm_jmp,
