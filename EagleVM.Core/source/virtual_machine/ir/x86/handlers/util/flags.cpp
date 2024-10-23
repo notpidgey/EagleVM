@@ -23,7 +23,7 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_SF), size),
             std::make_shared<cmd_shl>(size),
 
-            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
@@ -39,7 +39,7 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_ZF), size),
             std::make_shared<cmd_shl>(size),
 
-            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
         };
     }
@@ -60,13 +60,8 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_PF), size),
             std::make_shared<cmd_shl>(size),
 
-            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
         };
-    }
-
-    ir_insts copy_to_top(ir_size size, top_arg target_arg)
-    {
-
     }
 }

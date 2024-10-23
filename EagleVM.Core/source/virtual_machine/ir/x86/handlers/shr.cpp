@@ -85,7 +85,7 @@ namespace eagle::ir::handler
 
         ir_insts insts;
         insts.append_range(copy_to_top(size, util::result));
-        insts.append_range(bring_to_top(size, util::param_two, ?));
+        insts.append_range(copy_to_top(size, util::param_one, ?));
 
         return {
             // result = value >> (shift_count - 1)
@@ -97,7 +97,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_and>(size),
 
-            std::make_shared<cmd_x>(size, ir_size::bit_64),
+            std::make_shared<cmd_resize>(size, ir_size::bit_64),
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),
 
@@ -119,7 +119,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_shr>(size),
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_and>(size),
-            std::make_shared<cmd_x>(size, ir_size::bit_64),
+            std::make_shared<cmd_resize>(size, ir_size::bit_64),
 
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),

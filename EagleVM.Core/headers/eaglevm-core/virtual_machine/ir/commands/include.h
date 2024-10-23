@@ -14,7 +14,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_sx.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_resize.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_enter.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_exit.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"

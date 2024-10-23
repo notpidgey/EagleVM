@@ -90,7 +90,7 @@ namespace eagle::ir::handler
         insts.push_back(std::make_shared<cmd_push>(static_cast<uint64_t>(size), size));
 
         // (shift_count & 3F/1F)
-        insts.append_range(copy_to_top(size, util::param_two, ??));
+        insts.append_range(copy_to_top(size, util::param_one, ??));
         if (size == ir_size::bit_64)
             insts.push_back(std::make_shared<cmd_push>(0x3F, size));
         else
@@ -105,7 +105,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_and>(size),
 
-            std::make_shared<cmd_x>(size, ir_size::bit_64),
+            std::make_shared<cmd_resize>(size, ir_size::bit_64),
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),
 
@@ -127,7 +127,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_shr>(size),
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_and>(size),
-            std::make_shared<cmd_x>(size, ir_size::bit_64),
+            std::make_shared<cmd_resize>(size, ir_size::bit_64),
 
             std::make_shared<cmd_context_rflags_load>(),
             std::make_shared<cmd_push>(ZYDIS_CPUFLAG_CF, ir_size::bit_64),

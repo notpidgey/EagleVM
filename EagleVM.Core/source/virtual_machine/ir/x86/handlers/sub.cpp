@@ -122,7 +122,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_or>(size),
 
             // OF = (r_sign XOR b_sign) OR (b_sign XOR a_sign)
-            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),
             std::make_shared<cmd_or>(ir_size::bit_64),
@@ -161,7 +161,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_and>(size),
 
             // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
-            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),
             std::make_shared<cmd_or>(ir_size::bit_64),

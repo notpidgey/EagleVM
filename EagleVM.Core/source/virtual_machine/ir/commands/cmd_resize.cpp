@@ -2,24 +2,24 @@
 
 namespace eagle::ir
 {
-    cmd_x::cmd_x(const ir_size to, const ir_size from)
+    cmd_resize::cmd_resize(const ir_size to, const ir_size from)
         : base_command(command_type::vm_x), target(to), current(from)
     {
     }
 
-    ir_size cmd_x::get_target() const
+    ir_size cmd_resize::get_target() const
     {
         return target;
     }
 
-    ir_size cmd_x::get_current() const
+    ir_size cmd_resize::get_current() const
     {
         return current;
     }
 
-    bool cmd_x::is_similar(const std::shared_ptr<base_command>& other)
+    bool cmd_resize::is_similar(const std::shared_ptr<base_command>& other)
     {
-        const auto cmd = std::static_pointer_cast<cmd_x>(other);
+        const auto cmd = std::static_pointer_cast<cmd_resize>(other);
         return base_command::is_similar(other) &&
             get_target() == cmd->get_target() &&
             get_current() == cmd->get_current();

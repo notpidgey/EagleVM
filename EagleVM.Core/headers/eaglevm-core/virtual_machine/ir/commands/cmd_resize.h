@@ -4,10 +4,10 @@
 
 namespace eagle::ir
 {
-    class cmd_x : public base_command
+    class cmd_resize : public base_command
     {
     public:
-        explicit cmd_x(ir_size to, ir_size from);
+        explicit cmd_resize(ir_size to, ir_size from);
 
         ir_size get_target() const;
         ir_size get_current() const;
@@ -19,5 +19,5 @@ namespace eagle::ir
         ir_size current;
     };
 
-    SHARED_DEFINE(cmd_x);
+    SHARED_DEFINE(cmd_resize);
 }
