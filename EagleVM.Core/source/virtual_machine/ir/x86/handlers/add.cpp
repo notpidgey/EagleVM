@@ -48,13 +48,10 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_PF;
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_CF |
+            ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
-            std::make_shared<cmd_pop>(p_one, target_size),
-            std::make_shared<cmd_pop>(p_two, target_size),
-            make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_two)),
-            make_dyn(codec::m_add, encoder::reg(result), encoder::reg(p_one)),
-            std::make_shared<cmd_push>(result, target_size),
+            std::make_shared<cmd_add>(target_size, false, true),
 
             // The OF, SF, ZF, AF, CF, and PF flags are set according to the result.
             std::make_shared<cmd_context_rflags_load>(),
@@ -76,36 +73,67 @@ namespace eagle::ir::handler
     ir_insts add::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
         const discrete_store_ptr& flags)
     {
-        return {
-            std::make_shared<cmd_push>(result, ir_size::bit_64),
-            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
-            std::make_shared<cmd_push>(p_two, ir_size::bit_64),
+        // a_sign == b_sign AND r_sign == b_sign
+        ir_insts insts;
 
-            // a_sign = a >> (size - 1) & 1
-            make_dyn(codec::m_dec, encoder::reg(p_one)),
-            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm((uint64_t)size - 1)),
+        // r_sign XOR b_sign
+        {
+            insts.append_range(copy_to_top(size, util::result));
+            insts.append_range(ir_insts{
+                // r_sign = r >> (size - 1) & 1
+                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+                std::make_shared<cmd_shr>(size),
+                std::make_shared<cmd_push>(1, size),
+                std::make_shared<cmd_and>(size),
+            });
 
-            // b_sign = b >> (size - 1) & 1
-            make_dyn(codec::m_dec, encoder::reg(p_two)),
-            make_dyn(codec::m_shr, encoder::reg(p_two), encoder::imm((uint64_t)size - 1)),
+            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(ir_insts{
+                // b_sign = b >> (size - 1) & 1
+                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+                std::make_shared<cmd_shr>(size),
+                std::make_shared<cmd_push>(1, size),
+                std::make_shared<cmd_and>(size),
+            });
 
-            // r_sign = r >> (size - 1) & 1
-            make_dyn(codec::m_dec, encoder::reg(result)),
-            make_dyn(codec::m_shr, encoder::reg(result), encoder::imm((uint64_t)size - 1)),
+            insts.push_back(std::make_shared<cmd_xor>(size));
+        }
 
-            // a_sign == b_sign AND r_sign == b_sign
-            make_dyn(codec::m_xor, encoder::reg(p_one), encoder::reg(p_two)),
-            make_dyn(codec::m_not, encoder::reg(p_one)),
-            make_dyn(codec::m_xor, encoder::reg(p_two), encoder::reg(result)),
-            make_dyn(codec::m_and, encoder::reg(p_one), encoder::reg(p_two)),
+        // b_sign XOR a_sign
+        {
+            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(ir_insts{
+                // b_sign = b >> (size - 1) & 1
+                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+                std::make_shared<cmd_shr>(size),
+                std::make_shared<cmd_push>(1, size),
+                std::make_shared<cmd_and>(size),
+            });
 
-            make_dyn(codec::m_shl, encoder::reg(p_one), encoder::imm(util::flag_index(ZYDIS_CPUFLAG_OF))),
-            make_dyn(codec::m_or, encoder::reg(flags), encoder::reg(p_one)),
+            insts.append_range(copy_to_top(size, util::param_one, ...));
+            insts.append_range(ir_insts{
+                // a_sign = a >> (size - 1) & 1
+                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+                std::make_shared<cmd_shr>(size),
+                std::make_shared<cmd_push>(1, size),
+                std::make_shared<cmd_and>(size),
+            });
 
-            std::make_shared<cmd_pop>(p_two, ir_size::bit_64),
-            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
-            std::make_shared<cmd_pop>(result, ir_size::bit_64),
-        };
+            insts.push_back(std::make_shared<cmd_xor>(size));
+        }
+
+        insts.append_range(ir_insts{
+            // (r_sign XOR b_sign) OR (b_sign XOR a_sign)
+            std::make_shared<cmd_or>(size),
+
+            // OF = (r_sign XOR b_sign) OR (b_sign XOR a_sign)
+            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 
     ir_insts add::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
@@ -114,21 +142,37 @@ namespace eagle::ir::handler
         //
         // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
         //
+        ir_insts insts;
 
-        return {
-            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
-            std::make_shared<cmd_push>(p_two, ir_size::bit_64),
+        insts.append_range(copy_to_top(size, util::param_one,));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(0xF, size),
+            std::make_shared<cmd_and>(size),
+        });
 
-            make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(0xF)),
-            make_dyn(codec::m_and, encoder::reg(p_two), encoder::imm(0xF)),
+        insts.append_range(copy_to_top(size, util::param_two, ...));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(0xF, size),
+            std::make_shared<cmd_and>(size),
+        });
 
-            make_dyn(codec::m_add, encoder::reg(p_one), encoder::reg(p_two)),
-            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm(4)),
-            make_dyn(codec::m_and, encoder::reg(p_one), encoder::imm(1)),
+        // (() + () >> 4) & 1
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_add>(size),
+            std::make_shared<cmd_push>(4, size),
+            std::make_shared<cmd_shr>(size),
 
-            std::make_shared<cmd_pop>(p_two, ir_size::bit_64),
-            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
-        };
+            std::make_shared<cmd_push>(1, size),
+            std::make_shared<cmd_and>(size),
+
+            // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
+            std::make_shared<cmd_x>(ir_size::bit_64, size),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 
     ir_insts add::compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,

@@ -35,10 +35,8 @@ namespace eagle::ir::handler
 
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
-            std::make_shared<cmd_pop>(p_one, target_size),
-            make_dyn(codec::m_mov, encoder::reg(result), encoder::reg(p_one)),
-            make_dyn(codec::m_inc, encoder::reg(result)),
-            std::make_shared<cmd_push>(result, target_size),
+            std::make_shared<cmd_push>(1, target_size),
+            std::make_shared<cmd_add>(target_size, false, true),
 
             // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
             std::make_shared<cmd_context_rflags_load>(),
