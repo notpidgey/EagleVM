@@ -90,7 +90,7 @@ namespace eagle::ir::handler
         insts.push_back(std::make_shared<cmd_push>(static_cast<uint64_t>(size), size));
 
         // (shift_count & 3F/1F)
-        insts.append_range(copy_to_top(size, util::param_one, ??));
+        insts.append_range(copy_to_top(size, util::param_one, { size, size }));
         if (size == ir_size::bit_64)
             insts.push_back(std::make_shared<cmd_push>(0x3F, size));
         else

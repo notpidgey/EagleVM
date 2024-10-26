@@ -1,4 +1,7 @@
 #pragma once
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_logic.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_mem_read.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/ir/x86/base_x86_translator.h"
 
 namespace eagle::ir::handler::util
@@ -16,18 +19,9 @@ namespace eagle::ir::handler::util
         result,
     };
 
-    ir_insts copy_to_top(ir_size size, const top_arg target_arg, ir_size offsets...)
+    inline ir_insts copy_to_top(ir_size size, const top_arg target_arg, std::initializer_list<ir_size> offsets = {})
     {
-        // this is how the stack should look like
-
-        // 0x0: param two
-        // 0x(size * 1): para one
-        // 0x(size * 2): result
-        // 0x(size * 3 + bit_64): rflags
-
-        uint32_t total_offset = static_cast<uint32_t>(ir_size::bit_64);
-        total_offset += static_cast<uint32_t>(ir_size::bit_64);
-
+        uint32_t total_offset = static_cast<uint32_t>(ir_size::bit_64); // rflags
         switch (target_arg)
         {
             case param_two:
@@ -40,10 +34,14 @@ namespace eagle::ir::handler::util
                 break;
         }
 
-        uint32_t additional_offsets[] = { static_cast<uint32_t>(offsets)... };
-        for (const uint32_t offset : additional_offsets)
-            total_offset += offset;
+        for (const ir_size offset : offsets)
+            total_offset += static_cast<uint32_t>(offset);
 
-        return ir_insts(total_offset);
+        return ir_insts {
+            std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
+            std::make_shared<cmd_push>(total_offset, ir_size::bit_64),
+            std::make_shared<cmd_add>(ir_size::bit_64),
+            std::make_shared<cmd_mem_read>(size),
+        };
     }
 }

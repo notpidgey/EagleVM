@@ -85,7 +85,15 @@ namespace eagle::ir::handler
 
         ir_insts insts;
         insts.append_range(copy_to_top(size, util::result));
-        insts.append_range(copy_to_top(size, util::param_one, ?));
+
+        // (shift_count & 3F/1F)
+        insts.append_range(copy_to_top(size, util::param_one, { size }));
+        if (size == ir_size::bit_64)
+            insts.push_back(std::make_shared<cmd_push>(0x3F, size));
+        else
+            insts.push_back(std::make_shared<cmd_push>(0x1F, size));
+
+        insts.push_back(std::make_shared<cmd_and>(size));
 
         return {
             // result = value >> (shift_count - 1)

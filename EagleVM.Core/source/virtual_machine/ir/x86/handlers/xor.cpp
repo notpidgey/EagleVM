@@ -49,10 +49,7 @@ namespace eagle::ir::handler
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
-            std::make_shared<cmd_pop>(p_one, target_size),
-            std::make_shared<cmd_pop>(p_two, target_size),
-            make_dyn(codec::m_xor, encoder::reg(p_two), encoder::reg(p_one)),
-            std::make_shared<cmd_push>(p_two, target_size),
+            std::make_shared<cmd_xor>(target_size, false, true),
 
             // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
             std::make_shared<cmd_context_rflags_load>(),

@@ -87,7 +87,7 @@ namespace eagle::ir::handler
                 std::make_shared<cmd_and>(size),
             });
 
-            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(copy_to_top(size, util::param_two, { size }));
             insts.append_range(ir_insts{
                 // b_sign = b >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -101,7 +101,7 @@ namespace eagle::ir::handler
 
         // b_sign XOR a_sign
         {
-            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(copy_to_top(size, util::param_two, { size }));
             insts.append_range(ir_insts{
                 // b_sign = b >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -110,7 +110,7 @@ namespace eagle::ir::handler
                 std::make_shared<cmd_and>(size),
             });
 
-            insts.append_range(copy_to_top(size, util::param_one, ...));
+            insts.append_range(copy_to_top(size, util::param_one, { size, size }));
             insts.append_range(ir_insts{
                 // a_sign = a >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -144,13 +144,13 @@ namespace eagle::ir::handler
         //
         ir_insts insts;
 
-        insts.append_range(copy_to_top(size, util::param_one,));
+        insts.append_range(copy_to_top(size, util::param_one));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xF, size),
             std::make_shared<cmd_and>(size),
         });
 
-        insts.append_range(copy_to_top(size, util::param_two, ...));
+        insts.append_range(copy_to_top(size, util::param_two, { size }));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xF, size),
             std::make_shared<cmd_and>(size),
@@ -224,7 +224,7 @@ namespace eagle::ir::lifter
         return translate_status::success;
     }
 
-    void add::finalize_translate_to_virtual(x86_cpu_flag flags)
+    void add::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
         base_x86_translator::finalize_translate_to_virtual(flags);
 

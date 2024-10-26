@@ -44,7 +44,8 @@ namespace eagle::ir::handler
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
-        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF | ZYDIS_CPUFLAG_CF;
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF |
+            ZYDIS_CPUFLAG_CF;
         ir_insts insts = {
             std::make_shared<cmd_sub>(target_size, false, true),
 
@@ -82,7 +83,7 @@ namespace eagle::ir::handler
                 std::make_shared<cmd_and>(size),
             });
 
-            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(copy_to_top(size, util::param_two, { size }));
             insts.append_range(ir_insts{
                 // b_sign = b >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -96,7 +97,7 @@ namespace eagle::ir::handler
 
         // b_sign XOR a_sign
         {
-            insts.append_range(copy_to_top(size, util::param_two, ...));
+            insts.append_range(copy_to_top(size, util::param_two, { size }));
             insts.append_range(ir_insts{
                 // b_sign = b >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -105,7 +106,7 @@ namespace eagle::ir::handler
                 std::make_shared<cmd_and>(size),
             });
 
-            insts.append_range(copy_to_top(size, util::param_one, ...));
+            insts.append_range(copy_to_top(size, util::param_one, { size, size }));
             insts.append_range(ir_insts{
                 // a_sign = a >> (size - 1) & 1
                 std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
@@ -139,13 +140,13 @@ namespace eagle::ir::handler
         //
         ir_insts insts;
 
-        insts.append_range(copy_to_top(size, util::param_one,));
+        insts.append_range(copy_to_top(size, util::param_one));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xF, size),
             std::make_shared<cmd_and>(size),
         });
 
-        insts.append_range(copy_to_top(size, util::param_two, ...));
+        insts.append_range(copy_to_top(size, util::param_two, { size }));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xF, size),
             std::make_shared<cmd_and>(size),

@@ -57,12 +57,12 @@ namespace eagle::ir::handler
     ir_insts inc::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
     {
         ir_insts insts;
-        insts.append_range(copy_to_top(size, util::param_two));
+        insts.append_range(copy_to_top(size, util::param_one));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
         });
 
-        insts.append_range(copy_to_top(size, util::result));
+        insts.append_range(copy_to_top(size, util::result, { size, size }));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
         });
