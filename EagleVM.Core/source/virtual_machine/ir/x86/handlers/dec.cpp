@@ -111,7 +111,7 @@ namespace eagle::ir::lifter
 {
     translate_mem_result dec::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx) { return translate_mem_result::both; }
 
-    void dec::finalize_translate_to_virtual(x86_cpu_flag flags)
+    void dec::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
         base_x86_translator::finalize_translate_to_virtual(flags);
 
@@ -119,6 +119,9 @@ namespace eagle::ir::lifter
         if (first_op.type == ZYDIS_OPERAND_TYPE_REGISTER)
         {
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
+            if (static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+                reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
+
             block->push_back(std::make_shared<cmd_context_store>(reg));
         }
         else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
@@ -126,5 +129,10 @@ namespace eagle::ir::lifter
             ir_size value_size = static_cast<ir_size>(first_op.size);
             block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
+
+        // clean up regs on stack due to handler leaving params
+        const ir_size target_size = static_cast<ir_size>(first_op.size);
+        block->push_back(std::make_shared<cmd_pop>(target_size));
+        block->push_back(std::make_shared<cmd_pop>(target_size));
     }
 }

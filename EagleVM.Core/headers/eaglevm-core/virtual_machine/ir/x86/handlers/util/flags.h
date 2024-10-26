@@ -19,9 +19,12 @@ namespace eagle::ir::handler::util
         result,
     };
 
-    inline ir_insts copy_to_top(ir_size size, const top_arg target_arg, std::initializer_list<ir_size> offsets = {})
+    inline ir_insts copy_to_top(ir_size size, const top_arg target_arg, const std::initializer_list<ir_size> offsets = {})
     {
         uint32_t total_offset = static_cast<uint32_t>(ir_size::bit_64); // rflags
+        for (const ir_size offset : offsets)
+            total_offset += static_cast<uint32_t>(offset);
+
         switch (target_arg)
         {
             case param_two:
@@ -34,12 +37,9 @@ namespace eagle::ir::handler::util
                 break;
         }
 
-        for (const ir_size offset : offsets)
-            total_offset += static_cast<uint32_t>(offset);
-
         return ir_insts {
             std::make_shared<cmd_push>(reg_vm::vsp, ir_size::bit_64),
-            std::make_shared<cmd_push>(total_offset, ir_size::bit_64),
+            std::make_shared<cmd_push>(total_offset / 8, ir_size::bit_64),
             std::make_shared<cmd_add>(ir_size::bit_64),
             std::make_shared<cmd_mem_read>(size),
         };

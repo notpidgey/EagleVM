@@ -161,7 +161,7 @@ namespace eagle::ir::lifter
         return translate_status::success;
     }
 
-    void shr::finalize_translate_to_virtual(x86_cpu_flag flags)
+    void shr::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
         base_x86_translator::finalize_translate_to_virtual(flags);
 
@@ -180,5 +180,10 @@ namespace eagle::ir::lifter
             ir_size value_size = static_cast<ir_size>(first_op.size);
             block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
         }
+
+        // clean up regs on stack due to handler leaving params
+        const ir_size target_size = static_cast<ir_size>(first_op.size);
+        block->push_back(std::make_shared<cmd_pop>(target_size));
+        block->push_back(std::make_shared<cmd_pop>(target_size));
     }
 }

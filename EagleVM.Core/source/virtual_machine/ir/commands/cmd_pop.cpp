@@ -2,8 +2,13 @@
 
 namespace eagle::ir
 {
-    cmd_pop::cmd_pop(discrete_store_ptr reg_dest, ir_size size)
+    cmd_pop::cmd_pop(discrete_store_ptr reg_dest, const ir_size size)
         : base_command(command_type::vm_pop), dest_reg(std::move(reg_dest)), size(size)
+    {
+    }
+
+    cmd_pop::cmd_pop(const ir_size size)
+        : base_command(command_type::vm_pop), dest_reg(nullptr), size(size)
     {
     }
 

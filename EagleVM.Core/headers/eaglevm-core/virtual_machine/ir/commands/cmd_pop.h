@@ -9,6 +9,7 @@ namespace eagle::ir
     {
     public:
         explicit cmd_pop(discrete_store_ptr reg_dest, ir_size size);
+        explicit cmd_pop(ir_size size);
 
         discrete_store_ptr get_destination_reg();
         ir_size get_size() const;
