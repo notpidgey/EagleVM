@@ -2,10 +2,6 @@
 
 Playground for generating virtual machine protected x64 assembly.
 
-You can read about how the project works in my blog
-
-[EagleVM: Part 1 WIP](https://notpidgey.github.io/posts/eaglevm/)
-
 ## Project Breakdown
 
 ### EagleVM
