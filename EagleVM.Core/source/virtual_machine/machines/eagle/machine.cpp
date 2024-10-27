@@ -660,8 +660,6 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cnt_ptr& cmd)
     {
-        // TODO: this needs to be changed so that its not part of cmd_arith_base
-        // there is no need for a reversed and it should output a size of uint8_t
         const auto from = to_reg_size(cmd->get_size());
 
         const auto temp_reg = reg_64_container->get_any();
@@ -696,13 +694,29 @@ namespace eagle::virt::eg
         const auto temp_reg_two = reg_64_container->get_any();
         const auto pop_reg_two = get_bit_version(temp_reg_two, from);
 
-        block->add({
-            encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
-            encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, TOB(from), TOB(from))),
-            encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
-            encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
-            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
-        });
+        if (cmd->get_preserved())
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
+                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, 0, TOB(from))),
+
+                encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
+                encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
+            });
+        }
+        else
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, TOB(from), TOB(from))),
+
+                encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
+                encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
+            });
+        }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_umul_ptr& cmd)
@@ -721,16 +735,33 @@ namespace eagle::virt::eg
         const auto temp_reg_two = reg_64_container->get_any();
         const auto shift_reg = get_bit_version(temp_reg_two, from);
 
-        block->add({
-            encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+        if (cmd->get_preserved())
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_sub, ZREG(VSP), ZMEMBD(VSP, 0, TOB(from))),
 
-            encode(m_mov, ZREG(shift_reg), ZREG(pop_reg)),
-            encode(m_sar, ZREG(shift_reg), ZIMMS(TOB(from) - 1)),
-            encode(m_xor, ZREG(pop_reg), ZREG(shift_reg)),
-            encode(m_sub, ZREG(pop_reg), ZREG(shift_reg)),
+                encode(m_mov, ZREG(shift_reg), ZREG(pop_reg)),
+                encode(m_sar, ZREG(shift_reg), ZIMMS(TOB(from) - 1)),
+                encode(m_xor, ZREG(pop_reg), ZREG(shift_reg)),
+                encode(m_sub, ZREG(pop_reg), ZREG(shift_reg)),
 
-            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg)),
-        });
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg)),
+            });
+        }
+        else
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+
+                encode(m_mov, ZREG(shift_reg), ZREG(pop_reg)),
+                encode(m_sar, ZREG(shift_reg), ZIMMS(TOB(from) - 1)),
+                encode(m_xor, ZREG(pop_reg), ZREG(shift_reg)),
+                encode(m_sub, ZREG(pop_reg), ZREG(shift_reg)),
+
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg)),
+            });
+        }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_log2_ptr& cmd)
@@ -743,18 +774,34 @@ namespace eagle::virt::eg
         const auto temp_reg_two = reg_64_container->get_any();
         const auto count_reg = get_bit_version(temp_reg_two, from);
 
-        block->add({
-            encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+        if (cmd->get_preserved())
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
 
-            encode(m_xor, ZREG(count_reg), ZREG(count_reg)),
-            encode(m_bsr, ZREG(count_reg), ZREG(pop_reg)),
+                encode(m_xor, ZREG(count_reg), ZREG(count_reg)),
+                encode(m_bsr, ZREG(count_reg), ZREG(pop_reg)),
+                // > If the content source operand is 0, the content of the destination operand is undefined.
+                // Ensure that it is 0 even though log2(0) is undefined
+                encode(m_cmovz, ZREG(count_reg), ZREG(pop_reg)),
 
-            // > If the content source operand is 0, the content of the destination operand is undefined.
-            // Ensure that it is 0 even though log2(0) is undefined
-            encode(m_cmovz, ZREG(count_reg), ZREG(pop_reg)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(count_reg)),
+            });
+        }
+        else
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
 
-            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(count_reg)),
-        });
+                encode(m_xor, ZREG(count_reg), ZREG(count_reg)),
+                encode(m_bsr, ZREG(count_reg), ZREG(pop_reg)),
+                encode(m_cmovz, ZREG(count_reg), ZREG(pop_reg)),
+
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(count_reg)),
+            });
+        }
+
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd)

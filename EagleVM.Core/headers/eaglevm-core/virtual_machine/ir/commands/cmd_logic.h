@@ -5,14 +5,13 @@
 
 namespace eagle::ir
 {
-    template <command_type T>
+    template <command_type T, int param_count = 2>
     class cmd_arith_base final : public base_command
     {
     public:
-        explicit cmd_arith_base(const ir_size size, const bool reversed = false, const bool preserve_args = false) : base_command(T), size(size),
-            reversed(reversed), preserved(preserve_args)
-        {
-        }
+        explicit cmd_arith_base(const ir_size size, const bool reversed = false, const bool preserve_args = false)
+            : base_command(T), size(size), reversed(reversed), preserved(preserve_args)
+        { }
 
         ir_size get_size() const { return size; }
         bool get_reversed() const { return reversed; }
@@ -23,6 +22,24 @@ namespace eagle::ir
     private:
         ir_size size;
         bool reversed;
+        bool preserved;
+    };
+
+    template <command_type T>
+    class cmd_arith_base<T, 1> final : public base_command
+    {
+    public:
+        explicit cmd_arith_base(const ir_size size, const bool preserve_args = false)
+            : base_command(T), size(size), preserved(preserve_args)
+        { }
+
+        ir_size get_size() const { return size; }
+        bool get_preserved() const { return preserved; }
+
+        bool is_similar(const std::shared_ptr<base_command>& other) override { return true; }
+
+    private:
+        ir_size size;
         bool preserved;
     };
 
@@ -40,11 +57,11 @@ namespace eagle::ir
     using cmd_smul = cmd_arith_base<command_type::vm_smul>;
     using cmd_umul = cmd_arith_base<command_type::vm_umul>;
 
-    using cmd_abs = cmd_arith_base<command_type::vm_abs>;
-    using cmd_log2 = cmd_arith_base<command_type::vm_log2>;
+    using cmd_abs = cmd_arith_base<command_type::vm_abs, 1>;
+    using cmd_log2 = cmd_arith_base<command_type::vm_log2, 1>;
 
     // other
-    using cmd_dup = cmd_arith_base<command_type::vm_dup>;
+    using cmd_dup = cmd_arith_base<command_type::vm_dup, 1>;
 
     SHARED_DEFINE(cmd_and);
     SHARED_DEFINE(cmd_or);
