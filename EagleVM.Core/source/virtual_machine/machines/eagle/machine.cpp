@@ -560,12 +560,12 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shl_ptr& cmd)
     {
-        handle_generic_logic_cmd(block, m_and, cmd->get_size());
+        handle_generic_logic_cmd(block, m_shlx, cmd->get_size());
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shr_ptr& cmd)
     {
-        handle_generic_logic_cmd(block, m_shr, cmd->get_size());
+        handle_generic_logic_cmd(block, m_shrx, cmd->get_size());
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)

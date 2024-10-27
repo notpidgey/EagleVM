@@ -40,12 +40,6 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in shlition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr shift_count = discrete_store::create(target_size);
-        const discrete_store_ptr shift_value = discrete_store::create(target_size);
-        const discrete_store_ptr shift_result = discrete_store::create(target_size);
-
-        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
-
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
@@ -65,19 +59,18 @@ namespace eagle::ir::handler
             std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
-        insts.append_range(compute_cf(target_size, shift_result, shift_value, shift_count, flags_result));
-        insts.append_range(compute_of(target_size, shift_result, shift_value, shift_count, flags_result));
+        insts.append_range(compute_cf(target_size));
+        insts.append_range(compute_of(target_size));
 
         // The SF, ZF, and PF flags are set according to the result.
-        insts.append_range(util::calculate_sf(target_size, shift_result));
-        insts.append_range(util::calculate_zf(target_size, shift_result));
-        insts.append_range(util::calculate_pf(target_size, shift_result));
+        insts.append_range(util::calculate_sf(target_size));
+        insts.append_range(util::calculate_zf(target_size));
+        insts.append_range(util::calculate_pf(target_size));
 
         return insts;
     }
 
-    ir_insts shl::compute_cf(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
-        const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    ir_insts shl::compute_cf(ir_size size)
     {
         //
         // CF = (value >> (bit_size - (shift_count & 3F/1F)))
@@ -113,8 +106,7 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts shl::compute_of(ir_size size, const discrete_store_ptr& shift_result, const discrete_store_ptr& shift_value,
-        const discrete_store_ptr& shift_count, const discrete_store_ptr& flags_result)
+    ir_insts shl::compute_of(ir_size size)
     {
         //
         // OF = MSB(tempDEST) XOR CF

@@ -11,11 +11,13 @@ namespace eagle::ir::handler::util
         return index;
     }
 
-    ir_insts calculate_sf(ir_size size, const discrete_store_ptr& value)
+    ir_insts calculate_sf(ir_size size)
     {
-        return {
+        ir_insts insts;
+
+        insts.append_range(copy_to_top(size, result));
+        insts.append_range(ir_insts{
             // value >> sizeof(value) - 1
-            std::make_shared<cmd_push>(value, size),
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
             std::make_shared<cmd_shr>(size),
 
@@ -25,13 +27,17 @@ namespace eagle::ir::handler::util
 
             std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
-        };
+        });
+
+        return insts;
     }
 
-    ir_insts calculate_zf(ir_size size, const discrete_store_ptr& result)
+    ir_insts calculate_zf(ir_size size)
     {
-        return {
-            std::make_shared<cmd_push>(result, size),
+        ir_insts insts;
+
+        insts.append_range(copy_to_top(size, result));
+        insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0, size),
             std::make_shared<cmd_cmp>(size),
 
@@ -41,13 +47,17 @@ namespace eagle::ir::handler::util
 
             std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
-        };
+        });
+
+        return insts;
     }
 
-    ir_insts calculate_pf(ir_size size, const discrete_store_ptr& result)
+    ir_insts calculate_pf(ir_size size)
     {
-        return {
-            std::make_shared<cmd_push>(result, size),
+        ir_insts insts;
+
+        insts.append_range(copy_to_top(size, result));
+        insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xFF, size),
             std::make_shared<cmd_and>(size),
 
@@ -62,6 +72,8 @@ namespace eagle::ir::handler::util
 
             std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
-        };
+        });
+
+        return insts;
     }
 }

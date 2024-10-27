@@ -40,12 +40,6 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr p_one = discrete_store::create(target_size);
-        const discrete_store_ptr p_two = discrete_store::create(target_size);
-        const discrete_store_ptr result = discrete_store::create(target_size);
-
-        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
-
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_CF |
@@ -59,19 +53,18 @@ namespace eagle::ir::handler
             std::make_shared<cmd_and>(ir_size::bit_64),
         };
 
-        insts.append_range(compute_of(target_size, result, p_two, p_one, flags_result));
-        insts.append_range(compute_af(target_size, result, p_two, p_one, flags_result));
-        insts.append_range(compute_cf(target_size, result, p_two, p_one, flags_result));
+        insts.append_range(compute_of(target_size));
+        insts.append_range(compute_af(target_size));
+        insts.append_range(compute_cf(target_size));
 
-        insts.append_range(util::calculate_sf(target_size, result));
-        insts.append_range(util::calculate_zf(target_size, result));
-        insts.append_range(util::calculate_pf(target_size, result));
+        insts.append_range(util::calculate_sf(target_size));
+        insts.append_range(util::calculate_zf(target_size));
+        insts.append_range(util::calculate_pf(target_size));
 
         return insts;
     }
 
-    ir_insts add::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-        const discrete_store_ptr& flags)
+    ir_insts add::compute_of(ir_size size)
     {
         // a_sign == b_sign AND r_sign == b_sign
         ir_insts insts;
@@ -136,8 +129,7 @@ namespace eagle::ir::handler
         return insts;
     }
 
-    ir_insts add::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-        const discrete_store_ptr& flags)
+    ir_insts add::compute_af(ir_size size)
     {
         //
         // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
@@ -175,30 +167,65 @@ namespace eagle::ir::handler
         return insts;
     }
 
-    ir_insts add::compute_cf(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& p_one, const discrete_store_ptr& p_two,
-        const discrete_store_ptr& flags)
+    ir_insts add::compute_cf(ir_size size)
     {
         //
         // CF = ((A & B) | ((A | B) & ~R)) >> 63
         //
 
-        return {
-            std::make_shared<cmd_push>(p_one, ir_size::bit_64),
+        ir_insts insts;
 
-            // ((A | B) & ~R)
-            make_dyn(codec::m_or, encoder::reg(p_one), encoder::reg(p_two)),
-            make_dyn(codec::m_not, encoder::reg(result)),
-            make_dyn(codec::m_and, encoder::reg(result), encoder::reg(p_one)),
+        // (A & B)
+        insts.append_range(copy_to_top(size, util::param_one));
+        insts.append_range(copy_to_top(size, util::param_two, { size }));
+        insts.push_back(std::make_shared<cmd_and>(size));
 
-            std::make_shared<cmd_pop>(p_one, ir_size::bit_64),
+        // (A | B)
+        insts.append_range(copy_to_top(size, util::param_one, { size }));
+        insts.append_range(copy_to_top(size, util::param_two, { size, size }));
+        insts.push_back(std::make_shared<cmd_or>(size));
 
-            // (A & B)
-            make_dyn(codec::m_and, encoder::reg(p_one), encoder::reg(p_two)),
-            make_dyn(codec::m_or, encoder::reg(p_one), encoder::reg(result)),
+        // (A | B) & ~R
+        uint64_t target_points;
+        switch (size)
+        {
+            case ir_size::bit_64:
+                target_points = UINT64_MAX;
+            break;
+            case ir_size::bit_32:
+                target_points = UINT32_MAX;
+            break;
+            case ir_size::bit_16:
+                target_points = UINT16_MAX;
+            break;
+            case ir_size::bit_8:
+                target_points = UINT8_MAX;
+            break;
+        }
 
-            // >> 63
-            make_dyn(codec::m_shr, encoder::reg(p_one), encoder::imm(63)),
-        };
+        insts.append_range(copy_to_top(size, util::result, { size, size, size }));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(target_points, size),
+            std::make_shared<cmd_xor>(size),
+            std::make_shared<cmd_or>(size)
+        });
+
+        // ((A & B) | ((A | B) & ~R))
+        insts.push_back(std::make_shared<cmd_or>(size));
+
+        // CF = ((A & B) | ((A | B) & ~R)) >> bit_count
+        const auto bit_count = static_cast<uint32_t>(size);
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_push>(bit_count - 1, size),
+            std::make_shared<cmd_shr>(size),
+
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+            std::make_shared<cmd_or>(ir_size::bit_64)
+        });
+
+        return insts;
     }
 }
 
