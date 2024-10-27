@@ -57,13 +57,28 @@ namespace eagle::ir::handler
 
     ir_insts imul::compute_of_cf(ir_size size)
     {
-        ir_insts insts;
+        ir_insts insts = { };
         insts.append_range(copy_to_top(size, util::param_one));
-        insts.append_range(copy_to_top(size, util::param_two));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_abs>(size),
+            std::make_shared<cmd_log2>(size),
+        });
 
-        return {
-            std::make_shared<cmd_
-        };
+        insts.append_range(copy_to_top(size, util::param_two, { size }));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_abs>(size),
+            std::make_shared<cmd_log2>(size),
+        });
+
+        insts.push_back(std::make_shared<cmd_add>(size));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_add>(size),
+            std::make_shared<cmd_push>(63, size),
+            std::make_shared<cmd_cmp>(size),
+            std::make_shared<cmd_flags_load>(vm_flags::ge)
+        });
+
+        return insts;
     }
 }
 

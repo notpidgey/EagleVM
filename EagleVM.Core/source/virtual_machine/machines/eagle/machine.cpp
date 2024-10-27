@@ -590,7 +590,7 @@ namespace eagle::virt::eg
             auto build_flag_load = [&](const mnemonic mnemonic)
             {
                 block->add({
-                    // mask off EQ flag
+                    // mask off the flag
                     encode(m_mov, ZREG(vals[2]), ZIMMU(~(1ull << idx))),
                     encode(m_and, ZREG(VFLAGS), ZREG(vals[2])),
 
@@ -620,7 +620,7 @@ namespace eagle::virt::eg
                 case ir::vm_flags::ge:
                 {
                     // set ge = ZF = 0 and SF = OF
-                    build_flag_load(m_cmovnle);
+                    build_flag_load(m_cmovnl);
                     break;
                 }
             }

@@ -40,6 +40,9 @@ namespace eagle::ir
     using cmd_smul = cmd_arith_base<command_type::vm_smul>;
     using cmd_umul = cmd_arith_base<command_type::vm_umul>;
 
+    using cmd_abs = cmd_arith_base<command_type::vm_abs>;
+    using cmd_log2 = cmd_arith_base<command_type::vm_log2>;
+
     SHARED_DEFINE(cmd_and);
     SHARED_DEFINE(cmd_or);
     SHARED_DEFINE(cmd_xor);

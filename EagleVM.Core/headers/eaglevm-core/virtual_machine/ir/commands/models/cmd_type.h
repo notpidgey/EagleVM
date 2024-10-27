@@ -50,6 +50,9 @@ namespace eagle::ir
         vm_smul,
         vm_umul,
 
+        vm_abs,
+        vm_log2,
+
         // compare
         vm_cmp,
     };
