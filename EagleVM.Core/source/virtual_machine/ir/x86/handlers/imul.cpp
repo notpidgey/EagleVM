@@ -75,7 +75,18 @@ namespace eagle::ir::handler
             std::make_shared<cmd_add>(size),
             std::make_shared<cmd_push>(63, size),
             std::make_shared<cmd_cmp>(size),
-            std::make_shared<cmd_flags_load>(vm_flags::ge)
+            std::make_shared<cmd_dup>(size), // duplicate result
+
+            std::make_shared<cmd_flags_load>(vm_flags::ge),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_flags_load>(vm_flags::ge),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_or>(ir_size::bit_64),
+            std::make_shared<cmd_or>(ir_size::bit_64),
         });
 
         return insts;

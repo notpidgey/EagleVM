@@ -53,6 +53,8 @@ namespace eagle::ir
         vm_abs,
         vm_log2,
 
+        vm_dup,
+
         // compare
         vm_cmp,
     };

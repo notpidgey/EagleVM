@@ -43,6 +43,9 @@ namespace eagle::ir
     using cmd_abs = cmd_arith_base<command_type::vm_abs>;
     using cmd_log2 = cmd_arith_base<command_type::vm_log2>;
 
+    // other
+    using cmd_dup = cmd_arith_base<command_type::vm_dup>;
+
     SHARED_DEFINE(cmd_and);
     SHARED_DEFINE(cmd_or);
     SHARED_DEFINE(cmd_xor);
