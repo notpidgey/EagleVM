@@ -11,13 +11,21 @@ namespace eagle::ir
     public:
         explicit cmd_arith_base(const ir_size size, const bool reversed = false, const bool preserve_args = false)
             : base_command(T), size(size), reversed(reversed), preserved(preserve_args)
-        { }
+        {
+        }
+
+        uint8_t get_param_count() { return param_count; }
 
         ir_size get_size() const { return size; }
         bool get_reversed() const { return reversed; }
         bool get_preserved() const { return preserved; }
 
-        bool is_similar(const std::shared_ptr<base_command>& other) override { return true; }
+        bool is_similar(const std::shared_ptr<base_command>& other) override
+        {
+            std::shared_ptr<cmd_arith_base> cmd = std::static_pointer_cast<cmd_arith_base>(other);
+            return cmd->get_preserved() == preserved && cmd->get_param_count() == get_param_count() && cmd->get_size() == size &&
+                cmd->get_reversed() == reversed;
+        }
 
     private:
         ir_size size;
@@ -31,12 +39,19 @@ namespace eagle::ir
     public:
         explicit cmd_arith_base(const ir_size size, const bool preserve_args = false)
             : base_command(T), size(size), preserved(preserve_args)
-        { }
+        {
+        }
+
+        uint8_t get_param_count() { return 1; }
 
         ir_size get_size() const { return size; }
         bool get_preserved() const { return preserved; }
 
-        bool is_similar(const std::shared_ptr<base_command>& other) override { return true; }
+        bool is_similar(const std::shared_ptr<base_command>& other) override
+        {
+            std::shared_ptr<cmd_arith_base> cmd = std::static_pointer_cast<cmd_arith_base>(other);
+            return cmd->get_preserved() == preserved && cmd->get_param_count() == get_param_count() && cmd->get_size() == size;
+        }
 
     private:
         ir_size size;

@@ -1,9 +1,9 @@
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_resize.h"
 
 namespace eagle::ir
 {
     cmd_resize::cmd_resize(const ir_size to, const ir_size from)
-        : base_command(command_type::vm_x), target(to), current(from)
+        : base_command(command_type::vm_resize), target(to), current(from)
     {
     }
 
