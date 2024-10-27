@@ -55,7 +55,7 @@ namespace eagle::virt::pidg
         vm_inst_regs_ptr rm;
         vm_inst_handlers_ptr hg;
 
-        void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
+        void dispatch_handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
         codec::reg reg_vm_to_register(ir::reg_vm store) const;
     };
 }

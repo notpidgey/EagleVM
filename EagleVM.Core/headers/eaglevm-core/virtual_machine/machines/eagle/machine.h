@@ -40,7 +40,7 @@ namespace eagle::virt::eg
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) override;
-        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_and_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_or_ptr& cmd) override;
@@ -50,6 +50,13 @@ namespace eagle::virt::eg
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sub_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_resize_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cnt_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_smul_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_umul_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_abs_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_log2_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd) override;
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
@@ -63,7 +70,7 @@ namespace eagle::virt::eg
 
         std::unordered_map<ir::discrete_store_ptr, complex_load_info> store_complex_load_info;
 
-        void handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
+        void dispatch_handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) override;
 
         void call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const;
         void call_push(const asmb::code_container_ptr& block, codec::reg target_reg) const;

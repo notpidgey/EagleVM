@@ -81,7 +81,7 @@ namespace eagle::virt::eg
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->at(i);
-            handle_cmd(code, command);
+            dispatch_handle_cmd(code, command);
 
             for (auto store : store_dead[i])
                 reg_64_container->release(store);
@@ -93,7 +93,10 @@ namespace eagle::virt::eg
         return code;
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command) { base_machine::handle_cmd(code, command); }
+    void machine::dispatch_handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
+    {
+        base_machine::dispatch_handle_cmd(code, command);
+    }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_load_ptr& cmd)
     {
@@ -234,7 +237,7 @@ namespace eagle::virt::eg
         // we also want to inline this so we are inserting it in place
         const ir::ir_insts jcc_instructions = han_man->build_instruction_handler(m_jmp, static_cast<uint64_t>(cmd_condition));
         for (auto& inst : jcc_instructions)
-            handle_cmd(block, inst);
+            dispatch_handle_cmd(block, inst);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
@@ -515,14 +518,14 @@ namespace eagle::virt::eg
         block->add(cmd->get_request());
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load& cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load_ptr& cmd)
     {
         reg flag_reg = reg_man->get_vm_reg(register_manager::index_vflags);
 
         scope_register_manager scope = reg_64_container->create_scope();
         reg temp = scope.reserve();
 
-        const uint32_t target_mask = ir::cmd_flags_load::get_flag_index(cmd.get_flag());
+        const uint32_t target_mask = ir::cmd_flags_load::get_flag_index(cmd->get_flag());
         block->add({
             encode(m_mov, ZREG(temp), ZREG(flag_reg)),
             encode(m_and, ZREG(temp), ZIMMU(target_mask)),
@@ -578,11 +581,11 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
     {
         scope_register_manager scope = reg_64_container->create_scope();
-        std::array<reg, 4> vals = scope.reserve<4>();
-        for (auto& val : vals) val = get_bit_version(val, to_reg_size(cmd->get_size()));
+        std::array<reg, 4> regs = scope.reserve<4>();
+        for (auto& val : regs) val = get_bit_version(val, to_reg_size(cmd->get_size()));
 
-        call_pop(block, vals[1]);
-        call_pop(block, vals[0]);
+        call_pop(block, regs[1]);
+        call_pop(block, regs[0]);
 
         for (const ir::vm_flags flag : ir::vm_flags_list)
         {
@@ -591,15 +594,15 @@ namespace eagle::virt::eg
             {
                 block->add({
                     // mask off the flag
-                    encode(m_mov, ZREG(vals[2]), ZIMMU(~(1ull << idx))),
-                    encode(m_and, ZREG(VFLAGS), ZREG(vals[2])),
+                    encode(m_mov, ZREG(regs[2]), ZIMMU(~(1ull << idx))),
+                    encode(m_and, ZREG(VFLAGS), ZREG(regs[2])),
 
                     // clear target register and CMP initial values
-                    encode(m_xor, ZREG(vals[2]), ZREG(vals[2])),
-                    encode(m_cmp, ZREG(vals[0]), ZREG(vals[1])),
-                    encode(m_mov, ZREG(vals[3]), ZIMMU(1ull << idx)),
-                    encode(mnemonic, ZREG(vals[2]), ZREG(vals[3])),
-                    encode(m_or, ZREG(VFLAGS), ZREG(vals[2]))
+                    encode(m_xor, ZREG(regs[2]), ZREG(regs[2])),
+                    encode(m_cmp, ZREG(regs[0]), ZREG(regs[1])),
+                    encode(m_mov, ZREG(regs[3]), ZIMMU(1ull << idx)),
+                    encode(mnemonic, ZREG(regs[2]), ZREG(regs[3])),
+                    encode(m_or, ZREG(VFLAGS), ZREG(regs[2]))
                 });
             };
 
@@ -625,6 +628,147 @@ namespace eagle::virt::eg
                 }
             }
         }
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_resize_ptr& cmd)
+    {
+        const auto from = to_reg_size(cmd->get_current());
+        const auto to = to_reg_size(cmd->get_target());
+
+        const auto temp_reg = reg_64_container->get_any();
+        auto pop_reg = get_bit_version(temp_reg, from);
+        auto push_reg = get_bit_version(temp_reg, to);
+
+        if (to > from)
+        {
+            block->add({
+                encode(m_xor, ZREG(temp_reg), ZREG(temp_reg)),
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_sub, ZREG(VSP), ZIMMS(to - from)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(to)), ZREG(push_reg))
+            });
+        }
+        else if (from > to)
+        {
+            block->add({
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_add, ZREG(VSP), ZIMMS(from - to)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(to)), ZREG(push_reg))
+            });
+        }
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cnt_ptr& cmd)
+    {
+        // TODO: this needs to be changed so that its not part of cmd_arith_base
+        // there is no need for a reversed and it should output a size of uint8_t
+        const auto from = to_reg_size(cmd->get_size());
+
+        const auto temp_reg = reg_64_container->get_any();
+        const auto pop_reg = get_bit_version(temp_reg, from);
+
+        if (cmd->get_preserved())
+        {
+            block->add({
+                encode(m_mov, ZREG(temp_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_popcnt, ZREG(pop_reg), ZREG(pop_reg)),
+                encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg))
+            });
+        }
+        else
+        {
+            block->add({
+                encode(m_mov, ZREG(temp_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_popcnt, ZREG(pop_reg), ZREG(pop_reg)),
+                encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg))
+            });
+        }
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_smul_ptr& cmd)
+    {
+        const auto from = to_reg_size(cmd->get_size());
+
+        const auto temp_reg_one = reg_64_container->get_any();
+        const auto pop_reg_one = get_bit_version(temp_reg_one, from);
+
+        const auto temp_reg_two = reg_64_container->get_any();
+        const auto pop_reg_two = get_bit_version(temp_reg_two, from);
+
+        block->add({
+            encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
+            encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, TOB(from), TOB(from))),
+            encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
+            encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
+            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
+        });
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_umul_ptr& cmd)
+    {
+        // im not doing this
+        VM_ASSERT("im not doing this");
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_abs_ptr& cmd)
+    {
+        const auto from = to_reg_size(cmd->get_size());
+
+        const auto temp_reg = reg_64_container->get_any();
+        const auto pop_reg = get_bit_version(temp_reg, from);
+
+        const auto temp_reg_two = reg_64_container->get_any();
+        const auto shift_reg = get_bit_version(temp_reg_two, from);
+
+        block->add({
+            encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+
+            encode(m_mov, ZREG(shift_reg), ZREG(pop_reg)),
+            encode(m_sar, ZREG(shift_reg), ZIMMS(TOB(from) - 1)),
+            encode(m_xor, ZREG(pop_reg), ZREG(shift_reg)),
+            encode(m_sub, ZREG(pop_reg), ZREG(shift_reg)),
+
+            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg)),
+        });
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_log2_ptr& cmd)
+    {
+        const auto from = to_reg_size(cmd->get_size());
+
+        const auto temp_reg = reg_64_container->get_any();
+        const auto pop_reg = get_bit_version(temp_reg, from);
+
+        const auto temp_reg_two = reg_64_container->get_any();
+        const auto count_reg = get_bit_version(temp_reg_two, from);
+
+        block->add({
+            encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+
+            encode(m_xor, ZREG(count_reg), ZREG(count_reg)),
+            encode(m_bsr, ZREG(count_reg), ZREG(pop_reg)),
+
+            // > If the content source operand is 0, the content of the destination operand is undefined.
+            // Ensure that it is 0 even though log2(0) is undefined
+            encode(m_cmovz, ZREG(count_reg), ZREG(pop_reg)),
+
+            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(count_reg)),
+        });
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd)
+    {
+        const auto from = to_reg_size(cmd->get_size());
+
+        const auto temp_reg = reg_64_container->get_any();
+        const auto pop_reg = get_bit_version(temp_reg, from);
+
+        block->add({
+            encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
+            encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
+            encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg)),
+        });
     }
 
     std::vector<asmb::code_container_ptr> machine::create_handlers()

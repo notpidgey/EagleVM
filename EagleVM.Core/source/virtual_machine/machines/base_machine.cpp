@@ -19,7 +19,7 @@ namespace eagle::virt
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->at(i);
-            handle_cmd(code, command);
+            dispatch_handle_cmd(code, command);
         }
 
         return code;
@@ -83,7 +83,7 @@ namespace eagle::virt
         return blocks;
     }
 
-    void base_machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
+    void base_machine::dispatch_handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
     {
         switch (command->get_command_type())
         {
@@ -168,16 +168,29 @@ namespace eagle::virt
             case ir::command_type::vm_cmp:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_cmp>(command));
                 break;
-            case ir::command_type::none:
-                VM_ASSERT("unexpected command type generated");
-                break;
             case ir::command_type::vm_resize:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_resize>(command));
                 break;
             case ir::command_type::vm_cnt:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_cnt>(command));
                 break;
             case ir::command_type::vm_smul:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_smul>(command));
                 break;
             case ir::command_type::vm_umul:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_umul>(command));
+                break;
+            case ir::command_type::vm_abs:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_abs>(command));
+                break;
+            case ir::command_type::vm_log2:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_log2>(command));
+                break;
+            case ir::command_type::vm_dup:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_dup>(command));
+                break;
+            case ir::command_type::none:
+                VM_ASSERT("unexpected command type generated");
                 break;
         }
     }

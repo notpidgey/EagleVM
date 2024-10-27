@@ -57,4 +57,9 @@ namespace eagle::ir
     SHARED_DEFINE(cmd_sub);
     SHARED_DEFINE(cmd_smul);
     SHARED_DEFINE(cmd_umul);
+
+    SHARED_DEFINE(cmd_abs);
+    SHARED_DEFINE(cmd_log2);
+
+    SHARED_DEFINE(cmd_dup);
 }
