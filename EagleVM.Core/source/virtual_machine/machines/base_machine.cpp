@@ -171,6 +171,14 @@ namespace eagle::virt
             case ir::command_type::none:
                 VM_ASSERT("unexpected command type generated");
                 break;
+            case ir::command_type::vm_resize:
+                break;
+            case ir::command_type::vm_cnt:
+                break;
+            case ir::command_type::vm_smul:
+                break;
+            case ir::command_type::vm_umul:
+                break;
         }
     }
 

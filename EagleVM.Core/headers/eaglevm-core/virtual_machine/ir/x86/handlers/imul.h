@@ -9,6 +9,9 @@ namespace eagle::ir::handler
     public:
         imul();
         ir_insts gen_handler(handler_sig signature) override;
+
+    private:
+        ir_insts compute_of_cf(ir_size size);
     };
 }
 

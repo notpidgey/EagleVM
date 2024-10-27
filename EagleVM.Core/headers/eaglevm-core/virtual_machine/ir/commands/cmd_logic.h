@@ -37,6 +37,8 @@ namespace eagle::ir
     // arith
     using cmd_add = cmd_arith_base<command_type::vm_add>;
     using cmd_sub = cmd_arith_base<command_type::vm_sub>;
+    using cmd_smul = cmd_arith_base<command_type::vm_smul>;
+    using cmd_umul = cmd_arith_base<command_type::vm_umul>;
 
     SHARED_DEFINE(cmd_and);
     SHARED_DEFINE(cmd_or);
@@ -47,4 +49,6 @@ namespace eagle::ir
 
     SHARED_DEFINE(cmd_add);
     SHARED_DEFINE(cmd_sub);
+    SHARED_DEFINE(cmd_smul);
+    SHARED_DEFINE(cmd_umul);
 }

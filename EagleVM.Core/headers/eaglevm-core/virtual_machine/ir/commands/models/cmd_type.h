@@ -31,7 +31,7 @@ namespace eagle::ir
         vm_exec_dynamic_x86,
 
         vm_sx,
-        vm_x,
+        vm_resize,
 
         vm_branch,
         vm_jmp,
@@ -47,6 +47,8 @@ namespace eagle::ir
         // arith
         vm_add,
         vm_sub,
+        vm_smul,
+        vm_umul,
 
         // compare
         vm_cmp,
