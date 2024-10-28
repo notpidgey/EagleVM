@@ -323,7 +323,7 @@ int main(int argc, char* argv[])
         ir::preopt_block_vec preopt = ir_trans->translate();
 
         // here we assign vms to each block
-        // for the current example we can assign a unique vm to each block
+        // for the current example we can assign the same vm id to each block
         uint32_t vm_index = 0;
         std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
         for (const auto& preopt_block : preopt)

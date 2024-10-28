@@ -62,7 +62,10 @@ namespace eagle::ir
         // we will handle that manually instead of letting the il translator handle this
         const dasm::block_end_reason end_reason = bb->get_end_reason();
 
-        const auto liveness = dasm_liveness->analyze_block(bb);
+        std::vector<std::pair<dasm::analysis::liveness_info, dasm::analysis::liveness_info>> liveness;
+        if (dasm_liveness)
+            liveness = dasm_liveness->analyze_block(bb);
+
         for (uint32_t i = 0; i < bb->decoded_insts.size(); i++)
         {
             // use il x86 translator to translate the instruction to il
@@ -114,16 +117,26 @@ namespace eagle::ir
                 auto& create_lifter = instruction_lifters[mnemonic];
                 const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(shared_from_this(), decoded_inst, current_rva);
 
-                translate_success = lifter->translate_to_il(current_rva);
-                if (translate_success)
+                if(dasm_liveness)
                 {
-                    // append basic block
-                    block_ptr result_block = lifter->get_block();
                     auto out_liveness = std::get<1>(liveness[i]);
                     auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
 
                     auto relevant_out = inst_flags_liveness - out_liveness;
                     auto relevant_out_flags = relevant_out.get_flags();
+
+                    translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(relevant_out_flags));
+                }
+                else
+                {
+                    auto inst_flags_liveness = dasm::analysis::liveness::compute_inst_flags(decoded_inst);
+                    translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(inst_flags_liveness.get_flags()));
+                }
+
+                if (translate_success)
+                {
+                    // append basic block
+                    block_ptr result_block = lifter->get_block();
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though

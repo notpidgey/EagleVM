@@ -266,7 +266,7 @@ namespace eagle::virt::eg
         call_pop(block, temp);
 
         // mov temp, [address]
-        block->add(encode(m_mov, ZREG(target_temp), ZMEMBD(target_temp, 0, TOB(target_size))));
+        block->add(encode(m_mov, ZREG(target_temp), ZMEMBD(temp, 0, TOB(target_size))));
 
         // push
         call_push(block, get_bit_version(temp, to_reg_size(target_size)));
@@ -560,12 +560,28 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shl_ptr& cmd)
     {
-        handle_generic_logic_cmd(block, m_shlx, cmd->get_size());
+        scope_register_manager scope = reg_64_container->create_scope();
+        std::array<reg, 2> vals = scope.reserve<2>();
+
+        call_pop(block, get_bit_version(vals[1], to_reg_size(cmd->get_size())));
+        call_pop(block, get_bit_version(vals[0], to_reg_size(cmd->get_size())));
+
+        block->add(encode(m_shlx, ZREG(vals[0]), ZREG(vals[0]), ZREG(vals[1])));
+
+        call_push(block, get_bit_version(vals[0], to_reg_size(cmd->get_size())));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shr_ptr& cmd)
     {
-        handle_generic_logic_cmd(block, m_shrx, cmd->get_size());
+        scope_register_manager scope = reg_64_container->create_scope();
+        std::array<reg, 2> vals = scope.reserve<2>();
+
+        call_pop(block, get_bit_version(vals[1], to_reg_size(cmd->get_size())));
+        call_pop(block, get_bit_version(vals[0], to_reg_size(cmd->get_size())));
+
+        block->add(encode(m_shrx, ZREG(vals[0]), ZREG(vals[0]), ZREG(vals[1])));
+
+        call_push(block, get_bit_version(vals[0], to_reg_size(cmd->get_size())));
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)
@@ -582,7 +598,13 @@ namespace eagle::virt::eg
     {
         scope_register_manager scope = reg_64_container->create_scope();
         std::array<reg, 4> regs = scope.reserve<4>();
-        for (auto& val : regs) val = get_bit_version(val, to_reg_size(cmd->get_size()));
+        block->add({
+            encode(m_xor, ZREG(regs[0]), ZREG(regs[0])),
+            encode(m_xor, ZREG(regs[1]), ZREG(regs[1])),
+        });
+
+        regs[0] = get_bit_version(regs[0], to_reg_size(cmd->get_size()));
+        regs[1] = get_bit_version(regs[1], to_reg_size(cmd->get_size()));
 
         call_pop(block, regs[1]);
         call_pop(block, regs[0]);
@@ -660,15 +682,22 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cnt_ptr& cmd)
     {
-        const auto from = to_reg_size(cmd->get_size());
+        auto from_size = cmd->get_size();
+        if (from_size == ir::ir_size::bit_8)
+            from_size = ir::ir_size::bit_16;
+
+        const auto from = to_reg_size(from_size);
 
         const auto temp_reg = reg_64_container->get_any();
-        const auto pop_reg = get_bit_version(temp_reg, from);
+        auto pop_reg = get_bit_version(temp_reg, from);
+
+        if (cmd->get_size() == ir::ir_size::bit_8)
+            block->add(encode(m_xor, ZREG(temp_reg), ZREG(temp_reg)));
 
         if (cmd->get_preserved())
         {
             block->add({
-                encode(m_mov, ZREG(temp_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
                 encode(m_popcnt, ZREG(pop_reg), ZREG(pop_reg)),
                 encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg))
@@ -677,7 +706,7 @@ namespace eagle::virt::eg
         else
         {
             block->add({
-                encode(m_mov, ZREG(temp_reg), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
                 encode(m_popcnt, ZREG(pop_reg), ZREG(pop_reg)),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg))
             });
@@ -801,7 +830,6 @@ namespace eagle::virt::eg
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(count_reg)),
             });
         }
-
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd)

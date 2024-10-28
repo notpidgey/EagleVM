@@ -32,6 +32,8 @@ namespace eagle::ir
 
     std::vector<discrete_store_ptr> cmd_pop::get_use_stores()
     {
-        return { dest_reg };
+        if (dest_reg != nullptr)
+            return { dest_reg };
+        return { };
     }
 }

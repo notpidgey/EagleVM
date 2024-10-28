@@ -94,15 +94,15 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), 0, instruction_data.size());
     dasm->generate_blocks();
 
-    ir::ir_translator ir_trans(dasm);
-    ir::preopt_block_vec preopt = ir_trans.translate();
+    std::shared_ptr<ir::ir_translator> ir_trans = std::make_shared<ir::ir_translator>(dasm);
+    ir::preopt_block_vec preopt = ir_trans->translate();
 
     // here we assign vms to each block
-    // for the current example we can assign a unique vm to each block
+    // for the current example we can assign the same vm id to each block
     uint32_t vm_index = 0;
-    std::vector<ir::preopt_vm_id> block_vm_ids;
+    std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
     for (const auto& preopt_block : preopt)
-        block_vm_ids.emplace_back(preopt_block, vm_index++);
+        block_vm_ids[preopt_block] = vm_index;
 
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
@@ -115,7 +115,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // if we want, we can do a little optimzation which will rewrite the preopt blocks
     // or we could simply ir_trans.flatten()
     std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-    std::vector<ir::flat_block_vmid> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+    std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
     // initialize block code labels
     std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
