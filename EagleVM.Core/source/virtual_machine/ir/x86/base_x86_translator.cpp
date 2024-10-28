@@ -7,6 +7,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_pop.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_logic.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
@@ -69,7 +70,7 @@ namespace eagle::ir::lifter
         if (flags != 0)
             block->push_back(std::make_shared<cmd_context_rflags_store>(flags));
 
-        block->push_back(std::make_shared<cmd_pop>(discrete_store::create(ir_size::bit_64), ir_size::bit_64));
+        block->push_back(std::make_shared<cmd_pop>(ir_size::bit_64));
     }
 
     translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
@@ -169,12 +170,8 @@ namespace eagle::ir::lifter
                 // or idfk
 
                 ir_size size = static_cast<ir_size>(operands[idx].size);
-
-                discrete_store_ptr store = discrete_store::create(ir_size::bit_64);
                 block->push_back({
-                    std::make_shared<cmd_pop>(store, ir_size::bit_64),
-                    std::make_shared<cmd_push>(store, ir_size::bit_64),
-                    std::make_shared<cmd_push>(store, ir_size::bit_64),
+                    std::make_shared<cmd_dup>(ir_size::bit_64),
                     std::make_shared<cmd_mem_read>(size)
                 });
 
