@@ -28,16 +28,14 @@ namespace eagle::ir
         virtual std::vector<discrete_store_ptr> get_use_stores();
         virtual bool is_similar(const std::shared_ptr<base_command>& other);
 
+        static std::string command_to_string(command_type type);
+
         uint32_t unique_id;
         std::string unique_id_string;
 
     protected:
         command_type type;
-
         bool force_inline;
-
-    private:
-        static std::string command_to_string(command_type type);
     };
 
     SHARED_DEFINE(base_command);

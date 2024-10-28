@@ -66,6 +66,42 @@ namespace eagle::ir
                 return "vm_sx";
             case command_type::vm_branch:
                 return "vm_branch";
+            case command_type::none:
+                return "none";
+            case command_type::vm_flags_load:
+                return "vm_flags_load";
+            case command_type::vm_resize:
+                return "vm_resize";
+            case command_type::vm_jmp:
+                return "vm_jmp";
+            case command_type::vm_and:
+                return "vm_and";
+            case command_type::vm_or:
+                return "vm_or";
+            case command_type::vm_xor:
+                return "vm_xor";
+            case command_type::vm_shl:
+                return "vm_shl";
+            case command_type::vm_shr:
+                return "vm_shr";
+            case command_type::vm_cnt:
+                return "vm_cnt";
+            case command_type::vm_add:
+                return "vm_add";
+            case command_type::vm_sub:
+                return "vm_sub";
+            case command_type::vm_smul:
+                return "vm_smul";
+            case command_type::vm_umul:
+                return "vm_umul";
+            case command_type::vm_abs:
+                return "vm_abs";
+            case command_type::vm_log2:
+                return "vm_log2";
+            case command_type::vm_dup:
+                return "vm_dup";
+            case command_type::vm_cmp:
+                return "vm_cmp";
             default:
                 return "unknown";
         }
