@@ -58,10 +58,6 @@ namespace eagle::ir
         // body
         //
 
-        // we calculate skips here because a basic block might end with a jump
-        // we will handle that manually instead of letting the il translator handle this
-        const dasm::block_end_reason end_reason = bb->get_end_reason();
-
         std::vector<std::pair<dasm::analysis::liveness_info, dasm::analysis::liveness_info>> liveness;
         if (dasm_liveness)
             liveness = dasm_liveness->analyze_block(bb);
@@ -196,6 +192,7 @@ namespace eagle::ir
 
         // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
         cmd_branch_ptr branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+        branch_cmd->set_virtual(current_block->get_block_state() == vm_block);
         VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
 
         // we want to jump to the exit block now
@@ -275,12 +272,8 @@ namespace eagle::ir
             const auto head = preopt->head;
             const auto first_body = preopt->body.front();
 
-            // head is useless since we dont need to enter
-            if (first_body->get_block_state() != vm_block)
-                preopt->head = nullptr;
-
             // move heads to first body block
-            if (preopt->head)
+            if (first_body->get_block_state() == vm_block && preopt->head)
             {
                 // at this point we determined the head is relevant
                 // we can ignore last since its a branch
@@ -296,6 +289,8 @@ namespace eagle::ir
 
                 tail_branch->rewrite_branch(head, preopt->body.front());
             }
+
+            preopt->head = nullptr;
         }
     }
 
