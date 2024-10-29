@@ -82,6 +82,8 @@ namespace eagle::ir
 
         bool is_inverted();
 
+        std::string to_string() override;
+
     private:
         std::vector<ir_exit_result> info;
 

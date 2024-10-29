@@ -7,7 +7,7 @@ namespace eagle::ir
         static uint32_t id = 0;
 
         unique_id = id;
-        unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
+        unique_id_string = cmd_type_to_string(command) + ": " + std::to_string(id++);
     }
 
     command_type base_command::get_command_type() const
@@ -28,7 +28,7 @@ namespace eagle::ir
         return other->get_command_type() == get_command_type();
     }
 
-    std::string base_command::command_to_string(const command_type type)
+    std::string base_command::cmd_type_to_string(const command_type type)
     {
         switch (type)
         {
@@ -105,5 +105,10 @@ namespace eagle::ir
             default:
                 return "unknown";
         }
+    }
+
+    std::string base_command::to_string()
+    {
+        return cmd_type_to_string(type);
     }
 }

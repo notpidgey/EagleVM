@@ -22,7 +22,7 @@ namespace eagle::dasm::analysis
         std::pair<liveness_info, liveness_info> analyze_block_at(const basic_block_ptr& block, size_t idx);
 
         void compute_blocks_use_def();
-        static liveness_info compute_inst_flags(codec::dec::inst_info inst_info);
+        static liveness_info compute_inst_flags(const codec::dec::inst_info& inst_info);
 
     private:
         segment_dasm_ptr segment;

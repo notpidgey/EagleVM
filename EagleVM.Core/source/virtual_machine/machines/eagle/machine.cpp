@@ -170,25 +170,6 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
     {
-        // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
-        std::unordered_map<ir::exit_condition, std::array<codec::mnemonic, 2>> jcc_lookup =
-        {
-            { ir::exit_condition::jo, { m_jo, m_jno } },
-            { ir::exit_condition::js, { m_js, m_jns } },
-            { ir::exit_condition::je, { m_jz, m_jnz } },
-            { ir::exit_condition::jb, { m_jb, m_jnb } },
-            { ir::exit_condition::jbe, { m_jbe, m_jnbe } },
-            { ir::exit_condition::jl, { m_jl, m_jnl } },
-            { ir::exit_condition::jle, { m_jle, m_jnle } },
-            { ir::exit_condition::jp, { m_jp, m_jnp } },
-
-            { ir::exit_condition::jcxz, { m_jcxz, m_invalid } },
-            { ir::exit_condition::jecxz, { m_jecxz, m_invalid } },
-            { ir::exit_condition::jrcxz, { m_jrcxz, m_invalid } },
-
-            { ir::exit_condition::jmp, { m_jmp, m_invalid } }
-        };
-
         ir::exit_condition cmd_condition = cmd->get_condition();
         std::vector<ir::ir_exit_result> push_order =
             cmd_condition != ir::exit_condition::jmp
@@ -199,45 +180,112 @@ namespace eagle::virt::eg
         if (cmd_condition != ir::exit_condition::jmp && cmd->is_inverted())
             std::swap(push_order[0], push_order[1]);
 
-        // push all
-        for (const ir::ir_exit_result& exit_result : push_order)
+        if (cmd->is_virtual())
         {
-            std::visit([&](auto&& arg)
+            // push all
+            for (const ir::ir_exit_result& exit_result : push_order)
             {
-                scope_register_manager scope = reg_64_container->create_scope();
-                const reg temp_reg = scope.reserve();
-
-                using T = std::decay_t<decltype(arg)>;
-                if constexpr (std::is_same_v<T, uint64_t>)
+                std::visit([&](auto&& arg)
                 {
-                    const uint64_t immediate_value = arg;
+                    scope_register_manager scope = reg_64_container->create_scope();
+                    const reg temp_reg = scope.reserve();
 
-                    block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
-                    call_push(block, get_bit_version(temp_reg, bit_64));
-                }
-                else if constexpr (std::is_same_v<T, ir::block_ptr>)
-                {
-                    const ir::block_ptr target = arg;
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, uint64_t>)
+                    {
+                        const uint64_t immediate_value = arg;
 
-                    const asmb::code_label_ptr label = get_block_label(target);
-                    VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+                        block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
+                        call_push(block, get_bit_version(temp_reg, bit_64));
+                    }
+                    else if constexpr (std::is_same_v<T, ir::block_ptr>)
+                    {
+                        const ir::block_ptr target = arg;
 
-                    block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMS(label->get_address()))));
-                    call_push(block, get_bit_version(temp_reg, bit_64));
-                }
-                else
-                {
-                    VM_ASSERT("unimplemented exit result");
-                }
-            }, exit_result);
+                        const asmb::code_label_ptr label = get_block_label(target);
+                        VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+
+                        block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMS(label->get_address()))));
+                        call_push(block, get_bit_version(temp_reg, bit_64));
+                    }
+                    else
+                    {
+                        VM_ASSERT("unimplemented exit result");
+                    }
+                }, exit_result);
+            }
+
+            // this is a hacky solution but the exit condition maps to an actual handler id.
+            // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
+            // we also want to inline this so we are inserting it in place
+            const ir::ir_insts jcc_instructions = han_man->build_instruction_handler(m_jmp, static_cast<uint64_t>(cmd_condition));
+            for (auto& inst : jcc_instructions)
+                dispatch_handle_cmd(block, inst);
         }
+        else
+        {
+            auto resolve_non_virtual = [&](ir::ir_exit_result result)
+            {
+                return std::visit([&]<typename result>(result&& arg) -> dynamic_instruction
+                {
+                    using T = std::decay_t<result>;
+                    if constexpr (std::is_same_v<T, uint64_t>)
+                    {
+                        const uint64_t immediate_value = arg;
+                        return RECOMPILE(encode(m_jmp, ZJMPI(immediate_value)));
+                    }
+                    else if constexpr (std::is_same_v<T, ir::block_ptr>)
+                    {
+                        const ir::block_ptr target = arg;
 
-        // this is a hacky solution but the exit condition maps to an actual handler id.
-        // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
-        // we also want to inline this so we are inserting it in place
-        const ir::ir_insts jcc_instructions = han_man->build_instruction_handler(m_jmp, static_cast<uint64_t>(cmd_condition));
-        for (auto& inst : jcc_instructions)
-            dispatch_handle_cmd(block, inst);
+                        const asmb::code_label_ptr label = get_block_label(target);
+                        VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+
+                        return RECOMPILE(encode(m_jmp, ZJMPR(label)));
+                    }
+                    else
+                    VM_ASSERT("unimplemented exit result");
+
+                    return encode(m_int3);
+                }, result);
+            };
+
+            if (cmd_condition != ir::exit_condition::jmp)
+            {
+                // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
+                const std::unordered_map<ir::exit_condition, std::array<mnemonic, 2>> jcc_lookup =
+                {
+                    { ir::exit_condition::jo, { m_jo, m_jno } },
+                    { ir::exit_condition::js, { m_js, m_jns } },
+                    { ir::exit_condition::je, { m_jz, m_jnz } },
+                    { ir::exit_condition::jb, { m_jb, m_jnb } },
+                    { ir::exit_condition::jbe, { m_jbe, m_jnbe } },
+                    { ir::exit_condition::jl, { m_jl, m_jnl } },
+                    { ir::exit_condition::jle, { m_jle, m_jnle } },
+                    { ir::exit_condition::jp, { m_jp, m_jnp } },
+
+                    { ir::exit_condition::jcxz, { m_jcxz, m_invalid } },
+                    { ir::exit_condition::jecxz, { m_jecxz, m_invalid } },
+                    { ir::exit_condition::jrcxz, { m_jrcxz, m_invalid } },
+
+                    { ir::exit_condition::jmp, { m_jmp, m_invalid } }
+                };
+
+                const asmb::code_label_ptr special_label = asmb::code_label::create();
+                block->add(RECOMPILE(encode(jcc_lookup.at(cmd_condition)[0], ZJMPR(special_label))));
+
+                // normal condition
+                block->add(resolve_non_virtual(push_order[0]));
+
+                // special condition
+                block->bind(special_label);
+                block->add(resolve_non_virtual(push_order[1]));
+            }
+            else
+            {
+                block->add(resolve_non_virtual(push_order[0]));
+            }
+        }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)

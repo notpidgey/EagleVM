@@ -141,6 +141,8 @@ namespace eagle::virt::eg
             call_vm_handler(container, std::get<0>(store_register(gpr, target_reg)));
         }
 
+        container->add(encode(m_nop));
+
         create_vm_return(container);
         return container;
     }

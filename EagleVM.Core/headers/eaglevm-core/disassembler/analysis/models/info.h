@@ -32,7 +32,7 @@ namespace eagle::dasm::analysis
         void insert_flags(const uint64_t data)
         {
             for (int i = 0; i < 64; i++)
-                if (data << i & 1)
+                if (data >> i & 1)
                     flags.insert_byte(i);
         }
 

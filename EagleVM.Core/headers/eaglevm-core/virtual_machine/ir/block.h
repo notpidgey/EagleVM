@@ -23,9 +23,13 @@ namespace eagle::ir
         using reverse_iterator = container_type::reverse_iterator;
         using const_reverse_iterator = container_type::const_reverse_iterator;
 
+        uint32_t block_id;
+
         explicit block_ir(const block_state state)
             : exit_(nullptr), block_state_(state)
         {
+            static uint32_t current_block_id = 0;
+            block_id = current_block_id++;
         }
 
         iterator begin() { return commands_.begin(); }

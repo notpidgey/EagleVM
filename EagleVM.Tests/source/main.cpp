@@ -138,8 +138,23 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
         machine->add_block_context(block_labels);
 
-        for (auto& translated_block : blocks)
+        for (auto i = 0; i < blocks.size(); i++)
         {
+            auto& translated_block = blocks[i];
+            if(bp)
+            {
+                std::string out_string;
+                for (auto j = 0; j < translated_block->size(); j++)
+                {
+                    auto inst = translated_block->at(j);
+                    out_string += inst->to_string() + "\n";
+                }
+
+                out_string.pop_back();
+
+                spdlog::get("console")->info("block {}\n{}", i, out_string);
+            }
+
             asmb::code_container_ptr result_container = machine->lift_block(translated_block);
             ir::block_ptr block = block_tracker[entry_block];
             if (block == translated_block)
@@ -259,6 +274,8 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_vm_gpr_order = false;
     machine_settings->shuffle_vm_xmm_order = false;
     machine_settings->relative_addressing = false;
+
+    machine_settings->complex_temp_loading = false;
 
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))

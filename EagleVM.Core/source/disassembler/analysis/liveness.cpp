@@ -111,14 +111,12 @@ namespace eagle::dasm::analysis
         }
     }
 
-    liveness_info liveness::compute_inst_flags(codec::dec::inst_info inst_info)
+    liveness_info liveness::compute_inst_flags(const codec::dec::inst_info& inst_info)
     {
         liveness_info liveness = { };
-
-        auto& [inst, ops] = inst_info;
-        liveness.insert_flags(inst.cpu_flags->modified);
-        liveness.insert_flags(inst.cpu_flags->set_0);
-        liveness.insert_flags(inst.cpu_flags->set_1);
+        liveness.insert_flags(inst_info.instruction.cpu_flags->modified);
+        liveness.insert_flags(inst_info.instruction.cpu_flags->set_0);
+        liveness.insert_flags(inst_info.instruction.cpu_flags->set_1);
 
         return liveness;
     }

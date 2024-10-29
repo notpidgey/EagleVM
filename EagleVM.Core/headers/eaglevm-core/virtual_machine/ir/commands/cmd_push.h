@@ -23,6 +23,8 @@ namespace eagle::ir
 
         std::vector<discrete_store_ptr> get_use_stores() override;
 
+        std::string to_string() override;
+
     private:
         ir_size size;
         push_v value;

@@ -83,6 +83,11 @@ namespace eagle::ir
 
     void cmd_branch::set_virtual(const bool is_virtual) { this->virtual_branch = is_virtual; }
 
-    bool cmd_branch::is_virtual() const { return this->virtual_branch; }
+    bool cmd_branch::is_virtual() const { return virtual_branch; }
     bool cmd_branch::is_inverted() { return invert_condition; }
+
+    std::string cmd_branch::to_string()
+    {
+        return base_command::to_string() + (virtual_branch ? " (virtual)" : " (native)");
+    }
 }

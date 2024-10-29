@@ -36,4 +36,9 @@ namespace eagle::ir
             return { dest_reg };
         return { };
     }
+
+    std::string cmd_pop::to_string()
+    {
+        return base_command::to_string() + "(" + ir_size_to_string(size) + ")";
+    }
 }

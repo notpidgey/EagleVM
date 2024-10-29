@@ -24,6 +24,11 @@ namespace eagle::ir
             return get_relevant_flags() == cmd->get_relevant_flags();
         }
 
+        std::string to_string() override
+        {
+            return base_command::to_string() + " " + x86_cpu_flag_to_string(relevant_flags);
+        };
+
     private:
         x86_cpu_flag relevant_flags;
     };

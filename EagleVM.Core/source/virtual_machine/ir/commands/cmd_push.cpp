@@ -37,4 +37,40 @@ namespace eagle::ir
 
         return { };
     }
+
+    std::string cmd_push::to_string()
+    {
+        auto resolve_push = [&]
+        {
+            return std::visit([](auto&& arg) -> std::string
+            {
+                using T = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<T, uint64_t>)
+                {
+                    const uint64_t immediate_value = arg;
+                    return std::to_string(immediate_value);
+                }
+                else if constexpr (std::is_same_v<T, block_ptr>)
+                {
+                    const block_ptr block = arg;
+                    return "block(" + std::to_string(block->block_id) + ")";
+                }
+                else if constexpr (std::is_same_v<T, discrete_store_ptr>)
+                {
+                    return "(store)";
+                }
+                else if constexpr (std::is_same_v<T, reg_vm>)
+                {
+                    const reg_vm reg = arg;
+                    return reg_vm_to_string(reg);
+                }
+                else
+                VM_ASSERT("unknown push type handled");
+
+                return "";
+            }, value);
+        };
+
+        return base_command::to_string() + "(" + ir_size_to_string(size) + ") " + resolve_push();
+    }
 }

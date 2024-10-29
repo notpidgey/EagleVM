@@ -18,6 +18,8 @@ namespace eagle::ir
 
         std::vector<discrete_store_ptr> get_use_stores() override;
 
+        std::string to_string() override;
+
     private:
         discrete_store_ptr dest_reg;
         ir_size size;

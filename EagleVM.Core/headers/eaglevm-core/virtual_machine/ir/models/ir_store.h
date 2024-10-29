@@ -27,6 +27,35 @@ namespace eagle::ir
         vbase,
     };
 
+    inline std::string reg_vm_to_string(const reg_vm reg)
+    {
+        switch (reg)
+        {
+            case reg_vm::none:
+                return "none";
+            case reg_vm::vip:
+                return "vip";
+            case reg_vm::vip_32:
+                return "vip_32";
+            case reg_vm::vip_16:
+                return "vip_16";
+            case reg_vm::vip_8:
+                return "vip_8";
+            case reg_vm::vsp:
+                return "vsp";
+            case reg_vm::vsp_32:
+                return "vsp_32";
+            case reg_vm::vsp_16:
+                return "vsp_16";
+            case reg_vm::vsp_8:
+                return "vsp_8";
+            case reg_vm::vbase:
+                return "vbase";
+            default:
+                return "unknown";
+        }
+    }
+
     inline reg_vm get_bit_version(const reg_vm vm_reg, const ir_size target_size)
     {
         // yes i know there is cleaner ways of doing it
