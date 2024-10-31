@@ -20,12 +20,12 @@ namespace eagle::ir::handler::util
             // value >> sizeof(value) - 1
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
             std::make_shared<cmd_shr>(size),
+            std::make_shared<cmd_resize>(ir_size::bit_64, size),
 
             // value << index_of(ZYDIS_CPUFLAG_SF)
-            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_SF), size),
-            std::make_shared<cmd_shl>(size),
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_SF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
 
-            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
         });
 
@@ -42,10 +42,9 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_cmp>(size),
 
             std::make_shared<cmd_flags_load>(vm_flags::eq),
-            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_ZF), size),
-            std::make_shared<cmd_shl>(size),
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_ZF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
 
-            std::make_shared<cmd_resize>(ir_size::bit_64, size),
             std::make_shared<cmd_or>(ir_size::bit_64),
         });
 
@@ -67,10 +66,10 @@ namespace eagle::ir::handler::util
             std::make_shared<cmd_and>(size),
             std::make_shared<cmd_push>(1, size),
             std::make_shared<cmd_xor>(size),
-            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_PF), size),
-            std::make_shared<cmd_shl>(size),
-
             std::make_shared<cmd_resize>(ir_size::bit_64, size),
+            std::make_shared<cmd_push>(flag_index(ZYDIS_CPUFLAG_PF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
             std::make_shared<cmd_or>(ir_size::bit_64),
         });
 

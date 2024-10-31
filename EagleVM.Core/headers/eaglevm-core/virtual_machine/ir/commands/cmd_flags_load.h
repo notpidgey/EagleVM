@@ -9,9 +9,9 @@ namespace eagle::ir
 {
     enum class vm_flags
     {
-        eq = 1ul << 0, // equals flag
-        le = 1ul << 1, // less than flag
-        ge = 1ul << 2, // greater than flag
+        eq = 0, // equals flag
+        le = 1, // less than flag
+        ge = 2, // greater than flag
     };
 
     constexpr std::array vm_flags_list = { vm_flags::eq, vm_flags::le, vm_flags::ge };

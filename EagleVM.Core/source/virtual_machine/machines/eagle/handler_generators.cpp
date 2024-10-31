@@ -269,8 +269,8 @@ namespace eagle::virt::eg
             // combine
             encode(m_or, ZMEMBD(rsp, -8, 8), ZREG(flags)),
 
-            // pop
-            encode(m_sub, ZREG(flags), ZIMMU(8))
+            // pop the mask
+            encode(m_add, ZREG(VSP), ZIMMU(8)),
         });
 
         create_vm_return(container);

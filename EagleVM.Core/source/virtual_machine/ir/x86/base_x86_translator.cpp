@@ -65,11 +65,14 @@ namespace eagle::ir::lifter
             operand_sig.emplace_back(static_cast<codec::op_type>(operands[i].type), static_cast<codec::reg_size>(operands[i].size));
         }
 
+        // places rflags on top of the stack
         block->push_back(std::make_shared<cmd_handler_call>(static_cast<codec::mnemonic>(inst.mnemonic), operand_sig));
 
+        // zero change
         if (flags != 0)
             block->push_back(std::make_shared<cmd_context_rflags_store>(flags));
 
+        // pops rflags
         block->push_back(std::make_shared<cmd_pop>(ir_size::bit_64));
     }
 

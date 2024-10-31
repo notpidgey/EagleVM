@@ -81,6 +81,6 @@ namespace eagle::virt::eg
 
         [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
 
-        void handle_generic_logic_cmd(const asmb::code_container_ptr& block, codec::mnemonic command, ir::ir_size size);
+        void handle_generic_logic_cmd(const asmb::code_container_ptr& block, codec::mnemonic command, ir::ir_size size, bool preserved);
     };
 }
