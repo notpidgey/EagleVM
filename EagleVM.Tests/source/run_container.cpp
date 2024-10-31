@@ -138,14 +138,8 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
         }
     }
 
-    if (found)
+    if (found || info->ExceptionRecord->ExceptionCode)
         return EXCEPTION_CONTINUE_EXECUTION;
-
-    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
-    {
-        info->ContextRecord->Rip += 1;
-        return EXCEPTION_CONTINUE_EXECUTION;
-    }
 
     return EXCEPTION_CONTINUE_SEARCH;
 }
