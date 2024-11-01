@@ -48,13 +48,13 @@ namespace eagle::ir::handler
         insts.append_range(util::calculate_zf(target_size));
         insts.append_range(util::calculate_pf(target_size));
 
-        insts.append_range(compute_of(target_size, result, p_one, flags_result));
-        insts.append_range(compute_af(target_size, result, p_one, flags_result));
+        insts.append_range(compute_of(target_size));
+        insts.append_range(compute_af(target_size));
 
         return insts;
     }
 
-    ir_insts dec::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
+    ir_insts dec::compute_of(ir_size size)
     {
         ir_insts insts;
         insts.append_range(copy_to_top(size, util::param_two));
@@ -85,7 +85,7 @@ namespace eagle::ir::handler
         return insts;
     }
 
-    ir_insts dec::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
+    ir_insts dec::compute_af(ir_size size)
     {
         ir_insts insts;
         insts.append_range(copy_to_top(size, util::param_two));
