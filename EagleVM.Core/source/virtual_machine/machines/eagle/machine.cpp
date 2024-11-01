@@ -633,10 +633,17 @@ namespace eagle::virt::eg
 
         if (cmd->get_size() < ir::ir_size::bit_64)
         {
-            auto from = get_bit_version(vals[0], to_reg_size(cmd->get_size()));
-            auto to = get_bit_version(vals[0], to_reg_size(ir::ir_size::bit_64));
-
-            block->add(encode(m_movzx, ZREG(to), ZREG(from)));
+            reg from = get_bit_version(vals[0], to_reg_size(cmd->get_size()));
+            if (cmd->get_size() == ir::ir_size::bit_32)
+            {
+                reg to = get_bit_version(vals[0], to_reg_size(ir::ir_size::bit_32));
+                block->add(encode(m_mov, ZREG(to), ZREG(from)));
+            }
+            else
+            {
+                reg to = get_bit_version(vals[0], to_reg_size(ir::ir_size::bit_64));
+                block->add(encode(m_movzx, ZREG(to), ZREG(from)));
+            }
         }
 
         block->add(encode(m_shrx, ZREG(vals[0]), ZREG(vals[0]), ZREG(vals[1])));
@@ -916,101 +923,43 @@ namespace eagle::virt::eg
 
     void machine::call_push(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const
     {
-        reg pushing_register;
         const reg_size size = to_reg_size(shared->get_store_size());
 
-        if (!settings->randomize_working_register)
-        {
-            pushing_register = han_man->get_push_working_register();
-
-            reg target_returning = get_bit_version(pushing_register, size);
-            reg target_store = get_bit_version(shared->get_store_register(), size);
-            block->add(encode(m_mov, ZREG(target_returning), ZREG(target_store)));
-        }
-        else
-        {
-            pushing_register = shared->get_store_register();
-        }
-
-        han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
+        reg target_store = get_bit_version(shared->get_store_register(), size);
+        block->add(encode(m_sub, ZREG(VSP), ZIMMS(TOB(size))));
+        block->add(encode(m_mov, ZMEMBD(VSP, 0, TOB(size)), ZREG(target_store)));
     }
 
     void machine::call_push(const asmb::code_container_ptr& block, const reg target_reg) const
     {
-        reg pushing_register;
         const reg_size size = get_reg_size(target_reg);
 
-        if (!settings->randomize_working_register)
-        {
-            pushing_register = han_man->get_push_working_register();
-
-            reg target_returning = get_bit_version(pushing_register, size);
-            reg target_store = get_bit_version(target_reg, size);
-            block->add(encode(m_mov, ZREG(target_returning), ZREG(target_store)));
-        }
-        else
-        {
-            pushing_register = get_bit_version(target_reg, bit_64);
-        }
-
-        han_man->call_vm_handler(block, han_man->get_push(pushing_register, size));
+        block->add(encode(m_sub, ZREG(VSP), ZIMMS(TOB(size))));
+        block->add(encode(m_mov, ZMEMBD(VSP, 0, TOB(size)), ZREG(target_reg)));
     }
 
     void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared) const
     {
         const reg_size size = to_reg_size(shared->get_store_size());
-        if (!settings->randomize_working_register)
-        {
-            const reg returning_reg = han_man->get_pop_working_register();
 
-            reg target_returning = get_bit_version(returning_reg, size);
-            reg target_store = get_bit_version(shared->get_store_register(), size);
-
-            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
-            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
-        }
-        else
-        {
-            han_man->call_vm_handler(block, han_man->get_pop(shared->get_store_register(), size));
-        }
+        reg target_store = get_bit_version(shared->get_store_register(), size);
+        block->add(encode(m_mov, ZREG(target_store), ZMEMBD(VSP, 0, TOB(size))));
+        block->add(encode(m_add, ZREG(VSP), ZIMMS(TOB(size))));
     }
 
     void machine::call_pop(const asmb::code_container_ptr& block, const ir::discrete_store_ptr& shared, const reg_size size) const
     {
-        VM_ASSERT(to_reg_size(shared->get_store_size()) >= size, "pop size cannot be greater than store size");
-        if (!settings->randomize_working_register)
-        {
-            const reg returning_reg = han_man->get_pop_working_register();
-
-            reg target_returning = get_bit_version(returning_reg, size);
-            reg target_store = get_bit_version(shared->get_store_register(), size);
-
-            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
-            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
-        }
-        else
-        {
-            han_man->call_vm_handler(block, han_man->get_pop(shared->get_store_register(), size));
-        }
+        reg target_store = get_bit_version(shared->get_store_register(), size);
+        block->add(encode(m_mov, ZREG(target_store), ZMEMBD(VSP, 0, TOB(size))));
+        block->add(encode(m_add, ZREG(VSP), ZIMMS(TOB(size))));
     }
 
     void machine::call_pop(const asmb::code_container_ptr& block, const reg target_reg) const
     {
         const reg_size size = get_reg_size(target_reg);
-        if (!settings->randomize_working_register)
-        {
-            const reg returning_reg = han_man->get_pop_working_register();
 
-            reg target_returning = get_bit_version(returning_reg, size);
-            reg target_store = get_bit_version(target_reg, size);
-
-            han_man->call_vm_handler(block, han_man->get_pop(returning_reg, size));
-            block->add(encode(m_mov, ZREG(target_store), ZREG(target_returning)));
-        }
-        else
-        {
-            han_man->call_vm_handler(block, han_man->get_pop(target_reg, size));
-        }
+        block->add(encode(m_mov, ZREG(target_reg), ZMEMBD(VSP, 0, TOB(size))));
+        block->add(encode(m_add, ZREG(VSP), ZIMMS(TOB(size))));
     }
 
     reg machine::reg_vm_to_register(const ir::reg_vm store) const
@@ -1076,7 +1025,8 @@ namespace eagle::virt::eg
         return get_bit_version(reg, to_reg_size(size));
     }
 
-    void machine::handle_generic_logic_cmd(const asmb::code_container_ptr& block, const mnemonic command, const ir::ir_size size, const bool preserved)
+    void machine::handle_generic_logic_cmd(const asmb::code_container_ptr& block, const mnemonic command, const ir::ir_size size,
+        const bool preserved)
     {
         scope_register_manager scope = reg_64_container->create_scope();
         std::array<reg, 2> vals = scope.reserve<2>();
@@ -1103,7 +1053,5 @@ namespace eagle::virt::eg
 
             call_push(block, vals[0]);
         }
-
-
     }
 }

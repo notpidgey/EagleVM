@@ -8,8 +8,6 @@ namespace eagle::ir::handler
 {
     dec::dec()
     {
-        // todo: make vector of supported signatures
-        // todo: make vector of handlers to generate
         valid_operands = {
             { { { codec::op_none, codec::bit_8 } }, "dec 8" },
             { { { codec::op_none, codec::bit_16 } }, "dec 16" },
@@ -59,14 +57,16 @@ namespace eagle::ir::handler
     ir_insts dec::compute_of(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
     {
         ir_insts insts;
-        insts.append_range(copy_to_top(size, util::param_one));
+        insts.append_range(copy_to_top(size, util::param_two));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+            std::make_shared<cmd_shr>(size),
         });
 
-        insts.append_range(copy_to_top(size, util::result, { size, size }));
+        insts.append_range(copy_to_top(size, util::result, { size }));
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
+            std::make_shared<cmd_shr>(size),
         });
 
         insts.append_range(ir_insts{
@@ -75,6 +75,7 @@ namespace eagle::ir::handler
             std::make_shared<cmd_flags_load>(vm_flags::eq),
             std::make_shared<cmd_push>(1, ir_size::bit_64),
             std::make_shared<cmd_xor>(ir_size::bit_64),
+
             std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
             std::make_shared<cmd_shl>(ir_size::bit_64),
 
@@ -87,13 +88,13 @@ namespace eagle::ir::handler
     ir_insts dec::compute_af(ir_size size, const discrete_store_ptr& result, const discrete_store_ptr& value, const discrete_store_ptr& flags)
     {
         ir_insts insts;
-        insts.append_range(copy_to_top(size, util::param_one));
+        insts.append_range(copy_to_top(size, util::param_two));
 
         insts.append_range(ir_insts{
             std::make_shared<cmd_push>(0xF, size),
             std::make_shared<cmd_and>(size),
 
-            std::make_shared<cmd_push>(0xF, size),
+            std::make_shared<cmd_push>(0, size),
             std::make_shared<cmd_cmp>(size),
 
             std::make_shared<cmd_flags_load>(vm_flags::eq),

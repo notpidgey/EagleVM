@@ -34,6 +34,8 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
+        input_target.EFlags = 0;
+
         if (bp)
         {
             // so i can tell if its intentional in a debugger
