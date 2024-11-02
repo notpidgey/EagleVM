@@ -330,7 +330,7 @@ namespace eagle::virt::eg
             ir::ir_insts handler_ir = target_mnemonic->gen_handler(handler_id);
 
             // todo: walk each block and guarantee that discrete_store variables only use vtemps we want
-            ir::block_ptr ir_block = std::make_shared<ir::block_ir>(ir::mixed);
+            auto ir_block = std::make_shared<ir::block_virt_ir>();
             ir_block->push_back(handler_ir);
 
             const std::shared_ptr<machine> machine = machine_inst.lock();

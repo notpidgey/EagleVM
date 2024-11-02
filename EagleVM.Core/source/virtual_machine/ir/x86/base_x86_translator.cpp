@@ -15,7 +15,7 @@ namespace eagle::ir::lifter
 {
     base_x86_translator::base_x86_translator(const std::shared_ptr<class ir_translator>& translator, codec::dec::inst_info decode,
         const uint64_t rva) :
-        translator(translator), block(std::make_shared<block_ir>(vm_block)), orig_rva(rva), inst(decode.instruction)
+        translator(translator), block(std::make_shared<block_virt_ir>()), orig_rva(rva), inst(decode.instruction)
     {
         inst = decode.instruction;
         std::ranges::copy(decode.operands, std::begin(operands));
@@ -103,7 +103,7 @@ namespace eagle::ir::lifter
             if (stack_displacement)
             {
                 block->push_back(std::make_shared<cmd_push>(stack_displacement, ir_size::bit_64));
-                block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+                block->push_back(std::make_shared<cmd_add>(ir_size::bit_64));
             }
         }
         else if (op_mem.base != ZYDIS_REGISTER_NONE)
@@ -127,12 +127,12 @@ namespace eagle::ir::lifter
         if (op_mem.scale != 0)
         {
             block->push_back(std::make_shared<cmd_push>(op_mem.scale, ir_size::bit_64));
-            block->push_back(std::make_shared<cmd_handler_call>(codec::m_imul, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_smul>(ir_size::bit_64));
         }
 
         if (op_mem.index != ZYDIS_REGISTER_NONE)
         {
-            block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_add>(ir_size::bit_64));
         }
 
         if (op_mem.disp.has_displacement)
@@ -142,7 +142,7 @@ namespace eagle::ir::lifter
 
             // subtract displacement value
             block->push_back(std::make_shared<cmd_push>(op_mem.disp.value, ir_size::bit_64));
-            block->push_back(std::make_shared<cmd_handler_call>(codec::m_add, handler_sig{ ir_size::bit_64, ir_size::bit_64 }));
+            block->push_back(std::make_shared<cmd_add>(ir_size::bit_64));
         }
 
         // for memory operands we will only ever need one kind of action
@@ -168,10 +168,6 @@ namespace eagle::ir::lifter
             }
             case translate_mem_result::both:
             {
-                // todo: find a better way of doing this
-                // for instance adding a pop which actually doesnt remove from the stack and just reads
-                // or idfk
-
                 ir_size size = static_cast<ir_size>(operands[idx].size);
                 block->push_back({
                     std::make_shared<cmd_dup>(ir_size::bit_64),

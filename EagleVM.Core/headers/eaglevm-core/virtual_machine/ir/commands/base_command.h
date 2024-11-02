@@ -31,6 +31,12 @@ namespace eagle::ir
         static std::string cmd_type_to_string(command_type type);
         virtual std::string to_string();
 
+        template<typename T>
+        std::shared_ptr<T> get()
+        {
+            return std::static_pointer_cast<T>(shared_from_this());
+        }
+
         uint32_t unique_id;
         std::string unique_id_string;
 

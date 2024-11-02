@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_flags_load.h"
+
 namespace eagle::ir
 {
     cmd_flags_load::cmd_flags_load(const vm_flags flag): base_command(command_type::vm_flags_load), target_load(flag)

@@ -26,4 +26,9 @@ namespace eagle::ir
             get_reg() == cmd->get_reg() &&
             get_reg_class() == cmd->get_reg_class();
     }
+
+    std::string cmd_context_load::to_string()
+    {
+        return base_command::to_string() + " " + reg_to_string(get_reg());
+    }
 }

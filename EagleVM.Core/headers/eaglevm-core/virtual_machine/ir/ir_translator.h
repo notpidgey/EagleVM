@@ -76,8 +76,8 @@ namespace eagle::ir
 
         dasm::basic_block_ptr original_block = nullptr;
 
-        block_ptr head;
+        block_virt_ir_ptr head;
         std::vector<block_ptr> body;
-        block_ptr tail;
+        block_x86_ir_ptr tail;
     };
 }

@@ -16,21 +16,21 @@ namespace eagle::ir
             const auto [block_in, block_out] = liveness->live[preopt_block->original_block];
             auto& ir_body = preopt_block->body;
 
-            std::shared_ptr<block_ir> false_in = std::make_shared<block_ir>(vm_block);
-            std::shared_ptr<block_ir> false_out = std::make_shared<block_ir>(vm_block);
+            block_virt_ir_ptr false_in = std::make_shared<block_virt_ir>(vm_block);
+            block_virt_ir_ptr false_out = std::make_shared<block_virt_ir>(vm_block);
 
             for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
             {
                 if (0 == block_in.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    false_in->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
-                    false_in->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    //false_in->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
+                    //false_in->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
                 }
 
                 if (0 == block_out.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    false_out->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
-                    false_out->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    //false_out->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
+                    //false_out->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
                 }
             }
 

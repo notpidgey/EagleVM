@@ -1,5 +1,6 @@
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
+#include <intrin.h>
 #include <ranges>
 #include <unordered_set>
 
@@ -45,22 +46,20 @@ namespace eagle::ir
             return block_info;
 
         const block_ptr entry = block_info->head;
-        block_ptr current_block = std::make_shared<block_ir>(unassigned);
+        block_ptr current_block = nullptr;
         const block_ptr exit = block_info->tail;
 
         //
         // entry
         //
         entry->push_back(std::make_shared<cmd_vm_enter>());
-        entry->push_back(std::make_shared<cmd_branch>(current_block));
 
         //
         // body
         //
 
         std::vector<std::pair<dasm::analysis::liveness_info, dasm::analysis::liveness_info>> liveness;
-        if (dasm_liveness)
-            liveness = dasm_liveness->analyze_block(bb);
+        if (dasm_liveness) liveness = dasm_liveness->analyze_block(bb);
 
         for (uint32_t i = 0; i < bb->decoded_insts.size(); i++)
         {
@@ -113,7 +112,7 @@ namespace eagle::ir
                 auto& create_lifter = instruction_lifters[mnemonic];
                 const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(shared_from_this(), decoded_inst, current_rva);
 
-                if(dasm_liveness)
+                if (dasm_liveness)
                 {
                     auto out_liveness = std::get<1>(liveness[i]);
                     auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
@@ -136,39 +135,52 @@ namespace eagle::ir
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
+                    if (current_block == nullptr)
+                    {
+                        current_block = std::make_shared<block_virt_ir>();
+
+                        cmd_branch_ptr branch = std::make_shared<cmd_branch>(current_block);
+                        branch->set_virtual(true);
+                        entry->push_back(branch);
+                    }
+
                     if (current_block->get_block_state() == x86_block)
                     {
                         // the current block is an x86 block
                         const block_ptr previous = current_block;
                         block_info->body.push_back(current_block);
 
-                        current_block = std::make_shared<block_ir>(vm_block);
+                        current_block = std::make_shared<block_virt_ir>();
                         current_block->push_back(std::make_shared<cmd_vm_enter>());
 
                         previous->push_back(std::make_shared<cmd_branch>(current_block));
+                        previous->back()->get<cmd_branch>()->set_virtual(false);
                     }
 
-                    current_block->set_block_state(vm_block);
                     current_block->copy_from(result_block);
                 }
             }
 
             if (!translate_success)
             {
+                if (current_block == nullptr)
+                {
+                    current_block = std::make_shared<block_x86_ir>();
+                    entry->push_back(std::make_shared<cmd_vm_exit>(current_block));
+                }
+
                 if (current_block->get_block_state() == vm_block)
                 {
                     // the current block is a vm block
                     const block_ptr previous = current_block;
                     block_info->body.push_back(current_block);
 
-                    current_block = std::make_shared<block_ir>(x86_block);
-                    previous->push_back(std::make_shared<cmd_vm_exit>());
-                    previous->push_back(std::make_shared<cmd_branch>(current_block));
+                    current_block = std::make_shared<block_x86_ir>();
+                    previous->push_back(std::make_shared<cmd_vm_exit>(current_block));
                 }
 
                 // handler does not exist
                 // we need to execute the original instruction
-                current_block->set_block_state(x86_block);
                 handle_block_command(decoded_inst, current_block, bb->get_index_rva(i));
             }
         }
@@ -196,7 +208,10 @@ namespace eagle::ir
 
         // we want to jump to the exit block now
         current_block->pop_back();
-        current_block->push_back(std::make_shared<cmd_branch>(exit));
+        if (current_block->get_block_state() == vm_block)
+            current_block->push_back(std::make_shared<cmd_vm_exit>(exit));
+        else
+            current_block->push_back(std::make_shared<cmd_branch>(exit));
 
         // add as final block_info body
         block_info->body.push_back(current_block);
@@ -204,9 +219,7 @@ namespace eagle::ir
         //
         // exit
         //
-        if (current_block->get_block_state() == vm_block)
-            exit->push_back(std::make_shared<cmd_vm_exit>());
-
+        branch_cmd->set_virtual(false);
         exit->push_back(branch_cmd);
 
         return block_info;
@@ -255,6 +268,8 @@ namespace eagle::ir
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
         const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
+        // removes head preopt block and moves it to the first body if the first body block is not a vm_block
+        // every reference to the head is then rewritten to be the first body
         optimize_heads(block_vm_ids, block_tracker, extern_call_blocks);
         optimize_same_vm(block_vm_ids, block_tracker, extern_call_blocks);
 
@@ -283,10 +298,12 @@ namespace eagle::ir
             // replace all references to head with the first body
             for (const auto& seek_preopt : block_vm_ids | std::views::keys)
             {
-                const auto tail_branch = seek_preopt->tail->get_branch();
+                const auto tail = seek_preopt->tail;
+
+                const auto tail_branch = tail->exit_as_branch();
                 VM_ASSERT(tail_branch, "tail branch cannot be null");
 
-                tail_branch->rewrite_branch(head, preopt->body.front());
+                tail_branch->rewrite_branch(head, first_body);
             }
 
             preopt->head = nullptr;
@@ -297,117 +314,109 @@ namespace eagle::ir
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
         const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
-        // remove vm enter block if every reference to vm enter block uses the same vm
-        for (const auto& [preopt_block, vm_id] : block_vm_ids)
-        {
-            const block_ptr search_enter = preopt_block->head;
-            if (search_enter == nullptr)
-            {
-                // this means we removed the head
-                // meaning the first body block doesnt use vm enter
-                continue;
-            }
-
-            const block_ptr redirect_body = preopt_block->body.front();
-
-            bool vm_enter_unremovable = false;
-            std::vector<cmd_branch_ptr> search_enter_refs;
-
-            // check if there are any external calls to any of the body blocks
-            // if there are, we cannot remove vm enter
-            for (auto& external : extern_call_blocks)
-            {
-                if (preopt_block == external)
-                {
-                    vm_enter_unremovable = true;
-                    goto UNREMOVABLE;
-                }
-            }
-
-            // go through each preopt block
-            for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
-            {
-                // go through each block
-                // the only blocks that can reference our search block are body and exit
-                std::vector<block_ptr> search_blocks;
-                search_blocks.append_range(search_preopt_block->body);
-                search_blocks.push_back(search_preopt_block->tail);
-
-                for (const block_ptr& search_block : search_blocks)
-                {
-                    const cmd_branch_ptr branch = search_block->get_branch();
-                    if (branch->branch_visits(search_enter))
-                    {
-                        if (search_vm_id != vm_id)
-                            vm_enter_unremovable = true;
-                        else
-                            search_enter_refs.emplace_back(branch);
-                    }
-
-                    if (vm_enter_unremovable)
-                        goto UNREMOVABLE;
-                }
-            }
-
-        UNREMOVABLE:
-            if (!vm_enter_unremovable)
-            {
-                // we found that we can replace each branch to the block with a branch to the body
-                for (const auto& branch_ref : search_enter_refs)
-                {
-                    auto rewrite_branch = [&](ir_exit_result& exit_result)
-                    {
-                        if (std::holds_alternative<block_ptr>(exit_result))
-                            exit_result = redirect_body;
-                    };
-
-                    rewrite_branch(branch_ref->get_condition_default());
-                    rewrite_branch(branch_ref->get_condition_special());
-                }
-
-                preopt_block->head = nullptr;
-            }
-        }
-
-        // remove vm exit block if every branching block uses the same vm
-        for (const auto& [preopt_block, vm_id] : block_vm_ids)
-        {
-            // check entery of every block
-            const block_ptr preopt_exit = preopt_block->tail;
-            const cmd_branch_ptr branch = preopt_exit->get_branch();
-
-            // now we want to check if the current vm group has all the exits of this preopt
-            auto is_same_vm = [&](const ir_exit_result& exit_result)
-            {
-                if (std::holds_alternative<block_ptr>(exit_result))
-                {
-                    const block_ptr exit_block = std::get<block_ptr>(exit_result);
-                    for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
-                    {
-                        const bool contains = search_preopt_block->head == exit_block || search_preopt_block->tail == exit_block ||
-                            std::ranges::find(search_preopt_block->body, exit_block) != search_preopt_block->body.end();
-
-                        if (contains)
-                            return search_vm_id == vm_id;
-                    }
-                }
-
-                // if one of the exits is an rva then we have to exit no matter what : (
-                // otherwise the search would fall through to this fail
-                return false;
-            };
-
-            if (is_same_vm(branch->get_condition_default()) && is_same_vm(branch->get_condition_special()))
-            {
-                // this means all exits are of the same vm
-                const size_t command_count = preopt_exit->size();
-                VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
-
-                // this means we should have a vm exit command
-                if (command_count == 2)
-                    preopt_exit->erase(preopt_exit->begin());
-            }
-        }
+        // // remove vm enter block if every reference to vm enter block uses the same vm
+        // for (const auto& [preopt_block, vm_id] : block_vm_ids)
+        // {
+        //     const block_ptr search_enter = preopt_block->head;
+        //     if (search_enter == nullptr)
+        //     {
+        //         // this means we removed the head
+        //         // meaning the first body block doesnt use vm enter
+        //         continue;
+        //     }
+//
+        //     const block_ptr redirect_body = preopt_block->body.front();
+//
+        //     bool vm_enter_unremovable = false;
+        //     std::vector<cmd_branch_ptr> search_enter_refs;
+//
+        //     // check if there are any external calls to any of the body blocks
+        //     // if there are, we cannot remove vm enter
+        //     for (auto& external : extern_call_blocks)
+        //     {
+        //         if (preopt_block == external)
+        //         {
+        //             vm_enter_unremovable = true;
+        //             goto UNREMOVABLE;
+        //         }
+        //     }
+//
+        //     // go through each preopt block
+        //     for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
+        //     {
+        //         // go through each block
+        //         // the only blocks that can reference our search block are exits
+        //         const auto& search_block = search_preopt_block->tail;
+//
+        //         const cmd_branch_ptr branch = search_block->exit_as_branch();
+        //         if (branch->branch_visits(search_enter))
+        //         {
+        //             if (search_vm_id != vm_id)
+        //                 vm_enter_unremovable = true;
+        //             else
+        //                 search_enter_refs.emplace_back(branch);
+        //         }
+//
+        //         // the only case where this happens is if a block referencing the current search block
+        //         // is using a different vm id
+        //         if (vm_enter_unremovable)
+        //             goto UNREMOVABLE;
+        //     }
+//
+        // UNREMOVABLE:
+        //     if (!vm_enter_unremovable)
+        //     {
+        //         // we found that we can replace each branch to the block with a branch to the body
+        //         for (const auto& branch_ref : search_enter_refs)
+        //             branch_ref->rewrite_branch(search_enter, redirect_body);
+//
+        //         preopt_block->head = nullptr;
+//
+        //         // TODO: make sure we are using a VIRTUAL branch for these branches
+        //         // this means a vmenter has to be added before any of these branches are called
+        //         // also check if
+        //     }
+        // }
+//
+        // // remove vm exit block if every branching block uses the same vm
+        // for (const auto& [preopt_block, vm_id] : block_vm_ids)
+        // {
+        //     // check entery of every block
+        //     const block_ptr preopt_exit = preopt_block->tail;
+        //     const cmd_branch_ptr branch = preopt_exit->get_branch();
+//
+        //     // now we want to check if the current vm group has all the exits of this preopt
+        //     auto is_same_vm = [&](const ir_exit_result& exit_result)
+        //     {
+        //         if (std::holds_alternative<block_ptr>(exit_result))
+        //         {
+        //             const block_ptr exit_block = std::get<block_ptr>(exit_result);
+        //             for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
+        //             {
+        //                 const bool contains = search_preopt_block->head == exit_block || search_preopt_block->tail == exit_block ||
+        //                     std::ranges::find(search_preopt_block->body, exit_block) != search_preopt_block->body.end();
+//
+        //                 if (contains)
+        //                     return search_vm_id == vm_id;
+        //             }
+        //         }
+//
+        //         // if one of the exits is an rva then we have to exit no matter what : (
+        //         // otherwise the search would fall through to this fail
+        //         return false;
+        //     };
+//
+        //     if (is_same_vm(branch->get_condition_default()) && is_same_vm(branch->get_condition_special()))
+        //     {
+        //         // this means all exits are of the same vm
+        //         const size_t command_count = preopt_exit->size();
+        //         VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
+//
+        //         // this means we should have a vm exit command
+        //         if (command_count == 2)
+        //             preopt_exit->erase(preopt_exit->begin());
+        //     }
+        // }
     }
 
     dasm::basic_block_ptr ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
@@ -596,8 +605,8 @@ namespace eagle::ir
 
     void preopt_block::init(const dasm::basic_block_ptr& block)
     {
-        head = std::make_shared<block_ir>(vm_block);
-        tail = std::make_shared<block_ir>(vm_block);
+        head = std::make_shared<block_virt_ir>(block->start_rva);
+        tail = std::make_shared<block_x86_ir>();
         original_block = block;
     }
 }

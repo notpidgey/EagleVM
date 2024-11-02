@@ -235,15 +235,17 @@ namespace eagle::ir
 
             const auto [condition, inverted] = get_exit_condition(static_cast<codec::mnemonic>(inst.mnemonic));
 
+            cmd_branch_ptr result_branch = nullptr;
             branch_info info = translator->get_branch_info(original_rva);
             if (info.exit_condition == exit_condition::jmp)
-                block->push_back(std::make_shared<cmd_branch>(*info.fallthrough_branch));
+               result_branch = std::make_shared<cmd_branch>(*info.fallthrough_branch);
             else
-                block->push_back(std::make_shared<cmd_branch>(*info.fallthrough_branch, *info.conditional_branch, condition,
-                    info.inverted_condition));
+                result_branch = std::make_shared<cmd_branch>(*info.fallthrough_branch, *info.conditional_branch, condition, info.inverted_condition);
 
-            block->back()->set_inlined(true);
+            result_branch->set_virtual(true);
+            result_branch->set_inlined(true);
 
+            block->push_back(result_branch);
             return true;
         }
 

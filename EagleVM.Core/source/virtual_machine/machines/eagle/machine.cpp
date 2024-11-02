@@ -520,12 +520,27 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         const asmb::code_label_ptr vm_exit = han_man->get_vm_exit();
-        const asmb::code_label_ptr ret = asmb::code_label::create("vmexit_ret target");
+        std::visit([&](auto&& arg)
+        {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, uint64_t>)
+            {
+                const uint64_t val = arg;
 
-        // mov VCSRET, ZLABEL(target)
-        block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(ret))));
-        block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_exit))));
-        block->bind(ret);
+                // mov VCSRET, ZLABEL(target)
+                block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZIMMU(val))));
+                block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_exit))));
+            }
+            else if constexpr (std::is_same_v<T, ir::block_ptr>)
+            {
+                const ir::block_ptr target_block = arg;
+                const auto label = block_context[target_block];
+
+                // mov VCSRET, ZLABEL(target)
+                block->add(RECOMPILE(encode(m_mov, ZREG(VCSRET), ZLABEL(label))));
+                block->add(RECOMPILE(encode(m_jmp, ZJMPR(vm_exit))));
+            }
+        }, cmd->get_exit());
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)

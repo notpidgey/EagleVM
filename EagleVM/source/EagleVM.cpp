@@ -385,8 +385,18 @@ int main(int argc, char* argv[])
 
             machine->add_block_context(block_labels);
 
-            for (auto& translated_block : blocks)
+            for (auto i = 0; i < blocks.size(); i++)
             {
+                auto& translated_block = blocks[i];
+                {
+                    std::printf("block %i\n", translated_block->block_id);
+                    for (auto j = 0; j < translated_block->size(); j++)
+                    {
+                        auto inst = translated_block->at(j);
+                        std::printf("\t%s\n", inst->to_string().c_str());
+                    }
+                }
+
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
                 ir::block_ptr block = block_tracker[entry_block];
                 if (block == translated_block)

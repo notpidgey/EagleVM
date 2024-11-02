@@ -15,6 +15,8 @@ namespace eagle::ir
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
 
+        std::string to_string() override;
+
     private:
         codec::reg source = codec::reg::none;
         codec::reg_class r_class = codec::reg_class::invalid;
