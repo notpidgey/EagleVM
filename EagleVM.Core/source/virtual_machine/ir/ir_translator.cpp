@@ -67,6 +67,10 @@ namespace eagle::ir
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
+            constexpr auto ignored_mnemonics = { codec::m_nop };
+            if (std::ranges::find(ignored_mnemonics, static_cast<codec::mnemonic>(inst.mnemonic)) != ignored_mnemonics.end())
+                continue;
+
             handler::base_handler_gen_ptr handler_gen = nullptr;
             std::optional<uint64_t> target_handler = std::nullopt;
 
@@ -286,27 +290,23 @@ namespace eagle::ir
             const auto head = preopt->head;
             const auto first_body = preopt->body.front();
 
-            // move heads to first body block
-            if (first_body->get_block_state() == vm_block && preopt->head)
+            if (first_body->get_block_state() != vm_block)
             {
-                // at this point we determined the head is relevant
-                // we can ignore last since its a branch
-                for (auto i = preopt->head->size() - 1; i--;)
-                    first_body->insert(first_body->begin(), preopt->head->at(i));
+                // this means the head is useless
+
+                // replace all references to head with the first body
+                for (const auto& seek_preopt : block_vm_ids | std::views::keys)
+                {
+                    const auto tail = seek_preopt->tail;
+
+                    const auto tail_branch = tail->exit_as_branch();
+                    VM_ASSERT(tail_branch, "tail branch cannot be null");
+
+                    tail_branch->rewrite_branch(head, first_body);
+                }
+
+                preopt->head = nullptr;
             }
-
-            // replace all references to head with the first body
-            for (const auto& seek_preopt : block_vm_ids | std::views::keys)
-            {
-                const auto tail = seek_preopt->tail;
-
-                const auto tail_branch = tail->exit_as_branch();
-                VM_ASSERT(tail_branch, "tail branch cannot be null");
-
-                tail_branch->rewrite_branch(head, first_body);
-            }
-
-            preopt->head = nullptr;
         }
     }
 

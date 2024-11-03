@@ -48,7 +48,7 @@ namespace eagle::ir
                 if constexpr (std::is_same_v<T, uint64_t>)
                 {
                     const uint64_t immediate_value = arg;
-                    return std::to_string(immediate_value);
+                    return std::format("0x{:x}", immediate_value);
                 }
                 else if constexpr (std::is_same_v<T, block_ptr>)
                 {

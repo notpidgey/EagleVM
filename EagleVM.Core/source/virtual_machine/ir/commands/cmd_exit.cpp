@@ -20,11 +20,11 @@ namespace eagle::ir
         if (std::holds_alternative<block_ptr>(branches[0]))
         {
             const auto cmd = std::get<block_ptr>(branches[0]);
-            out += " block " + std::to_string(cmd->block_id);
+            out += std::format(" block 0x{:x}", cmd->block_id);
         }
         else
         {
-            out += " " + std::get<uint64_t>(branches[0]);
+            out += std::format(" OUT 0x{:x}",  std::get<uint64_t>(branches[0]));
         }
 
         return base_command::to_string() + out;

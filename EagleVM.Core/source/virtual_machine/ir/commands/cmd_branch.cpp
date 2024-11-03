@@ -49,7 +49,7 @@ namespace eagle::ir
             if (std::holds_alternative<block_ptr>(branch))
             {
                 const auto cmd = std::get<block_ptr>(branch);
-                out += " block " + std::to_string(cmd->block_id) + ",";
+                out += std::format(" block 0x{:x},", cmd->block_id);
             }
             else
                 out += " ?,";

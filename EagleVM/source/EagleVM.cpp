@@ -389,7 +389,7 @@ int main(int argc, char* argv[])
             {
                 auto& translated_block = blocks[i];
                 {
-                    std::printf("block %i\n", translated_block->block_id);
+                    std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == block_tracker[entry_block] ? "(entry)" : "");
                     for (auto j = 0; j < translated_block->size(); j++)
                     {
                         auto inst = translated_block->at(j);

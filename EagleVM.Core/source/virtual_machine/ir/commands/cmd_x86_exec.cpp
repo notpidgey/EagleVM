@@ -22,4 +22,26 @@ namespace eagle::ir
     {
         return false;
     }
+
+    std::string cmd_x86_exec::to_string()
+    {
+        // return std::visit([&](auto&& arg)
+        // {
+        //     using T = std::decay_t<decltype(arg)>;
+        //     if constexpr (std::is_same_v<T, codec::enc::req>)
+        //     {
+        //         auto reg = arg;
+        //         codec::encode
+        //         auto str = codec::instruction_to_string(reg);
+//
+        //         return base_command::to_string() + " " + str;
+        //     }
+        //     else
+        //     {
+        //         return base_command::to_string();
+        //     }
+        // }, request);
+
+        return base_command::to_string();
+    }
 }

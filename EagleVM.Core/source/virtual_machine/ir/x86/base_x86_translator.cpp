@@ -92,7 +92,10 @@ namespace eagle::ir::lifter
         if (op_mem.base == ZYDIS_REGISTER_RIP)
         {
             auto [target, _] = codec::calc_relative_rva(inst, operands, orig_rva, idx);
+
+            block->push_back(std::make_shared<cmd_push>(reg_vm::vbase, ir_size::bit_64));
             block->push_back(std::make_shared<cmd_push>(target, ir_size::bit_64));
+            block->push_back(std::make_shared<cmd_add>(ir_size::bit_64));
 
             goto HANDLE_MEM_ACTION;
         }

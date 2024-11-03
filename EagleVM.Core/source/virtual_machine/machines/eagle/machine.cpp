@@ -195,7 +195,7 @@ namespace eagle::virt::eg
                     {
                         const uint64_t immediate_value = arg;
 
-                        block->add(encode(m_mov, ZREG(temp_reg), ZIMMU(immediate_value)));
+                        block->add(encode(m_lea, ZREG(temp_reg), ZMEMBD(VBASE, immediate_value, 8)));
                         call_push(block, get_bit_version(temp_reg, bit_64));
                     }
                     else if constexpr (std::is_same_v<T, ir::block_ptr>)
@@ -205,7 +205,7 @@ namespace eagle::virt::eg
                         const asmb::code_label_ptr label = get_block_label(target);
                         VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
 
-                        block->add(RECOMPILE(encode(m_mov, ZREG(temp_reg), ZIMMS(label->get_address()))));
+                        block->add(RECOMPILE(encode(m_lea, ZREG(temp_reg), ZMEMBD(VBASE, label->get_address(), 8))));
                         call_push(block, get_bit_version(temp_reg, bit_64));
                     }
                     else
