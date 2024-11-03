@@ -8,18 +8,22 @@ int main(int, char*[])
 {
     fnEagleVMBegin();
 
-    std::string key;
-    std::cout << "license key: ";
-    std::cin >> key;
+    std::string some_output;
 
-    if (key == "1798263718265567865") {
-        std::cout << "correct key";
+    auto total_sum = 0;
+    for (auto i = 0; i < 255; i++)
+    {
+        total_sum += i;
+        for (int j = 0 ; j < i; j++)
+        {
+            total_sum += i;
+            some_output += std::to_string(total_sum);
+        }
+
+        std::reverse(some_output.begin(), some_output.end());
     }
 
-    if (key != "1798263718265567865") {
-        std::cout << "incorrect key";
-    }
-
+    std::cout << some_output << std::endl;
     system("pause");
 
     fnEagleVMEnd();

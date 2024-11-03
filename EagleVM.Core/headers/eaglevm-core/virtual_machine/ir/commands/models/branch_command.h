@@ -62,6 +62,11 @@ namespace eagle::ir
             return false;
         }
 
+        std::vector<ir_exit_result> get_branches()
+        {
+            return branches;
+        }
+
     protected:
         std::vector<ir_exit_result> branches;
     };

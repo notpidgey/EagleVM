@@ -56,6 +56,16 @@ namespace eagle::dasm::analysis
             return info;
         }
 
+        friend liveness_info operator&(const liveness_info& first, const liveness_info& second)
+        {
+            liveness_info info;
+            info.r64 = first.r64 & second.r64;
+            info.r512 = first.r512 & second.r512;
+            info.flags = first.flags & second.flags;
+
+            return info;
+        }
+
         liveness_info& operator|=(const liveness_info& first)
         {
             this->r64 |= first.r64;

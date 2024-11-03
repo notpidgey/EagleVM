@@ -121,7 +121,7 @@ namespace eagle::ir
                     auto out_liveness = std::get<1>(liveness[i]);
                     auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
 
-                    auto relevant_out = inst_flags_liveness - out_liveness;
+                    auto relevant_out = inst_flags_liveness & out_liveness;
                     auto relevant_out_flags = relevant_out.get_flags();
 
                     translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(relevant_out_flags));
@@ -191,6 +191,7 @@ namespace eagle::ir
 
         // every jcc/jmp is garuanteed to get processed if its at the end of the block
         // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
+        cmd_branch_ptr branch_cmd;
         if (bb->get_end_reason() == dasm::block_end)
         {
             // add a branch to make sure we account for this case
@@ -203,15 +204,19 @@ namespace eagle::ir
             else
                 target_exit = bb_map[dasm->get_block(target)]->head;
 
-            current_block->push_back(std::make_shared<cmd_branch>(target_exit));
+            branch_cmd = std::make_shared<cmd_branch>(target_exit);
+        }
+        else
+        {
+            // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
+            branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+            VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
+
+            current_block->pop_back();
         }
 
-        // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
-        cmd_branch_ptr branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
-        VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
 
         // we want to jump to the exit block now
-        current_block->pop_back();
         if (current_block->get_block_state() == vm_block)
             current_block->push_back(std::make_shared<cmd_vm_exit>(exit));
         else

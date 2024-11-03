@@ -17,7 +17,7 @@ namespace eagle::ir
     class block_ir;
     using block_ptr = std::shared_ptr<block_ir>;
 
-    class block_ir
+    class block_ir : public std::enable_shared_from_this<block_ir>
     {
     public:
         using container_type = std::vector<base_command_ptr>;
@@ -109,6 +109,18 @@ namespace eagle::ir
 
             return std::static_pointer_cast<T>(command);
         }
+
+        std::shared_ptr<class block_virt_ir> as_virt()
+        {
+            if (ir_state == vm_block) return std::static_pointer_cast<class block_virt_ir>(shared_from_this());
+            return nullptr;
+        };
+
+        std::shared_ptr<class block_x86_ir> as_x86()
+        {
+            if (ir_state == x86_block) return std::static_pointer_cast<class block_x86_ir>(shared_from_this());
+            return nullptr;
+        };
 
     protected:
         ~block_ir() = default;

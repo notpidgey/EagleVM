@@ -20,6 +20,73 @@
 
 using namespace eagle;
 
+void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
+{
+    std::printf("digraph ControlFlow { node [shape=box, fontname=\"Courier\"];");
+
+    for (auto translated_block : blocks)
+    {
+        std::string node_id = std::format("0x{:x}", translated_block->block_id);
+        std::string graph_title = node_id;
+        if (translated_block == entry)
+            graph_title += " (entry)";
+
+        std::string insts_nodes;
+        for (auto j = 0; j < translated_block->size(); j++)
+        {
+            ir::base_command_ptr inst = translated_block->at(j);
+            insts_nodes += std::format("<TR><TD ALIGN=\"LEFT\">{}</TD></TR>", inst->to_string().c_str());
+        }
+
+        std::string graph_node = std::format(
+            "\"{}\" [label=<<TABLE BORDER=\"0\"><TR><TD ALIGN=\"CENTER\"><B>block {}</B></TD></TR>{}</TABLE>>];",
+            node_id, graph_title, insts_nodes);
+        std::printf("%s\n", graph_node.c_str());
+
+        std::vector<ir::ir_exit_result> branches;
+        if (auto ptr = translated_block->as_virt())
+        {
+            if (auto exit = ptr->exit_as_branch())
+                branches = exit->get_branches();
+            else if (auto branch = ptr->exit_as_vmexit())
+                branches = branch->get_branches();
+        }
+        else if (auto ptr = translated_block->as_x86())
+        {
+            branches = ptr->exit_as_branch()->get_branches();
+        }
+
+        for (ir::ir_exit_result branch : branches)
+        {
+            if (std::holds_alternative<ir::block_ptr>(branch))
+            {
+                const auto cmd = std::get<ir::block_ptr>(branch);
+                std::cout << std::format("\"{}\" -> \"{}\";", node_id, std::format("0x{:x}", cmd->block_id));
+            }
+            else
+            {
+                const auto cmd = std::get<uint64_t>(branch);
+                std::cout << std::format("\"{}\" -> \"{}\";", node_id, std::format("0x{:x}", cmd));
+            }
+        }
+    }
+
+    std::printf("}");
+}
+
+void print_ir(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
+{
+    for (auto& translated_block : blocks)
+    {
+        std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == entry ? "(entry)" : "");
+        for (auto j = 0; j < translated_block->size(); j++)
+        {
+            const auto inst = translated_block->at(j);
+            std::printf("\t%s\n", inst->to_string().c_str());
+        }
+    }
+}
+
 int main(int argc, char* argv[])
 {
     auto executable = argc > 1 ? argv[1] : "EagleVMSandbox.exe";
@@ -388,14 +455,6 @@ int main(int argc, char* argv[])
             for (auto i = 0; i < blocks.size(); i++)
             {
                 auto& translated_block = blocks[i];
-                {
-                    std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == block_tracker[entry_block] ? "(entry)" : "");
-                    for (auto j = 0; j < translated_block->size(); j++)
-                    {
-                        auto inst = translated_block->at(j);
-                        std::printf("\t%s\n", inst->to_string().c_str());
-                    }
-                }
 
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
                 ir::block_ptr block = block_tracker[entry_block];
@@ -404,6 +463,8 @@ int main(int argc, char* argv[])
 
                 vm_section.add_code_container(result_container);
             }
+
+            print_graphviz(blocks, block_tracker[entry_block]);
 
             // build handlers
             std::vector<asmb::code_container_ptr> handler_containers = machine->create_handlers();
