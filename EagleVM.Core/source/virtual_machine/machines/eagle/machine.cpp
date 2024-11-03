@@ -355,7 +355,9 @@ namespace eagle::virt::eg
         else
         {
             scope_register_manager scope = reg_64_container->create_scope();
-            call_pop(block, scope.reserve());
+            reg target_reg = get_bit_version(scope.reserve(), to_reg_size(cmd->get_size()));
+
+            call_pop(block, target_reg);
         }
     }
 
