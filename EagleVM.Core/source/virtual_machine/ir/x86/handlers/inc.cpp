@@ -28,11 +28,6 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 1, "invalid signature. must contain 1 operand");
         ir_size target_size = signature.front();
 
-        const discrete_store_ptr p_one = discrete_store::create(target_size);
-        const discrete_store_ptr result = discrete_store::create(target_size);
-
-        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
-
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
             std::make_shared<cmd_push>(1, target_size),
@@ -118,7 +113,15 @@ namespace eagle::ir::handler
 
 namespace eagle::ir::lifter
 {
-    translate_mem_result inc::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx) { return translate_mem_result::both; }
+    bool inc::translate_to_il(uint64_t original_rva, x86_cpu_flag flags)
+    {
+        return base_x86_translator::translate_to_il(original_rva, flags);
+    }
+
+    translate_mem_result inc::translate_mem_action(const codec::dec::op_mem& op_mem, uint8_t idx)
+    {
+        return translate_mem_result::both;
+    }
 
     void inc::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
@@ -130,9 +133,14 @@ namespace eagle::ir::lifter
             // register
             codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
             if (static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+            {
                 reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
-
-            block->push_back(std::make_shared<cmd_context_store>(reg));
+                block->push_back(std::make_shared<cmd_context_store>(reg, codec::reg_size::bit_32));
+            }
+            else
+            {
+                block->push_back(std::make_shared<cmd_context_store>(reg));
+            }
         }
         else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
         {

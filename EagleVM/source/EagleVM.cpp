@@ -22,57 +22,53 @@ using namespace eagle;
 
 void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
 {
-    std::printf("digraph ControlFlow { node [shape=box, fontname=\"Courier\"];");
+    std::cout << "digraph ControlFlow {\n  node [shape=box, fontname=\"Courier\"];\n";
 
-    for (auto translated_block : blocks)
+    for (const auto& block : blocks)
     {
-        std::string node_id = std::format("0x{:x}", translated_block->block_id);
-        std::string graph_title = node_id;
-        if (translated_block == entry)
-            graph_title += " (entry)";
+        const std::string node_id = std::format("0x{:x}", block->block_id);
+        std::string graph_title = (block == entry) ? node_id + " (entry)" : node_id;
 
-        std::string insts_nodes;
-        for (auto j = 0; j < translated_block->size(); j++)
-        {
-            ir::base_command_ptr inst = translated_block->at(j);
-            insts_nodes += std::format("<TR><TD ALIGN=\"LEFT\">{}</TD></TR>", inst->to_string().c_str());
-        }
+        std::ostringstream insts_nodes;
+        for (const auto& inst : *block)
+            insts_nodes << std::format("<TR><TD ALIGN=\"LEFT\">{}</TD></TR>", inst->to_string());
 
-        std::string graph_node = std::format(
-            "\"{}\" [label=<<TABLE BORDER=\"0\"><TR><TD ALIGN=\"CENTER\"><B>block {}</B></TD></TR>{}</TABLE>>];",
-            node_id, graph_title, insts_nodes);
-        std::printf("%s\n", graph_node.c_str());
+        std::cout << std::format(
+            "  \"{}\" [label=<<TABLE BORDER=\"0\">"
+            "<TR><TD ALIGN=\"CENTER\"><B>block {}</B></TD></TR>"
+            "{}"
+            "</TABLE>>];\n",
+            node_id, graph_title, insts_nodes.str());
 
         std::vector<ir::ir_exit_result> branches;
-        if (auto ptr = translated_block->as_virt())
+        if (const auto ptr = block->as_virt())
         {
-            if (auto exit = ptr->exit_as_branch())
+            if (const auto exit = ptr->exit_as_branch())
                 branches = exit->get_branches();
-            else if (auto branch = ptr->exit_as_vmexit())
-                branches = branch->get_branches();
+            else if (const auto vmexit = ptr->exit_as_vmexit())
+                branches = vmexit->get_branches();
         }
-        else if (auto ptr = translated_block->as_x86())
+        else if (auto ptr = block->as_x86())
         {
-            branches = ptr->exit_as_branch()->get_branches();
+            if (const auto exit = ptr->exit_as_branch())
+                branches = exit->get_branches();
         }
 
-        for (ir::ir_exit_result branch : branches)
+        for (const auto& branch : branches)
         {
+            std::string target_id;
             if (std::holds_alternative<ir::block_ptr>(branch))
-            {
-                const auto cmd = std::get<ir::block_ptr>(branch);
-                std::cout << std::format("\"{}\" -> \"{}\";", node_id, std::format("0x{:x}", cmd->block_id));
-            }
+                target_id = std::format("0x{:x}", std::get<ir::block_ptr>(branch)->block_id);
             else
-            {
-                const auto cmd = std::get<uint64_t>(branch);
-                std::cout << std::format("\"{}\" -> \"{}\";", node_id, std::format("0x{:x}", cmd));
-            }
+                target_id = std::format("0x{:x}", std::get<uint64_t>(branch));
+
+            std::cout << std::format("  \"{}\" -> \"{}\";\n", node_id, target_id);
         }
     }
 
-    std::printf("}");
+    std::cout << "}\n";
 }
+
 
 void print_ir(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
 {

@@ -191,14 +191,16 @@ namespace eagle::dasm::analysis
                 if (reg2 != ZYDIS_REGISTER_NONE)
                     handle_register(reg2, true);
             }
-
-            // check read flags
-            use.insert_flags(inst.cpu_flags->tested);
-
-            // check written flags
-            def.insert_flags(inst.cpu_flags->modified);
-            def.insert_flags(inst.cpu_flags->set_0);
-            def.insert_flags(inst.cpu_flags->set_1);
         }
+
+        // check read flags
+        use.insert_flags(inst.cpu_flags->tested);
+
+        // check written flags
+        def.insert_flags(inst.cpu_flags->modified);
+        def.insert_flags(inst.cpu_flags->set_0);
+        def.insert_flags(inst.cpu_flags->set_1);
+
+        use = use - def;
     }
 }
