@@ -22,7 +22,7 @@ using namespace eagle;
 
 void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
 {
-    std::cout << "digraph ControlFlow {\n  node [shape=box, fontname=\"Courier\"];\n";
+    std::cout << "digraph ControlFlow {\n  graph [splines=ortho]\n  node [shape=box, fontname=\"Courier\"];\n";
 
     for (const auto& block : blocks)
     {
