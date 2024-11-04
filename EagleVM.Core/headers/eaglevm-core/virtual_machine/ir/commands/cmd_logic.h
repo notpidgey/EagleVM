@@ -27,6 +27,11 @@ namespace eagle::ir
                 cmd->get_reversed() == reversed;
         }
 
+        std::string to_string() override
+        {
+            return base_command::to_string() + " (" + ir_size_to_string(size) + ", " + ir_size_to_string(size) + ")";
+        }
+
     private:
         ir_size size;
         bool reversed;

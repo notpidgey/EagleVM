@@ -8,33 +8,39 @@
 
 namespace eagle::ir
 {
-    void obfuscator::run_preopt_pass(const preopt_block_vec& preopt_vec, const std::unique_ptr<dasm::analysis::liveness>& liveness)
+    void obfuscator::run_preopt_pass(const preopt_block_vec& preopt_vec, const dasm::analysis::liveness* liveness)
     {
         for (const auto& preopt_block : preopt_vec)
         {
             VM_ASSERT(liveness->live.contains(preopt_block->original_block), "liveness data must contain data for existing block");
-            const auto [block_in, block_out] = liveness->live[preopt_block->original_block];
-            auto& ir_body = preopt_block->body;
+            const auto [block_in, block_out] = liveness->live.at(preopt_block->original_block);
 
-            block_virt_ir_ptr false_in = std::make_shared<block_virt_ir>(vm_block);
-            block_virt_ir_ptr false_out = std::make_shared<block_virt_ir>(vm_block);
+            block_virt_ir_ptr first_block = nullptr;
+            for (auto& body : preopt_block->body)
+                if (body->get_block_state() == vm_block)
+                    first_block = std::static_pointer_cast<block_virt_ir>(body);
+
+            if (first_block == nullptr)
+                continue;
+
+            auto in_insert_index = 0;
+            if (first_block->at(0)->get_command_type() == command_type::vm_enter)
+                in_insert_index = 1;
 
             for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
             {
                 if (0 == block_in.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    //false_in->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
-                    //false_in->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->begin() + in_insert_index, std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->begin() + in_insert_index, std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                 }
 
                 if (0 == block_out.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    //false_out->push_back(std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
-                    //false_out->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->end() - 1, std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->end() - 1, std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                 }
             }
-
-
         }
     }
 

@@ -385,6 +385,9 @@ int main(int argc, char* argv[])
         std::shared_ptr ir_trans = std::make_shared<ir::ir_translator>(dasm, &seg_live);
         ir::preopt_block_vec preopt = ir_trans->translate();
 
+        // run some basic pre-optimization passes
+        ir::obfuscator::run_preopt_pass(preopt, &seg_live);
+
         // here we assign vms to each block
         // for the current example we can assign the same vm id to each block
         uint32_t vm_index = 0;
@@ -406,13 +409,9 @@ int main(int argc, char* argv[])
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
-        // obfuscation pass
         std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;
         for (auto& [block, vmid] : vm_blocks)
             vm_id_map[vmid].append_range(block);
-
-        // for (auto& [vmid, vmid_blocks] : vm_id_map)
-        //     ir::obfuscator::create_merged_handlers(vmid_blocks);
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings =

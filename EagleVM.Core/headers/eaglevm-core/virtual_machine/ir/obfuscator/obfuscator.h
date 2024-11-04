@@ -9,7 +9,7 @@ namespace eagle::ir
     public:
         static void run_preopt_pass(
             const preopt_block_vec& preopt_vec,
-            const std::unique_ptr<dasm::analysis::liveness>& liveness
+            const dasm::analysis::liveness* liveness
         );
 
         /**
