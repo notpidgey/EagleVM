@@ -49,6 +49,7 @@ namespace eagle::ir::handler
         block_builder builder;
         builder
             .add_add(target_size, false, true)
+
             .add_context_rflags_load()
             .add_push(~affected_flags, ir_size::bit_64)
             .add_and(ir_size::bit_64)
