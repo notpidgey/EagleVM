@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     sub::sub()
@@ -34,30 +36,28 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 2, "invalid signature. must contain 2 operands");
         VM_ASSERT(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
 
-        ir_size target_size = signature.front();
+        const ir_size target_size = signature.front();
 
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF |
             ZYDIS_CPUFLAG_CF;
-        ir_insts insts = {
-            std::make_shared<cmd_sub>(target_size, false, true),
+        block_builder builder;
+        builder
+            .add_sub(target_size, false, true)
+            .add_context_rflags_load()
+            .add_push(~affected_flags, ir_size::bit_64)
+            .add_and(ir_size::bit_64)
 
-            // The OF, SF, ZF, AF, PF, and CF flags are set according to the result.
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
-            std::make_shared<cmd_and>(ir_size::bit_64),
-        };
+            .append(compute_of(target_size))
+            .append(compute_af(target_size))
+            .append(compute_cf(target_size))
 
-        insts.append_range(compute_of(target_size));
-        insts.append_range(compute_af(target_size));
-        insts.append_range(compute_cf(target_size));
+            .append(util::calculate_sf(target_size))
+            .append(util::calculate_zf(target_size))
+            .append(util::calculate_pf(target_size));
 
-        insts.append_range(util::calculate_sf(target_size));
-        insts.append_range(util::calculate_zf(target_size));
-        insts.append_range(util::calculate_pf(target_size));
-
-        return insts;
+        return builder.build();
     }
 
     ir_insts sub::compute_of(ir_size size)

@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     add::add()
@@ -34,7 +36,7 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 2, "invalid signature. must contain 2 operands");
         VM_ASSERT(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
 
-        ir_size target_size = signature.front();
+        const ir_size target_size = signature.front();
 
         // the way this is done is far slower than it used to be
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
@@ -44,89 +46,65 @@ namespace eagle::ir::handler
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_CF |
             ZYDIS_CPUFLAG_PF;
-        ir_insts insts = {
-            std::make_shared<cmd_add>(target_size, false, true),
+        block_builder builder;
+        builder
+            .add_add(target_size, false, true)
+            .add_context_rflags_load()
+            .add_push(~affected_flags, ir_size::bit_64)
+            .add_and(ir_size::bit_64)
 
-            // The OF, SF, ZF, AF, CF, and PF flags are set according to the result.
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
-            std::make_shared<cmd_and>(ir_size::bit_64),
-        };
+            .append(compute_of(target_size))
+            .append(compute_af(target_size))
+            .append(compute_cf(target_size))
 
-        insts.append_range(compute_of(target_size));
-        insts.append_range(compute_af(target_size));
-        insts.append_range(compute_cf(target_size));
+            .append(util::calculate_sf(target_size))
+            .append(util::calculate_zf(target_size))
+            .append(util::calculate_pf(target_size));
 
-        insts.append_range(util::calculate_sf(target_size));
-        insts.append_range(util::calculate_zf(target_size));
-        insts.append_range(util::calculate_pf(target_size));
-
-        return insts;
+        return builder.build();
     }
 
     ir_insts add::compute_of(ir_size size)
     {
         // a_sign == b_sign AND r_sign == b_sign
-        ir_insts insts;
+        block_builder builder;
 
         // r_sign XOR b_sign
-        {
-            insts.append_range(copy_to_top(size, util::result));
-            insts.append_range(ir_insts{
-                // r_sign = r >> (size - 1) & 1
-                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-                std::make_shared<cmd_shr>(size),
-                std::make_shared<cmd_push>(1, size),
-                std::make_shared<cmd_and>(size),
-            });
-
-            insts.append_range(copy_to_top(size, util::param_two, { size }));
-            insts.append_range(ir_insts{
-                // b_sign = b >> (size - 1) & 1
-                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-                std::make_shared<cmd_shr>(size),
-                std::make_shared<cmd_push>(1, size),
-                std::make_shared<cmd_and>(size),
-            });
-
-            insts.push_back(std::make_shared<cmd_xor>(size));
-        }
+        builder
+            .append(copy_to_top(size, util::result))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
+            .add_push(1, size)
+            .add_and(size)
+            .append(copy_to_top(size, util::param_two, { size }))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
+            .add_push(1, size)
+            .add_and(size)
+            .add_xor(size);
 
         // b_sign XOR a_sign
-        {
-            insts.append_range(copy_to_top(size, util::param_two, { size }));
-            insts.append_range(ir_insts{
-                // b_sign = b >> (size - 1) & 1
-                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-                std::make_shared<cmd_shr>(size),
-                std::make_shared<cmd_push>(1, size),
-                std::make_shared<cmd_and>(size),
-            });
+        builder
+            .append(copy_to_top(size, util::param_two, { size }))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
+            .add_push(1, size)
+            .add_and(size)
+            .append(copy_to_top(size, util::param_one, { size, size }))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
+            .add_push(1, size)
+            .add_and(size)
+            .add_xor(size);
 
-            insts.append_range(copy_to_top(size, util::param_one, { size, size }));
-            insts.append_range(ir_insts{
-                // a_sign = a >> (size - 1) & 1
-                std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-                std::make_shared<cmd_shr>(size),
-                std::make_shared<cmd_push>(1, size),
-                std::make_shared<cmd_and>(size),
-            });
+        builder
+            .add_or(size)
+            .add_resize(ir_size::bit_64, size)
+            .add_push(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64)
+            .add_shl(ir_size::bit_64)
+            .add_or(ir_size::bit_64);
 
-            insts.push_back(std::make_shared<cmd_xor>(size));
-        }
-
-        insts.append_range(ir_insts{
-            // (r_sign XOR b_sign) OR (b_sign XOR a_sign)
-            std::make_shared<cmd_or>(size),
-
-            // OF = (r_sign XOR b_sign) OR (b_sign XOR a_sign)
-            std::make_shared<cmd_resize>(ir_size::bit_64, size),
-            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
-            std::make_shared<cmd_shl>(ir_size::bit_64),
-            std::make_shared<cmd_or>(ir_size::bit_64),
-        });
-
-        return insts;
+        return builder.build();
     }
 
     ir_insts add::compute_af(ir_size size)
@@ -134,37 +112,31 @@ namespace eagle::ir::handler
         //
         // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
         //
-        ir_insts insts;
+        block_builder builder;
 
-        insts.append_range(copy_to_top(size, util::param_one));
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(0xF, size),
-            std::make_shared<cmd_and>(size),
-        });
+        builder
+            .append(copy_to_top(size, util::param_one))
+            .add_push(0xF, size)
+            .add_and(size)
 
-        insts.append_range(copy_to_top(size, util::param_two, { size }));
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(0xF, size),
-            std::make_shared<cmd_and>(size),
-        });
+            .append(copy_to_top(size, util::param_two, { size }))
+            .add_push(0xF, size)
+            .add_and(size)
 
-        // (() + () >> 4) & 1
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_add>(size),
-            std::make_shared<cmd_push>(4, size),
-            std::make_shared<cmd_shr>(size),
+            .add_add(size)
 
-            std::make_shared<cmd_push>(1, size),
-            std::make_shared<cmd_and>(size),
+            .add_push(4, size)
+            .add_shr(size)
 
-            // AF = ((A & 0xF) + (B & 0xF) >> 4) & 1
-            std::make_shared<cmd_resize>(ir_size::bit_64, size),
-            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64),
-            std::make_shared<cmd_shl>(ir_size::bit_64),
-            std::make_shared<cmd_or>(ir_size::bit_64),
-        });
+            .add_push(1, size)
+            .add_and(size)
 
-        return insts;
+            .add_resize(ir_size::bit_64, size)
+            .add_push(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64)
+            .add_shl(ir_size::bit_64)
+            .add_or(ir_size::bit_64);
+
+        return builder.build();
     }
 
     ir_insts add::compute_cf(ir_size size)
@@ -172,18 +144,19 @@ namespace eagle::ir::handler
         //
         // CF = ((A & B) | ((A | B) & ~R)) >> 63
         //
-
-        ir_insts insts;
+        block_builder builder;
 
         // (A & B)
-        insts.append_range(copy_to_top(size, util::param_one));
-        insts.append_range(copy_to_top(size, util::param_two, { size }));
-        insts.push_back(std::make_shared<cmd_and>(size));
+        builder
+            .append(copy_to_top(size, util::param_one))
+            .append(copy_to_top(size, util::param_two, { size }))
+            .add_and(size);
 
         // (A | B)
-        insts.append_range(copy_to_top(size, util::param_one, { size }));
-        insts.append_range(copy_to_top(size, util::param_two, { size, size }));
-        insts.push_back(std::make_shared<cmd_or>(size));
+        builder
+            .append(copy_to_top(size, util::param_one, { size }))
+            .append(copy_to_top(size, util::param_two, { size, size }))
+            .add_or(size);
 
         // (A | B) & ~R
         uint64_t target_points;
@@ -191,41 +164,32 @@ namespace eagle::ir::handler
         {
             case ir_size::bit_64:
                 target_points = UINT64_MAX;
-            break;
+                break;
             case ir_size::bit_32:
                 target_points = UINT32_MAX;
-            break;
+                break;
             case ir_size::bit_16:
                 target_points = UINT16_MAX;
-            break;
+                break;
             case ir_size::bit_8:
                 target_points = UINT8_MAX;
-            break;
+                break;
         }
 
-        insts.append_range(copy_to_top(size, util::result, { size, size, size }));
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(target_points, size),
-            std::make_shared<cmd_xor>(size),
-            std::make_shared<cmd_or>(size)
-        });
+        builder
+            .append(copy_to_top(size, util::result, { size, size, size }))
+            .add_push(target_points, size)
+            .add_xor(size)
+            .add_or(size)
+            .add_or(size)
+            .add_push(static_cast<uint32_t>(size) - 1, size)
+            .add_shr(size)
+            .add_resize(ir_size::bit_64, size)
+            .add_push(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64)
+            .add_shl(ir_size::bit_64)
+            .add_or(ir_size::bit_64);
 
-        // ((A & B) | ((A | B) & ~R))
-        insts.push_back(std::make_shared<cmd_or>(size));
-
-        // CF = ((A & B) | ((A | B) & ~R)) >> bit_count
-        const auto bit_count = static_cast<uint32_t>(size);
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(bit_count - 1, size),
-            std::make_shared<cmd_shr>(size),
-
-            std::make_shared<cmd_resize>(ir_size::bit_64, size),
-            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
-            std::make_shared<cmd_shl>(ir_size::bit_64),
-            std::make_shared<cmd_or>(ir_size::bit_64)
-        });
-
-        return insts;
+        return builder.build();
     }
 }
 

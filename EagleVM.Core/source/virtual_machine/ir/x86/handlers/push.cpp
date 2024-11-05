@@ -1,5 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/push.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     push::push()

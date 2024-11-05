@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     inc::inc()
@@ -23,91 +25,78 @@ namespace eagle::ir::handler
         };
     }
 
-    ir_insts inc::gen_handler(handler_sig signature)
+    ir_insts inc::gen_handler(const handler_sig signature)
     {
         VM_ASSERT(signature.size() == 1, "invalid signature. must contain 1 operand");
-        ir_size target_size = signature.front();
+        const ir_size target_size = signature.front();
 
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF;
-        ir_insts insts = {
-            std::make_shared<cmd_push>(1, target_size),
-            std::make_shared<cmd_add>(target_size, false, true),
+        block_builder builder;
+        builder
+            .add_push(1, target_size)
+            .add_add(target_size, false, true)
 
             // The CF flag is not affected. The OF, SF, ZF, AF, and PF flags are set according to the result.
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
-            std::make_shared<cmd_and>(ir_size::bit_64),
-        };
+            .add_context_rflags_load()
+            .add_push(~affected_flags, ir_size::bit_64)
+            .add_and(ir_size::bit_64)
 
-        insts.append_range(util::calculate_sf(target_size));
-        insts.append_range(util::calculate_zf(target_size));
-        insts.append_range(util::calculate_pf(target_size));
+            .append(util::calculate_sf(target_size))
+            .append(util::calculate_zf(target_size))
+            .append(util::calculate_pf(target_size))
 
-        insts.append_range(compute_of(target_size));
-        insts.append_range(compute_af(target_size));
+            .append(compute_of(target_size))
+            .append(compute_af(target_size));
 
-        return insts;
+        return builder.build();
     }
 
     ir_insts inc::compute_of(ir_size size)
     {
-        ir_insts insts;
-        insts.append_range(copy_to_top(size, util::param_two));
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-            std::make_shared<cmd_shr>(size),
-        });
+        block_builder builder;
+        builder
+            .append(copy_to_top(size, util::param_two))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
 
-        insts.append_range(copy_to_top(size, util::result, { size }));
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(static_cast<uint64_t>(size) - 1, size),
-            std::make_shared<cmd_shr>(size),
-        });
+            .append(copy_to_top(size, util::result, { size }))
+            .add_push(static_cast<uint64_t>(size) - 1, size)
+            .add_shr(size)
 
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_cmp>(size),
+            .add_cmp(size)
+            .add_flags_load(vm_flags::eq)
+            .add_push(1, ir_size::bit_64)
+            .add_xor(ir_size::bit_64)
+            .add_push(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64)
+            .add_shl(ir_size::bit_64)
+            .add_or(ir_size::bit_64);
 
-            std::make_shared<cmd_flags_load>(vm_flags::eq),
-            std::make_shared<cmd_push>(1, ir_size::bit_64),
-            std::make_shared<cmd_xor>(ir_size::bit_64),
-
-            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
-            std::make_shared<cmd_shl>(ir_size::bit_64),
-
-            std::make_shared<cmd_or>(ir_size::bit_64),
-        });
-
-        return insts;
+        return builder.build();
     }
 
     ir_insts inc::compute_af(ir_size size)
     {
-        ir_insts insts;
-        insts.append_range(copy_to_top(size, util::param_two));
+        block_builder builder;
+        builder
+            .append(copy_to_top(size, util::param_two))
+            .add_push(0xF, size)
+            .add_and(size)
+            .add_push(1, size)
+            .add_add(size)
+            .add_push(0x10, size)
+            .add_and(size)
 
-        insts.append_range(ir_insts{
-            std::make_shared<cmd_push>(0xF, size),
-            std::make_shared<cmd_and>(size),
+            .add_push(0, size)
+            .add_cmp(size)
 
-            std::make_shared<cmd_push>(1, size),
-            std::make_shared<cmd_add>(size),
+            .add_flags_load(vm_flags::eq)
+            .add_push(1, ir_size::bit_64)
+            .add_xor(ir_size::bit_64)
+            .add_push(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64)
+            .add_shl(ir_size::bit_64)
+            .add_or(ir_size::bit_64);
 
-            std::make_shared<cmd_push>(0x10, size),
-            std::make_shared<cmd_and>(size),
-
-            std::make_shared<cmd_push>(0, size),
-            std::make_shared<cmd_cmp>(size),
-
-            std::make_shared<cmd_flags_load>(vm_flags::eq),
-            std::make_shared<cmd_push>(1, ir_size::bit_64),
-            std::make_shared<cmd_xor>(ir_size::bit_64),
-            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_AF), ir_size::bit_64),
-            std::make_shared<cmd_shl>(ir_size::bit_64),
-
-            std::make_shared<cmd_or>(ir_size::bit_64),
-        });
-
-        return insts;
+        return builder.build();
     }
 }
 

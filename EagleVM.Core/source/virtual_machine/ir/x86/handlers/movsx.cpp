@@ -3,6 +3,8 @@
 #include "eaglevm-core/compiler/code_label.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     movsx::movsx()

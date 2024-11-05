@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     x_or::x_or()
@@ -43,20 +45,19 @@ namespace eagle::ir::handler
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
-        ir_insts insts = {
-            std::make_shared<cmd_xor>(target_size, false, true),
+        block_builder builder;
+        builder
+            .add_xor(target_size, false, true)
 
-            // The OF and CF flags are cleared; the SF, ZF, and PF flags are set according to the result. The state of the AF flag is undefined.
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
-            std::make_shared<cmd_and>(ir_size::bit_64),
-        };
+            .add_context_rflags_load()
+            .add_push(~affected_flags, ir_size::bit_64)
+            .add_and(ir_size::bit_64)
 
-        insts.append_range(util::calculate_sf(target_size));
-        insts.append_range(util::calculate_zf(target_size));
-        insts.append_range(util::calculate_pf(target_size));
+            .append(util::calculate_sf(target_size))
+            .append(util::calculate_zf(target_size))
+            .append(util::calculate_pf(target_size));
 
-        return insts;
+        return builder.build();
     }
 }
 

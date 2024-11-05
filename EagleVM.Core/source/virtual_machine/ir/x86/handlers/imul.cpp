@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     imul::imul()

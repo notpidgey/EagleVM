@@ -3,6 +3,8 @@
 #include "eaglevm-core/virtual_machine/ir/x86/util.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 #define HS(x) hash_string::hash(x)
 
 namespace eagle::ir

@@ -4,6 +4,8 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     shr::shr()
@@ -34,7 +36,7 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 2, "invalid signature. must contain 2 operands");
         VM_ASSERT(signature[0] == signature[1], "invalid signature. must contain same sized parameters");
 
-        ir_size target_size = signature.front();
+        const ir_size target_size = signature.front();
 
         // the way this is done is far slower than it used to be
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
@@ -43,31 +45,30 @@ namespace eagle::ir::handler
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;
-        ir_insts insts = {
-            std::make_shared<cmd_shr>(target_size, false, true),
+        block_builder builder;
+        builder
+            .add_shr(target_size, false, true)
 
             /*
                 The CF flag contains the value of the last bit shifted out of the destination operand; it is undefined for SHL and SHR instructions
-               where the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit
-               shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
-               0, the flags are not affected. For a non-zero count, the AF flag is undefined.
+                where the count is greater than or equal to the size (in bits) of the destination operand. The OF flag is affected only for 1-bit
+                shifts (see “Description” above); otherwise, it is undefined. The SF, ZF, and PF flags are set according to the result. If the count is
+                0, the flags are not affected. For a non-zero count, the AF flag is undefined.
             */
 
             // CF, OF, SF, ZF, PF are all set
-            std::make_shared<cmd_context_rflags_load>(),
-            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
-            std::make_shared<cmd_and>(ir_size::bit_64),
-        };
+            .add_context_rflags_load()
+            .add_push(~affected_flags, ir_size::bit_64)
+            .add_and(ir_size::bit_64)
 
-        insts.append_range(compute_cf(target_size));
-        insts.append_range(compute_of(target_size));
+            .append(compute_of(target_size))
+            .append(compute_cf(target_size))
 
-        // The SF, ZF, and PF flags are set according to the result.
-        insts.append_range(util::calculate_sf(target_size));
-        insts.append_range(util::calculate_zf(target_size));
-        insts.append_range(util::calculate_pf(target_size));
+            .append(util::calculate_sf(target_size))
+            .append(util::calculate_zf(target_size))
+            .append(util::calculate_pf(target_size));
 
-        return insts;
+        return builder.build();
     }
 
     ir_insts shr::compute_cf(ir_size size)
