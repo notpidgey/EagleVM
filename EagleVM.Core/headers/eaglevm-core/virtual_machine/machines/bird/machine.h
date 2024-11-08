@@ -2,6 +2,7 @@
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include <vector>
 
+#include "eaglevm-core/codec/zydis_encoder.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
 
@@ -56,7 +57,7 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
     private:
-        asmb::code_container_ptr out_block;
+        codec::encoder::encode_builder_ptr out_block;
 
         settings_ptr settings;
         register_manager_ptr reg_man;
@@ -70,6 +71,6 @@ namespace eagle::virt::eg
         void pop_to_register(codec::reg register);
         void push_register(codec::reg register);
 
-        codec::reg_size get_size(ir::ir_size size);
+        void create_handler(bool force_inline, std::function<void(codec::encoder::encode_builder_ptr&, std::function<codec::reg()>)> handler_create);
     };
 }

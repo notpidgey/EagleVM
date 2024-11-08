@@ -51,6 +51,39 @@ namespace eagle::codec
         return static_cast<reg>(result);
     }
 
+    uint16_t reg_size_to_b(const reg_size size)
+    {
+        uint16_t read_size = 0;
+        switch (size)
+        {
+            case bit_512:
+                read_size = 512 / 8;
+            break;
+            case bit_256:
+                read_size = 256 / 8;
+            break;
+            case bit_128:
+                read_size = 128 / 8;
+            break;
+            case bit_64:
+                read_size = 64 / 8;
+            break;
+            case bit_32:
+                read_size = 32 / 8;
+            break;
+            case bit_16:
+                read_size = 16 / 8;
+            break;
+            case bit_8:
+                read_size = 8 / 8;
+            break;
+            default:
+                VM_ASSERT("invalid reg size handled");
+        }
+
+        return read_size;
+    }
+
     reg_class get_max_size(reg input_reg)
     {
         const zydis_register zy_register = static_cast<zydis_register>(input_reg);

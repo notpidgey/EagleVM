@@ -52,6 +52,12 @@ namespace eagle::util
         return distribution(gen);
     }
 
+    bool ran_device::gen_chance(const float chance)
+    {
+        std::bernoulli_distribution dist(chance);
+        return dist(gen);
+    }
+
     double ran_device::gen_dist(std::uniform_real_distribution<>& distribution)
     {
         return distribution(gen);

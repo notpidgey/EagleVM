@@ -815,8 +815,8 @@ namespace eagle::virt::eg
             block->add({
                 encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
                 encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
-                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, 0, TOB(from))),
 
+                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, 0, TOB(from))),
                 encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
                 encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
@@ -826,8 +826,8 @@ namespace eagle::virt::eg
         {
             block->add({
                 encode(m_mov, ZREG(pop_reg_one), ZMEMBD(VSP, 0, TOB(from))),
-                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, TOB(from), TOB(from))),
 
+                encode(m_mov, ZREG(pop_reg_two), ZMEMBD(VSP, TOB(from), TOB(from))),
                 encode(m_add, ZREG(VSP), ZIMMS(TOB(from))),
                 encode(m_imul, ZREG(pop_reg_two), ZREG(pop_reg_one)),
                 encode(m_mov, ZMEMBD(VSP, 0, TOB(from)), ZREG(pop_reg_two))
@@ -855,7 +855,7 @@ namespace eagle::virt::eg
         {
             block->add({
                 encode(m_mov, ZREG(pop_reg), ZMEMBD(VSP, 0, TOB(from))),
-                encode(m_sub, ZREG(VSP), ZMEMBD(VSP, 0, TOB(from))),
+                encode(m_sub, ZREG(VSP), ZIMMS(TOB(from))),
 
                 encode(m_mov, ZREG(shift_reg), ZREG(pop_reg)),
                 encode(m_sar, ZREG(shift_reg), ZIMMS(TOB(from) - 1)),

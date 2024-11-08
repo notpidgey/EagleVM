@@ -29,6 +29,7 @@ namespace eagle::codec
     reg get_bit_version(zydis_register input_reg, reg_class target_size);
     reg get_largest_enclosing(reg input_reg);
 
+    uint16_t reg_size_to_b(reg_size size);
     bool is_upper_8(reg reg);
 
     reg_class get_class_from_size(const reg_size size);

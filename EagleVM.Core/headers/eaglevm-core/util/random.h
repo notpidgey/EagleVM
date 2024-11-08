@@ -16,6 +16,7 @@ namespace eagle::util
         uint16_t gen_16();
         uint8_t gen_8();
         uint64_t gen_dist(std::uniform_int_distribution<uint64_t>& distribution);
+        bool gen_chance(float chance);
         double gen_dist(std::uniform_real_distribution<>& distribution);
 
         template <typename T>
