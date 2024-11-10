@@ -66,7 +66,7 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
         }
     }
 
-    std::cout << "}\n";
+    std::cout << "}\n" << std::flush;
 }
 
 
@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
         ir::preopt_block_vec preopt = ir_trans->translate();
 
         // run some basic pre-optimization passes
-        ir::obfuscator::run_preopt_pass(preopt, &seg_live);
+        //ir::obfuscator::run_preopt_pass(preopt, &seg_live);
 
         // here we assign vms to each block
         // for the current example we can assign the same vm id to each block

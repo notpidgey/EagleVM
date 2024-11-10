@@ -483,8 +483,7 @@ namespace eagle::virt::eg
             const reg to_reg = get_bit_version(temp_reg, to_size);
 
             out.make(m_mov, reg_op(from_reg), mem_op(VSP, 0, from_size))
-               .make(m_movsx, reg_op(to_reg), reg_op(from_reg))
-               .make(m_mov, mem_op(VSP, 0, to_size), reg_op(to_reg));
+               .make(m_movsx, reg_op(to_reg), reg_op(from_reg));
 
             const auto stack_diff = static_cast<uint32_t>(to_size) - static_cast<uint32_t>(from_size);
             const auto byte_diff = stack_diff / 8;
@@ -573,18 +572,31 @@ namespace eagle::virt::eg
         {
             encode_builder& out = *out_container;
 
-            const auto value_reg = get_bit_version(alloc_reg(), size);
-            const auto shift_reg = get_bit_version(alloc_reg(), size);
+            const auto value_reg = alloc_reg();
+            const auto value_reg_size = get_bit_version(value_reg, size);
+            const auto shift_reg = alloc_reg();
+            const auto shift_reg_size = get_bit_version(shift_reg, size);
 
-            out.make(m_mov, reg_op(shift_reg), mem_op(VSP, 0, size));
-            out.make(m_mov, reg_op(shift_reg), mem_op(VSP, TOB(size), size));
+            out.make(m_mov, reg_op(shift_reg_size), mem_op(VSP, 0, size));
+            out.make(m_mov, reg_op(value_reg_size), mem_op(VSP, TOB(size), size));
             if (cmd->get_preserved())
-                out.make(m_sub, reg_op(shift_reg), imm_op(size));
+                out.make(m_sub, reg_op(VSP), imm_op(size));
             else
-                out.make(m_add, reg_op(shift_reg), imm_op(size));
+                out.make(m_add, reg_op(VSP), imm_op(size));
+
+            if (cmd->get_size() < ir::ir_size::bit_64)
+            {
+                if (cmd->get_size() != ir::ir_size::bit_32)
+                {
+                    const reg from = get_bit_version(value_reg_size, to_reg_size(cmd->get_size()));
+                    const reg to = get_bit_version(value_reg_size, to_reg_size(ir::ir_size::bit_64));
+
+                    block->make(m_movzx, reg_op(to), reg_op(from));
+                }
+            }
 
             out.make(m_shlx, reg_op(value_reg), reg_op(value_reg), reg_op(shift_reg))
-               .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg));
+               .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg_size));
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
@@ -597,18 +609,31 @@ namespace eagle::virt::eg
         {
             encode_builder& out = *out_container;
 
-            const auto value_reg = get_bit_version(alloc_reg(), size);
-            const auto shift_reg = get_bit_version(alloc_reg(), size);
+            const auto value_reg = alloc_reg();
+            const auto value_reg_size = get_bit_version(value_reg, size);
+            const auto shift_reg = alloc_reg();
+            const auto shift_reg_size = get_bit_version(shift_reg, size);
 
-            out.make(m_mov, reg_op(shift_reg), mem_op(VSP, 0, size));
-            out.make(m_mov, reg_op(shift_reg), mem_op(VSP, TOB(size), size));
+            out.make(m_mov, reg_op(shift_reg_size), mem_op(VSP, 0, size));
+            out.make(m_mov, reg_op(value_reg_size), mem_op(VSP, TOB(size), size));
             if (cmd->get_preserved())
-                out.make(m_sub, reg_op(shift_reg), imm_op(size));
+                out.make(m_sub, reg_op(VSP), imm_op(size));
             else
-                out.make(m_add, reg_op(shift_reg), imm_op(size));
+                out.make(m_add, reg_op(VSP), imm_op(size));
+
+            if (cmd->get_size() < ir::ir_size::bit_64)
+            {
+                if (cmd->get_size() != ir::ir_size::bit_32)
+                {
+                    const reg from = get_bit_version(value_reg_size, to_reg_size(cmd->get_size()));
+                    const reg to = get_bit_version(value_reg_size, to_reg_size(ir::ir_size::bit_64));
+
+                    block->make(m_movzx, reg_op(to), reg_op(from));
+                }
+            }
 
             out.make(m_shrx, reg_op(value_reg), reg_op(value_reg), reg_op(shift_reg))
-               .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg));
+               .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg_size));
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
@@ -714,7 +739,7 @@ namespace eagle::virt::eg
                 out.make(m_xor, reg_op(target_reg_size), reg_op(target_reg_size))
                    .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
                    .make(m_sub, reg_op(VSP), imm_op(bit_diff / 8))
-                   .make(m_mov, mem_op(VSP, 0, target_size), imm_op(target_reg_size));
+                   .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
             }, cmd->get_current(), cmd->get_target());
         }
         else if (from_size > target_size)
@@ -730,7 +755,7 @@ namespace eagle::virt::eg
 
                 out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
                    .make(m_add, reg_op(VSP), imm_op(bit_diff / 8))
-                   .make(m_mov, mem_op(VSP, 0, target_size), imm_op(target_reg_size));
+                   .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
             }, cmd->get_current(), cmd->get_target());
         }
     }
@@ -979,9 +1004,9 @@ namespace eagle::virt::eg
         else
         {
             out.make(m_mov, reg_op(r_par1), mem_op(VSP, 0, size))
-               .make(m_add, reg_op(r_par1), imm_op(size))
+               .make(m_add, reg_op(VSP), imm_op(size))
                .make(m_mov, reg_op(r_par2), mem_op(VSP, 0, size))
-               .make(m_add, reg_op(r_par2), imm_op(size));
+               .make(m_add, reg_op(VSP), imm_op(size));
         }
 
         out.make(command, reg_op(r_par1), reg_op(r_par2))

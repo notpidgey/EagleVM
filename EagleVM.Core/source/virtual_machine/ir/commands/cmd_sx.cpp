@@ -5,6 +5,7 @@ namespace eagle::ir
     cmd_sx::cmd_sx(const ir_size to, const ir_size from)
         : base_command(command_type::vm_sx), target(to), current(from)
     {
+        VM_ASSERT(to >= from, "sign extension must grow");
     }
 
     ir_size cmd_sx::get_target() const

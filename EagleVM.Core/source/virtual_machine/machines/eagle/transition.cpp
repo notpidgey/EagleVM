@@ -76,11 +76,12 @@ namespace eagle::virt::eg
         builder.make(m_mov, reg_op(VSP), reg_op(rsp))
                .make(m_mov, reg_op(VREGS), reg_op(VSP))
                .make(m_mov, reg_op(VCS), reg_op(VSP))
-               .make(m_lea, reg_op(rsp), mem_op(VREGS, 8 * vm_stack_regs, bit_64))
-               .make(m_lea, reg_op(temp), mem_op(VSP, 8 * (vm_stack_regs + vm_overhead), bit_64))
-               .make(m_mov, reg_op(temp), mem_op(temp, 0, bit_64))
-               .make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
-               .make(m_mov, mem_op(VCS, 0, 8), reg_op(temp));
+               .make(m_lea, reg_op(rsp), mem_op(VREGS, 8 * vm_stack_regs, bit_64));
+
+        // .make(m_lea, reg_op(temp), mem_op(VSP, 8 * (vm_stack_regs + vm_overhead), bit_64))
+        // .make(m_mov, reg_op(temp), mem_op(temp, 0, bit_64))
+        // .make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
+        // .make(m_mov, mem_op(VCS, 0, 8), reg_op(temp));
 
         // mov VBASE, 0x14000000 ; load base
         const asmb::code_label_ptr rel_label = asmb::code_label::create();
@@ -93,7 +94,7 @@ namespace eagle::virt::eg
 
         // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed a rva)
         // mov VSP, VTEMP
-        builder.make(m_lea, reg_op(temp), mem_op(VSP, 8 * (vm_stack_regs + vm_overhead + 1), bit_64))
+        builder.make(m_lea, reg_op(temp), mem_op(VSP, 8 * (vm_stack_regs + vm_overhead), bit_64))
                .make(m_mov, reg_op(VSP), reg_op(temp));
 
         // setup register mappings
@@ -123,22 +124,7 @@ namespace eagle::virt::eg
     {
         encode_builder& builder = *block;
 
-        const reg temp = reg_64_container->get_any();
-
-        // we need to place the target RSP after all the pops
-        // lea VTEMP, [VREGS + vm_stack_regs]
-        // mov [VTEMP], VSP
-        builder.make(m_lea, reg_op(temp), mem_op(VREGS, 8 * vm_stack_regs, bit_64))
-               .make(m_mov, mem_op(temp, 0, 8), reg_op(VSP));
-
-        // we also need to setup an RIP to return to main program execution
-        // we will place that after the RSP
-        builder.make(m_mov, reg_op(VIP), reg_op(VBASE))
-               .make(m_lea, reg_op(VIP), mem_op(VIP, VCSRET, 1, 0, bit_64))
-               .make(m_mov, mem_op(VSP, -8, 8), reg_op(VIP));
-
-        // mov rsp, VREGS
-        builder.make(m_mov, reg_op(rsp), reg_op(VREGS));
+        builder.make(m_nop);
 
         // restore context
         std::array<reg, 16> gprs = register_manager::get_gpr64_regs();
@@ -152,13 +138,36 @@ namespace eagle::virt::eg
             scope_register_manager scope = reg_64_container->create_scope();
             const reg target_temp = scope.reserve();
 
-            // todo: actually find a way where you dont have to pass into the block
             handle_cmd(block, std::make_shared<ir::cmd_context_load>(gpr));
-
             builder.make(m_mov, reg_op(target_temp), mem_op(VSP, 0, bit_64))
                    .make(m_add, reg_op(VSP), imm_op(bit_64))
-                   .make(m_mov, mem_op(VREGS, displacement, 8), reg_op(target_temp));
+                   .make(m_mov, mem_op(VREGS, displacement, bit_64), reg_op(target_temp));
         }
+
+        // push exits
+        handle_cmd(block, std::make_shared<ir::cmd_push>(std::visit([](auto&& arg) -> ir::push_v {
+            return ir::push_v{std::forward<decltype(arg)>(arg)};
+        }, cmd->get_exit()), ir::ir_size::bit_64));
+
+        builder.make(m_mov, reg_op(VCSRET), mem_op(VSP, 0, bit_64))
+               .make(m_add, reg_op(VSP), imm_op(bit_64));
+
+        const reg temp = reg_64_container->get_any();
+
+        // we need to place the target RSP after all the pops
+        // lea VTEMP, [VREGS + vm_stack_regs]
+        // mov [VTEMP], VSP
+        builder.make(m_lea, reg_op(temp), mem_op(VREGS, 8 * vm_stack_regs, bit_64))
+               .make(m_mov, mem_op(temp, 0, bit_64), reg_op(VSP));
+
+        // we also need to setup an RIP to return to main program execution
+        // we will place that after the RSP
+        builder.make(m_mov, reg_op(VIP), reg_op(VBASE))
+               .make(m_lea, reg_op(VIP), mem_op(VIP, VCSRET, 1, 0, bit_64))
+               .make(m_mov, mem_op(VSP, -8, bit_64), reg_op(VIP));
+
+        // mov rsp, VREGS
+        builder.make(m_mov, reg_op(rsp), reg_op(VREGS));
 
         //pop r0-r15 to stack
         regs->enumerate([&](auto reg)

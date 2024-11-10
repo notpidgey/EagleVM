@@ -84,7 +84,7 @@ namespace eagle::asmb
 
                         attempt_instruction_fix(enc);
 
-                        compiled = codec::compile_absolute(enc, base_offset);
+                        compiled = codec::compile_absolute(enc, 0);
                         base_offset += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
