@@ -77,11 +77,13 @@ namespace eagle::ir::handler
             .add_shr(size)
             .add_push(1, size)
             .add_and(size)
+
             .append(copy_to_top(size, util::param_two, { size }))
             .add_push(static_cast<uint64_t>(size) - 1, size)
             .add_shr(size)
             .add_push(1, size)
             .add_and(size)
+
             .add_xor(size);
 
         // b_sign XOR a_sign
@@ -91,11 +93,13 @@ namespace eagle::ir::handler
             .add_shr(size)
             .add_push(1, size)
             .add_and(size)
+
             .append(copy_to_top(size, util::param_one, { size, size }))
             .add_push(static_cast<uint64_t>(size) - 1, size)
             .add_shr(size)
             .add_push(1, size)
             .add_and(size)
+
             .add_xor(size);
 
         builder

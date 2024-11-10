@@ -1,5 +1,6 @@
 #pragma once
 #include <ranges>
+#include <queue>
 
 #include "zydis_defs.h"
 #include "zydis_enum.h"
@@ -8,18 +9,7 @@
 
 namespace eagle::codec::encoder
 {
-    struct dependent_collector
-    {
-    public:
-        virtual ~dependent_collector() = default;
-
-        virtual std::vector<asmb::code_label_ptr> dependents()
-        {
-            return { };
-        };
-    };
-
-    struct mem_op final : public dependent_collector
+    struct mem_op final
     {
         mem_op(const reg base, const uint16_t displacement, const uint16_t read_size)
             : base(base), index(none), scale(1), displacement(displacement), read_size(read_size)
@@ -51,46 +41,53 @@ namespace eagle::codec::encoder
         uint16_t read_size;
     };
 
-    struct reg_op final : public dependent_collector
+    struct reg_op final
     {
         explicit reg_op(const reg reg)
             : reg(reg)
         {
-
         }
 
         reg reg;
     };
 
-    struct imm_op final : public dependent_collector
+    struct imm_op final
     {
-        explicit imm_op(const uint64_t value, bool relative = false)
-            : value(value)
+        explicit imm_op(const uint64_t value, const bool relative = false)
+            : value(value), relative(relative)
         {
         }
 
         explicit imm_op(const reg_size size)
+            : relative(false)
         {
-
+            value = reg_size_to_b(size);
         }
 
         uint64_t value;
+        bool relative;
     };
 
-    struct imm_label_operand final : public dependent_collector
+    struct imm_label_operand final
     {
-        explicit imm_label_operand(const asmb::code_label_ptr& value, bool relative = false)
-            : code_label(value)
+        explicit imm_label_operand(const asmb::code_label_ptr& value, const bool relative = false)
+            : code_label(value), relative(relative)
         {
         }
 
+        asmb::code_label_ptr get_dependent()
+        {
+            return code_label;
+        }
+
         asmb::code_label_ptr code_label;
+        bool relative;
     };
 
     struct inst_req
     {
         mnemonic mnemonic;
-        std::vector<std::variant<mem_op, reg_op, imm_op>> operands;
+        std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
 
         std::vector<asmb::code_label_ptr> get_dependents()
         {
@@ -99,11 +96,43 @@ namespace eagle::codec::encoder
             {
                 std::visit([&](auto&& inst)
                 {
-                    dependents.append_range(inst.get_dependents());
+                    using T = std::decay_t<decltype(inst)>;
+                    if constexpr (std::is_same_v<T, imm_label_operand>)
+                    {
+                        imm_label_operand& label_op = inst;
+                        dependents.push_back(label_op.get_dependent());
+                    }
                 }, op);
             }
 
             return dependents;
+        }
+
+        bool get_rva_dependent()
+        {
+            bool is_dependent = false;
+            for (auto& op : operands)
+            {
+                std::visit([&](auto&& inst)
+                {
+                    using T = std::decay_t<decltype(inst)>;
+                    if constexpr (std::is_same_v<T, imm_label_operand>)
+                    {
+                        const imm_label_operand& label_op = inst;
+                        is_dependent |= label_op.relative;
+                    }
+                    else if constexpr (std::is_same_v<T, imm_op>)
+                    {
+                        const imm_op& imm_op = inst;
+                        is_dependent |= imm_op.relative;
+                    }
+                }, op);
+
+                if (is_dependent)
+                    break;
+            }
+
+            return is_dependent;
         }
 
         enc::req build()
@@ -152,16 +181,19 @@ namespace eagle::codec::encoder
 
             req.operands[op_index].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
             req.operands[op_index].imm.u = imm.value;
+            if (imm.relative)
+                req.operands[op_index].imm.u -= current_rva;
             req.operand_count++;
         }
 
         static void encode_op(enc::req& req, const imm_label_operand& imm, const uint64_t current_rva)
         {
             const auto op_index = req.operand_count;
-            const auto target_address = imm.code_label->get_address() - current_rva;
 
             req.operands[op_index].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
-            req.operands[op_index].imm.u = target_address;
+            req.operands[op_index].imm.u = imm.code_label->get_address();
+            if(imm.relative)
+                req.operands[op_index].imm.u -= current_rva;
             req.operand_count++;
         }
     };
@@ -178,17 +210,18 @@ namespace eagle::codec::encoder
             // Expand and push each argument as a variant into the operands vector
             (instruction.operands.push_back(std::forward<Args>(args)), ...);
 
-            instruction_list.push_back(std::move(instruction));
-
+            instruction_list.push(instruction);
             return *this;
         }
 
         encode_builder& label(const asmb::code_label_ptr& ptr)
         {
-            // TODO:
+            instruction_list.push(ptr);
+            return *this;
         }
 
-        std::vector<inst_req> instruction_list;
+        using inst_req_label_v = std::variant<inst_req, asmb::code_label_ptr>;
+        std::queue<inst_req_label_v> instruction_list;
     };
 
     using encode_builder_ptr = std::shared_ptr<encode_builder>;

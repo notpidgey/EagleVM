@@ -6,29 +6,39 @@ namespace eagle::virt::eg
 {
     class register_loader
     {
-        std::pair<asmb::code_label_ptr, codec::reg> load_register(
-            codec::reg register_to_load,
-            codec::reg load_destination
-        );
+    public:
+        explicit register_loader(const register_manager_ptr& manager)
+            : regs(manager)
+        {
 
-        void load_register_internal(
-            codec::reg load_destination,
-            const asmb::code_container_ptr& out,
-            const std::vector<reg_mapped_range>& ranges_required
+        }
+
+        void load_register(
+            codec::reg register_to_load,
+            codec::reg load_destination, codec::encoder::encode_builder& out
         ) const;
 
-        std::pair<asmb::code_label_ptr, codec::reg> store_register(
+        void store_register(
             codec::reg register_to_store_into,
-            codec::reg source
-        );
+            codec::reg source, codec::encoder::encode_builder& out
+        ) const;
+
+        static void trim_ranges(std::vector<reg_mapped_range>& ranges_required, codec::reg target);
+        std::vector<reg_mapped_range> get_relevant_ranges(codec::reg source_reg) const;
+
+    private:
+        void load_register_internal(
+            codec::reg load_destination,
+            const std::vector<reg_mapped_range>& ranges_required,
+            codec::encoder::encode_builder& out
+        ) const;
 
         void store_register_internal(
             codec::reg source_register,
-            const asmb::code_container_ptr& out,
-            const std::vector<reg_mapped_range>& ranges_required
+            const std::vector<reg_mapped_range>& ranges_required,
+            codec::encoder::encode_builder& out
         ) const;
 
-        static void trim_ranges(std::vector<reg_mapped_range>& ranges_required, const codec::reg target);
-        std::vector<reg_mapped_range> get_relevant_ranges(const codec::reg source_reg) const;
+        register_manager_ptr regs;
     };
 }

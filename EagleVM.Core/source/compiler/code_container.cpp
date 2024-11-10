@@ -49,6 +49,24 @@ namespace eagle::asmb
         function_segments.emplace_back(code_label);
     }
 
+    void code_container::add(codec::encoder::inst_req& req)
+    {
+        function_segments.push_back(req);
+    }
+
+    void code_container::add(codec::encoder::encode_builder& req)
+    {
+        while (!req.instruction_list.empty())
+        {
+            std::visit([&](auto&& v)
+            {
+                function_segments.push_back(v);
+            }, req.instruction_list.front());
+
+            req.instruction_list.pop();
+        }
+    }
+
     std::vector<inst_label_v> code_container::get_instructions() const
     {
         return function_segments;

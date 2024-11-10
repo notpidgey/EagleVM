@@ -62,15 +62,20 @@ namespace eagle::virt::eg
         settings_ptr settings;
         register_manager_ptr reg_man;
 
+        register_manager_ptr regs;
         register_context_ptr reg_64_container;
         register_context_ptr reg_128_container;
 
         [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
-        void handle_generic_logic_cmd(codec::mnemonic command, ir::ir_size size, bool preserved);
+        void handle_generic_logic_cmd(codec::mnemonic command, ir::ir_size ir_size, bool preserved, codec::encoder::encode_builder& out, const std::function<codec::reg()>& alloc_reg);
 
-        void pop_to_register(codec::reg register);
-        void push_register(codec::reg register);
+        enum handler_call_flags
+        {
+            default_create = 0,
+            force_inline = 1,
+            force_unique = 2,
+        };
 
-        void create_handler(bool force_inline, std::function<void(codec::encoder::encode_builder_ptr&, std::function<codec::reg()>)> handler_create);
+        void create_handler(handler_call_flags flags, ir::command_type cmd_type, std::function<void(codec::encoder::encode_builder&, std::function<codec::reg()>)> handler_create);
     };
 }

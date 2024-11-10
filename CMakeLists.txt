@@ -136,6 +136,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/machines/bird/handler.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/bird/loader.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/bird/machine.cpp"
+	"EagleVM.Core/source/virtual_machine/machines/bird/transition.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_generators.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/handler_manager.cpp"
 	"EagleVM.Core/source/virtual_machine/machines/eagle/machine.cpp"

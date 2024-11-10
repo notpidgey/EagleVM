@@ -30,6 +30,7 @@ namespace eagle::asmb
 
     codec::encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
     {
+
         if (shuffle_functions)
             shuffle_containers();
 
