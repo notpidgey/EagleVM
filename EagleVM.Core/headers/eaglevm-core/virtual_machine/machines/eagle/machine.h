@@ -31,7 +31,6 @@ namespace eagle::virt::eg
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd) override;
-        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd) override;

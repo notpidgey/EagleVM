@@ -184,7 +184,7 @@ namespace eagle::ir
                 }
                 else
                 {
-                    VM_ASSERT(command_type != command_type::vm_exec_dynamic_x86 && command_type != command_type::vm_exec_x86,
+                    VM_ASSERT(command_type != command_type::vm_exec_x86,
                         "vm block may not execute x86 instructions");
                 }
             }
@@ -223,7 +223,7 @@ namespace eagle::ir
                 }
                 else
                 {
-                    VM_ASSERT(command_type == command_type::vm_exec_dynamic_x86 || command_type == command_type::vm_exec_x86,
+                    VM_ASSERT(command_type == command_type::vm_exec_x86,
                         "x86 block may only execute x86 instructions");
                 }
             }

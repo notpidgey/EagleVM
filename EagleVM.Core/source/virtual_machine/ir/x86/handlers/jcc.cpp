@@ -77,6 +77,8 @@ namespace eagle::ir
                 case exit_condition::jrcxz:
                     ir_output = write_check_register(get_register_for_condition(condition));
                     break;
+                case exit_condition::jmp:
+                    break;
                 default:
                     VM_ASSERT("invalid jump condition");
                     break;

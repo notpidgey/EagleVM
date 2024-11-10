@@ -329,12 +329,12 @@ namespace eagle::ir
         //         // meaning the first body block doesnt use vm enter
         //         continue;
         //     }
-//
+        //
         //     const block_ptr redirect_body = preopt_block->body.front();
-//
+        //
         //     bool vm_enter_unremovable = false;
         //     std::vector<cmd_branch_ptr> search_enter_refs;
-//
+        //
         //     // check if there are any external calls to any of the body blocks
         //     // if there are, we cannot remove vm enter
         //     for (auto& external : extern_call_blocks)
@@ -345,14 +345,14 @@ namespace eagle::ir
         //             goto UNREMOVABLE;
         //         }
         //     }
-//
+        //
         //     // go through each preopt block
         //     for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
         //     {
         //         // go through each block
         //         // the only blocks that can reference our search block are exits
         //         const auto& search_block = search_preopt_block->tail;
-//
+        //
         //         const cmd_branch_ptr branch = search_block->exit_as_branch();
         //         if (branch->branch_visits(search_enter))
         //         {
@@ -361,35 +361,35 @@ namespace eagle::ir
         //             else
         //                 search_enter_refs.emplace_back(branch);
         //         }
-//
+        //
         //         // the only case where this happens is if a block referencing the current search block
         //         // is using a different vm id
         //         if (vm_enter_unremovable)
         //             goto UNREMOVABLE;
         //     }
-//
+        //
         // UNREMOVABLE:
         //     if (!vm_enter_unremovable)
         //     {
         //         // we found that we can replace each branch to the block with a branch to the body
         //         for (const auto& branch_ref : search_enter_refs)
         //             branch_ref->rewrite_branch(search_enter, redirect_body);
-//
+        //
         //         preopt_block->head = nullptr;
-//
+        //
         //         // TODO: make sure we are using a VIRTUAL branch for these branches
         //         // this means a vmenter has to be added before any of these branches are called
         //         // also check if
         //     }
         // }
-//
+        //
         // // remove vm exit block if every branching block uses the same vm
         // for (const auto& [preopt_block, vm_id] : block_vm_ids)
         // {
         //     // check entery of every block
         //     const block_ptr preopt_exit = preopt_block->tail;
         //     const cmd_branch_ptr branch = preopt_exit->get_branch();
-//
+        //
         //     // now we want to check if the current vm group has all the exits of this preopt
         //     auto is_same_vm = [&](const ir_exit_result& exit_result)
         //     {
@@ -400,23 +400,23 @@ namespace eagle::ir
         //             {
         //                 const bool contains = search_preopt_block->head == exit_block || search_preopt_block->tail == exit_block ||
         //                     std::ranges::find(search_preopt_block->body, exit_block) != search_preopt_block->body.end();
-//
+        //
         //                 if (contains)
         //                     return search_vm_id == vm_id;
         //             }
         //         }
-//
+        //
         //         // if one of the exits is an rva then we have to exit no matter what : (
         //         // otherwise the search would fall through to this fail
         //         return false;
         //     };
-//
+        //
         //     if (is_same_vm(branch->get_condition_default()) && is_same_vm(branch->get_condition_special()))
         //     {
         //         // this means all exits are of the same vm
         //         const size_t command_count = preopt_exit->size();
         //         VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
-//
+        //
         //         // this means we should have a vm exit command
         //         if (command_count == 2)
         //             preopt_exit->erase(preopt_exit->begin());
@@ -515,45 +515,78 @@ namespace eagle::ir
 
     void ir_translator::handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, const uint64_t current_rva)
     {
-        if (codec::has_relative_operand(decoded_inst))
+        using namespace codec;
+        using namespace codec::encoder;
+
+        inst_req request(static_cast<mnemonic>(decoded_inst.instruction.mnemonic));
+        const enc::req encode_request = decode_to_encode(decoded_inst);
+
+        if (has_relative_operand(decoded_inst))
         {
-            auto [target_address, op_i] = codec::calc_relative_rva(decoded_inst, current_rva);
-            current_block->push_back(std::make_shared<cmd_x86_exec>(
-                [decoded_inst, target_address, op_i](const uint32_t rva)
+            auto [target_address, op_i] = calc_relative_rva(decoded_inst, current_rva);
+            for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
+            {
+                const auto op = encode_request.operands[i];
+                switch (op.type)
                 {
-                    // Decode instruction to an encode request
-                    codec::enc::req encode_request = codec::decode_to_encode(decoded_inst);
-                    codec::enc::op& op = encode_request.operands[op_i];
-
-                    // Adjust the operand based on its type
-                    switch (op.type)
+                    case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        case ZYDIS_OPERAND_TYPE_MEMORY:
-                        {
-                            // Adjust memory displacement
-                            op.mem.displacement = target_address - rva;
-                            break;
-                        }
-                        case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                        {
-                            // Adjust immediate value
-                            op.imm.s = target_address - rva;
-                            break;
-                        }
-                        default:
-                        {
-                            // Break on unexpected operand type
-                            __debugbreak();
-                        }
+                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        break;
                     }
+                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                    {
+                        auto& mem = op.mem;
+                        if (i == op_i)
+                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), target_address,
+                                mem.size, true));
+                        else
+                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                                mem.size));
 
-                    return encode_request;
-                }));
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                    {
+                        if (i == op_i)
+                            request.operands.push_back(imm_op(target_address, i == op_i));
+                        else
+                            request.operands.push_back(imm_op(op.imm.s));
+                        break;
+                    }
+                }
+            }
         }
         else
         {
-            current_block->push_back(std::make_shared<cmd_x86_exec>(decoded_inst));
+            for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
+            {
+                const auto op = encode_request.operands[i];
+                switch (op.type)
+                {
+                    case ZYDIS_OPERAND_TYPE_REGISTER:
+                    {
+                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                    {
+                        auto& mem = op.mem;
+                        request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                            mem.size));
+
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                    {
+                        request.operands.push_back(imm_op(op.imm.s));
+                        break;
+                    }
+                }
+            }
         }
+
+        current_block->push_back(std::make_shared<cmd_x86_exec>(request));
     }
 
     branch_info ir_translator::get_branch_info(const uint32_t rva)

@@ -123,9 +123,6 @@ namespace eagle::virt
             case ir::command_type::vm_exec_x86:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_exec>(command));
                 break;
-            case ir::command_type::vm_exec_dynamic_x86:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_dynamic>(command));
-                break;
             case ir::command_type::vm_context_rflags_load:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_context_rflags_load>(command));
                 break;

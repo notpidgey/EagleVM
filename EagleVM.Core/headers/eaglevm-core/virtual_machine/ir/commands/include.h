@@ -17,6 +17,5 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_resize.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_enter.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_exit.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_flags_load.h"

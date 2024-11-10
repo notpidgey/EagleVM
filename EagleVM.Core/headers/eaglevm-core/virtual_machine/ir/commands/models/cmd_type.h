@@ -28,7 +28,6 @@ namespace eagle::ir
         vm_context_rflags_store,
 
         vm_exec_x86,
-        vm_exec_dynamic_x86,
 
         vm_sx,
         vm_resize,

@@ -13,26 +13,26 @@ namespace eagle::codec::encoder
 {
     struct mem_op final
     {
-        mem_op(const reg base, const int64_t displacement, const uint16_t read_size)
-            : base(base), index(none), scale(1), displacement(displacement), read_size(read_size)
+        mem_op(const reg base, const int64_t displacement, const uint16_t read_size, const bool rel = false)
+            : base(base), index(none), scale(1), displacement(displacement), read_size(read_size), relative_disp(rel)
         {
             VM_ASSERT(read_size > 0 && (read_size & read_size - 1) == 0, "unexpected mem_op size");
         }
 
-        mem_op(const reg base, const int64_t displacement, const reg_size reg_read_size)
-            : base(base), index(none), scale(1), displacement(displacement)
+        mem_op(const reg base, const int64_t displacement, const reg_size reg_read_size, const bool rel = false)
+            : base(base), index(none), scale(1), displacement(displacement), relative_disp(rel)
         {
             read_size = reg_size_to_b(reg_read_size);
         }
 
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const uint16_t read_size)
-            : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size)
+            : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size), relative_disp(false)
         {
             VM_ASSERT(read_size > 0 && (read_size & (read_size - 1)) == 0, "unexpected mem_op size");
         }
 
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const reg_size reg_read_size)
-            : base(base), index(index), scale(scale), displacement(displacement)
+            : base(base), index(index), scale(scale), displacement(displacement), relative_disp(false)
         {
             read_size = reg_size_to_b(reg_read_size);
         }
@@ -41,8 +41,9 @@ namespace eagle::codec::encoder
         reg index;
         uint64_t scale;
         int64_t displacement;
-
         uint16_t read_size;
+
+        bool relative_disp;
     };
 
     struct reg_op final
@@ -97,9 +98,6 @@ namespace eagle::codec::encoder
         {
             static uint32_t current_uuid = 0;
             uuid = current_uuid++;
-
-            if (uuid == 1151)
-                __debugbreak();
         }
 
         std::vector<asmb::code_label_ptr> get_dependents() const
@@ -170,18 +168,23 @@ namespace eagle::codec::encoder
         std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
 
     private:
-        static void encode_op(enc::req& req, const mem_op& mem, uint64_t)
+        static void encode_op(enc::req& req, const mem_op& mem, uint64_t rva)
         {
             const auto op_index = req.operand_count;
 
             req.operands[op_index].type = ZYDIS_OPERAND_TYPE_MEMORY;
-            req.operands[op_index].mem.base = static_cast<zydis_register>(mem.base);
+
             if (mem.index != none)
                 req.operands[op_index].mem.scale = mem.scale;
             else
-                req.operands[op_index].mem.scale = 0;
-            req.operands[op_index].mem.index = static_cast<zydis_register>(mem.index);
+                req.operands[op_index].mem.scale = 0; // zydis does not like 1 scale encoding by default
+
             req.operands[op_index].mem.displacement = mem.displacement;
+            if (mem.relative_disp)
+                req.operands[op_index].mem.displacement -= rva;
+
+            req.operands[op_index].mem.base = static_cast<zydis_register>(mem.base);
+            req.operands[op_index].mem.index = static_cast<zydis_register>(mem.index);
             req.operands[op_index].mem.size = mem.read_size;
 
             req.operand_count++;

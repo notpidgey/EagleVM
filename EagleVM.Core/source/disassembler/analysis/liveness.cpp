@@ -175,6 +175,9 @@ namespace eagle::dasm::analysis
                     op.reg.value == ZYDIS_REGISTER_EIP)
                     continue;
 
+                if (op.reg.value == ZYDIS_REGISTER_FLAGS || op.reg.value == ZYDIS_REGISTER_EFLAGS || op.reg.value == ZYDIS_REGISTER_RFLAGS)
+                    continue;
+
                 const auto reg = static_cast<codec::reg>(op.reg.value);
                 if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ)
                     handle_register(reg, true);
@@ -185,6 +188,10 @@ namespace eagle::dasm::analysis
             {
                 const codec::reg reg = static_cast<codec::reg>(op.mem.base);
                 const codec::reg reg2 = static_cast<codec::reg>(op.mem.index);
+
+                if (reg == ZYDIS_REGISTER_RIP ||
+                    reg == ZYDIS_REGISTER_EIP)
+                    continue;
 
                 if (reg != ZYDIS_REGISTER_NONE)
                     handle_register(reg, true);

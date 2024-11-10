@@ -28,7 +28,6 @@ namespace eagle::virt
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd) = 0;
-        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_and_ptr& cmd) = 0;

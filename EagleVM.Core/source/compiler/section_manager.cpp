@@ -44,17 +44,13 @@ namespace eagle::asmb
                 std::visit([&base_offset, runtime_base](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::recompile_chunk>)
-                    {
-                        base_offset += arg(base_offset).size();
-                    }
-                    else if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
+                    if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
                     {
                         const codec::encoder::inst_req inst = arg;
                         codec::enc::req enc = inst.build(base_offset);
 
                         attempt_instruction_fix(enc);
-                        base_offset += codec::compile_absolute(enc, base_offset).size();
+                        base_offset += codec::compile(enc).size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
@@ -81,19 +77,14 @@ namespace eagle::asmb
                 std::visit([&base_offset, &force_recompile, runtime_base, &compiled](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::recompile_chunk>)
-                    {
-                        compiled = arg(base_offset);
-                        base_offset += compiled.size();
-                    }
-                    else if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
+                    if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
                     {
                         const codec::encoder::inst_req inst = arg;
                         codec::enc::req enc = inst.build(base_offset);
 
                         attempt_instruction_fix(enc);
 
-                        compiled = codec::compile_absolute(enc, base_offset);
+                        compiled = codec::compile(enc);
                         base_offset += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)

@@ -39,6 +39,11 @@ namespace eagle::asmb
         function_segments.push_back(req);
     }
 
+    void code_container::add(codec::encoder::inst_req req)
+    {
+        function_segments.push_back(req);
+    }
+
     void code_container::transfer_from(codec::encoder::encode_builder& req)
     {
         while (!req.instruction_list.empty())

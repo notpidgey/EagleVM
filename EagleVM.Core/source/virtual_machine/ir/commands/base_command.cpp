@@ -56,8 +56,6 @@ namespace eagle::ir
                 return "vm_context_store";
             case command_type::vm_exec_x86:
                 return "vm_exec_x86";
-            case command_type::vm_exec_dynamic_x86:
-                return "vm_exec_dynamic_x86";
             case command_type::vm_context_rflags_load:
                 return "vm_rflags_load";
             case command_type::vm_context_rflags_store:

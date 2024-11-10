@@ -466,14 +466,9 @@ namespace eagle::virt::eg
         }, cmd->get_current(), cmd->get_target());
     }
 
-    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
-    {
-        VM_ASSERT("deprecated command type");
-    }
-
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_exec_ptr& cmd)
     {
-        VM_ASSERT("deprecated command type");
+        block->add(cmd->get_request());
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load_ptr& cmd)

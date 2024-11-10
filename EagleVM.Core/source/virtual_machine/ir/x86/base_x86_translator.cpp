@@ -8,7 +8,6 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_push.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_logic.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_dynamic.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::ir::lifter
