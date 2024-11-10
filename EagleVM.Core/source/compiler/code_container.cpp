@@ -24,21 +24,6 @@ namespace eagle::asmb
         return is_named;
     }
 
-    void code_container::add(const codec::dynamic_instruction& instruction)
-    {
-        function_segments.emplace_back(instruction);
-    }
-
-    void code_container::add(const std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
-    void code_container::add(std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
     void code_container::bind_start(const code_label_ptr& code_label)
     {
         function_segments.insert(function_segments.begin(), code_label);
@@ -54,7 +39,7 @@ namespace eagle::asmb
         function_segments.push_back(req);
     }
 
-    void code_container::add(codec::encoder::encode_builder& req)
+    void code_container::transfer_from(codec::encoder::encode_builder& req)
     {
         while (!req.instruction_list.empty())
         {

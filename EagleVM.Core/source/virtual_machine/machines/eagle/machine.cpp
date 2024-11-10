@@ -9,17 +9,17 @@
 #include "eaglevm-core/virtual_machine/machines/eagle/handler.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/loader.h"
 
-#define VIP reg_man->get_vm_reg(register_manager::index_vip)
-#define VSP reg_man->get_vm_reg(register_manager::index_vsp)
-#define VREGS reg_man->get_vm_reg(register_manager::index_vregs)
-#define VCS reg_man->get_vm_reg(register_manager::index_vcs)
-#define VCSRET reg_man->get_vm_reg(register_manager::index_vcsret)
-#define VBASE reg_man->get_vm_reg(register_manager::index_vbase)
-#define VFLAGS reg_man->get_vm_reg(register_manager::index_vflags)
+#define VIP regs->get_vm_reg(register_manager::index_vip)
+#define VSP regs->get_vm_reg(register_manager::index_vsp)
+#define VREGS regs->get_vm_reg(register_manager::index_vregs)
+#define VCS regs->get_vm_reg(register_manager::index_vcs)
+#define VCSRET regs->get_vm_reg(register_manager::index_vcsret)
+#define VBASE regs->get_vm_reg(register_manager::index_vbase)
+#define VFLAGS regs->get_vm_reg(register_manager::index_vflags)
 
-#define VTEMP reg_man->get_reserved_temp(0)
-#define VTEMP2 reg_man->get_reserved_temp(1)
-#define VTEMPX(x) reg_man->get_reserved_temp(x)
+#define VTEMP regs->get_reserved_temp(0)
+#define VTEMP2 regs->get_reserved_temp(1)
+#define VTEMPX(x) regs->get_reserved_temp(x)
 
 namespace eagle::virt::eg
 {
@@ -42,7 +42,7 @@ namespace eagle::virt::eg
         const std::shared_ptr<register_context> reg_ctx_128 = std::make_shared<register_context>(reg_man->get_unreserved_temp_xmm(), codec::xmm_128);
         // const std::shared_ptr<handler_manager> han_man = std::make_shared<handler_manager>(instance, reg_man, reg_ctx_64, reg_ctx_128, settings_info);
 
-        instance->reg_man = reg_man;
+        instance->regs = reg_man;
         instance->reg_64_container = reg_ctx_64;
         instance->reg_128_container = reg_ctx_128;
         // instance->han_man = han_man;
@@ -70,6 +70,7 @@ namespace eagle::virt::eg
             dispatch_handle_cmd(code, command);
         }
 
+        // TODO add checks that these were actually freed?
         reg_64_container->reset();
         reg_128_container->reset();
 
@@ -92,10 +93,12 @@ namespace eagle::virt::eg
             create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto size = get_reg_size(load_reg);
-                const auto output_reg = get_bit_version(alloc_reg(), size);
 
-                const register_loader loader(regs);
-                loader.load_register(load_reg, output_reg, out);
+                const auto output_reg_64 = alloc_reg();
+                const auto output_reg = get_bit_version(output_reg_64, size);
+
+                const register_loader loader(regs, reg_64_container, reg_128_container);
+                loader.load_register(load_reg, output_reg_64, out);
 
                 out
                     .make(m_sub, reg_op(VSP), imm_op(size))
@@ -110,14 +113,16 @@ namespace eagle::virt::eg
         create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto size = get_reg_size(store_reg);
-            const auto output_reg = get_bit_version(alloc_reg(), size);
 
+            const auto output_reg_64 = alloc_reg();
+            const auto output_reg = get_bit_version(output_reg_64, size);
+
+            const register_loader loader(regs, reg_64_container, reg_128_container);
             out
                 .make(m_mov, reg_op(output_reg), mem_op(VSP, 0, size))
                 .make(m_add, reg_op(VSP), imm_op(size));
 
-            const register_loader loader(regs);
-            loader.store_register(store_reg, output_reg, out);
+            loader.store_register(store_reg, output_reg_64, out);
         }, store_reg);
     }
 
@@ -472,7 +477,7 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_flags_load_ptr& cmd)
     {
-        const reg vflag_reg = reg_man->get_vm_reg(register_manager::index_vflags);
+        const reg vflag_reg = regs->get_vm_reg(register_manager::index_vflags);
         const uint32_t flag_index = ir::cmd_flags_load::get_flag_index(cmd->get_flag());
 
         create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
@@ -494,7 +499,7 @@ namespace eagle::virt::eg
             const reg pop_reg = alloc_reg();
             out.make(m_mov, reg_op(pop_reg), mem_op(VSP, 0, bit_64))
                .make(m_add, reg_op(VSP), imm_op(bit_64))
-               .make(m_jmp, ZREG(pop_reg));
+               .make(m_jmp, reg_op(pop_reg));
         });
     }
 
@@ -833,6 +838,23 @@ namespace eagle::virt::eg
         }, cmd->get_size());
     }
 
+    std::vector<asmb::code_container_ptr> machine::create_handlers()
+    {
+        std::vector<asmb::code_container_ptr> out;
+        for (auto& [_, pairs] : handler_map)
+        {
+            for (auto& [label, code] : pairs)
+            {
+                const asmb::code_container_ptr container = asmb::code_container::create();
+                container->transfer_from(code);
+
+                out.push_back(container);
+            }
+        }
+
+        return out;
+    }
+
     reg machine::reg_vm_to_register(const ir::reg_vm store) const
     {
         ir::ir_size size = ir::ir_size::none;
@@ -924,7 +946,7 @@ namespace eagle::virt::eg
     void machine::create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const handler_generator& create, const size_t handler_hash)
     {
         scope_register_manager scope = reg_64_container->create_scope();
-        auto reg_allocator = [&] -> reg
+        auto reg_allocator = [&]() -> reg
         {
             return scope.reserve();
         };

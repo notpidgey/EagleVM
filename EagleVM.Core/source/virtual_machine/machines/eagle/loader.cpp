@@ -5,6 +5,7 @@
 #include "eaglevm-core/util/random.h"
 
 using namespace eagle::codec;
+using namespace eagle::codec::encoder;
 
 namespace eagle::virt::eg
 {
@@ -38,7 +39,7 @@ namespace eagle::virt::eg
     void register_loader::load_register_internal(reg load_destination, const std::vector<reg_mapped_range>& ranges_required,
         encoder::encode_builder& out) const
     {
-        out.make(m_xor, ZREG(load_destination), ZREG(load_destination));
+        out.make(m_xor, reg_op(load_destination), reg_op(load_destination));
 
         std::vector<reg_range> stored_ranges;
         for (const reg_mapped_range& mapping : ranges_required)
@@ -63,11 +64,11 @@ namespace eagle::virt::eg
                      */
 
                     reg gpr_temp = int_64_ctx.reserve();
-                    out.make(m_movq, ZREG(gpr_temp), ZREG(source_register))
-                       .make(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end))
-                       .make(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start))
-                       .make(m_shl, ZREG(gpr_temp), ZIMMS(destination_start))
-                       .make(m_or, ZREG(load_destination), ZREG(gpr_temp));
+                    out.make(m_movq, reg_op(gpr_temp), reg_op(source_register))
+                       .make(m_shl, reg_op(gpr_temp), imm_op(64 - source_end))
+                       .make(m_shr, reg_op(gpr_temp), imm_op(64 - source_end + source_start))
+                       .make(m_shl, reg_op(gpr_temp), imm_op(destination_start))
+                       .make(m_or, reg_op(load_destination), reg_op(gpr_temp));
                 }
                 else if (source_start >= 64) // upper 64 bits of XMM
                 {
@@ -93,11 +94,11 @@ namespace eagle::virt::eg
                     source_end -= 64;
 
                     reg gpr_temp = int_64_ctx.reserve();
-                    out.make(m_pextrq, ZREG(gpr_temp), ZREG(source_register), ZIMMS(1))
-                       .make(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end))
-                       .make(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start))
-                       .make(m_shl, ZREG(gpr_temp), ZIMMS(destination_start))
-                       .make(m_or, ZREG(load_destination), ZREG(gpr_temp));
+                    out.make(m_pextrq, reg_op(gpr_temp), reg_op(source_register), imm_op(1))
+                       .make(m_shl, reg_op(gpr_temp), imm_op(64 - source_end))
+                       .make(m_shr, reg_op(gpr_temp), imm_op(64 - source_end + source_start))
+                       .make(m_shl, reg_op(gpr_temp), imm_op(destination_start))
+                       .make(m_or, reg_op(load_destination), reg_op(gpr_temp));
                 }
                 else // cross boundary register
                 {
@@ -133,10 +134,10 @@ namespace eagle::virt::eg
 
                     // reg gpr_temp = temp_regs[0];
                     // out->add({
-                    //     encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
-                    //     encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_start)),
-                    //     encode(m_shl, ZREG(gpr_temp), ZIMMS(destination_start)),
-                    //     encode(m_or, ZREG(target_register), ZREG(gpr_temp))
+                    //     encode(m_movq, reg_op(gpr_temp), reg_op(source_register)),
+                    //     encode(m_shr, reg_op(gpr_temp), imm_op(64 - source_start)),
+                    //     encode(m_shl, reg_op(gpr_temp), imm_op(destination_start)),
+                    //     encode(m_or, reg_op(target_register), reg_op(gpr_temp))
                     // });
 
                     // source_start = 0;
@@ -144,11 +145,11 @@ namespace eagle::virt::eg
 
                     // gpr_temp = temp_regs[1];
                     // out->add({
-                    //     encode(m_pextrq, ZREG(gpr_temp), ZREG(source_register), ZIMMS(1)),
-                    //     encode(m_movq, ZREG(gpr_temp), ZREG(source_register)),
-                    //     encode(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end)),
-                    //     encode(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end)),
-                    //     encode(m_or, ZREG(target_register), ZREG(gpr_temp)),
+                    //     encode(m_pextrq, reg_op(gpr_temp), reg_op(source_register), imm_op(1)),
+                    //     encode(m_movq, reg_op(gpr_temp), reg_op(source_register)),
+                    //     encode(m_shl, reg_op(gpr_temp), imm_op(64 - source_end)),
+                    //     encode(m_shr, reg_op(gpr_temp), imm_op(64 - source_end)),
+                    //     encode(m_or, reg_op(target_register), reg_op(gpr_temp)),
                     // });
 
                     VM_ASSERT("this should not happen as the register manager should handle cross boundary loads");
@@ -167,11 +168,11 @@ namespace eagle::virt::eg
                 */
 
                 reg gpr_temp = int_64_ctx.reserve();
-                out.make(m_mov, ZREG(gpr_temp), ZREG(source_register))
-                   .make(m_shl, ZREG(gpr_temp), ZIMMS(64 - source_end))
-                   .make(m_shr, ZREG(gpr_temp), ZIMMS(64 - source_end + source_start))
-                   .make(m_shl, ZREG(gpr_temp), ZIMMS(destination_start))
-                   .make(m_or, ZREG(load_destination), ZREG(gpr_temp));
+                out.make(m_mov, reg_op(gpr_temp), reg_op(source_register))
+                   .make(m_shl, reg_op(gpr_temp), imm_op(64 - source_end))
+                   .make(m_shr, reg_op(gpr_temp), imm_op(64 - source_end + source_start))
+                   .make(m_shl, reg_op(gpr_temp), imm_op(destination_start))
+                   .make(m_or, reg_op(load_destination), reg_op(gpr_temp));
             }
 
             stored_ranges.push_back(source_range);
@@ -222,20 +223,20 @@ namespace eagle::virt::eg
             {
                 // gpr
                 reg temp_value_reg = scope_64.reserve();
-                out.make(m_mov, ZREG(temp_value_reg), ZREG(source_register))
-                   .make(m_shl, ZREG(temp_value_reg), ZIMMS(64 - s_to))
-                   .make(m_shr, ZREG(temp_value_reg), ZIMMS(s_from + 64 - s_to));
+                out.make(m_mov, reg_op(temp_value_reg), reg_op(source_register))
+                   .make(m_shl, reg_op(temp_value_reg), imm_op(64 - s_to))
+                   .make(m_shr, reg_op(temp_value_reg), imm_op(s_from + 64 - s_to));
 
                 const uint8_t bit_length = s_to - s_from;
 
                 reg temp_xmm_q = scope_64.reserve();
-                out.make(m_mov, ZREG(temp_xmm_q), ZREG(dest_reg))
-                   .make(m_ror, ZREG(temp_xmm_q), ZIMMS(d_from))
-                   .make(m_shr, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                   .make(m_shl, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                   .make(m_or, ZREG(temp_xmm_q), ZREG(temp_value_reg))
-                   .make(m_rol, ZREG(temp_xmm_q), ZIMMS(d_from))
-                   .make(m_mov, ZREG(dest_reg), ZREG(temp_xmm_q));
+                out.make(m_mov, reg_op(temp_xmm_q), reg_op(dest_reg))
+                   .make(m_ror, reg_op(temp_xmm_q), imm_op(d_from))
+                   .make(m_shr, reg_op(temp_xmm_q), imm_op(bit_length))
+                   .make(m_shl, reg_op(temp_xmm_q), imm_op(bit_length))
+                   .make(m_or, reg_op(temp_xmm_q), reg_op(temp_value_reg))
+                   .make(m_rol, reg_op(temp_xmm_q), imm_op(d_from))
+                   .make(m_mov, reg_op(dest_reg), reg_op(temp_xmm_q));
             }
             else
             {
@@ -250,9 +251,9 @@ namespace eagle::virt::eg
                  */
 
                 reg temp_value = scope_64.reserve();
-                out.make(m_mov, ZREG(temp_value), ZREG(source_register))
-                   .make(m_shl, ZREG(temp_value), ZIMMS(64 - s_to))
-                   .make(m_shr, ZREG(temp_value), ZIMMS(s_from + 64 - s_to));
+                out.make(m_mov, reg_op(temp_value), reg_op(source_register))
+                   .make(m_shl, reg_op(temp_value), imm_op(64 - s_to))
+                   .make(m_shr, reg_op(temp_value), imm_op(s_from + 64 - s_to));
 
                 /*
                  * step 2: clear and store
@@ -267,13 +268,13 @@ namespace eagle::virt::eg
                     reg temp_xmm_q = scope_64.reserve();
                     const uint8_t bit_length = to - from;
 
-                    out.make(m_movq, ZREG(temp_xmm_q), ZREG(dest_reg))
-                       .make(m_ror, ZREG(temp_xmm_q), ZIMMS(from))
-                       .make(m_shr, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                       .make(m_shl, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                       .make(m_or, ZREG(temp_xmm_q), ZREG(temp_value_reg))
-                       .make(m_rol, ZREG(temp_xmm_q), ZIMMS(from))
-                       .make(m_pinsrq, ZREG(dest_reg), ZREG(temp_xmm_q), ZIMMS(0));
+                    out.make(m_movq, reg_op(temp_xmm_q), reg_op(dest_reg))
+                       .make(m_ror, reg_op(temp_xmm_q), imm_op(from))
+                       .make(m_shr, reg_op(temp_xmm_q), imm_op(bit_length))
+                       .make(m_shl, reg_op(temp_xmm_q), imm_op(bit_length))
+                       .make(m_or, reg_op(temp_xmm_q), reg_op(temp_value_reg))
+                       .make(m_rol, reg_op(temp_xmm_q), imm_op(from))
+                       .make(m_pinsrq, reg_op(dest_reg), reg_op(temp_xmm_q), imm_op(0));
                 };
 
                 auto handle_ub = [&](auto to, auto from, auto temp_value_reg)
@@ -281,13 +282,13 @@ namespace eagle::virt::eg
                     reg temp_xmm_q = scope_64.reserve();
                     const uint8_t bit_length = to - from;
 
-                    out.make(m_pextrq, ZREG(temp_xmm_q), ZREG(dest_reg), ZIMMS(1))
-                       .make(m_ror, ZREG(temp_xmm_q), ZIMMS(from - 64))
-                       .make(m_shr, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                       .make(m_shl, ZREG(temp_xmm_q), ZIMMS(bit_length))
-                       .make(m_or, ZREG(temp_xmm_q), ZREG(temp_value_reg))
-                       .make(m_rol, ZREG(temp_xmm_q), ZIMMS(from - 64))
-                       .make(m_pinsrq, ZREG(dest_reg), ZREG(temp_xmm_q), ZIMMS(1));
+                    out.make(m_pextrq, reg_op(temp_xmm_q), reg_op(dest_reg), imm_op(1))
+                       .make(m_ror, reg_op(temp_xmm_q), imm_op(from - 64))
+                       .make(m_shr, reg_op(temp_xmm_q), imm_op(bit_length))
+                       .make(m_shl, reg_op(temp_xmm_q), imm_op(bit_length))
+                       .make(m_or, reg_op(temp_xmm_q), reg_op(temp_value_reg))
+                       .make(m_rol, reg_op(temp_xmm_q), imm_op(from - 64))
+                       .make(m_pinsrq, reg_op(dest_reg), reg_op(temp_xmm_q), imm_op(1));
                 };
 
                 // case 1: all the bits are located in qword 1

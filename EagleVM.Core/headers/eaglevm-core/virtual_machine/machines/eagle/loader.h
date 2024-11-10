@@ -1,5 +1,6 @@
 #pragma once
 #include "eaglevm-core/compiler/code_container.h"
+#include "eaglevm-core/virtual_machine/machines/register_context.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 
 namespace eagle::virt::eg
@@ -7,10 +8,9 @@ namespace eagle::virt::eg
     class register_loader
     {
     public:
-        explicit register_loader(const register_manager_ptr& manager)
-            : regs(manager)
+        explicit register_loader(const register_manager_ptr& manager, const register_context_ptr& context_64, const register_context_ptr& context_128)
+            : regs(manager), regs_64_context(context_64), regs_128_context(context_128)
         {
-
         }
 
         void load_register(
@@ -40,5 +40,7 @@ namespace eagle::virt::eg
         ) const;
 
         register_manager_ptr regs;
+        register_context_ptr regs_64_context;
+        register_context_ptr regs_128_context;
     };
 }

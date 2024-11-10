@@ -9,26 +9,26 @@
 #include "eaglevm-core/virtual_machine/machines/eagle/handler.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/loader.h"
 
-#define VIP reg_man->get_vm_reg(register_manager::index_vip)
-#define VSP reg_man->get_vm_reg(register_manager::index_vsp)
-#define VREGS reg_man->get_vm_reg(register_manager::index_vregs)
-#define VCS reg_man->get_vm_reg(register_manager::index_vcs)
-#define VCSRET reg_man->get_vm_reg(register_manager::index_vcsret)
-#define VBASE reg_man->get_vm_reg(register_manager::index_vbase)
-#define VFLAGS reg_man->get_vm_reg(register_manager::index_vflags)
+#define VIP regs->get_vm_reg(register_manager::index_vip)
+#define VSP regs->get_vm_reg(register_manager::index_vsp)
+#define VREGS regs->get_vm_reg(register_manager::index_vregs)
+#define VCS regs->get_vm_reg(register_manager::index_vcs)
+#define VCSRET regs->get_vm_reg(register_manager::index_vcsret)
+#define VBASE regs->get_vm_reg(register_manager::index_vbase)
+#define VFLAGS regs->get_vm_reg(register_manager::index_vflags)
 
-#define VTEMP reg_man->get_reserved_temp(0)
-#define VTEMP2 reg_man->get_reserved_temp(1)
-#define VTEMPX(x) reg_man->get_reserved_temp(x)
+#define VTEMP regs->get_reserved_temp(0)
+#define VTEMP2 regs->get_reserved_temp(1)
+#define VTEMPX(x) regs->get_reserved_temp(x)
 
 namespace eagle::virt::eg
 {
     using namespace codec;
     using namespace codec::encoder;
 
-    constexpr uint32_t vm_overhead = 8 * 300;
-    constexpr uint32_t vm_stack_regs = 17 + 16 * 2;
-    constexpr uint32_t vm_call_stack = 3;
+    constexpr int32_t vm_overhead = 8 * 300;
+    constexpr int32_t vm_stack_regs = 17 + 16 * 2;
+    constexpr int32_t vm_call_stack = 3;
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {

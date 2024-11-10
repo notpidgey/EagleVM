@@ -1,5 +1,7 @@
 #pragma once
 #include "eaglevm-core/codec/zydis_enum.h"
+#include "eaglevm-core/util/assert.h"
+
 #include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 namespace eagle::virt

@@ -10,7 +10,7 @@
 namespace eagle::asmb
 {
     using code_container_ptr = std::shared_ptr<class code_container>;
-    using inst_label_v = std::variant<codec::encoder::inst_req, code_label_ptr>;
+    using inst_label_v = std::variant<codec::recompile_chunk, codec::encoder::inst_req, code_label_ptr>;
 
     class code_container
     {

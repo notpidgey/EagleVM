@@ -4,6 +4,7 @@
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/util/hash.h"
 
 #include "eaglevm-core/codec/zydis_encoder.h"
 
@@ -54,7 +55,6 @@ namespace eagle::virt::eg
 
     private:
         settings_ptr settings;
-        register_manager_ptr reg_man;
 
         register_manager_ptr regs;
         register_context_ptr reg_64_container;

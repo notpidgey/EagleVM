@@ -1,5 +1,6 @@
 #pragma once
 #include <random>
+#include "eaglevm-core/util/assert.h"
 
 namespace eagle::util
 {

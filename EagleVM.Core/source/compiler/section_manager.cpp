@@ -30,7 +30,6 @@ namespace eagle::asmb
 
     codec::encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
     {
-
         if (shuffle_functions)
             shuffle_containers();
 
@@ -45,28 +44,17 @@ namespace eagle::asmb
                 std::visit([&base_offset, runtime_base](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
+                    if constexpr (std::is_same_v<T, codec::recompile_chunk>)
                     {
-                        codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&base_offset](auto&& inner_arg)
-                        {
-                            using InnerT = std::decay_t<decltype(inner_arg)>;
-                            if constexpr (std::is_same_v<InnerT, codec::recompile_chunk>)
-                            {
-                                base_offset += inner_arg(base_offset).size();
-                            }
-                            else
-                            {
-                                codec::enc::req request;
-                                if constexpr (std::is_same_v<InnerT, codec::recompile_promise>)
-                                    request = inner_arg(base_offset);
-                                else if constexpr (std::is_same_v<InnerT, codec::enc::req>)
-                                    request = inner_arg;
+                        base_offset += arg(base_offset).size();
+                    }
+                    else if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
+                    {
+                        const codec::encoder::inst_req inst = arg;
+                        codec::enc::req enc = inst.build(base_offset);
 
-                                attempt_instruction_fix(request);
-                                base_offset += codec::compile_absolute(request, base_offset).size();
-                            }
-                        }, dynamic_inst);
+                        attempt_instruction_fix(enc);
+                        base_offset += codec::compile_absolute(enc, base_offset).size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
@@ -78,7 +66,6 @@ namespace eagle::asmb
         }
 
     RECOMPILE:
-
         std::vector<uint8_t> compiled_section;
         compiled_section.reserve(base_offset - base_address);
 
@@ -88,41 +75,26 @@ namespace eagle::asmb
             std::vector<inst_label_v> segments = code_container->get_instructions();
             for (inst_label_v& label_code_variant : segments)
             {
+                std::vector<uint8_t> compiled;
+
                 bool force_recompile = false;
-                std::visit([&base_offset, &compiled_section, &force_recompile, base_address, runtime_base](auto&& arg)
+                std::visit([&base_offset, &force_recompile, runtime_base, &compiled](auto&& arg)
                 {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, codec::dynamic_instruction>)
+                    if constexpr (std::is_same_v<T, codec::recompile_chunk>)
                     {
-                        codec::dynamic_instruction dynamic_inst = arg;
-                        std::visit([&base_offset, &compiled_section](auto&& arg)
-                        {
-                            std::vector<uint8_t> compiled;
+                        compiled = arg(base_offset);
+                        base_offset += compiled.size();
+                    }
+                    else if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
+                    {
+                        const codec::encoder::inst_req inst = arg;
+                        codec::enc::req enc = inst.build(base_offset);
 
-                            using T = std::decay_t<decltype(arg)>;
-                            if constexpr (std::is_same_v<T, codec::recompile_chunk>)
-                            {
-                                compiled = arg(base_offset);
-                                base_offset += compiled.size();
-                            }
-                            else
-                            {
-                                codec::enc::req request;
-                                if constexpr (std::is_same_v<T, codec::recompile_promise>)
-                                    request = arg(base_offset);
-                                else if constexpr (std::is_same_v<T, codec::enc::req>)
-                                    request = arg;
-                                else
-                                    __debugbreak();
+                        attempt_instruction_fix(enc);
 
-                                attempt_instruction_fix(request);
-
-                                compiled = codec::compile_absolute(request, 0);
-                                base_offset += compiled.size();
-                            }
-
-                            compiled_section.append_range(compiled);
-                        }, dynamic_inst);
+                        compiled = codec::compile_absolute(enc, base_offset);
+                        base_offset += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
@@ -133,6 +105,8 @@ namespace eagle::asmb
                         label->set_address(runtime_base, base_offset);
                     }
                 }, label_code_variant);
+
+                compiled_section.append_range(compiled);
 
                 if (force_recompile)
                     goto RECOMPILE;

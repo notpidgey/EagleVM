@@ -75,7 +75,7 @@ namespace eagle::codec::encoder
         {
         }
 
-        asmb::code_label_ptr get_dependent()
+        asmb::code_label_ptr get_dependent() const
         {
             return code_label;
         }
@@ -91,7 +91,7 @@ namespace eagle::codec::encoder
         mnemonic mnemonic;
         std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
 
-        std::vector<asmb::code_label_ptr> get_dependents()
+        std::vector<asmb::code_label_ptr> get_dependents() const
         {
             std::vector<asmb::code_label_ptr> dependents;
             for (auto& op : operands)
@@ -101,7 +101,7 @@ namespace eagle::codec::encoder
                     using T = std::decay_t<decltype(inst)>;
                     if constexpr (std::is_same_v<T, imm_label_operand>)
                     {
-                        imm_label_operand& label_op = inst;
+                        const imm_label_operand& label_op = inst;
                         dependents.push_back(label_op.get_dependent());
                     }
                 }, op);
@@ -110,7 +110,7 @@ namespace eagle::codec::encoder
             return dependents;
         }
 
-        bool get_rva_dependent()
+        bool get_rva_dependent() const
         {
             bool is_dependent = false;
             for (auto& op : operands)
@@ -137,7 +137,7 @@ namespace eagle::codec::encoder
             return is_dependent;
         }
 
-        enc::req build()
+        enc::req build(uint64_t rva) const
         {
             enc::req req = { };
             req.mnemonic = static_cast<zyids_mnemonic>(mnemonic);
@@ -147,7 +147,7 @@ namespace eagle::codec::encoder
             {
                 std::visit([&](auto&& operand)
                 {
-                    encode_op(req, operand);
+                    encode_op(req, operand, rva);
                 }, operand_variant);
             }
 
@@ -211,11 +211,24 @@ namespace eagle::codec::encoder
         template <typename... Args>
         encode_builder& make(const mnemonic mnemonic, Args&&... args)
         {
-            inst_req instruction = { };
+            inst_req instruction = {};
             instruction.mnemonic = mnemonic;
 
+            // Helper lambda to convert each argument to a specific variant type
+            auto make_variant = [](auto&& arg) -> std::variant<mem_op, reg_op, imm_op, imm_label_operand> {
+                using ArgType = std::decay_t<decltype(arg)>;
+                if constexpr (std::is_same_v<ArgType, mem_op>)
+                    return (std::in_place_type<mem_op>, std::forward<ArgType>(arg));
+                else if constexpr (std::is_same_v<ArgType, reg_op>)
+                    return (std::in_place_type<reg_op>, std::forward<ArgType>(arg));
+                else if constexpr (std::is_same_v<ArgType, imm_op>)
+                    return (std::in_place_type<imm_op>, std::forward<ArgType>(arg));
+                else if constexpr (std::is_same_v<ArgType, imm_label_operand>)
+                    return (std::in_place_type<imm_label_operand>, std::forward<ArgType>(arg));
+            };
+
             // Expand and push each argument as a variant into the operands vector
-            (instruction.operands.push_back(std::forward<Args>(args)), ...);
+            (instruction.operands.push_back(make_variant(std::forward<Args>(args))), ...);
 
             instruction_list.push(instruction);
             return *this;
