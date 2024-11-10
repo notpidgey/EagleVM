@@ -62,34 +62,10 @@ namespace eagle::virt::eg
             code->bind(label);
         }
 
-        // walk backwards each command to see the last time each discrete_ptr was used
-        // this will tell us when we can free the register
-        std::vector<std::vector<ir::discrete_store_ptr>> store_dead(command_count, { });
-        std::unordered_set<ir::discrete_store_ptr> discovered_stores;
-
-        // as a fair warning, this analysis only cares about the store usage in the current block
-        // so if you are using a store across multiple blocks, you can wish that goodbye because i will not
-        // be implementing that because i do not need it
-        for (auto i = command_count; i--;)
-        {
-            auto ref = block->at(i)->get_use_stores();
-            for (auto& store : ref)
-            {
-                if (!discovered_stores.contains(store))
-                {
-                    store_dead[i].push_back(store);
-                    discovered_stores.insert(store);
-                }
-            }
-        }
-
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->at(i);
             dispatch_handle_cmd(code, command);
-
-            for (auto store : store_dead[i])
-                reg_64_container->release(store);
         }
 
         reg_64_container->reset();
