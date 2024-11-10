@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/bird/loader.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/loader.h"
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/util/assert.h"

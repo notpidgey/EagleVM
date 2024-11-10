@@ -11,23 +11,23 @@ namespace eagle::codec::encoder
 {
     struct mem_op final
     {
-        mem_op(const reg base, const uint16_t displacement, const uint16_t read_size)
+        mem_op(const reg base, const int64_t displacement, const uint16_t read_size)
             : base(base), index(none), scale(1), displacement(displacement), read_size(read_size)
         {
         }
 
-        mem_op(const reg base, const uint16_t displacement, const reg_size reg_read_size)
+        mem_op(const reg base, const int64_t displacement, const reg_size reg_read_size)
             : base(base), index(none), scale(1), displacement(displacement)
         {
             read_size = reg_size_to_b(reg_read_size);
         }
 
-        mem_op(const reg base, const reg index, const uint64_t scale, const uint16_t displacement, const uint16_t read_size)
+        mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const uint16_t read_size)
             : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size)
         {
         }
 
-        mem_op(const reg base, const reg index, const uint64_t scale, const uint16_t displacement, const reg_size reg_read_size)
+        mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const reg_size reg_read_size)
             : base(base), index(index), scale(scale), displacement(displacement)
         {
             read_size = reg_size_to_b(reg_read_size);
@@ -36,7 +36,7 @@ namespace eagle::codec::encoder
         reg base;
         reg index;
         uint64_t scale;
-        uint16_t displacement;
+        int64_t displacement;
 
         uint16_t read_size;
     };
@@ -70,8 +70,8 @@ namespace eagle::codec::encoder
 
     struct imm_label_operand final
     {
-        explicit imm_label_operand(const asmb::code_label_ptr& value, const bool relative = false)
-            : code_label(value), relative(relative)
+        explicit imm_label_operand(const asmb::code_label_ptr& value, const bool relative = false, const bool negative = false)
+            : code_label(value), relative(relative), negative(negative)
         {
         }
 
@@ -82,6 +82,8 @@ namespace eagle::codec::encoder
 
         asmb::code_label_ptr code_label;
         bool relative;
+
+        bool negative;
     };
 
     struct inst_req
@@ -153,7 +155,7 @@ namespace eagle::codec::encoder
         }
 
     private:
-        static void encode_op(enc::req& req, const mem_op& mem, uint64_t current_rva)
+        static void encode_op(enc::req& req, const mem_op& mem, uint64_t)
         {
             const auto op_index = req.operand_count;
 
@@ -166,7 +168,7 @@ namespace eagle::codec::encoder
             req.operand_count++;
         }
 
-        static void encode_op(enc::req& req, const reg_op& reg, uint64_t current_rva)
+        static void encode_op(enc::req& req, const reg_op& reg, uint64_t)
         {
             const auto op_index = req.operand_count;
 
@@ -175,7 +177,7 @@ namespace eagle::codec::encoder
             req.operand_count++;
         }
 
-        static void encode_op(enc::req& req, const imm_op& imm, uint64_t current_rva)
+        static void encode_op(enc::req& req, const imm_op& imm, const uint64_t current_rva)
         {
             const auto op_index = req.operand_count;
 
@@ -191,9 +193,14 @@ namespace eagle::codec::encoder
             const auto op_index = req.operand_count;
 
             req.operands[op_index].type = ZYDIS_OPERAND_TYPE_IMMEDIATE;
-            req.operands[op_index].imm.u = imm.code_label->get_address();
-            if(imm.relative)
+            if (imm.negative)
+                req.operands[op_index].imm.u = -imm.code_label->get_address();
+            else
+                req.operands[op_index].imm.u = imm.code_label->get_address();
+
+            if (imm.relative)
                 req.operands[op_index].imm.u -= current_rva;
+
             req.operand_count++;
         }
     };
@@ -222,7 +229,7 @@ namespace eagle::codec::encoder
 
         encode_builder& transfer_from(const encode_builder& from)
         {
-            while(!from.instruction_list.empty())
+            while (!from.instruction_list.empty())
             {
                 instruction_list.push(from.instruction_list.front());
                 instruction_list.pop();

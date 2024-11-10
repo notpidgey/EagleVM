@@ -1,4 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/bird/machine.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/register_manager.h"
 #include "eaglevm-core/virtual_machine/machines/eagle/settings.h"
@@ -6,8 +6,8 @@
 #include <unordered_set>
 
 #include "eaglevm-core/virtual_machine/machines/util.h"
-#include "eaglevm-core/virtual_machine/machines/bird/handler.h"
-#include "eaglevm-core/virtual_machine/machines/bird/loader.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/handler.h"
+#include "eaglevm-core/virtual_machine/machines/eagle/loader.h"
 
 #define VIP reg_man->get_vm_reg(register_manager::index_vip)
 #define VSP reg_man->get_vm_reg(register_manager::index_vsp)
@@ -30,7 +30,7 @@ namespace eagle::virt::eg
     constexpr uint32_t vm_stack_regs = 17 + 16 * 2;
     constexpr uint32_t vm_call_stack = 3;
 
-    void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {
         encode_builder builder = { };
 
@@ -88,8 +88,8 @@ namespace eagle::virt::eg
         // mov temp, rel_offset_to_virtual_base
         builder.label(rel_label);
         builder.make(m_lea, reg_op(VBASE), mem_op(rip, 0, bit_64))
-               .make(m_mov, reg_op(temp), imm_label_operand(rel_label))
-               .make(m_lea, reg_op(VBASE), mem_op(VBASE, temp, -1, 0, bit_64));
+               .make(m_mov, reg_op(temp), imm_label_operand(rel_label, false, true))
+               .make(m_lea, reg_op(VBASE), mem_op(VBASE, temp, 1, 0, bit_64));
 
         // lea VTEMP, [VSP + (8 * (stack_regs + vm_overhead) + 1)] ; load the address of the original rsp (+1 because we pushed a rva)
         // mov VSP, VTEMP
@@ -119,7 +119,7 @@ namespace eagle::virt::eg
         builder.make(m_nop);
     }
 
-    void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         encode_builder builder = { };
 

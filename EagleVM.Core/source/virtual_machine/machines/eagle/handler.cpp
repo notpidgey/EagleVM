@@ -1,5 +1,4 @@
-#include "eaglevm-core/virtual_machine/machines/bird/handler.h"
-
+#include "eaglevm-core/virtual_machine/machines/eagle/handler.h"
 #include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
 namespace eagle::virt::eg
