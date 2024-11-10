@@ -38,7 +38,7 @@ namespace eagle::asmb
         // this should take all the functions in the section and connect them to desired labels
         for (const code_container_ptr& code_container : section_code_containers)
         {
-            std::vector<inst_label_v> segments = code_container->get_instructions();
+            std::vector<codec::encoder::inst_req_label_v> segments = code_container->get_instructions();
             for (auto& label_code_variant : segments)
             {
                 std::visit([&base_offset, runtime_base](auto&& arg)
@@ -50,7 +50,7 @@ namespace eagle::asmb
                         codec::enc::req enc = inst.build(base_offset);
 
                         attempt_instruction_fix(enc);
-                        base_offset += codec::compile(enc).size();
+                        base_offset += codec::compile_absolute(enc, base_offset).size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
@@ -68,8 +68,8 @@ namespace eagle::asmb
         base_offset = base_address;
         for (const code_container_ptr& code_container : section_code_containers)
         {
-            std::vector<inst_label_v> segments = code_container->get_instructions();
-            for (inst_label_v& label_code_variant : segments)
+            std::vector segments = code_container->get_instructions();
+            for (auto& label_code_variant : segments)
             {
                 std::vector<uint8_t> compiled;
 
@@ -84,7 +84,7 @@ namespace eagle::asmb
 
                         attempt_instruction_fix(enc);
 
-                        compiled = codec::compile(enc);
+                        compiled = codec::compile_absolute(enc, base_offset);
                         base_offset += compiled.size();
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)

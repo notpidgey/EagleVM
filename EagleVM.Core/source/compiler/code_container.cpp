@@ -1,5 +1,7 @@
 #include "eaglevm-core/compiler/code_container.h"
 
+#include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
+
 namespace eagle::asmb
 {
     uint32_t code_container::current_uid = 0;
@@ -26,40 +28,17 @@ namespace eagle::asmb
 
     void code_container::bind_start(const code_label_ptr& code_label)
     {
-        function_segments.insert(function_segments.begin(), code_label);
+        instruction_list.insert(instruction_list.begin(), code_label);
     }
 
-    void code_container::bind(const code_label_ptr& code_label)
+    void code_container::add(codec::encoder::inst_req inst)
     {
-        function_segments.emplace_back(code_label);
+        instruction_list.push_back(inst);
     }
 
-    void code_container::add(codec::encoder::inst_req& req)
+    std::vector<codec::encoder::inst_req_label_v> code_container::get_instructions() const
     {
-        function_segments.push_back(req);
-    }
-
-    void code_container::add(codec::encoder::inst_req req)
-    {
-        function_segments.push_back(req);
-    }
-
-    void code_container::transfer_from(codec::encoder::encode_builder& req)
-    {
-        while (!req.instruction_list.empty())
-        {
-            std::visit([&](auto&& v)
-            {
-                function_segments.push_back(v);
-            }, req.instruction_list.front());
-
-            req.instruction_list.pop();
-        }
-    }
-
-    std::vector<inst_label_v> code_container::get_instructions() const
-    {
-        return function_segments;
+        return instruction_list;
     }
 
     code_container::code_container()

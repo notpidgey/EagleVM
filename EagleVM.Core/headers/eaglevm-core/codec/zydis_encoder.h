@@ -1,6 +1,6 @@
 #pragma once
 #include <ranges>
-#include <queue>
+#include <deque>
 
 #include "zydis_defs.h"
 #include "zydis_enum.h"
@@ -228,6 +228,7 @@ namespace eagle::codec::encoder
         }
     };
 
+    using inst_req_label_v = std::variant<inst_req, asmb::code_label_ptr>;
     class encode_builder
     {
     public:
@@ -253,29 +254,27 @@ namespace eagle::codec::encoder
             // Expand and push each argument as a variant into the operands vector
             (instruction.operands.push_back(make_variant(std::forward<Args>(args))), ...);
 
-            instruction_list.push(instruction);
+            instruction_list.push_back(instruction);
             return *this;
         }
 
         encode_builder& label(const asmb::code_label_ptr& ptr)
         {
-            instruction_list.push(ptr);
+            instruction_list.push_back(ptr);
             return *this;
         }
 
-        encode_builder& transfer_from(const encode_builder& from)
+        encode_builder& transfer_from(encode_builder& from)
         {
-            while (!from.instruction_list.empty())
-            {
-                instruction_list.push(from.instruction_list.front());
-                instruction_list.pop();
-            }
+            instruction_list.insert(instruction_list.end(),
+            std::make_move_iterator(from.instruction_list.begin()),
+            std::make_move_iterator(from.instruction_list.end()));
 
+            from.instruction_list.clear();
             return *this;
         }
 
-        using inst_req_label_v = std::variant<inst_req, asmb::code_label_ptr>;
-        std::queue<inst_req_label_v> instruction_list;
+        std::vector<inst_req_label_v> instruction_list;
     };
 
     using encode_builder_ptr = std::shared_ptr<encode_builder>;

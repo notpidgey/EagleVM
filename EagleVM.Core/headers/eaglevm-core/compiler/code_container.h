@@ -10,9 +10,7 @@
 namespace eagle::asmb
 {
     using code_container_ptr = std::shared_ptr<class code_container>;
-    using inst_label_v = std::variant<codec::encoder::inst_req, code_label_ptr>;
-
-    class code_container
+    class code_container : public codec::encoder::encode_builder
     {
     public:
         code_container();
@@ -25,13 +23,9 @@ namespace eagle::asmb
         [[nodiscard]] bool get_is_named() const;
 
         void bind_start(const code_label_ptr& code_label);
-        void bind(const code_label_ptr& code_label);
+        void add(codec::encoder::inst_req inst);
 
-        void add(codec::encoder::inst_req& req);
-        void add(codec::encoder::inst_req req);
-        void transfer_from(codec::encoder::encode_builder& req);
-
-        [[nodiscard]] std::vector<inst_label_v> get_instructions() const;
+        [[nodiscard]] std::vector<codec::encoder::inst_req_label_v> get_instructions() const;
 
     private:
         uint32_t uid;
@@ -39,7 +33,5 @@ namespace eagle::asmb
 
         std::string name;
         bool is_named;
-
-        std::vector<inst_label_v> function_segments;
     };
 }

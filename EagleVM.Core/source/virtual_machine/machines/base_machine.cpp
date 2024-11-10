@@ -13,7 +13,7 @@ namespace eagle::virt
         if (block_context.contains(block))
         {
             const asmb::code_label_ptr label = block_context[block];
-            code->bind(label);
+            code->label(label);
         }
 
         for (size_t i = 0; i < command_count; i++)

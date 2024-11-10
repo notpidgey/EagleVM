@@ -32,7 +32,7 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_enter_ptr& cmd)
     {
-        encode_builder builder = { };
+        encode_builder& builder = *block;
 
         // TODO: this is a temporary fix before i add stack overrun checks
         // we allocate the registers for the virtual machine 20 pushes after the current stack
@@ -117,12 +117,11 @@ namespace eagle::virt::eg
         }
 
         builder.make(m_nop);
-        block->transfer_from(builder);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
-        encode_builder builder = { };
+        encode_builder& builder = *block;
 
         const reg temp = reg_64_container->get_any();
 
@@ -154,8 +153,7 @@ namespace eagle::virt::eg
             const reg target_temp = scope.reserve();
 
             // todo: actually find a way where you dont have to pass into the block
-            const asmb::code_container_ptr context_load_block = asmb::code_container::create();
-            handle_cmd(context_load_block, std::make_shared<ir::cmd_context_load>(gpr));
+            handle_cmd(block, std::make_shared<ir::cmd_context_load>(gpr));
 
             builder.make(m_mov, reg_op(target_temp), mem_op(VSP, 0, bit_64))
                    .make(m_add, reg_op(VSP), imm_op(bit_64))
@@ -193,6 +191,5 @@ namespace eagle::virt::eg
                .make(m_jmp, mem_op(rsp, -8, bit_64));
 
         builder.make(m_nop);
-        block->transfer_from(builder);
     }
 }

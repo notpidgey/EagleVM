@@ -59,7 +59,7 @@ namespace eagle::virt::eg
         register_context_ptr reg_64_container;
         register_context_ptr reg_128_container;
 
-        using handler_info_pair = std::pair<asmb::code_label_ptr, codec::encoder::encode_builder>;
+        using handler_info_pair = std::pair<asmb::code_label_ptr, asmb::code_container_ptr>;
         std::unordered_map<size_t, std::vector<handler_info_pair>> handler_map;
 
         [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
@@ -73,7 +73,7 @@ namespace eagle::virt::eg
             force_unique = 2,
         };
 
-        using handler_generator = std::function<void(codec::encoder::encode_builder&, std::function<codec::reg()>)>;
+        using handler_generator = std::function<void(const asmb::code_container_ptr&, std::function<codec::reg()>)>;
 
         template <typename... Params>
         void create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const ir::base_command_ptr& command,
