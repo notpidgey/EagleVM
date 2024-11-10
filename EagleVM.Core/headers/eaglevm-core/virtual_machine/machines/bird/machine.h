@@ -54,8 +54,6 @@ namespace eagle::virt::eg
         std::vector<asmb::code_container_ptr> create_handlers() override;
 
     private:
-        codec::encoder::encode_builder_ptr out_block;
-
         settings_ptr settings;
         register_manager_ptr reg_man;
 
@@ -78,13 +76,15 @@ namespace eagle::virt::eg
         };
 
         using handler_generator = std::function<void(codec::encoder::encode_builder&, std::function<codec::reg()>)>;
+
         template <typename... Params>
-        void create_handler(const handler_call_flags flags, ir::command_type cmd_type, const handler_generator handler_create, const Params&... params)
+        void create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const ir::base_command_ptr& command,
+            const handler_generator handler_create, const Params&... params)
         {
-            const size_t handler_hash = compute_handler_hash(cmd_type, params...);
-            create_handler(flags, handler_create, handler_hash);
+            const size_t handler_hash = compute_handler_hash(command->get_command_type(), params...);
+            create_handler(flags, block, handler_create, handler_hash);
         }
 
-        void create_handler(handler_call_flags flags, const handler_generator& create, size_t handler_hash);
+        void create_handler(handler_call_flags flags, const asmb::code_container_ptr& block, const handler_generator& create, size_t handler_hash);
     };
 }

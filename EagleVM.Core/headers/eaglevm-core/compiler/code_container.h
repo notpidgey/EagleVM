@@ -28,7 +28,7 @@ namespace eagle::asmb
         void bind(const code_label_ptr& code_label);
 
         void add(codec::encoder::inst_req& req);
-        void add(codec::encoder::encode_builder& req);
+        void transfer_from(codec::encoder::encode_builder& req);
 
         [[nodiscard]] std::vector<inst_label_v> get_instructions() const;
 

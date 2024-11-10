@@ -54,8 +54,11 @@ namespace eagle::virt::eg
     asmb::code_container_ptr bird_machine::lift_block(const ir::block_ptr& block)
     {
         const size_t command_count = block->size();
+        const asmb::code_container_ptr code = asmb::code_container::create(
+            std::format("block 0x{:x}, {} inst", block->block_id, command_count),
+            true
+        );
 
-        const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + std::to_string(command_count), true);
         if (block_context.contains(block))
         {
             const asmb::code_label_ptr label = block_context[block];
@@ -79,7 +82,7 @@ namespace eagle::virt::eg
         const auto load_reg = cmd->get_reg();
         if (get_reg_class(load_reg) == seg)
         {
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 out.make(m_sub, reg_op(VSP), imm_op(bit_64))
                    .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(load_reg));
@@ -87,7 +90,7 @@ namespace eagle::virt::eg
         }
         else
         {
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto size = get_reg_size(load_reg);
                 const auto output_reg = get_bit_version(alloc_reg(), size);
@@ -105,7 +108,7 @@ namespace eagle::virt::eg
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         const auto store_reg = cmd->get_reg();
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto size = get_reg_size(store_reg);
             const auto output_reg = get_bit_version(alloc_reg(), size);
@@ -133,7 +136,7 @@ namespace eagle::virt::eg
 
         if (cmd->is_virtual())
         {
-            create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 // push all
                 for (const ir::ir_exit_result& exit_result : push_order)
@@ -178,7 +181,7 @@ namespace eagle::virt::eg
         }
         else
         {
-            create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 auto jmp_non_virtual = [&](ir::ir_exit_result result)
                 {
@@ -242,32 +245,22 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_handler_call_ptr& cmd)
     {
-        // todo: pull the actual handler
-        asmb::code_label_ptr handler_label = nullptr;
+        const auto mnemonic = cmd->get_mnemonic();
+
+        std::vector<ir::base_command_ptr> generated_instructions;
         if (cmd->is_operand_sig())
         {
-            const auto sig = cmd->get_x86_signature();
-            // find_handler(sig)
+            const ir::x86_operand_sig sig = cmd->get_x86_signature();
+            generated_instructions = handler_manager::generate_handler(mnemonic, sig);
         }
         else
         {
-            const auto sig = cmd->get_handler_signature();
-            // find_handler(sig)
+            const ir::handler_sig sig = cmd->get_handler_signature();
+            generated_instructions = handler_manager::generate_handler(mnemonic, sig);
         }
 
-        create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
-        {
-            const asmb::code_label_ptr return_label = asmb::code_label::create();
-
-            out.make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
-               .make(m_mov, mem_op(VCS, 0, bit_64), imm_label_operand(return_label))
-
-               .make(m_mov, reg_op(VIP), imm_label_operand(handler_label))
-               .make(m_lea, reg_op(VIP), mem_op(VBASE, VIP, 1, 0, bit_64))
-               .make(m_jmp, reg_op(VIP))
-
-               .label(return_label);
-        });
+        for (const ir::base_command_ptr& instruction : generated_instructions)
+            dispatch_handle_cmd(block, instruction);
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
@@ -275,7 +268,7 @@ namespace eagle::virt::eg
         const ir::ir_size value_size = cmd->get_read_size();
         const auto value_reg_size = to_reg_size(value_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto address_reg = alloc_reg();
             const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
@@ -297,7 +290,7 @@ namespace eagle::virt::eg
 
         if (const auto nearest = cmd->get_is_value_nearest())
         {
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto mem_reg = alloc_reg();
                 const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
@@ -313,7 +306,7 @@ namespace eagle::virt::eg
         }
         else
         {
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto mem_reg = alloc_reg();
                 const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
@@ -336,7 +329,7 @@ namespace eagle::virt::eg
         const auto pop_size = cmd->get_size();
         const auto pop_reg_size = to_reg_size(pop_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             out.make(m_add, reg_op(VSP), imm_op(pop_reg_size));
         }, pop_size);
@@ -355,7 +348,7 @@ namespace eagle::virt::eg
             {
                 const uint64_t immediate_value = arg;
 
-                create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+                create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
                 {
                     const auto reg = get_bit_version(alloc_reg(), push_reg_size);
                     out.make(m_mov, reg_op(reg), imm_op(immediate_value))
@@ -369,7 +362,7 @@ namespace eagle::virt::eg
                 const asmb::code_label_ptr label = get_block_label(target);
                 VM_ASSERT(label != nullptr, "block contains missing context");
 
-                create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+                create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
                 {
                     const auto reg = get_bit_version(alloc_reg(), push_reg_size);
                     out.make(m_mov, reg_op(reg), imm_label_operand(label))
@@ -382,7 +375,7 @@ namespace eagle::virt::eg
                 const ir::reg_vm& target = arg;
                 const auto vm_reg = reg_vm_to_register(target);
 
-                create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+                create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
                 {
                     const auto reg = get_bit_version(alloc_reg(), push_reg_size);
                     out.make(m_mov, reg_op(reg), reg_op(vm_reg))
@@ -397,7 +390,7 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_load_ptr& cmd)
     {
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             // prepare to pop flags from stack
             out.make(m_sub, reg_op(rsp), imm_op(bit_64))
@@ -422,7 +415,7 @@ namespace eagle::virt::eg
         handle_cmd(block, std::make_shared<ir::cmd_push>(flags, ir::ir_size::bit_64));
 
         // we can treat the actual context store as a generic handler because we got rid of the flags store
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto mask_reg = alloc_reg();
             const auto flag_reg = alloc_reg();
@@ -447,7 +440,7 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd)
     {
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto temp_reg = alloc_reg();
             const auto from_size = to_reg_size(cmd->get_current());
@@ -483,7 +476,7 @@ namespace eagle::virt::eg
         const reg vflag_reg = reg_man->get_vm_reg(register_manager::index_vflags);
         const uint32_t flag_index = ir::cmd_flags_load::get_flag_index(cmd->get_flag());
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg flag_hold = alloc_reg();
             out.make(m_mov, reg_op(flag_hold), reg_op(vflag_reg))
@@ -497,7 +490,7 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd)
     {
-        create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg = alloc_reg();
             out.make(m_mov, reg_op(pop_reg), mem_op(VSP, 0, bit_64))
@@ -510,7 +503,7 @@ namespace eagle::virt::eg
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_and, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
@@ -520,7 +513,7 @@ namespace eagle::virt::eg
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_or, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
@@ -530,7 +523,7 @@ namespace eagle::virt::eg
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_xor, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
@@ -541,7 +534,7 @@ namespace eagle::virt::eg
         // TODO: handle reversed parameters
 
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto value_reg = get_bit_version(alloc_reg(), size);
             const auto shift_reg = get_bit_version(alloc_reg(), size);
@@ -563,7 +556,7 @@ namespace eagle::virt::eg
         // TODO: handle reversed parameters
 
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto value_reg = get_bit_version(alloc_reg(), size);
             const auto shift_reg = get_bit_version(alloc_reg(), size);
@@ -582,7 +575,7 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)
     {
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_add, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
@@ -590,7 +583,7 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sub_ptr& cmd)
     {
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_sub, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
         }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
@@ -599,7 +592,7 @@ namespace eagle::virt::eg
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
     {
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             // im not even going to bother naming these, idfc read the assembly
             auto reg_zero = alloc_reg();
@@ -667,7 +660,7 @@ namespace eagle::virt::eg
         if (target_size > from_size)
         {
             const auto bit_diff = static_cast<uint32_t>(target_size) - static_cast<uint32_t>(from_size);
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto target_reg = alloc_reg();
                 const auto pop_reg_size = get_bit_version(target_reg, from_size);
@@ -682,7 +675,7 @@ namespace eagle::virt::eg
         else if (from_size > target_size)
         {
             const auto bit_diff = static_cast<uint32_t>(from_size) - static_cast<uint32_t>(target_size);
-            create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+            create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
                 const auto target_reg = alloc_reg();
                 const auto pop_reg_size = get_bit_version(target_reg, from_size);
@@ -700,7 +693,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg = alloc_reg();
             reg pop_reg_size = get_bit_version(pop_reg, size);
@@ -736,7 +729,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg_one = alloc_reg();
             const reg pop_reg_one_size = get_bit_version(pop_reg_one, size);
@@ -766,7 +759,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg = alloc_reg();
             const reg pop_reg_size = get_bit_version(pop_reg, size);
@@ -793,7 +786,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg = alloc_reg();
             reg pop_reg_size = get_bit_version(pop_reg, size);
@@ -832,7 +825,7 @@ namespace eagle::virt::eg
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg target = get_bit_version(alloc_reg(), size);
             out.make(m_mov, reg_op(target), mem_op(VSP, 0, size))
@@ -929,7 +922,7 @@ namespace eagle::virt::eg
            .make(m_mov, mem_op(VSP, 0, size), reg_op(r_par1));
     }
 
-    void bird_machine::create_handler(const handler_call_flags flags, const handler_generator& create, const size_t handler_hash)
+    void bird_machine::create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const handler_generator& create, const size_t handler_hash)
     {
         scope_register_manager scope = reg_64_container->create_scope();
         auto reg_allocator = [&] -> reg
@@ -986,6 +979,6 @@ namespace eagle::virt::eg
         }
         else create(out, reg_allocator);
 
-        out_block->transfer_from(out);
+        block->transfer_from(out);
     }
 }
