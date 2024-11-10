@@ -242,6 +242,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/bird/handler.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/bird/loader.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/bird/machine.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/bird/util/hash.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_regenerate.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_shuffle.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/eagle/commands/cmd_ctx_swap.h"

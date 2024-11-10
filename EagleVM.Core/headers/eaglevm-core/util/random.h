@@ -20,7 +20,7 @@ namespace eagle::util
         double gen_dist(std::uniform_real_distribution<>& distribution);
 
         template <typename T>
-        T random_elem(const std::vector<T>& vec)
+        const T& random_elem(const std::vector<T>& vec)
         {
             VM_ASSERT(!vec.empty(), "cannot get a random element from an empty vector");
 

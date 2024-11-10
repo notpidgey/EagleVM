@@ -202,7 +202,7 @@ namespace eagle::codec::encoder
     {
     public:
         template <typename... Args>
-        encode_builder& make(mnemonic mnemonic, Args&&... args)
+        encode_builder& make(const mnemonic mnemonic, Args&&... args)
         {
             inst_req instruction = { };
             instruction.mnemonic = mnemonic;
@@ -217,6 +217,17 @@ namespace eagle::codec::encoder
         encode_builder& label(const asmb::code_label_ptr& ptr)
         {
             instruction_list.push(ptr);
+            return *this;
+        }
+
+        encode_builder& transfer_from(const encode_builder& from)
+        {
+            while(!from.instruction_list.empty())
+            {
+                instruction_list.push(from.instruction_list.front());
+                instruction_list.pop();
+            }
+
             return *this;
         }
 

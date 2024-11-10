@@ -107,7 +107,7 @@ namespace eagle::virt::eg
             {
                 out.make(m_sub, reg_op(VSP), imm_op(bit_64))
                    .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(load_reg));
-            });
+            }, load_reg);
         }
         else
         {
@@ -122,7 +122,7 @@ namespace eagle::virt::eg
                 out
                     .make(m_sub, reg_op(VSP), imm_op(size))
                     .make(m_mov, mem_op(VSP, 0, size), reg_op(output_reg));
-            });
+            }, load_reg);
         }
     }
 
@@ -140,7 +140,7 @@ namespace eagle::virt::eg
 
             const register_loader loader(regs);
             loader.store_register(store_reg, output_reg, out);
-        });
+        }, store_reg);
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
@@ -310,7 +310,7 @@ namespace eagle::virt::eg
 
                .make(m_sub, reg_op(VSP), imm_op(value_reg_size))
                .make(m_mov, mem_op(VSP, 0, value_reg), reg_op(value_reg));
-        });
+        }, value_size);
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_write_ptr& cmd)
@@ -319,7 +319,7 @@ namespace eagle::virt::eg
         const ir::ir_size value_size = cmd->get_value_size();
         const auto value_reg_size = to_reg_size(value_size);
 
-        if (cmd->get_is_value_nearest())
+        if (const auto nearest = cmd->get_is_value_nearest())
         {
             create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
             {
@@ -333,7 +333,7 @@ namespace eagle::virt::eg
                    .make(m_add, reg_op(VSP), imm_op(bit_64))
 
                    .make(m_mov, mem_op(mem_reg, 0, value_reg_size), reg_op(value_reg));
-            });
+            }, nearest, value_reg_size);
         }
         else
         {
@@ -349,7 +349,7 @@ namespace eagle::virt::eg
                    .make(m_add, reg_op(VSP), imm_op(value_reg_size))
 
                    .make(m_mov, mem_op(mem_reg, 0, value_reg_size), reg_op(value_reg));
-            });
+            }, nearest, value_reg_size);
         }
     }
 
@@ -363,7 +363,7 @@ namespace eagle::virt::eg
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             out.make(m_add, reg_op(VSP), imm_op(pop_reg_size));
-        });
+        }, pop_size);
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_push_ptr& cmd)
@@ -440,13 +440,19 @@ namespace eagle::virt::eg
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_store_ptr& cmd)
     {
+        const ir::x86_cpu_flag flags = cmd->get_relevant_flags();
+
+        // push flags value as 64 bit
+        handle_cmd(block, std::make_shared<ir::cmd_push>(flags, ir::ir_size::bit_64));
+
+        // we can treat the actual context store as a generic handler because we got rid of the flags store
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const auto mask_reg = alloc_reg();
             const auto flag_reg = alloc_reg();
 
             out.make(m_mov, reg_op(mask_reg), mem_op(VSP, 0, bit_64))
-               .make(m_mov, reg_op(mask_reg), mem_op(VSP, 8, bit_64))
+               .make(m_mov, reg_op(flag_reg), mem_op(VSP, 8, bit_64))
 
                // mask off the wanted bits from flags
                .make(m_and, reg_op(flag_reg), reg_op(mask_reg))
@@ -483,7 +489,7 @@ namespace eagle::virt::eg
 
             out.make(m_sub, reg_op(VSP), imm_op(byte_diff))
                .make(m_mov, mem_op(VSP, 0, to_size), reg_op(to_reg));
-        });
+        }, cmd->get_current(), cmd->get_target());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_x86_dynamic_ptr& cmd)
@@ -510,45 +516,54 @@ namespace eagle::virt::eg
 
                .make(m_sub, reg_op(VSP), imm_op(bit_64))
                .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(flag_hold));
-        });
+        }, flag_index);
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd)
     {
-        create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
+        create_handler(force_inline, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             const reg pop_reg = alloc_reg();
             out.make(m_mov, reg_op(pop_reg), mem_op(VSP, 0, bit_64))
+               .make(m_add, reg_op(VSP), imm_op(bit_64))
                .make(m_jmp, ZREG(pop_reg));
         });
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_and_ptr& cmd)
     {
+        // TODO: handle reversed parameters
+
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_and, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_or_ptr& cmd)
     {
+        // TODO: handle reversed parameters
+
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_or, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_xor_ptr& cmd)
     {
+        // TODO: handle reversed parameters
+
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_xor, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shl_ptr& cmd)
     {
+        // TODO: handle reversed parameters
+
         const reg_size size = to_reg_size(cmd->get_size());
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
@@ -564,11 +579,13 @@ namespace eagle::virt::eg
 
             out.make(m_shlx, reg_op(value_reg), reg_op(value_reg), reg_op(shift_reg))
                .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg));
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_shr_ptr& cmd)
     {
+        // TODO: handle reversed parameters
+
         const reg_size size = to_reg_size(cmd->get_size());
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
@@ -584,7 +601,7 @@ namespace eagle::virt::eg
 
             out.make(m_shrx, reg_op(value_reg), reg_op(value_reg), reg_op(shift_reg))
                .make(m_mov, mem_op(VSP, 0, size), reg_op(value_reg));
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)
@@ -592,7 +609,7 @@ namespace eagle::virt::eg
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_add, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sub_ptr& cmd)
@@ -600,7 +617,7 @@ namespace eagle::virt::eg
         create_handler(default_create, cmd->get_command_type(), [&](encode_builder& out, const std::function<reg()>& alloc_reg)
         {
             handle_generic_logic_cmd(m_sub, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
-        });
+        }, cmd->get_reversed(), cmd->get_preserved(), cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
@@ -663,7 +680,7 @@ namespace eagle::virt::eg
                     }
                 }
             }
-        });
+        }, cmd->get_size());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_resize_ptr& cmd)
@@ -684,7 +701,7 @@ namespace eagle::virt::eg
                    .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
                    .make(m_sub, reg_op(VSP), imm_op(bit_diff / 8))
                    .make(m_mov, mem_op(VSP, 0, target_size), imm_op(target_reg_size));
-            });
+            }, cmd->get_current(), cmd->get_target());
         }
         else if (from_size > target_size)
         {
@@ -698,7 +715,7 @@ namespace eagle::virt::eg
                 out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
                    .make(m_add, reg_op(VSP), imm_op(bit_diff / 8))
                    .make(m_mov, mem_op(VSP, 0, target_size), imm_op(target_reg_size));
-            });
+            }, cmd->get_current(), cmd->get_target());
         }
     }
 
@@ -735,7 +752,7 @@ namespace eagle::virt::eg
             else out.make(m_popcnt, reg_op(pop_reg_size), reg_op(pop_reg_size));
 
             out.make(m_mov, mem_op(VSP, 0, size), reg_op(pop_reg_size));
-        });
+        }, cmd->get_size(), cmd->get_preserved());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_smul_ptr& cmd)
@@ -760,7 +777,7 @@ namespace eagle::virt::eg
 
             out.make(m_imul, reg_op(pop_reg_two_size), reg_op(pop_reg_one_size))
                .make(m_mov, mem_op(VSP, 0, size), reg_op(pop_reg_two_size));
-        });
+        }, cmd->get_size(), cmd->get_preserved());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_umul_ptr& cmd)
@@ -792,7 +809,7 @@ namespace eagle::virt::eg
                .make(m_sub, reg_op(pop_reg_size), reg_op(shift_reg_size))
 
                .make(m_mov, mem_op(VSP, 0, size), reg_op(pop_reg_size));
-        });
+        }, cmd->get_size(), cmd->get_preserved());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_log2_ptr& cmd)
@@ -831,7 +848,7 @@ namespace eagle::virt::eg
                 out.make(m_mov, mem_op(VSP, 0, bit_8), reg_op(count_reg_size));
             }
             else out.make(m_mov, mem_op(VSP, 0, size), reg_op(count_reg_size));
-        });
+        }, cmd->get_size(), cmd->get_preserved());
     }
 
     void bird_machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd)
@@ -845,7 +862,7 @@ namespace eagle::virt::eg
             out.make(m_mov, reg_op(target), mem_op(VSP, 0, size))
                .make(m_sub, reg_op(VSP), imm_op(size))
                .make(m_mov, mem_op(VSP, 0, size), reg_op(target));
-        });
+        }, cmd->get_size());
     }
 
     reg bird_machine::reg_vm_to_register(const ir::reg_vm store) const
@@ -936,44 +953,63 @@ namespace eagle::virt::eg
            .make(m_mov, mem_op(VSP, 0, size), reg_op(r_par1));
     }
 
-    void bird_machine::create_handler(handler_call_flags flags, ir::command_type cmd_type,
-        std::function<void(codec::encoder::encode_builder&, std::function<codec::reg()>)> handler_create)
+    void bird_machine::create_handler(const handler_call_flags flags, const handler_generator& create, const size_t handler_hash)
     {
         scope_register_manager scope = reg_64_container->create_scope();
-
-        auto reg_allocator = [&]
+        auto reg_allocator = [&] -> reg
         {
             return scope.reserve();
         };
 
         // if not force inlined, we let the vm settings decide the chance of generating a new handler
-        if (flags)
+        encode_builder out = { };
+        if (flags != force_inline)
         {
-            // dump to block
-            auto builder = std::make_shared<encode_builder>();
-            handler_create(builder, reg_allocator);
-
-            // todo: actually add to block
-        }
-        else
-        {
-            constexpr float chance_to_generate = 0.10;
-            if (util::get_ran_device().gen_chance(chance_to_generate))
+            asmb::code_label_ptr target_label = nullptr;
+            if (flags == default_create)
             {
-                // we want to generate a new handler
-                encode_builder_ptr builder = std::make_shared<encode_builder>();
-                handler_create(builder, reg_allocator);
+            HANDLE_CREATE:
+                target_label = asmb::code_label::create(std::to_string(handler_hash));
 
-                // create a handler return
-                builder->make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
+                encode_builder builder = { };
+                builder.label(target_label);
+
+                create(builder, reg_allocator);
+                builder.make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
                        .make(m_lea, reg_op(VCS), mem_op(VCS, 8, bit_64))
                        .make(m_lea, reg_op(VIP), mem_op(VBASE, VCSRET, 1, 0, bit_64))
                        .make(m_jmp, reg_op(VIP));
+
+                handler_map[handler_hash].emplace_back(target_label, builder);
             }
             else
             {
-                // we want to use an existing handler
+                constexpr float chance_to_generate = 0.10;
+                if (flags != force_unique && (handler_map[handler_hash].empty() || util::get_ran_device().gen_chance(chance_to_generate)))
+                    goto HANDLE_CREATE;
+
+                const auto& handler_instances = handler_map[handler_hash];
+                target_label = std::get<0>(util::get_ran_device().random_elem(handler_instances));
             }
+
+            const asmb::code_label_ptr return_label = asmb::code_label::create();
+
+            // lea VCS, [VCS - 8]       ; allocate space for new return address
+            // mov [VCS], code_label    ; place return rva on the stack
+            out.make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
+               .make(m_mov, mem_op(VCS, 0, bit_64), imm_label_operand(return_label));
+
+            // lea VIP, [VBASE + VCSRET]  ; add rva to base
+            // jmp VIP
+            out.make(m_mov, reg_op(VIP), imm_label_operand(target_label))
+               .make(m_lea, reg_op(VIP), mem_op(VBASE, VIP, 1, 0, bit_64))
+               .make(m_jmp, reg_op(VIP));
+
+            // execution after VM handler should end up here
+            out.label(return_label);
         }
+        else create(out, reg_allocator);
+
+        out_block->transfer_from(out);
     }
 }

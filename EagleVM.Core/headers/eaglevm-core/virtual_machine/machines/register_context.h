@@ -1,14 +1,13 @@
 #pragma once
+#include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
-#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
+#include "eaglevm-core/codec/zydis_defs.h"
 
 namespace eagle::virt
 {
     using register_context_ptr = std::shared_ptr<class register_context>;
-
     class scope_register_manager
     {
     public:
@@ -46,13 +45,10 @@ namespace eagle::virt
         uint16_t get_available_count() const;
         std::unordered_set<codec::reg> get_all_available();
 
-        codec::reg assign(const ir::discrete_store_ptr& store);
         codec::reg get_any();
         std::vector<codec::reg> get_any_multiple(uint8_t count);
 
-        void block(const ir::discrete_store_ptr& store);
         void block(codec::reg reg);
-        void release(const ir::discrete_store_ptr& store);
         void release(codec::reg reg);
 
         scope_register_manager create_scope();

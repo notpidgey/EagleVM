@@ -70,7 +70,10 @@ namespace eagle::ir::lifter
 
         // zero change
         if (flags != 0)
-            block->push_back(std::make_shared<cmd_context_rflags_store>(flags));
+        {
+            block->push_back(std::make_shared<cmd_push>(flags, ir_size::bit_64));
+            block->push_back(std::make_shared<cmd_context_rflags_store>());
+        }
 
         // pops rflags
         block->push_back(std::make_shared<cmd_pop>(ir_size::bit_64));
