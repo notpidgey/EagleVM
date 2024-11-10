@@ -5,7 +5,9 @@
 #include "zydis_defs.h"
 #include "zydis_enum.h"
 #include "zydis_helper.h"
+
 #include "eaglevm-core/compiler/code_label.h"
+#include "eaglevm-core/util/assert.h"
 
 namespace eagle::codec::encoder
 {
@@ -14,6 +16,7 @@ namespace eagle::codec::encoder
         mem_op(const reg base, const int64_t displacement, const uint16_t read_size)
             : base(base), index(none), scale(1), displacement(displacement), read_size(read_size)
         {
+            VM_ASSERT(read_size > 0 && (read_size & read_size - 1) == 0, "unexpected mem_op size");
         }
 
         mem_op(const reg base, const int64_t displacement, const reg_size reg_read_size)
@@ -25,6 +28,7 @@ namespace eagle::codec::encoder
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const uint16_t read_size)
             : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size)
         {
+            VM_ASSERT(read_size > 0 && (read_size & (read_size - 1)) == 0, "unexpected mem_op size");
         }
 
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const reg_size reg_read_size)
@@ -86,10 +90,17 @@ namespace eagle::codec::encoder
         bool negative;
     };
 
-    struct inst_req
+    class inst_req
     {
-        mnemonic mnemonic;
-        std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
+    public:
+        explicit inst_req(const mnemonic mnemonic): mnemonic(mnemonic)
+        {
+            static uint32_t current_uuid = 0;
+            uuid = current_uuid++;
+
+            if (uuid == 1151)
+                __debugbreak();
+        }
 
         std::vector<asmb::code_label_ptr> get_dependents() const
         {
@@ -154,6 +165,10 @@ namespace eagle::codec::encoder
             return req;
         }
 
+        uint32_t uuid;
+        mnemonic mnemonic;
+        std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
+
     private:
         static void encode_op(enc::req& req, const mem_op& mem, uint64_t)
         {
@@ -161,10 +176,14 @@ namespace eagle::codec::encoder
 
             req.operands[op_index].type = ZYDIS_OPERAND_TYPE_MEMORY;
             req.operands[op_index].mem.base = static_cast<zydis_register>(mem.base);
+            if (mem.index != none)
+                req.operands[op_index].mem.scale = mem.scale;
+            else
+                req.operands[op_index].mem.scale = 0;
             req.operands[op_index].mem.index = static_cast<zydis_register>(mem.index);
             req.operands[op_index].mem.displacement = mem.displacement;
-            req.operands[op_index].mem.scale = mem.scale;
             req.operands[op_index].mem.size = mem.read_size;
+
             req.operand_count++;
         }
 
@@ -185,6 +204,7 @@ namespace eagle::codec::encoder
             req.operands[op_index].imm.u = imm.value;
             if (imm.relative)
                 req.operands[op_index].imm.u -= current_rva;
+
             req.operand_count++;
         }
 
@@ -211,11 +231,11 @@ namespace eagle::codec::encoder
         template <typename... Args>
         encode_builder& make(const mnemonic mnemonic, Args&&... args)
         {
-            inst_req instruction = {};
-            instruction.mnemonic = mnemonic;
+            inst_req instruction(mnemonic);
 
             // Helper lambda to convert each argument to a specific variant type
-            auto make_variant = [](auto&& arg) -> std::variant<mem_op, reg_op, imm_op, imm_label_operand> {
+            auto make_variant = [](auto&& arg) -> std::variant<mem_op, reg_op, imm_op, imm_label_operand>
+            {
                 using ArgType = std::decay_t<decltype(arg)>;
                 if constexpr (std::is_same_v<ArgType, mem_op>)
                     return (std::in_place_type<mem_op>, std::forward<ArgType>(arg));

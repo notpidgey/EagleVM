@@ -282,7 +282,7 @@ namespace eagle::virt::eg
                .make(m_mov, reg_op(value_reg), mem_op(address_reg, 0, value_reg_size))
 
                .make(m_sub, reg_op(VSP), imm_op(value_reg_size))
-               .make(m_mov, mem_op(VSP, 0, value_reg), reg_op(value_reg));
+               .make(m_mov, mem_op(VSP, 0, value_reg_size), reg_op(value_reg));
         }, value_size);
     }
 
@@ -354,10 +354,11 @@ namespace eagle::virt::eg
 
                 create_handler(force_inline, block, cmd, [&](encode_builder& out, const std::function<reg()>& alloc_reg)
                 {
-                    const auto reg = get_bit_version(alloc_reg(), push_reg_size);
+                    const auto reg = alloc_reg();
+                    const auto reg_sized = get_bit_version(reg, push_reg_size);
                     out.make(m_mov, reg_op(reg), imm_op(immediate_value))
                        .make(m_sub, reg_op(VSP), imm_op(push_reg_size))
-                       .make(m_mov, mem_op(VSP, 0, push_reg_size), reg_op(reg));
+                       .make(m_mov, mem_op(VSP, 0, push_reg_size), reg_op(reg_sized));
                 });
             }
             else if constexpr (std::is_same_v<T, ir::block_ptr>)

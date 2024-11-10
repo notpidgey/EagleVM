@@ -1,3 +1,5 @@
+#include <intrin.h>
+
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/codec/zydis_defs.h"
 
@@ -339,7 +341,12 @@ namespace eagle::codec
         const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&request, instruction_data.data(),
             &encoded_length, address);
         if (!ZYAN_SUCCESS(result))
+        {
+            auto target = ZYAN_STATUS_OUT_OF_RESOURCES;
+            auto status_code = ZYAN_STATUS_CODE(result);
             __debugbreak();
+            __nop();
+        }
 
         instruction_data.resize(encoded_length);
         return instruction_data;
