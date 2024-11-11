@@ -17,6 +17,11 @@ namespace eagle::asmb
         return name;
     }
 
+    uint32_t code_label::get_uuid()
+    {
+        return uuid;
+    }
+
     void code_label::set_name(const std::string& new_name)
     {
         name = new_name;
@@ -37,11 +42,13 @@ namespace eagle::asmb
         return relative_address + base_address;
     }
 
-    void code_label::set_address(uint64_t base, uint64_t address)
+    void code_label::set_address(const uint64_t base, const uint64_t address)
     {
         base_address = base;
         relative_address = address;
     }
+
+    inline static uint32_t global_uuid = 0;
 
     code_label::code_label()
     {
@@ -50,6 +57,8 @@ namespace eagle::asmb
 
         relative_address = 0;
         base_address = 0;
+
+        uuid = global_uuid++;
     }
 
     code_label::code_label(const std::string& label_name, const bool generate_comments)
@@ -59,5 +68,7 @@ namespace eagle::asmb
 
         relative_address = 0;
         base_address = 0;
+
+        uuid = global_uuid++;
     }
 }

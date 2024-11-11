@@ -70,7 +70,7 @@ namespace eagle::asmb
                         codec::enc::req enc_req = inst.build(base_offset);
                         attempt_instruction_fix(enc_req);
 
-                        const auto compiled = codec::compile_absolute(enc_req, base_offset);
+                        const auto compiled = codec::compile_absolute(enc_req, 0);
                         output_encodings.push_back(compiled);
 
                         base_offset += compiled.size();
