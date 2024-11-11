@@ -178,7 +178,8 @@ namespace eagle::virt::eg
                                .make(m_sub, reg_op(VSP), imm_op(bit_64))
                                .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
                         }
-                        else VM_ASSERT("unimplemented exit result");
+                        else
+                        VM_ASSERT("unimplemented exit result");
                     }, exit_result);
                 }
 
@@ -763,7 +764,7 @@ namespace eagle::virt::eg
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cnt_ptr& cmd)
     {
         const ir::ir_size ir_size = cmd->get_size();
-        const reg_size size = to_reg_size(ir_size);
+        reg_size size = to_reg_size(ir_size);
 
         create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
         {
@@ -775,24 +776,23 @@ namespace eagle::virt::eg
             const bool is_bit8 = size == bit_8;
             if (is_bit8)
             {
-                pop_reg_size = get_bit_version(pop_reg, bit_16);
-                out.make(m_xor, reg_op(pop_reg_size), reg_op(pop_reg_size));
+                out.make(m_xor, reg_op(pop_reg), reg_op(pop_reg));
 
-                pop_reg_size = get_bit_version(pop_reg, bit_8);
+                size = bit_16;
+                pop_reg_size = get_bit_version(pop_reg, size);
             }
 
             out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
             if (cmd->get_preserved())
                 out.make(m_sub, reg_op(VSP), imm_op(size));
 
+            out.make(m_popcnt, reg_op(pop_reg_size), reg_op(pop_reg_size));
+
             if (is_bit8)
             {
-                pop_reg_size = get_bit_version(pop_reg, bit_16);
-                out.make(m_popcnt, reg_op(pop_reg_size), reg_op(pop_reg_size));
-
-                pop_reg_size = get_bit_version(pop_reg, bit_8);
+                size = bit_8;
+                pop_reg_size = get_bit_version(pop_reg, size);
             }
-            else out.make(m_popcnt, reg_op(pop_reg_size), reg_op(pop_reg_size));
 
             out.make(m_mov, mem_op(VSP, 0, size), reg_op(pop_reg_size));
         }, cmd->get_size(), cmd->get_preserved());
@@ -874,29 +874,30 @@ namespace eagle::virt::eg
             const reg count_reg = alloc_reg();
             reg count_reg_size = get_bit_version(count_reg, size);
 
-            if (size == bit_8)
+            const bool is_bit8 = size == bit_8;
+            if (is_bit8)
             {
-                const auto scaled_reg = get_bit_version(pop_reg, bit_16);
-                out.make(m_xor, reg_op(scaled_reg), reg_op(scaled_reg))
-                   .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
+                out
+                    .make(m_xor, reg_op(pop_reg), reg_op(pop_reg))
+                    .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
 
-                pop_reg_size = get_bit_version(pop_reg, bit_16);
                 count_reg_size = get_bit_version(count_reg, bit_16);
+                pop_reg_size = get_bit_version(count_reg, bit_16);
             }
             else out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
 
             if (cmd->get_preserved())
                 out.make(m_sub, reg_op(VSP), imm_op(size));
 
-            out.make(m_bsr, reg_op(count_reg_size), reg_op(pop_reg_size))
-               .make(m_cmovz, reg_op(count_reg_size), reg_op(pop_reg_size));
+            out.make(m_xor, reg_op(count_reg_size), reg_op(count_reg_size))
+               .make(m_bsr, reg_op(count_reg_size), reg_op(pop_reg_size))
+               .make(m_cmovz, reg_op(count_reg_size), reg_op(pop_reg_size))
+               .make(m_mov, mem_op(VSP, 0, size), reg_op(count_reg_size));
 
-            if (size == bit_8)
-            {
+            if (is_bit8)
                 count_reg_size = get_bit_version(count_reg, bit_8);
-                out.make(m_mov, mem_op(VSP, 0, bit_8), reg_op(count_reg_size));
-            }
-            else out.make(m_mov, mem_op(VSP, 0, size), reg_op(count_reg_size));
+
+            out.make(m_mov, mem_op(VSP, 0, size), reg_op(count_reg_size));
         }, cmd->get_size(), cmd->get_preserved());
     }
 
@@ -993,28 +994,29 @@ namespace eagle::virt::eg
         encode_builder& out, const std::function<reg()>& alloc_reg)
     {
         const reg_size size = to_reg_size(ir_size);
-        const reg r_par1 = get_bit_version(alloc_reg(), size);
-        const reg r_par2 = get_bit_version(alloc_reg(), size);
+        const reg r_arg1 = get_bit_version(alloc_reg(), size);
+        const reg r_arg_0 = get_bit_version(alloc_reg(), size);
 
         if (preserved)
         {
-            out.make(m_mov, reg_op(r_par1), mem_op(VSP, 0, size))
-               .make(m_mov, reg_op(r_par2), mem_op(VSP, TOB(size), size));
+            out.make(m_mov, reg_op(r_arg1), mem_op(VSP, 0, size))
+               .make(m_mov, reg_op(r_arg_0), mem_op(VSP, TOB(size), size));
         }
         else
         {
-            out.make(m_mov, reg_op(r_par1), mem_op(VSP, 0, size))
+            out.make(m_mov, reg_op(r_arg1), mem_op(VSP, 0, size))
                .make(m_add, reg_op(VSP), imm_op(size))
-               .make(m_mov, reg_op(r_par2), mem_op(VSP, 0, size))
+               .make(m_mov, reg_op(r_arg_0), mem_op(VSP, 0, size))
                .make(m_add, reg_op(VSP), imm_op(size));
         }
 
-        out.make(command, reg_op(r_par1), reg_op(r_par2))
+        out.make(command, reg_op(r_arg_0), reg_op(r_arg1))
            .make(m_sub, reg_op(VSP), imm_op(size))
-           .make(m_mov, mem_op(VSP, 0, size), reg_op(r_par1));
+           .make(m_mov, mem_op(VSP, 0, size), reg_op(r_arg_0));
     }
 
-    void machine::create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const handler_generator& create, const size_t handler_hash)
+    void machine::create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const handler_generator& create,
+        const size_t handler_hash)
     {
         scope_register_manager scope = reg_64_container->create_scope();
         auto reg_allocator = [&]() -> reg
@@ -1043,7 +1045,7 @@ namespace eagle::virt::eg
             }
             else
             {
-                constexpr float chance_to_generate = 0.10;
+                constexpr float chance_to_generate = 0.0;
                 if (!(flags & force_unique) && (handler_map[handler_hash].empty() || util::get_ran_device().gen_chance(chance_to_generate)))
                     goto HANDLE_CREATE;
 

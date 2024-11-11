@@ -152,7 +152,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
                 out_string.pop_back();
 
-                spdlog::get("console")->info("block {}\n{}", i, out_string);
+                spdlog::get("console")->info("block 0x{:x}\n{}", translated_block->block_id, out_string);
             }
 
             asmb::code_container_ptr result_container = machine->lift_block(translated_block);

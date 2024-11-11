@@ -228,7 +228,9 @@ namespace eagle::virt
 
     asmb::code_label_ptr base_machine::get_block_label(const ir::block_ptr& block)
     {
-        if (block_context.contains(block))
+        const bool contains = block_context.contains(block);
+        VM_ASSERT(contains, "block must contain label");
+        if (contains)
             return block_context[block];
 
         return nullptr;

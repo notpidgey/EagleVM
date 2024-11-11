@@ -26,7 +26,7 @@ namespace eagle::virt::eg
     using namespace codec;
     using namespace codec::encoder;
 
-    constexpr int32_t vm_overhead = 8 * 300;
+    constexpr int32_t vm_overhead = 8 * 100;
     constexpr int32_t vm_stack_regs = 17 + 16 * 2;
     constexpr int32_t vm_call_stack = 3;
 
