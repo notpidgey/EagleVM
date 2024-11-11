@@ -278,10 +278,7 @@ namespace eagle::virt::eg
         container->bind_start(target_label);
 
         for (const ir::base_command_ptr& instruction : generated_instructions)
-        {
-            instruction->set_inlined(true);
             dispatch_handle_cmd(container, instruction);
-        }
 
         container->make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
                  .make(m_lea, reg_op(VCS), mem_op(VCS, 8, bit_64))

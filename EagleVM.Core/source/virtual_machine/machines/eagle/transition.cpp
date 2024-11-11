@@ -116,15 +116,11 @@ namespace eagle::virt::eg
             // store it however we intend to
             handle_cmd(block, std::make_shared<ir::cmd_context_store>(gpr));
         }
-
-        builder.make(m_nop);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_vm_exit_ptr& cmd)
     {
         encode_builder& builder = *block;
-
-        builder.make(m_nop);
 
         // restore context
         std::array<reg, 16> gprs = register_manager::get_gpr64_regs();
@@ -198,7 +194,5 @@ namespace eagle::virt::eg
         // the rsp that we set up earlier before popping all the regs
         builder.make(m_pop, reg_op(rsp))
                .make(m_jmp, mem_op(rsp, -8, bit_64));
-
-        builder.make(m_nop);
     }
 }
