@@ -290,7 +290,7 @@ namespace eagle::virt::eg
             const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
 
             out.make(m_mov, reg_op(address_reg), mem_op(VSP, 0, bit_64))
-               .make(m_add, reg_op(VSP), imm_op(value_reg_size))
+               .make(m_add, reg_op(VSP), imm_op(bit_64))
                .make(m_mov, reg_op(value_reg), mem_op(address_reg, 0, value_reg_size))
 
                .make(m_sub, reg_op(VSP), imm_op(value_reg_size))
