@@ -231,6 +231,11 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
             ss << "  out:   " << out_flags << '\n';
         }
 
+        if (result & stack_misalign)
+        {
+            ss << "[!] stack pointer not returned to original position\n";
+        }
+
         ss << "[!] failed\n";
         failed->fetch_add(1);
 
@@ -367,6 +372,11 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
             fail |= register_mismatch;
             break;
         }
+    }
+
+    if (target.Rsp != result.Rsp)
+    {
+        fail |= stack_misalign;
     }
 
     if (flags)
