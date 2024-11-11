@@ -259,7 +259,8 @@ namespace eagle::ir::lifter
             if (static_cast<ir_size>(first_op.size) == ir_size::bit_32)
             {
                 reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
-                block->push_back(std::make_shared<cmd_context_store>(reg, codec::reg_size::bit_32));
+                block->push_back(std::make_shared<cmd_resize>(ir_size::bit_64, ir_size::bit_32));
+                block->push_back(std::make_shared<cmd_context_store>(reg));
             }
             else
             {

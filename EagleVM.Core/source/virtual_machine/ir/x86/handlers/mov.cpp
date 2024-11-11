@@ -39,8 +39,11 @@ namespace eagle::ir::lifter
             case ZYDIS_OPERAND_TYPE_REGISTER:
             {
                 codec::reg reg = static_cast<codec::reg>(first_op.reg.value);
-                if(static_cast<ir_size>(first_op.size) == ir_size::bit_32)
-                    reg = codec::get_bit_version(first_op.reg.value, codec::gpr_64);
+                if (static_cast<ir_size>(first_op.size) == ir_size::bit_32)
+                {
+                    block->push_back(std::make_shared<cmd_resize>(ir_size::bit_32, ir_size::bit_64));
+                    block->push_back(std::make_shared<cmd_context_store>(reg));
+                }
 
                 block->push_back(std::make_shared<cmd_context_store>(reg, static_cast<codec::reg_size>(first_op.size)));
 
