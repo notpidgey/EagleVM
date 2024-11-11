@@ -280,6 +280,7 @@ namespace eagle::ir
         // removes head preopt block and moves it to the first body if the first body block is not a vm_block
         // every reference to the head is then rewritten to be the first body
         optimize_heads(block_vm_ids, block_tracker, extern_call_blocks);
+        optimize_body_to_tail(block_vm_ids, block_tracker, extern_call_blocks);
         optimize_same_vm(block_vm_ids, block_tracker, extern_call_blocks);
 
         return flatten(block_vm_ids, block_tracker);
@@ -311,6 +312,32 @@ namespace eagle::ir
                 }
 
                 preopt->head = nullptr;
+            }
+        }
+    }
+
+    void ir_translator::optimize_body_to_tail(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker, const std::vector<preopt_block_ptr>& extern_call_blocks)
+    {
+        // check each preopt block to see if vmenter head is even necessary
+        for (const auto& preopt : block_vm_ids | std::views::keys)
+        {
+            const auto tail = preopt->tail;
+            const auto last_body = preopt->body.back();
+
+            // check for body size of two, i will figure a better way of oding this better
+            // but wwhat this means is that the last instruction generated a branch which got copied to the tail
+            // and that hte last body only contains a vm enter and vmexit ( as by design a VM preopt body MINIMALY SHOULD)
+            // so we will remove it because this is not supposed to ahppen
+            if (last_body->get_block_state() == vm_block && last_body->size() == 2)
+            {
+                // this means the last body is useless
+                VM_ASSERT(preopt->body.size() > 1, "there should never be a case where a generated preopt body should have only 1 body that is broken");
+
+                const auto before_last = preopt->body.at(preopt->body.size() - 2);
+                before_last->as_x86()->exit_as_branch()->rewrite_branch(last_body, tail);
+
+                preopt->body.pop_back();
             }
         }
     }

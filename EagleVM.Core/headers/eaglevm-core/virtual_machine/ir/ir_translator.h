@@ -48,12 +48,19 @@ namespace eagle::ir
          * @return branching information of the found block within the translator's context
          */
         branch_info get_branch_info(uint32_t rva);
+
     private:
         dasm::segment_dasm_ptr dasm;
         dasm::analysis::liveness* dasm_liveness;
         std::unordered_map<dasm::basic_block_ptr, preopt_block_ptr> bb_map;
 
         void optimize_heads(
+            std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+            std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+            const std::vector<preopt_block_ptr>& extern_call_blocks
+        );
+
+        void optimize_body_to_tail(
             std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
             std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
             const std::vector<preopt_block_ptr>& extern_call_blocks
