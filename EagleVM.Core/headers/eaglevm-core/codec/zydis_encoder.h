@@ -119,6 +119,25 @@ namespace eagle::codec::encoder
             return dependents;
         }
 
+        bool is_relative() const
+        {
+            for (const auto& op : operands)
+            {
+                const bool relative = std::visit([](auto&& inst) -> bool
+                {
+                    using T = std::decay_t<decltype(inst)>;
+                    if constexpr (std::is_same_v<T, imm_label_operand> || std::is_same_v<T, imm_op>)
+                        return inst.relative;
+
+                    return false;
+                }, op);
+
+                if (relative)
+                    return true;
+            }
+            return false;
+        }
+
         bool get_rva_dependent() const
         {
             bool is_dependent = false;
@@ -229,6 +248,7 @@ namespace eagle::codec::encoder
     };
 
     using inst_req_label_v = std::variant<inst_req, asmb::code_label_ptr>;
+
     class encode_builder
     {
     public:
@@ -267,8 +287,8 @@ namespace eagle::codec::encoder
         encode_builder& transfer_from(encode_builder& from)
         {
             instruction_list.insert(instruction_list.end(),
-            std::make_move_iterator(from.instruction_list.begin()),
-            std::make_move_iterator(from.instruction_list.end()));
+                std::make_move_iterator(from.instruction_list.begin()),
+                std::make_move_iterator(from.instruction_list.end()));
 
             from.instruction_list.clear();
             return *this;
