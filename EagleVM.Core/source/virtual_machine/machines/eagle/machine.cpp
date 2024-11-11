@@ -273,8 +273,40 @@ namespace eagle::virt::eg
             generated_instructions = handler_manager::generate_handler(mnemonic, sig);
         }
 
+        const asmb::code_container_ptr container = asmb::code_container::create();
+        const auto target_label = asmb::code_label::create();
+        container->bind_start(target_label);
+
         for (const ir::base_command_ptr& instruction : generated_instructions)
-            dispatch_handle_cmd(block, instruction);
+        {
+            instruction->set_inlined(true);
+            dispatch_handle_cmd(container, instruction);
+        }
+
+        container->make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
+                 .make(m_lea, reg_op(VCS), mem_op(VCS, 8, bit_64))
+                 .make(m_lea, reg_op(VIP), mem_op(VBASE, VCSRET, 1, 0, bit_64))
+                 .make(m_jmp, reg_op(VIP));
+
+        // write the call into the current block
+        const asmb::code_label_ptr return_label = asmb::code_label::create();
+        encode_builder& out = *block;
+
+        // lea VCS, [VCS - 8]       ; allocate space for new return address
+        // mov [VCS], code_label    ; place return rva on the stack
+        out.make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
+           .make(m_mov, mem_op(VCS, 0, bit_64), imm_label_operand(return_label));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        out.make(m_mov, reg_op(VIP), imm_label_operand(target_label))
+           .make(m_lea, reg_op(VIP), mem_op(VBASE, VIP, 1, 0, bit_64))
+           .make(m_jmp, reg_op(VIP));
+
+        // execution after VM handler should end up here
+        out.label(return_label);
+
+        misc_handlers.emplace_back(target_label, container);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_mem_read_ptr& cmd)
@@ -737,7 +769,7 @@ namespace eagle::virt::eg
                 const auto pop_reg_size = get_bit_version(target_reg, from_size);
                 const auto target_reg_size = get_bit_version(target_reg, target_size);
 
-                out.make(m_xor, reg_op(target_reg_size), reg_op(target_reg_size))
+                out.make(m_xor, reg_op(target_reg), reg_op(target_reg))
                    .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
                    .make(m_sub, reg_op(VSP), imm_op(bit_diff / 8))
                    .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
@@ -770,29 +802,27 @@ namespace eagle::virt::eg
         {
             encode_builder& out = *out_container;
 
-            const reg pop_reg = alloc_reg();
-            reg pop_reg_size = get_bit_version(pop_reg, size);
+            const auto pop_reg = alloc_reg();
+            auto pop_reg_size = get_bit_version(pop_reg, size);
 
             const bool is_bit8 = size == bit_8;
             if (is_bit8)
             {
-                out.make(m_xor, reg_op(pop_reg), reg_op(pop_reg));
+                out
+                    .make(m_xor, reg_op(pop_reg), reg_op(pop_reg))
+                    .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
 
-                size = bit_16;
-                pop_reg_size = get_bit_version(pop_reg, size);
+                pop_reg_size = get_bit_version(pop_reg, bit_16);
             }
+            else out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
 
-            out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, size));
             if (cmd->get_preserved())
                 out.make(m_sub, reg_op(VSP), imm_op(size));
 
             out.make(m_popcnt, reg_op(pop_reg_size), reg_op(pop_reg_size));
 
             if (is_bit8)
-            {
-                size = bit_8;
-                pop_reg_size = get_bit_version(pop_reg, size);
-            }
+                pop_reg_size = get_bit_version(pop_reg, bit_8);
 
             out.make(m_mov, mem_op(VSP, 0, size), reg_op(pop_reg_size));
         }, cmd->get_size(), cmd->get_preserved());
@@ -923,6 +953,9 @@ namespace eagle::virt::eg
         for (auto& [_, pairs] : handler_map)
             for (auto& code : pairs | std::views::values)
                 out.push_back(code);
+
+        for (auto& [lable, dat] : misc_handlers)
+            out.push_back(dat);
 
         return out;
     }
