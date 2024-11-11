@@ -61,6 +61,7 @@ namespace eagle::virt::eg
 
         using handler_info_pair = std::pair<asmb::code_label_ptr, asmb::code_container_ptr>;
         std::unordered_map<size_t, std::vector<handler_info_pair>> handler_map;
+        std::vector<handler_info_pair> misc_handlers;
 
         [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
         void handle_generic_logic_cmd(codec::mnemonic command, ir::ir_size ir_size, bool preserved, codec::encoder::encode_builder& out,
@@ -76,10 +77,13 @@ namespace eagle::virt::eg
         using handler_generator = std::function<void(const asmb::code_container_ptr&, std::function<codec::reg()>)>;
 
         template <typename... Params>
-        void create_handler(const handler_call_flags flags, const asmb::code_container_ptr& block, const ir::base_command_ptr& command,
+        void create_handler(handler_call_flags flags, const asmb::code_container_ptr& block, const ir::base_command_ptr& command,
             const handler_generator handler_create, const Params&... params)
         {
             const size_t handler_hash = compute_handler_hash(command->get_command_type(), params...);
+            if (command->is_inlined())
+                flags = force_inline;
+
             create_handler(flags, block, handler_create, handler_hash);
         }
 
