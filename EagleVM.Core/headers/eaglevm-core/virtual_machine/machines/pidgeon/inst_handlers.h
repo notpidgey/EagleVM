@@ -51,7 +51,7 @@ namespace eagle::virt::pidg
 
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::x86_operand_sig& operand_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, const ir::handler_sig& handler_sig);
-        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, std::string handler_sig);
+        asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, uint64_t handler_sig);
         asmb::code_label_ptr get_instruction_handler(codec::mnemonic mnemonic, int len, codec::reg_size size);
 
         std::vector<asmb::code_container_ptr> build_instruction_handlers();
@@ -93,7 +93,7 @@ namespace eagle::virt::pidg
 
         std::vector<
             std::pair<
-                std::tuple<codec::mnemonic, std::string>,
+                std::tuple<codec::mnemonic, uint64_t>,
                 asmb::code_label_ptr>
         > tagged_instruction_handlers;
 

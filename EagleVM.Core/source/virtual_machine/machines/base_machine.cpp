@@ -1,25 +1,25 @@
 #include "eaglevm-core/virtual_machine/machines/base_machine.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
 
 namespace eagle::virt
 {
     asmb::code_container_ptr base_machine::lift_block(const ir::block_ptr& block)
     {
-        const size_t command_count = block->get_command_count();
+        const size_t command_count = block->size();
         const asmb::code_container_ptr code = asmb::code_container::create("block_begin " + command_count, true);
 
         if (block_context.contains(block))
         {
             const asmb::code_label_ptr label = block_context[block];
-            code->bind(label);
+            code->label(label);
         }
 
         for (size_t i = 0; i < command_count; i++)
         {
-            const ir::base_command_ptr command = block->get_command(i);
-            handle_cmd(code, command);
+            const ir::base_command_ptr command = block->at(i);
+            dispatch_handle_cmd(code, command);
         }
 
         return code;
@@ -83,7 +83,7 @@ namespace eagle::virt
         return blocks;
     }
 
-    void base_machine::handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
+    void base_machine::dispatch_handle_cmd(const asmb::code_container_ptr& code, const ir::base_command_ptr& command)
     {
         switch (command->get_command_type())
         {
@@ -123,20 +123,71 @@ namespace eagle::virt
             case ir::command_type::vm_exec_x86:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_exec>(command));
                 break;
-            case ir::command_type::vm_exec_dynamic_x86:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_x86_dynamic>(command));
+            case ir::command_type::vm_context_rflags_load:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_context_rflags_load>(command));
                 break;
-            case ir::command_type::vm_rflags_load:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_rflags_load>(command));
-                break;
-            case ir::command_type::vm_rflags_store:
-                handle_cmd(code, std::static_pointer_cast<ir::cmd_rflags_store>(command));
+            case ir::command_type::vm_context_rflags_store:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_context_rflags_store>(command));
                 break;
             case ir::command_type::vm_sx:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_sx>(command));
                 break;
             case ir::command_type::vm_branch:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_branch>(command));
+                break;
+            case ir::command_type::vm_flags_load:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_flags_load>(command));
+                break;
+            case ir::command_type::vm_jmp:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_jmp>(command));
+                break;
+            case ir::command_type::vm_and:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_and>(command));
+                break;
+            case ir::command_type::vm_or:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_or>(command));
+                break;
+            case ir::command_type::vm_xor:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_xor>(command));
+                break;
+            case ir::command_type::vm_shl:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_shl>(command));
+                break;
+            case ir::command_type::vm_shr:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_shr>(command));
+                break;
+            case ir::command_type::vm_add:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_add>(command));
+                break;
+            case ir::command_type::vm_sub:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_sub>(command));
+                break;
+            case ir::command_type::vm_cmp:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_cmp>(command));
+                break;
+            case ir::command_type::vm_resize:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_resize>(command));
+                break;
+            case ir::command_type::vm_cnt:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_cnt>(command));
+                break;
+            case ir::command_type::vm_smul:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_smul>(command));
+                break;
+            case ir::command_type::vm_umul:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_umul>(command));
+                break;
+            case ir::command_type::vm_abs:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_abs>(command));
+                break;
+            case ir::command_type::vm_log2:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_log2>(command));
+                break;
+            case ir::command_type::vm_dup:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_dup>(command));
+                break;
+            case ir::command_type::none:
+                VM_ASSERT("unexpected command type generated");
                 break;
         }
     }
@@ -153,32 +204,12 @@ namespace eagle::virt
                 return codec::m_jcxz;
             case ir::exit_condition::jecxz:
                 return codec::m_jecxz;
-            case ir::exit_condition::jknzd:
-                return codec::m_jknzd;
-            case ir::exit_condition::jkzd:
-                return codec::m_jkzd;
             case ir::exit_condition::jl:
                 return codec::m_jl;
             case ir::exit_condition::jle:
                 return codec::m_jle;
             case ir::exit_condition::jmp:
                 return codec::m_jmp;
-            case ir::exit_condition::jnb:
-                return codec::m_jnb;
-            case ir::exit_condition::jnbe:
-                return codec::m_jnbe;
-            case ir::exit_condition::jnl:
-                return codec::m_jnl;
-            case ir::exit_condition::jnle:
-                return codec::m_jnle;
-            case ir::exit_condition::jno:
-                return codec::m_jno;
-            case ir::exit_condition::jnp:
-                return codec::m_jnp;
-            case ir::exit_condition::jns:
-                return codec::m_jns;
-            case ir::exit_condition::jnz:
-                return codec::m_jnz;
             case ir::exit_condition::jo:
                 return codec::m_jo;
             case ir::exit_condition::jp:
@@ -187,8 +218,6 @@ namespace eagle::virt
                 return codec::m_jrcxz;
             case ir::exit_condition::js:
                 return codec::m_js;
-            case ir::exit_condition::jz:
-                return codec::m_jz;
             default:
             {
                 VM_ASSERT("invalid exit condition reached");
@@ -199,7 +228,9 @@ namespace eagle::virt
 
     asmb::code_label_ptr base_machine::get_block_label(const ir::block_ptr& block)
     {
-        if (block_context.contains(block))
+        const bool contains = block_context.contains(block);
+        VM_ASSERT(contains, "block must contain label");
+        if (contains)
             return block_context[block];
 
         return nullptr;

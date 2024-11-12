@@ -32,7 +32,7 @@ namespace eagle::dasm::analysis
         void insert_flags(const uint64_t data)
         {
             for (int i = 0; i < 64; i++)
-                if (data << i & 1)
+                if (data >> i & 1)
                     flags.insert_byte(i);
         }
 
@@ -52,6 +52,16 @@ namespace eagle::dasm::analysis
             info.r64 = first.r64 | second.r64;
             info.r512 = first.r512 | second.r512;
             info.flags = first.flags | second.flags;
+
+            return info;
+        }
+
+        friend liveness_info operator&(const liveness_info& first, const liveness_info& second)
+        {
+            liveness_info info;
+            info.r64 = first.r64 & second.r64;
+            info.r512 = first.r512 & second.r512;
+            info.flags = first.flags & second.flags;
 
             return info;
         }

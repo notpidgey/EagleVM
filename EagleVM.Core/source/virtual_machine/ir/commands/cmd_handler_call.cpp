@@ -33,4 +33,24 @@ namespace eagle::ir
     {
         return h_sig;
     }
+
+    x86_cpu_flag cmd_handler_call::get_relevant_flag() const
+    {
+        return relevant_flags;
+    }
+
+    void cmd_handler_call::set_relevant_flags(const x86_cpu_flag flags)
+    {
+        relevant_flags = flags;
+    }
+
+    bool cmd_handler_call::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_handler_call>(other);
+        return base_command::is_similar(other) &&
+            is_operand_sig() == cmd->is_operand_sig() &&
+            get_mnemonic() == cmd->get_mnemonic() &&
+            get_x86_signature() == cmd->get_x86_signature() &&
+            get_handler_signature() == cmd->get_handler_signature();
+    }
 }

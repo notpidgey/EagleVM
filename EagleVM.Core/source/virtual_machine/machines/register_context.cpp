@@ -1,8 +1,8 @@
 #include "eaglevm-core/virtual_machine/machines/register_context.h"
-
 #include "eaglevm-core/virtual_machine/machines/util.h"
 
 #include "eaglevm-core/codec/zydis_helper.h"
+#include "eaglevm-core/util/assert.h"
 #include "eaglevm-core/util/random.h"
 
 namespace eagle::virt
@@ -33,7 +33,7 @@ namespace eagle::virt
     std::vector<codec::reg> scope_register_manager::reserve_multiple(const uint8_t count)
     {
         std::vector<codec::reg> result;
-        for(auto i = 0; i < count; i++)
+        for (auto i = 0; i < count; i++)
             result.push_back(reserve());
 
         return result;
@@ -49,7 +49,7 @@ namespace eagle::virt
 
     void scope_register_manager::release(const std::vector<codec::reg>& regs)
     {
-        for(const auto reg : regs)
+        for (const auto reg : regs)
             release(reg);
     }
 
@@ -66,21 +66,14 @@ namespace eagle::virt
         blocked_stores.clear();
     }
 
-    std::unordered_set<codec::reg> register_context::get_all_availiable()
+    uint16_t register_context::get_available_count() const
     {
-        return avaliable_stores;
+        return avaliable_stores.size();
     }
 
-    codec::reg register_context::assign(const ir::discrete_store_ptr& store)
+    std::unordered_set<codec::reg> register_context::get_all_available()
     {
-        if (store->get_finalized())
-            return get_bit_version(store->get_store_register(), target_size);
-
-        const codec::reg target_register_64 = pop_availiable_store();
-        block(target_register_64);
-
-        store->finalize_register(target_register_64);
-        return target_register_64;
+        return avaliable_stores;
     }
 
     codec::reg register_context::get_any()
@@ -103,16 +96,6 @@ namespace eagle::virt
         return out;
     }
 
-    void register_context::block(const ir::discrete_store_ptr& store)
-    {
-        const codec::reg target_register = store->get_store_register();
-        const codec::reg target_register_64 = get_bit_version(target_register, target_size);
-
-        VM_ASSERT(avaliable_stores.contains(target_register_64), "attempted to block unavailiable register");
-        blocked_stores.insert(target_register_64);
-        avaliable_stores.erase(target_register_64);
-    }
-
     void register_context::block(const codec::reg reg)
     {
         const codec::reg target_register_64 = get_bit_version(reg, target_size);
@@ -120,16 +103,6 @@ namespace eagle::virt
         VM_ASSERT(!blocked_stores.contains(target_register_64), "attempted to block blocked register");
         blocked_stores.insert(target_register_64);
         avaliable_stores.erase(target_register_64);
-    }
-
-    void register_context::release(const ir::discrete_store_ptr& store)
-    {
-        const codec::reg target_register = store->get_store_register();
-        const codec::reg target_register_64 = get_bit_version(target_register, target_size);
-
-        VM_ASSERT(!avaliable_stores.contains(target_register_64), "attempted to release available register");
-        avaliable_stores.insert(target_register_64);
-        blocked_stores.erase(target_register_64);
     }
 
     void register_context::release(const codec::reg reg)

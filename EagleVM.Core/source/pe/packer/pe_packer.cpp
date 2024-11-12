@@ -18,14 +18,14 @@ namespace eagle::pe
     {
         size_t address = encoded_vec.size();
 
-        code_view_pdb pdb{};
+        code_view_pdb pdb{ };
         pdb.signature[0] = 'R';
         pdb.signature[1] = 'S';
         pdb.signature[2] = 'D';
         pdb.signature[3] = 'S';
         pdb.age = 0xE;
 
-        // inser the "pdb" structure to the back of encoded_vec
+        // insert the "pdb" structure to the back of encoded_vec
         encoded_vec.insert(encoded_vec.end(), reinterpret_cast<uint8_t*>(&pdb), reinterpret_cast<uint8_t*>(&pdb) + sizeof(pdb));
 
         std::string pdb_value;
@@ -39,21 +39,23 @@ namespace eagle::pe
         pdb_value += "⠀⠀⠀⠀⠀⠈⠙⠦⢕⡋⠶⠄⣤⠤⠤⠤⠤⠂⡠⠀⡇\n";
         pdb_value += "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠑⠒⠦⠤⣄⣀⣀⣀⣠⠔⠁\n";
 
-        // conver the string to bytes and insert at the end of the file
+        // convert the string to bytes and insert at the end of the file
         encoded_vec.insert(encoded_vec.end(), pdb_value.begin(), pdb_value.end());
-        return {address, pdb_value.size() + sizeof(pdb)};
+        return { address, pdb_value.size() + sizeof(pdb) };
     }
 
     asmb::section_manager pe_packer::create_section() const
     {
+        using namespace codec;
+
         asmb::section_manager section_manager;
 
         // apply text overlay
         if (text_overlay)
         {
-            asmb::code_container_ptr container = asmb::code_container::create();
+            encoder::encode_builder builder = { };
 
-            std::vector<codec::enc::req> target_instructions;
+            std::vector<enc::req> target_instructions;
             int current_byte = 0;
 
             // if you want to use this feature add some kind of text file where the run directory for eaglevm is
@@ -82,9 +84,9 @@ namespace eagle::pe
                 const uint32_t section_rva = header.virtual_address;
 
                 asmb::code_label_ptr rel_label = asmb::code_label::create();
-                container->bind(rel_label);
-                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_relative_address(), 8))));
-                container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, section_rva, 8))));
+                builder.label(rel_label)
+                       .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_address(), 8))
+                       .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rax, section_rva, 8));
 
                 for (int i = 0; i < data.size(); i += 4)
                 {
@@ -99,26 +101,32 @@ namespace eagle::pe
 
                     // then we find a way to get it back
                     const int32_t diff = target_value - current_value;
-                    container->add(encode(codec::m_sub, ZMEMBD(codec::rax, 0, 4), ZIMMS(diff)));
-                    container->add(encode(codec::m_add, ZREG(codec::rax), ZIMMS(4)));
+                    builder.make(m_sub, encoder::mem_op(rax, 0, 4), encoder::imm_op(diff))
+                           .make(m_add, encoder::reg_op(rax), encoder::imm_op(4));
 
                     current_byte += 4;
                 }
             }
+
+            asmb::code_container_ptr container = asmb::code_container::create();
+            container->transfer_from(builder);
 
             section_manager.add_code_container(container);
         }
 
         // return to main
         {
-            asmb::code_container_ptr container = asmb::code_container::create();
+            encoder::encode_builder builder = { };
             auto orig_entry = generator->nt_headers.OptionalHeader.AddressOfEntryPoint;
 
             asmb::code_label_ptr rel_label = asmb::code_label::create();
-            container->bind(rel_label);
-            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rip, -rel_label->get_relative_address(), 8))));
-            container->add(RECOMPILE(codec::encode(codec::m_lea, ZREG(codec::rax), ZMEMBD(codec::rax, orig_entry, 8))));
-            container->add(encode(codec::m_jmp, ZREG(codec::rax)));
+            builder.label(rel_label)
+                   .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_address(), 8))
+                   .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rax, orig_entry, 8))
+                   .make(m_jmp, encoder::reg_op(rax));
+
+            asmb::code_container_ptr container = asmb::code_container::create();
+            container->transfer_from(builder);
 
             section_manager.add_code_container(container);
         }

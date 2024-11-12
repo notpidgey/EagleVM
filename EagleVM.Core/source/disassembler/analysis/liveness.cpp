@@ -59,7 +59,7 @@ namespace eagle::dasm::analysis
         // profit??
     }
 
-    std::vector<std::pair<liveness_info, liveness_info>> liveness::analyze_block_liveness(const basic_block_ptr& block)
+    std::vector<std::pair<liveness_info, liveness_info>> liveness::analyze_block(const basic_block_ptr& block)
     {
         std::vector<std::pair<liveness_info, liveness_info>> instruction_live(block->decoded_insts.size());
 
@@ -76,7 +76,7 @@ namespace eagle::dasm::analysis
 
                 // IN[B]
                 liveness_info use_set, def_set;
-                compute_use_def(block->decoded_insts[i], use_set, def_set);
+                compute_inst_use_def(block->decoded_insts[i], use_set, def_set);
 
                 const liveness_info diff = new_out - def_set;
                 liveness_info new_in = use_set | diff;
@@ -91,19 +91,37 @@ namespace eagle::dasm::analysis
         return instruction_live;
     }
 
-    void liveness::compute_use_def()
+    std::pair<liveness_info, liveness_info> liveness::analyze_block_at(const basic_block_ptr& block, const size_t idx)
+    {
+        const std::vector<std::pair<liveness_info, liveness_info>> instruction_live
+            = analyze_block(block);
+
+        return instruction_live[idx];
+    }
+
+    void liveness::compute_blocks_use_def()
     {
         for (auto& block : segment->blocks)
         {
-            liveness_info use, def = {};
+            liveness_info use, def = { };
             for (const auto& decoded_inst : block->decoded_insts)
-                compute_use_def(decoded_inst, use, def);
+                compute_inst_use_def(decoded_inst, use, def);
 
             block_use_def[block] = { use, def };
         }
     }
 
-    void liveness::compute_use_def(codec::dec::inst_info inst_info, liveness_info& use, liveness_info& def)
+    liveness_info liveness::compute_inst_flags(const codec::dec::inst_info& inst_info)
+    {
+        liveness_info liveness = { };
+        liveness.insert_flags(inst_info.instruction.cpu_flags->modified);
+        liveness.insert_flags(inst_info.instruction.cpu_flags->set_0);
+        liveness.insert_flags(inst_info.instruction.cpu_flags->set_1);
+
+        return liveness;
+    }
+
+    void liveness::compute_inst_use_def(codec::dec::inst_info inst_info, liveness_info& use, liveness_info& def)
     {
         auto& [inst, operands] = inst_info;
         auto handle_register = [&](codec::reg reg, const bool read)
@@ -157,6 +175,9 @@ namespace eagle::dasm::analysis
                     op.reg.value == ZYDIS_REGISTER_EIP)
                     continue;
 
+                if (op.reg.value == ZYDIS_REGISTER_FLAGS || op.reg.value == ZYDIS_REGISTER_EFLAGS || op.reg.value == ZYDIS_REGISTER_RFLAGS)
+                    continue;
+
                 const auto reg = static_cast<codec::reg>(op.reg.value);
                 if (op.actions & ZYDIS_OPERAND_ACTION_MASK_READ)
                     handle_register(reg, true);
@@ -168,19 +189,25 @@ namespace eagle::dasm::analysis
                 const codec::reg reg = static_cast<codec::reg>(op.mem.base);
                 const codec::reg reg2 = static_cast<codec::reg>(op.mem.index);
 
+                if (reg == ZYDIS_REGISTER_RIP ||
+                    reg == ZYDIS_REGISTER_EIP)
+                    continue;
+
                 if (reg != ZYDIS_REGISTER_NONE)
                     handle_register(reg, true);
                 if (reg2 != ZYDIS_REGISTER_NONE)
                     handle_register(reg2, true);
             }
-
-            // check read flags
-            use.insert_flags(inst.cpu_flags->tested);
-
-            // check written flags
-            def.insert_flags(inst.cpu_flags->modified);
-            def.insert_flags(inst.cpu_flags->set_0);
-            def.insert_flags(inst.cpu_flags->set_1);
         }
+
+        // check read flags
+        use.insert_flags(inst.cpu_flags->tested);
+
+        // check written flags
+        def.insert_flags(inst.cpu_flags->modified);
+        def.insert_flags(inst.cpu_flags->set_0);
+        def.insert_flags(inst.cpu_flags->set_1);
+
+        use = use - def;
     }
 }

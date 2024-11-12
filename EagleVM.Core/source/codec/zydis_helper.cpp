@@ -1,3 +1,5 @@
+#include <intrin.h>
+
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/codec/zydis_defs.h"
 
@@ -49,6 +51,39 @@ namespace eagle::codec
     {
         zydis_register result = ZydisRegisterGetLargestEnclosing(ZYDIS_MACHINE_MODE_LONG_64, static_cast<zydis_register>(input_reg));
         return static_cast<reg>(result);
+    }
+
+    uint16_t reg_size_to_b(const reg_size size)
+    {
+        uint16_t read_size = 0;
+        switch (size)
+        {
+            case bit_512:
+                read_size = 512 / 8;
+            break;
+            case bit_256:
+                read_size = 256 / 8;
+            break;
+            case bit_128:
+                read_size = 128 / 8;
+            break;
+            case bit_64:
+                read_size = 64 / 8;
+            break;
+            case bit_32:
+                read_size = 32 / 8;
+            break;
+            case bit_16:
+                read_size = 16 / 8;
+            break;
+            case bit_8:
+                read_size = 8 / 8;
+            break;
+            default:
+                VM_ASSERT("invalid reg size handled");
+        }
+
+        return read_size;
     }
 
     reg_class get_max_size(reg input_reg)
@@ -306,7 +341,12 @@ namespace eagle::codec
         const ZyanStatus result = ZydisEncoderEncodeInstructionAbsolute(&request, instruction_data.data(),
             &encoded_length, address);
         if (!ZYAN_SUCCESS(result))
+        {
+            auto target = ZYAN_STATUS_OUT_OF_RESOURCES;
+            auto status_code = ZYAN_STATUS_CODE(result);
             __debugbreak();
+            __nop();
+        }
 
         instruction_data.resize(encoded_length);
         return instruction_data;

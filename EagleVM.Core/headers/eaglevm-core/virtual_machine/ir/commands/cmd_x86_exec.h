@@ -1,4 +1,5 @@
 #pragma once
+#include "eaglevm-core/codec/zydis_encoder.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
@@ -7,23 +8,16 @@ namespace eagle::ir
     class cmd_x86_exec : public base_command
     {
     public:
-        explicit cmd_x86_exec(const codec::dec::inst_info& dec_req)
-            : base_command(command_type::vm_exec_x86)
-        {
-            request = codec::decode_to_encode(dec_req);
-        }
+        explicit cmd_x86_exec(const codec::encoder::inst_req& enc_req);
 
-        explicit cmd_x86_exec(const codec::dynamic_instruction& enc_req)
-            : base_command(command_type::vm_exec_x86), request(enc_req)
-        {
-        }
+        codec::encoder::inst_req get_request() const;
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
-        codec::dynamic_instruction get_request() const
-        {
-            return request;
-        }
+        std::string to_string() override;
 
     private:
-        codec::dynamic_instruction request{ };
+        codec::encoder::inst_req request;
     };
+
+    SHARED_DEFINE(cmd_x86_exec);
 }

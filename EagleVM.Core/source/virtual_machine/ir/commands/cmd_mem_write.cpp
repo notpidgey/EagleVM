@@ -21,4 +21,13 @@ namespace eagle::ir
     {
         return write_size;
     }
+
+    bool cmd_mem_write::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_mem_write>(other);
+        return base_command::is_similar(other) &&
+            get_is_value_nearest() == cmd->get_is_value_nearest() &&
+            get_value_size() == cmd->get_value_size() &&
+            get_write_size() == cmd->get_write_size();
+    }
 }

@@ -26,13 +26,15 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
         output_target = build_context(safe_context, output_writes);
 
         // exception handler will redirect to this RIP
-        int64_t rip_diff = output_target.Rip - input_target.Rip;
+        const int64_t rip_diff = output_target.Rip - input_target.Rip;
         input_target.Rip = reinterpret_cast<uint64_t>(run_area);
         output_target.Rip = input_target.Rip + rip_diff;
 
-        int64_t rsp_diff = output_target.Rsp - input_target.Rsp;
+        const int64_t rsp_diff = output_target.Rsp - input_target.Rsp;
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
+
+        input_target.EFlags = 0;
 
         if (bp)
         {
@@ -138,14 +140,8 @@ LONG run_container::veh_handler(EXCEPTION_POINTERS* info)
         }
     }
 
-    if (found)
+    if (found || info->ExceptionRecord->ExceptionCode)
         return EXCEPTION_CONTINUE_EXECUTION;
-
-    if (info->ExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT)
-    {
-        info->ContextRecord->Rip += 1;
-        return EXCEPTION_CONTINUE_EXECUTION;
-    }
 
     return EXCEPTION_CONTINUE_SEARCH;
 }

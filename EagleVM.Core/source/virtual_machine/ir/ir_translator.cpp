@@ -1,24 +1,27 @@
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 
+#include <intrin.h>
 #include <ranges>
 #include <unordered_set>
 
-#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
-#include "eaglevm-core/virtual_machine/ir/commands/include.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/block.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
+#include "eaglevm-core/virtual_machine/ir/commands/include.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handler_data.h"
 
-#include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/codec/zydis_helper.h"
+#include "eaglevm-core/disassembler/analysis/liveness.h"
+#include "eaglevm-core/disassembler/disassembler.h"
 
 namespace eagle::ir
 {
-    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm)
+    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness)
     {
         dasm = seg_dasm;
+        dasm_liveness = liveness;
     }
 
-    std::vector<preopt_block_ptr> ir_translator::translate(const bool split)
+    std::vector<preopt_block_ptr> ir_translator::translate()
     {
         // we want to initialzie the entire map with bb translates
         for (dasm::basic_block_ptr block : dasm->blocks)
@@ -31,191 +34,9 @@ namespace eagle::ir
 
         std::vector<preopt_block_ptr> result;
         for (const dasm::basic_block_ptr& block : dasm->blocks)
-            if (split)
-                result.push_back(translate_block_split(block));
-            else
-                result.push_back(translate_block(block));
-
-        // auto similar_seq = [](const std::vector<ir_preopt_block_ptr>& blocks)
-        //     -> std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>>
-        // {
-        //     std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> sequence_map;
-        //     for (const ir_preopt_block_ptr& block : blocks)
-        //     {
-        //         auto body = block->get_body();
-        //         for (int window_size = 2; window_size <= 4; ++window_size)
-        //         {
-        //             for (int i = 0; i <= body.size() - window_size; ++i)
-        //             {
-        //                 std::string sequence;
-        //                 for (int j = i; j < i + window_size; ++j)
-        //                     sequence += body[j].first->to_string();
-
-        //                 sequence_map[sequence].push_back(block);
-        //             }
-        //         }
-        //     }
-
-        //     std::unordered_map<std::string, std::vector<ir_preopt_block_ptr>> similar_sequences;
-        //     for (auto& pair : sequence_map)
-        //         if (pair.second.size() > 1)
-        //             similar_sequences.insert(pair);
-
-        //     return similar_sequences;
-        // };
+            result.push_back(translate_block_split(block));
 
         return result;
-    }
-
-    preopt_block_ptr ir_translator::translate_block(dasm::basic_block_ptr bb)
-    {
-        preopt_block_ptr block_info = bb_map[bb];
-        if (bb->decoded_insts.empty())
-            return block_info;
-
-        const block_ptr entry = block_info->get_head();
-        const block_ptr current_block = std::make_shared<block_ir>(false);
-        const block_ptr exit = block_info->get_tail();
-
-        //
-        // entry
-        //
-        entry->add_command(std::make_shared<cmd_vm_enter>());
-        entry->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
-
-        //
-        // body
-        //
-
-        // we calculate skips here because a basic block might end with a jump
-        // we will handle that manually instead of letting the il translator handle this
-        const dasm::block_end_reason end_reason = bb->get_end_reason();
-        const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
-
-        bool is_in_vm = true;
-        for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
-        {
-            // use il x86 translator to translate the instruction to il
-            codec::dec::inst_info decoded_inst = bb->decoded_insts[i];
-            auto& [inst, ops] = decoded_inst;
-
-            std::vector<handler_op> il_operands;
-            handler::base_handler_gen_ptr handler_gen = nullptr;
-
-            std::optional<std::string> target_handler = std::nullopt;
-
-            codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
-            if (instruction_handlers.contains(mnemonic))
-            {
-                // first we verify if there is even a valid handler for this inustruction
-                // we do this by checking the handler generator for this specific handler
-                handler_gen = instruction_handlers[mnemonic];
-
-                for (int j = 0; j < inst.operand_count_visible; j++)
-                {
-                    il_operands.emplace_back(
-                        static_cast<codec::op_type>(ops[i].type),
-                        static_cast<codec::reg_size>(ops[i].size)
-                    );
-                }
-
-                target_handler = handler_gen->get_handler_id(il_operands);
-            }
-
-            bool translate_sucess = target_handler != std::nullopt;
-            if (target_handler)
-            {
-                // we know that a valid handler exists for this instruction
-                // this means that we can bring it into the base x86 lifter
-
-                // now we need to find a lifter
-                const uint64_t current_rva = bb->get_index_rva(i);
-
-                auto create_lifter = instruction_lifters[mnemonic];
-                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
-
-                translate_sucess = lifter->translate_to_il(current_rva);
-                if (translate_sucess)
-                {
-                    if (!is_in_vm)
-                    {
-                        current_block->add_command(std::make_shared<cmd_vm_enter>());
-                        is_in_vm = true;
-                    }
-
-                    // append basic block
-                    block_ptr result_block = lifter->get_block();
-                    current_block->copy_from(result_block);
-                }
-            }
-
-            if (!translate_sucess)
-            {
-                if (is_in_vm)
-                {
-                    current_block->add_command(std::make_shared<cmd_vm_exit>());
-                    is_in_vm = false;
-                }
-
-                handle_block_command(decoded_inst, current_block, bb->get_index_rva(i));
-            }
-        }
-
-        // jump to exiting block
-        current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
-        block_info->add_body(current_block);
-
-        //
-        // exit
-        //
-        if (is_in_vm)
-            exit->add_command(std::make_shared<cmd_vm_exit>());
-
-        std::vector<il_exit_result> exits;
-        exit_condition condition = exit_condition::none;
-
-        switch (end_reason)
-        {
-            case dasm::block_jump:
-            case dasm::block_end:
-            {
-                auto [target, type] = dasm->get_jump(bb);
-                if (type == dasm::jump_outside_segment)
-                    exits.emplace_back(target);
-                else
-                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-
-                condition = exit_condition::jmp;
-                break;
-            }
-            case dasm::block_conditional_jump:
-            {
-                // case 1 - condition succeed
-                {
-                    auto [target, type] = dasm->get_jump(bb);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-                }
-
-                // case 2 - fall through
-                {
-                    auto [target, type] = dasm->get_jump(bb, true);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-                }
-
-                const auto& [instruction, _] = bb->decoded_insts.back();
-                condition = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
-                break;
-            }
-        }
-
-        exit->add_command(std::make_shared<cmd_branch>(exits, condition));
-        return block_info;
     }
 
     preopt_block_ptr ir_translator::translate_block_split(dasm::basic_block_ptr bb)
@@ -224,58 +45,66 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
-        const block_ptr entry = block_info->get_head();
-        block_ptr current_block = std::make_shared<block_ir>(false);
-        const block_ptr exit = block_info->get_tail();
+        const block_ptr entry = block_info->head;
+        block_ptr current_block = nullptr;
+        const block_ptr exit = block_info->tail;
 
         //
         // entry
         //
-        entry->add_command(std::make_shared<cmd_vm_enter>());
-        entry->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+        entry->push_back(std::make_shared<cmd_vm_enter>());
 
         //
         // body
         //
-        enum block_state { unassigned, vm_block, x86_block };
-        block_state current_state = unassigned;
 
-        // we calculate skips here because a basic block might end with a jump
-        // we will handle that manually instead of letting the il translator handle this
-        const dasm::block_end_reason end_reason = bb->get_end_reason();
-        const uint8_t skips = end_reason == dasm::block_end ? 0 : 1;
+        std::vector<std::pair<dasm::analysis::liveness_info, dasm::analysis::liveness_info>> liveness;
+        if (dasm_liveness) liveness = dasm_liveness->analyze_block(bb);
 
-        for (uint32_t i = 0; i < bb->decoded_insts.size() - skips; i++)
+        for (uint32_t i = 0; i < bb->decoded_insts.size(); i++)
         {
             // use il x86 translator to translate the instruction to il
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            std::vector<handler_op> il_operands;
-            handler::base_handler_gen_ptr handler_gen = nullptr;
+            constexpr auto ignored_mnemonics = { codec::m_nop };
+            if (std::ranges::find(ignored_mnemonics, static_cast<codec::mnemonic>(inst.mnemonic)) != ignored_mnemonics.end())
+                continue;
 
-            std::optional<std::string> target_handler = std::nullopt;
+            handler::base_handler_gen_ptr handler_gen = nullptr;
+            std::optional<uint64_t> target_handler = std::nullopt;
 
             codec::mnemonic mnemonic = static_cast<codec::mnemonic>(inst.mnemonic);
+
+            // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
+            // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
+            // codec::m_jmp mnemonic which will be the way we select it here
+            if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
+                mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
+                mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
+                mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
+                mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
+                mnemonic == codec::m_js || mnemonic == codec::m_jz)
+            {
+                mnemonic = codec::m_jmp;
+            }
+
             if (instruction_handlers.contains(mnemonic))
             {
                 // first we verify if there is even a valid handler for this inustruction
                 // we do this by checking the handler generator for this specific handler
-                handler_gen = instruction_handlers[mnemonic];
-
+                std::vector<handler_op> il_operands;
                 for (int j = 0; j < inst.operand_count_visible; j++)
                 {
                     auto op = ops[j];
-                    il_operands.emplace_back(
-                        static_cast<codec::op_type>(op.type),
-                        static_cast<codec::reg_size>(op.size)
-                    );
+                    il_operands.emplace_back(static_cast<codec::op_type>(op.type), static_cast<codec::reg_size>(op.size));
                 }
 
+                handler_gen = instruction_handlers[mnemonic];
                 target_handler = handler_gen->get_handler_id(il_operands);
             }
 
-            bool translate_sucess = target_handler != std::nullopt;
+            bool translate_success = target_handler != std::nullopt;
             if (target_handler)
             {
                 // we know that a valid handler exists for this instruction
@@ -284,137 +113,139 @@ namespace eagle::ir
                 // now we need to find a lifter
                 const uint64_t current_rva = bb->get_index_rva(i);
 
-                auto create_lifter = instruction_lifters[mnemonic];
-                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(decoded_inst, current_rva);
+                auto& create_lifter = instruction_lifters[mnemonic];
+                const std::shared_ptr<lifter::base_x86_translator> lifter = create_lifter(shared_from_this(), decoded_inst, current_rva);
 
-                translate_sucess = lifter->translate_to_il(current_rva);
-                if (translate_sucess)
+                if (dasm_liveness)
+                {
+                    auto out_liveness = std::get<1>(liveness[i]);
+                    auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
+
+                    auto relevant_out = inst_flags_liveness & out_liveness;
+                    auto relevant_out_flags = relevant_out.get_flags();
+
+                    translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(relevant_out_flags));
+                }
+                else
+                {
+                    // no liveness so we assume all flags are relevant
+                    auto inst_flags_liveness = dasm::analysis::liveness::compute_inst_flags(decoded_inst);
+                    translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(inst_flags_liveness.get_flags()));
+                }
+
+                if (translate_success)
                 {
                     // append basic block
                     block_ptr result_block = lifter->get_block();
 
                     // TODO: add way to scatter blocks instead of appending them to a single block
                     // this should probably be done post gen though
-                    if (current_state == x86_block)
+                    if (current_block == nullptr)
                     {
-                        // the current block is a x86 block
+                        current_block = std::make_shared<block_virt_ir>();
+
+                        cmd_branch_ptr branch = std::make_shared<cmd_branch>(current_block);
+                        branch->set_virtual(true);
+                        entry->push_back(branch);
+                    }
+
+                    if (current_block->get_block_state() == x86_block)
+                    {
+                        // the current block is an x86 block
                         const block_ptr previous = current_block;
-                        block_info->add_body(current_block);
+                        block_info->body.push_back(current_block);
 
-                        current_block = std::make_shared<block_ir>(false);
-                        current_block->add_command(std::make_shared<cmd_vm_enter>());
+                        current_block = std::make_shared<block_virt_ir>();
+                        current_block->push_back(std::make_shared<cmd_vm_enter>());
 
-                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
+                        previous->push_back(std::make_shared<cmd_branch>(current_block));
+                        previous->back()->get<cmd_branch>()->set_virtual(false);
                     }
 
                     current_block->copy_from(result_block);
-                    current_state = vm_block;
                 }
             }
 
-            if (!translate_sucess)
+            if (!translate_success)
             {
-                if (current_state != x86_block)
+                if (current_block == nullptr)
                 {
-                    if (current_state == unassigned)
-                    {
-                        // todo: THIS IS NOT GOOD!!!
-                        // this means that the head vm enter is actually useless so we can remove it
-                        // but because im lazy and its actually kind of difficult i will just vm exit...
-                        // block_ptr preopt_entry = block_info->get_head();
-                        current_block->add_command(std::make_shared<cmd_vm_exit>());
-                    }
-                    else
-                    {
-                        // the current block is a vm block
-                        const block_ptr previous = current_block;
-                        block_info->add_body(current_block);
+                    current_block = std::make_shared<block_x86_ir>();
+                    entry->push_back(std::make_shared<cmd_vm_exit>(current_block));
+                }
 
-                        current_block = std::make_shared<block_ir>(true);
-                        previous->add_command(std::make_shared<cmd_vm_exit>());
-                        previous->add_command(std::make_shared<cmd_branch>(current_block, exit_condition::jmp));
-                    }
+                if (current_block->get_block_state() == vm_block)
+                {
+                    // the current block is a vm block
+                    const block_ptr previous = current_block;
+                    block_info->body.push_back(current_block);
 
-                    current_state = x86_block;
+                    current_block = std::make_shared<block_x86_ir>();
+                    previous->push_back(std::make_shared<cmd_vm_exit>(current_block));
                 }
 
                 // handler does not exist
                 // we need to execute the original instruction
-
                 handle_block_command(decoded_inst, current_block, bb->get_index_rva(i));
             }
         }
 
-        // jump to exiting block
-        current_block->add_command(std::make_shared<cmd_branch>(exit, exit_condition::jmp));
-        block_info->add_body(current_block);
+        // every jcc/jmp is garuanteed to get processed if its at the end of the block
+        // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
+        cmd_branch_ptr branch_cmd;
+        if (bb->get_end_reason() == dasm::block_end)
+        {
+            // add a branch to make sure we account for this case
+            // where there's on instruction to virtualize
+            ir_exit_result target_exit;
+
+            auto [target, type] = dasm->get_jump(bb);
+            if (type == dasm::jump_outside_segment)
+                target_exit = target;
+            else
+                target_exit = bb_map[dasm->get_block(target)]->head;
+
+            branch_cmd = std::make_shared<cmd_branch>(target_exit);
+        }
+        else
+        {
+            // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
+            branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+            VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
+
+            current_block->pop_back();
+        }
+
+
+        // we want to jump to the exit block now
+        if (current_block->get_block_state() == vm_block)
+            current_block->push_back(std::make_shared<cmd_vm_exit>(exit));
+        else
+            current_block->push_back(std::make_shared<cmd_branch>(exit));
+
+        // add as final block_info body
+        block_info->body.push_back(current_block);
 
         //
         // exit
         //
-        if (current_state == vm_block)
-            exit->add_command(std::make_shared<cmd_vm_exit>());
+        branch_cmd->set_virtual(false);
+        exit->push_back(branch_cmd);
 
-        std::vector<il_exit_result> exits;
-        exit_condition condition = exit_condition::none;
-
-        switch (end_reason)
-        {
-            case dasm::block_jump:
-            case dasm::block_end:
-            {
-                auto [target, type] = dasm->get_jump(bb);
-                if (type == dasm::jump_outside_segment)
-                    exits.emplace_back(target);
-                else
-                    exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-
-                condition = exit_condition::jmp;
-                break;
-            }
-            case dasm::block_conditional_jump:
-            {
-                // case 1 - condition succeed
-                {
-                    auto [target, type] = dasm->get_jump(bb);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-                }
-
-                // case 2 - fall through
-                {
-                    auto [target, type] = dasm->get_jump(bb, true);
-                    if (type == dasm::jump_outside_segment)
-                        exits.emplace_back(target);
-                    else
-                        exits.emplace_back(bb_map[dasm->get_block(target)]->get_head());
-                }
-
-                const auto& [instruction, _] = bb->decoded_insts.back();
-                condition = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
-                break;
-            }
-        }
-
-        exit->add_command(std::make_shared<cmd_branch>(exits, condition));
         return block_info;
     }
 
-    std::vector<block_vm_id> ir_translator::flatten(
-        const std::vector<preopt_vm_id>& block_vms,
-        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker
-    )
+    std::vector<flat_block_vmid> ir_translator::flatten(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker)
     {
         // for now we just flatten
-        std::vector<block_vm_id> block_groups;
-        for (const auto& [block, vm_id] : block_vms)
+        std::vector<flat_block_vmid> block_groups;
+        for (const auto& [block, vm_id] : block_vm_ids)
         {
             std::vector<block_ptr> block_group;
-            auto entry = block->get_head();
-            auto body = block->get_body();
-            auto exit = block->get_tail();
+            auto entry = block->head;
+            auto body = block->body;
+            auto exit = block->tail;
 
             if (block_tracker.contains(block))
             {
@@ -443,150 +274,182 @@ namespace eagle::ir
         return block_groups;
     }
 
-    std::vector<block_vm_id> ir_translator::optimize(
-        const std::vector<preopt_vm_id>& block_vms,
+    std::vector<flat_block_vmid> ir_translator::optimize(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
         std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
-        const std::vector<preopt_block_ptr>& extern_call_blocks
-    )
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
     {
-        std::unordered_map<uint32_t, std::vector<preopt_block_ptr>> vm_groups;
-        for (const auto& [block, vm_id] : block_vms)
-            vm_groups[vm_id].push_back(block);
+        // removes head preopt block and moves it to the first body if the first body block is not a vm_block
+        // every reference to the head is then rewritten to be the first body
+        optimize_heads(block_vm_ids, block_tracker, extern_call_blocks);
+        optimize_body_to_tail(block_vm_ids, block_tracker, extern_call_blocks);
+        optimize_same_vm(block_vm_ids, block_tracker, extern_call_blocks);
 
-        // remove vm enter block if every reference to vm enter block uses the same vm
-        for (auto& [vm_id, blocks] : vm_groups)
+        return flatten(block_vm_ids, block_tracker);
+    }
+
+    void ir_translator::optimize_heads(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
+    {
+        // check each preopt block to see if vmenter head is even necessary
+        for (const auto& preopt : block_vm_ids | std::views::keys)
         {
-            // check entery of every block
-            for (const preopt_block_ptr& preopt_block : blocks)
+            const auto head = preopt->head;
+            const auto first_body = preopt->body.front();
+
+            if (first_body->get_block_state() != vm_block)
             {
-                const block_ptr search_enter = preopt_block->get_head();
-                const std::vector redirect_body = preopt_block->get_body();
+                // this means the head is useless
 
-                bool vm_enter_unremovable = false;
-                std::vector<cmd_branch_ptr> search_enter_refs;
-
-                // check if there are any external calls
-                // if there are, we cannot remove vm enter
-                for (auto& external : extern_call_blocks)
+                // replace all references to head with the first body
+                for (const auto& seek_preopt : block_vm_ids | std::views::keys)
                 {
-                    if (preopt_block == external)
-                    {
-                        vm_enter_unremovable = true;
-                        goto UNREMOVABLE;
-                    }
+                    const auto tail = seek_preopt->tail;
+
+                    const auto tail_branch = tail->exit_as_branch();
+                    VM_ASSERT(tail_branch, "tail branch cannot be null");
+
+                    tail_branch->rewrite_branch(head, first_body);
                 }
 
-                // go through each preopt block
-                for (auto& [search_vm_id, other_blocks] : vm_groups)
-                {
-                    // go through each block
-                    for (const preopt_block_ptr& search_preopt_block : other_blocks)
-                    {
-                        // the only blocks that can reference our search block are body and exit
-                        std::vector<block_ptr> search_blocks;
-                        search_blocks.append_range(search_preopt_block->get_body());
-                        search_blocks.push_back(search_preopt_block->get_tail());
-
-                        for (const block_ptr& search_block : search_blocks)
-                        {
-                            const cmd_branch_ptr branch = search_block->get_branch();
-                            auto check_block = [&](const il_exit_result& exit_result)
-                            {
-                                if (std::holds_alternative<block_ptr>(exit_result))
-                                {
-                                    const block_ptr exit_block = std::get<block_ptr>(exit_result);
-                                    if (exit_block == search_enter && search_vm_id != vm_id)
-                                        vm_enter_unremovable = true;
-                                    else
-                                        search_enter_refs.emplace_back(branch);
-                                }
-                            };
-
-                            check_block(branch->get_condition_default());
-                            check_block(branch->get_condition_special());
-
-                            if (vm_enter_unremovable)
-                                goto UNREMOVABLE;
-                        }
-                    }
-                }
-
-            UNREMOVABLE:
-
-                if (!vm_enter_unremovable)
-                {
-                    // we found that we can replace each branch to the block with a branch to the body
-                    for (const auto& branch_ref : search_enter_refs)
-                    {
-                        auto rewrite_branch = [&](il_exit_result& exit_result)
-                        {
-                            if (std::holds_alternative<block_ptr>(exit_result))
-                                exit_result = redirect_body.front();
-                        };
-
-                        rewrite_branch(branch_ref->get_condition_default());
-                        rewrite_branch(branch_ref->get_condition_special());
-                    }
-
-                    preopt_block->clear_head();
-                }
+                preopt->head = nullptr;
             }
         }
+    }
 
-        // remove vm exit block if every branching block uses the same vm
-        for (auto& [vm_id, blocks] : vm_groups)
+    void ir_translator::optimize_body_to_tail(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker, const std::vector<preopt_block_ptr>& extern_call_blocks)
+    {
+        // check each preopt block to see if vmenter head is even necessary
+        for (const auto& preopt : block_vm_ids | std::views::keys)
         {
-            // check entery of every block
-            for (const preopt_block_ptr& preopt_block : blocks)
+            const auto tail = preopt->tail;
+            const auto last_body = preopt->body.back();
+
+            // check for body size of two, i will figure a better way of oding this better
+            // but wwhat this means is that the last instruction generated a branch which got copied to the tail
+            // and that hte last body only contains a vm enter and vmexit ( as by design a VM preopt body MINIMALY SHOULD)
+            // so we will remove it because this is not supposed to ahppen
+            if (last_body->get_block_state() == vm_block && last_body->size() == 2)
             {
-                const block_ptr preopt_exit = preopt_block->get_tail();
-                const cmd_branch_ptr branch = preopt_exit->get_branch();
+                // this means the last body is useless
+                VM_ASSERT(preopt->body.size() > 1, "there should never be a case where a generated preopt body should have only 1 body that is broken");
 
-                // now we want to check if the current vm group has all the exits of this preopt
-                std::vector<preopt_block_ptr>& curr_vm_group = vm_groups[vm_id];
-                auto is_same_vm = [&](const il_exit_result& exit_result)
-                {
-                    if (std::holds_alternative<block_ptr>(exit_result))
-                    {
-                        const block_ptr exit_block = std::get<block_ptr>(exit_result);
-                        for (const auto& search_preopt : curr_vm_group)
-                        {
-                            std::vector<block_ptr> all_search_blocks;
-                            all_search_blocks.push_back(search_preopt->get_head());
-                            all_search_blocks.append_range(search_preopt->get_body());
-                            all_search_blocks.push_back(search_preopt->get_tail());
+                const auto before_last = preopt->body.at(preopt->body.size() - 2);
+                before_last->as_x86()->exit_as_branch()->rewrite_branch(last_body, tail);
 
-                            if (std::ranges::find(all_search_blocks, exit_block) != all_search_blocks.end())
-                                return true;
-                        }
-                    }
-
-                    // if one of the exits is an rva then we have to exit no matter what : (
-                    // otherwise the search would fall through to this fail
-                    return false;
-                };
-
-                const bool check_one = is_same_vm(branch->get_condition_default());
-                const bool check_two = is_same_vm(branch->get_condition_special());
-
-                if (check_one && check_two)
-                {
-                    // this means all exits are of the same vm
-                    const size_t command_count = preopt_exit->get_command_count();
-                    VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
-
-                    if (command_count == 2)
-                    {
-                        // this means we should have a vm exit command
-                        const base_command_ptr& cmd = preopt_exit->remove_command(0);
-                        VM_ASSERT(cmd->get_command_type() == command_type::vm_exit, "invalid command, expected exit");
-                    }
-                }
+                preopt->body.pop_back();
             }
         }
+    }
 
-        // merge blocks together
-        return flatten(block_vms, block_tracker);
+    void ir_translator::optimize_same_vm(std::unordered_map<preopt_block_ptr, uint32_t>& block_vm_ids,
+        std::unordered_map<preopt_block_ptr, block_ptr>& block_tracker,
+        const std::vector<preopt_block_ptr>& extern_call_blocks)
+    {
+        // // remove vm enter block if every reference to vm enter block uses the same vm
+        // for (const auto& [preopt_block, vm_id] : block_vm_ids)
+        // {
+        //     const block_ptr search_enter = preopt_block->head;
+        //     if (search_enter == nullptr)
+        //     {
+        //         // this means we removed the head
+        //         // meaning the first body block doesnt use vm enter
+        //         continue;
+        //     }
+        //
+        //     const block_ptr redirect_body = preopt_block->body.front();
+        //
+        //     bool vm_enter_unremovable = false;
+        //     std::vector<cmd_branch_ptr> search_enter_refs;
+        //
+        //     // check if there are any external calls to any of the body blocks
+        //     // if there are, we cannot remove vm enter
+        //     for (auto& external : extern_call_blocks)
+        //     {
+        //         if (preopt_block == external)
+        //         {
+        //             vm_enter_unremovable = true;
+        //             goto UNREMOVABLE;
+        //         }
+        //     }
+        //
+        //     // go through each preopt block
+        //     for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
+        //     {
+        //         // go through each block
+        //         // the only blocks that can reference our search block are exits
+        //         const auto& search_block = search_preopt_block->tail;
+        //
+        //         const cmd_branch_ptr branch = search_block->exit_as_branch();
+        //         if (branch->branch_visits(search_enter))
+        //         {
+        //             if (search_vm_id != vm_id)
+        //                 vm_enter_unremovable = true;
+        //             else
+        //                 search_enter_refs.emplace_back(branch);
+        //         }
+        //
+        //         // the only case where this happens is if a block referencing the current search block
+        //         // is using a different vm id
+        //         if (vm_enter_unremovable)
+        //             goto UNREMOVABLE;
+        //     }
+        //
+        // UNREMOVABLE:
+        //     if (!vm_enter_unremovable)
+        //     {
+        //         // we found that we can replace each branch to the block with a branch to the body
+        //         for (const auto& branch_ref : search_enter_refs)
+        //             branch_ref->rewrite_branch(search_enter, redirect_body);
+        //
+        //         preopt_block->head = nullptr;
+        //
+        //         // TODO: make sure we are using a VIRTUAL branch for these branches
+        //         // this means a vmenter has to be added before any of these branches are called
+        //         // also check if
+        //     }
+        // }
+        //
+        // // remove vm exit block if every branching block uses the same vm
+        // for (const auto& [preopt_block, vm_id] : block_vm_ids)
+        // {
+        //     // check entery of every block
+        //     const block_ptr preopt_exit = preopt_block->tail;
+        //     const cmd_branch_ptr branch = preopt_exit->get_branch();
+        //
+        //     // now we want to check if the current vm group has all the exits of this preopt
+        //     auto is_same_vm = [&](const ir_exit_result& exit_result)
+        //     {
+        //         if (std::holds_alternative<block_ptr>(exit_result))
+        //         {
+        //             const block_ptr exit_block = std::get<block_ptr>(exit_result);
+        //             for (const auto& [search_preopt_block, search_vm_id] : block_vm_ids)
+        //             {
+        //                 const bool contains = search_preopt_block->head == exit_block || search_preopt_block->tail == exit_block ||
+        //                     std::ranges::find(search_preopt_block->body, exit_block) != search_preopt_block->body.end();
+        //
+        //                 if (contains)
+        //                     return search_vm_id == vm_id;
+        //             }
+        //         }
+        //
+        //         // if one of the exits is an rva then we have to exit no matter what : (
+        //         // otherwise the search would fall through to this fail
+        //         return false;
+        //     };
+        //
+        //     if (is_same_vm(branch->get_condition_default()) && is_same_vm(branch->get_condition_special()))
+        //     {
+        //         // this means all exits are of the same vm
+        //         const size_t command_count = preopt_exit->size();
+        //         VM_ASSERT(command_count <= 2 && command_count > 0, "preoptimized exit should not have more than 2 obfuscation");
+        //
+        //         // this means we should have a vm exit command
+        //         if (command_count == 2)
+        //             preopt_exit->erase(preopt_exit->begin());
+        //     }
+        // }
     }
 
     dasm::basic_block_ptr ir_translator::map_basic_block(const preopt_block_ptr& preopt_target)
@@ -598,162 +461,218 @@ namespace eagle::ir
         return nullptr;
     }
 
-    preopt_block_ptr ir_translator::map_preopt_block(dasm::basic_block_ptr basic_block)
-    {
-        return bb_map[basic_block];
-    }
+    preopt_block_ptr ir_translator::map_preopt_block(const dasm::basic_block_ptr& basic_block) { return bb_map[basic_block]; }
 
-    exit_condition ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
+    std::pair<exit_condition, bool> ir_translator::get_exit_condition(const codec::mnemonic mnemonic)
     {
         switch (mnemonic)
         {
-            case codec::m_jb:
-                return exit_condition::jb;
-            case codec::m_jbe:
-                return exit_condition::jbe;
-            case codec::m_jcxz:
-                return exit_condition::jcxz;
-            case codec::m_jecxz:
-                return exit_condition::jecxz;
-            case codec::m_jknzd:
-                return exit_condition::jknzd;
-            case codec::m_jkzd:
-                return exit_condition::jkzd;
-            case codec::m_jl:
-                return exit_condition::jl;
-            case codec::m_jle:
-                return exit_condition::jle;
-            case codec::m_jmp:
-                return exit_condition::jmp;
-            case codec::m_jnb:
-                return exit_condition::jnb;
-            case codec::m_jnbe:
-                return exit_condition::jnbe;
-            case codec::m_jnl:
-                return exit_condition::jnl;
-            case codec::m_jnle:
-                return exit_condition::jnle;
-            case codec::m_jno:
-                return exit_condition::jno;
-            case codec::m_jnp:
-                return exit_condition::jnp;
-            case codec::m_jns:
-                return exit_condition::jns;
-            case codec::m_jnz:
-                return exit_condition::jnz;
+            // Overflow flag (OF)
             case codec::m_jo:
-                return exit_condition::jo;
-            case codec::m_jp:
-                return exit_condition::jp;
-            case codec::m_jrcxz:
-                return exit_condition::jrcxz;
+                return { exit_condition::jo, false };
+            case codec::m_jno:
+                return { exit_condition::jo, true };
+
+            // Sign flag (SF)
             case codec::m_js:
-                return exit_condition::js;
+                return { exit_condition::js, false };
+            case codec::m_jns:
+                return { exit_condition::js, true };
+
+            // Zero flag (ZF)
             case codec::m_jz:
-                return exit_condition::jz;
+                return { exit_condition::je, false };
+            case codec::m_jnz:
+                return { exit_condition::je, true };
+
+            // Carry flag (CF)
+            case codec::m_jb:
+                return { exit_condition::jb, false };
+            case codec::m_jnb:
+                return { exit_condition::jb, true };
+
+            // Carry or Zero flag (CF or ZF)
+            case codec::m_jbe:
+                return { exit_condition::jbe, false };
+            case codec::m_jnbe:
+                return { exit_condition::jbe, true };
+
+            // Sign flag not equal to Overflow flag (SF != OF)
+            case codec::m_jl:
+                return { exit_condition::jl, false };
+            case codec::m_jnl:
+                return { exit_condition::jl, true };
+
+            // Zero flag or Sign flag not equal to Overflow flag (ZF or SF != OF)
+            case codec::m_jle:
+                return { exit_condition::jle, false };
+            case codec::m_jnle:
+                return { exit_condition::jle, true };
+
+            // Parity flag (PF)
+            case codec::m_jp:
+                return { exit_condition::jp, false };
+            case codec::m_jnp:
+                return { exit_condition::jp, true };
+
+            // CX/ECX/RCX register is zero
+            case codec::m_jcxz:
+                return { exit_condition::jcxz, false };
+            case codec::m_jecxz:
+                return { exit_condition::jecxz, false };
+            case codec::m_jrcxz:
+                return { exit_condition::jrcxz, false };
+
+            // Unconditional jump
+            case codec::m_jmp:
+                return { exit_condition::jmp, false };
+
+            // Conditions not in the enum, might need to be added
+            case codec::m_jknzd:
+                return { exit_condition::none, false };
+            case codec::m_jkzd:
+                return { exit_condition::none, false };
+
             default:
             {
                 VM_ASSERT("invalid conditional jump reached");
-                return exit_condition::none;
+                return { exit_condition::none, false };
             }
         }
     }
 
     void ir_translator::handle_block_command(codec::dec::inst_info decoded_inst, const block_ptr& current_block, const uint64_t current_rva)
     {
-        if (codec::has_relative_operand(decoded_inst))
+        using namespace codec;
+        using namespace codec::encoder;
+
+        inst_req request(static_cast<mnemonic>(decoded_inst.instruction.mnemonic));
+        const enc::req encode_request = decode_to_encode(decoded_inst);
+
+        if (has_relative_operand(decoded_inst))
         {
-            auto [target_address, op_i] = codec::calc_relative_rva(decoded_inst, current_rva);
-            current_block->add_command(
-                std::make_shared<cmd_x86_exec>
-                (
-                    [decoded_inst, target_address, op_i](const uint32_t rva)
+            auto [target_address, op_i] = calc_relative_rva(decoded_inst, current_rva);
+            for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
+            {
+                const auto op = encode_request.operands[i];
+                switch (op.type)
+                {
+                    case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        // Decode instruction to an encode request
-                        codec::enc::req encode_request = codec::decode_to_encode(decoded_inst);
-                        codec::enc::op& op = encode_request.operands[op_i];
-
-                        // Adjust the operand based on its type
-                        switch (op.type)
-                        {
-                            case ZYDIS_OPERAND_TYPE_MEMORY:
-                            {
-                                // Adjust memory displacement
-                                op.mem.displacement = target_address - rva;
-                                break;
-                            }
-                            case ZYDIS_OPERAND_TYPE_IMMEDIATE:
-                            {
-                                // Adjust immediate value
-                                op.imm.s = target_address - rva;
-                                break;
-                            }
-                            default:
-                            {
-                                // Break on unexpected operand type
-                                __debugbreak();
-                            }
-                        }
-
-                        return encode_request;
+                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        break;
                     }
-                )
-            );
+                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                    {
+                        auto& mem = op.mem;
+                        if (i == op_i)
+                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), target_address,
+                                mem.size, true));
+                        else
+                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                                mem.size));
+
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                    {
+                        if (i == op_i)
+                            request.operands.push_back(imm_op(target_address, i == op_i));
+                        else
+                            request.operands.push_back(imm_op(op.imm.s));
+                        break;
+                    }
+                }
+            }
         }
         else
         {
-            current_block->add_command(std::make_shared<cmd_x86_exec>(decoded_inst));
+            for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
+            {
+                const auto op = encode_request.operands[i];
+                switch (op.type)
+                {
+                    case ZYDIS_OPERAND_TYPE_REGISTER:
+                    {
+                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_MEMORY:
+                    {
+                        auto& mem = op.mem;
+                        request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                            mem.size));
+
+                        break;
+                    }
+                    case ZYDIS_OPERAND_TYPE_IMMEDIATE:
+                    {
+                        request.operands.push_back(imm_op(op.imm.s));
+                        break;
+                    }
+                }
+            }
         }
+
+        current_block->push_back(std::make_shared<cmd_x86_exec>(request));
     }
 
-    void preopt_block::init(dasm::basic_block_ptr block)
+    branch_info ir_translator::get_branch_info(const uint32_t rva)
     {
-        head = std::make_shared<block_ir>();
-        tail = std::make_shared<block_ir>();
+        branch_info info = { };
+
+        const auto bb = dasm->get_block(rva);
+        switch (bb->get_end_reason())
+        {
+            case dasm::block_jump:
+            case dasm::block_end:
+            {
+                auto [target, type] = dasm->get_jump(bb);
+                if (type == dasm::jump_outside_segment)
+                    info.fallthrough_branch = target;
+                else
+                    info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+
+                info.exit_condition = exit_condition::jmp;
+                info.inverted_condition = false;
+                break;
+            }
+            case dasm::block_conditional_jump:
+            {
+                // case 1 - condition succeed
+                {
+                    auto [target, type] = dasm->get_jump(bb);
+                    if (type == dasm::jump_outside_segment)
+                        info.conditional_branch = target;
+                    else
+                        info.conditional_branch = bb_map[dasm->get_block(target)]->head;
+                }
+
+                // case 2 - fall through
+                {
+                    auto [target, type] = dasm->get_jump(bb, true);
+                    if (type == dasm::jump_outside_segment)
+                        info.fallthrough_branch = target;
+                    else
+                        info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                }
+
+                const auto& [instruction, _] = bb->decoded_insts.back();
+                auto [condition, invert] = get_exit_condition(static_cast<codec::mnemonic>(instruction.mnemonic));
+
+                info.exit_condition = condition;
+                info.inverted_condition = invert;
+                break;
+            }
+        }
+
+        return info;
+    }
+
+    void preopt_block::init(const dasm::basic_block_ptr& block)
+    {
+        head = std::make_shared<block_virt_ir>(block->start_rva);
+        tail = std::make_shared<block_x86_ir>();
         original_block = block;
-    }
-
-    bool preopt_block::has_head() const
-    {
-        return head != nullptr;
-    }
-
-    block_ptr preopt_block::get_entry()
-    {
-        if (has_head())
-            return head;
-
-        VM_ASSERT(!body.empty(), "attempted to retrieve nearest entry while containing no body");
-        return body[0];
-    }
-
-    dasm::basic_block_ptr preopt_block::get_original_block() const
-    {
-        return original_block;
-    }
-
-    block_ptr preopt_block::get_head()
-    {
-        return head;
-    }
-
-    void preopt_block::clear_head()
-    {
-        head = nullptr;
-    }
-
-    std::vector<block_ptr> preopt_block::get_body()
-    {
-        return body;
-    }
-
-    block_ptr preopt_block::get_tail()
-    {
-        return tail;
-    }
-
-    void preopt_block::add_body(const block_ptr& block)
-    {
-        body.push_back(block);
     }
 }

@@ -9,6 +9,7 @@ namespace eagle::codec
     using zydis_register_width = ZydisRegisterWidth;
 
     using zydis_register = ZydisRegister;
+
     enum reg
     {
         none = ZYDIS_REGISTER_NONE,
@@ -214,9 +215,14 @@ namespace eagle::codec
         ds = ZYDIS_REGISTER_DS,
         fs = ZYDIS_REGISTER_FS,
         gs = ZYDIS_REGISTER_GS,
+
+        flags = ZYDIS_REGISTER_FLAGS,
+        eflags = ZYDIS_REGISTER_EFLAGS,
+        rflags = ZYDIS_REGISTER_RFLAGS,
     };
 
     using zyids_mnemonic = ZydisMnemonic;
+
     enum mnemonic
     {
         m_invalid = ZYDIS_MNEMONIC_INVALID,
@@ -2015,6 +2021,7 @@ namespace eagle::codec
     };
 
     using zydis_reg_class = ZydisRegisterClass;
+
     enum reg_class
     {
         invalid = ZYDIS_REGCLASS_INVALID,
@@ -2026,6 +2033,10 @@ namespace eagle::codec
         xmm_128 = ZYDIS_REGCLASS_XMM,
         ymm_256 = ZYDIS_REGCLASS_YMM,
         zmm_512 = ZYDIS_REGCLASS_ZMM,
+
+        class_flags = ZYDIS_REGCLASS_FLAGS,
+        class_ip = ZYDIS_REGCLASS_IP,
+
 
         seg = ZYDIS_REGCLASS_SEGMENT,
     };

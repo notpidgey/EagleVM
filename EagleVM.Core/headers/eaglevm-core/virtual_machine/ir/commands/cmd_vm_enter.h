@@ -13,4 +13,6 @@ namespace eagle::ir
 
     private:
     };
+
+    SHARED_DEFINE(cmd_vm_enter);
 }

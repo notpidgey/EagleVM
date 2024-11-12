@@ -12,7 +12,8 @@ enum comparison_fail
     none = 0b0,
     rip_mismatch = 0b1,
     flags_mismatch = 0b10,
-    register_mismatch = 0b100
+    register_mismatch = 0b100,
+    stack_misalign = 0b1000,
 };
 
 namespace test_util

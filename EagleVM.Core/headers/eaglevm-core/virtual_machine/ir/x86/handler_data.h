@@ -10,6 +10,6 @@ namespace eagle::ir
     extern std::unordered_map<codec::mnemonic, std::shared_ptr<handler::base_handler_gen>> instruction_handlers;
     extern std::unordered_map<
         codec::mnemonic,
-        std::function<std::shared_ptr<lifter::base_x86_translator>(codec::dec::inst_info, uint64_t)>
+        std::function<std::shared_ptr<lifter::base_x86_translator>(const std::shared_ptr<ir_translator>&, const codec::dec::inst_info&, uint64_t)>
     > instruction_lifters;
 }

@@ -33,7 +33,7 @@ namespace eagle::ir::lifter
         return translate_mem_result::address;
     }
 
-    void lea::finalize_translate_to_virtual()
+    void lea::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         // because of our LEA implementation we do not want to call a handler
         // a handler would serve no purpose the way this IL is setup
@@ -52,7 +52,7 @@ namespace eagle::ir::lifter
         64 	64 	64-bit effective address is calculated (default address size) and all 64-bits of the address are stored in the requested 64-bit register destination (using REX.W).
         */
 
-        block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(reg)));
+        block->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(reg)));
     }
 
     bool lea::skip(const uint8_t idx)

@@ -1,5 +1,7 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/push.h"
 
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
+
 namespace eagle::ir::handler
 {
     push::push()
@@ -27,7 +29,7 @@ namespace eagle::ir::lifter
         return translate_mem_result::value;
     }
 
-    void push::finalize_translate_to_virtual()
+    void push::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         // dont do anything because the operand encoders automatically push values
         // base_x86_translator::finalize_translate_to_virtual();

@@ -14,7 +14,6 @@
 #include "eaglevm-core/virtual_machine/ir/x86/models/handler_op.h"
 #include "eaglevm-core/virtual_machine/ir/x86/models/handler_build.h"
 
-
 namespace eagle::ir::handler
 {
     class base_handler_gen
@@ -25,12 +24,12 @@ namespace eagle::ir::handler
         {
         }
 
-        ir_insts gen_handler(const std::string& target_handler_id);
+        virtual ir_insts gen_handler(uint64_t target_handler_id);
         virtual ir_insts gen_handler(handler_sig signature);
 
-        [[nodiscard]] std::optional<std::string> get_handler_id(const op_params& target_operands);
-        [[nodiscard]] std::optional<std::string> get_handler_id(const handler_sig& target_build);
-        [[nodiscard]] std::optional<handler_build> get_handler_build(const std::string& target_handler_id) const;
+        [[nodiscard]] std::optional<uint64_t> get_handler_id(const op_params& target_operands);
+        [[nodiscard]] std::optional<uint64_t> get_handler_id(const handler_sig& target_build);
+        [[nodiscard]] std::optional<handler_build> get_handler_build(uint64_t target_handler_id) const;
 
     protected:
         ~base_handler_gen() = default;

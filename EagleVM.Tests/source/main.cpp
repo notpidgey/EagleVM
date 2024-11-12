@@ -94,20 +94,20 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), 0, instruction_data.size());
     dasm->generate_blocks();
 
-    ir::ir_translator ir_trans(dasm);
-    ir::preopt_block_vec preopt = ir_trans.translate(true);
+    std::shared_ptr<ir::ir_translator> ir_trans = std::make_shared<ir::ir_translator>(dasm);
+    ir::preopt_block_vec preopt = ir_trans->translate();
 
     // here we assign vms to each block
-    // for the current example we can assign a unique vm to each block
+    // for the current example we can assign the same vm id to each block
     uint32_t vm_index = 0;
-    std::vector<ir::preopt_vm_id> block_vm_ids;
+    std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
     for (const auto& preopt_block : preopt)
-        block_vm_ids.emplace_back(preopt_block, vm_index++);
+        block_vm_ids[preopt_block] = vm_index;
 
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
-    for (const auto& preopt_block : preopt)
-        if (preopt_block->get_original_block() == dasm->get_block(0))
+    for (const std::shared_ptr<ir::preopt_block>& preopt_block : preopt)
+        if (preopt_block->original_block == dasm->get_block(0))
             entry_block = preopt_block;
 
     assert(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -115,7 +115,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // if we want, we can do a little optimzation which will rewrite the preopt blocks
     // or we could simply ir_trans.flatten()
     std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-    std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+    std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
     // initialize block code labels
     std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
@@ -138,8 +138,23 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
         machine->add_block_context(block_labels);
 
-        for (auto& translated_block : blocks)
+        for (auto i = 0; i < blocks.size(); i++)
         {
+            auto& translated_block = blocks[i];
+            if(bp)
+            {
+                std::string out_string;
+                for (auto j = 0; j < translated_block->size(); j++)
+                {
+                    auto inst = translated_block->at(j);
+                    out_string += inst->to_string() + "\n";
+                }
+
+                out_string.pop_back();
+
+                spdlog::get("console")->info("block 0x{:x}\n{}", translated_block->block_id, out_string);
+            }
+
             asmb::code_container_ptr result_container = machine->lift_block(translated_block);
             ir::block_ptr block = block_tracker[entry_block];
             if (block == translated_block)
@@ -156,7 +171,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     constexpr auto run_space_size = 0x500000;
     uint64_t run_space = reinterpret_cast<uint64_t>(VirtualAlloc(nullptr, run_space_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE));
 
-    codec::encoded_vec virtualized_instruction = vm_section.compile_section(0, run_space);
+    codec::encoded_vec virtualized_instruction = vm_section.compile_section(0);
     memcpy(reinterpret_cast<void*>(run_space), virtualized_instruction.data(), virtualized_instruction.size());
 
     assert(run_space_size >= virtualized_instruction.size(), "run space is not big enough");
@@ -216,6 +231,11 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
             ss << "  out:   " << out_flags << '\n';
         }
 
+        if (result & stack_misalign)
+        {
+            ss << "[!] stack pointer not returned to original position\n";
+        }
+
         ss << "[!] failed\n";
         failed->fetch_add(1);
 
@@ -259,6 +279,8 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_vm_gpr_order = false;
     machine_settings->shuffle_vm_xmm_order = false;
     machine_settings->relative_addressing = false;
+
+    machine_settings->complex_temp_loading = false;
 
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
@@ -305,6 +327,8 @@ int main(int argc, char* argv[])
     }
 
     run_container::destroy_veh();
+
+    spdlog::get("console")->info("concluded all tests");
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)
@@ -350,6 +374,11 @@ uint32_t compare_context(CONTEXT& result, CONTEXT& target, reg_overwrites& outs,
             fail |= register_mismatch;
             break;
         }
+    }
+
+    if (target.Rsp != result.Rsp)
+    {
+        fail |= stack_misalign;
     }
 
     if (flags)

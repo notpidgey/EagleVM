@@ -2,15 +2,16 @@
 #include <ranges>
 
 #include "eaglevm-core/compiler/section_manager.h"
-#include "eaglevm-core/pe/pe_generator.h"
 #include "eaglevm-core/pe/packer/pe_packer.h"
+#include "eaglevm-core/pe/pe_generator.h"
 
 #include <linuxpe>
 
-#include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/disassembler/analysis/liveness.h"
+#include "eaglevm-core/disassembler/disassembler.h"
 #include "eaglevm-core/pe/models/stub.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
+#include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
 
 #include "eaglevm-core/virtual_machine/machines/pidgeon/inst_handlers.h"
 #include "eaglevm-core/virtual_machine/machines/pidgeon/machine.h"
@@ -18,6 +19,69 @@
 #include "eaglevm-core/virtual_machine/machines/eagle/machine.h"
 
 using namespace eagle;
+
+void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
+{
+    std::cout << "digraph ControlFlow {\n  graph [splines=ortho]\n  node [shape=box, fontname=\"Courier\"];\n";
+
+    for (const auto& block : blocks)
+    {
+        const std::string node_id = std::format("0x{:x}", block->block_id);
+        std::string graph_title = (block == entry) ? node_id + " (entry)" : node_id;
+
+        std::ostringstream insts_nodes;
+        for (const auto& inst : *block)
+            insts_nodes << std::format("<TR><TD ALIGN=\"LEFT\">{}</TD></TR>", inst->to_string());
+
+        std::cout << std::format(
+            "  \"{}\" [label=<<TABLE BORDER=\"0\">"
+            "<TR><TD ALIGN=\"CENTER\"><B>block {}</B></TD></TR>"
+            "{}"
+            "</TABLE>>];\n",
+            node_id, graph_title, insts_nodes.str());
+
+        std::vector<ir::ir_exit_result> branches;
+        if (const auto ptr = block->as_virt())
+        {
+            if (const auto exit = ptr->exit_as_branch())
+                branches = exit->get_branches();
+            else if (const auto vmexit = ptr->exit_as_vmexit())
+                branches = vmexit->get_branches();
+        }
+        else if (auto ptr = block->as_x86())
+        {
+            if (const auto exit = ptr->exit_as_branch())
+                branches = exit->get_branches();
+        }
+
+        for (const auto& branch : branches)
+        {
+            std::string target_id;
+            if (std::holds_alternative<ir::block_ptr>(branch))
+                target_id = std::format("0x{:x}", std::get<ir::block_ptr>(branch)->block_id);
+            else
+                target_id = std::format("0x{:x}", std::get<uint64_t>(branch));
+
+            std::cout << std::format("  \"{}\" -> \"{}\";\n", node_id, target_id);
+        }
+    }
+
+    std::cout << "}\n" << std::flush;
+}
+
+
+void print_ir(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
+{
+    for (auto& translated_block : blocks)
+    {
+        std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == entry ? "(entry)" : "");
+        for (auto j = 0; j < translated_block->size(); j++)
+        {
+            const auto inst = translated_block->at(j);
+            std::printf("\t%s\n", inst->to_string().c_str());
+        }
+    }
+}
 
 int main(int argc, char* argv[])
 {
@@ -48,8 +112,7 @@ int main(int argc, char* argv[])
     std::printf("%3s %-10s %-10s %-10s\n", "", "name", "va", "size");
     for (auto section : parser->get_nt_headers()->sections())
     {
-        std::printf("%10s %-10u %-10u\n", section.name.to_string().data(),
-            section.virtual_address, section.size_raw_data);
+        std::printf("%10s %-10u %-10u\n", section.name.to_string().data(), section.virtual_address, section.size_raw_data);
     }
 
     std::printf("\n");
@@ -111,8 +174,7 @@ int main(int argc, char* argv[])
         for (int i = 0; i < exception_data_dir_count; i++)
         {
             auto runtime_func = &exception_dir[i];
-            auto res = std::ranges::find_if(marked_function,
-                [&](auto& a) { return a.first == runtime_func->rva_begin; });
+            auto res = std::ranges::find_if(marked_function, [&](auto& a) { return a.first == runtime_func->rva_begin; });
 
             if (res != marked_function.end())
             {
@@ -189,27 +251,25 @@ int main(int argc, char* argv[])
 
     std::printf("\n");
 
-    //vm macros should be in "begin, end, begin, end" order
-    //this is not an entirely reliable way to check because it could mean function A has vm_begin and function B will have vm_end
-    //meaning it will virtualize in between the two functions, which should never happen.
-    //blame the user
+    // vm macros should be in "begin, end, begin, end" order
+    // this is not an entirely reliable way to check because it could mean
+    // function A has vm_begin and function B will have vm_end meaning it will
+    // virtualize in between the two functions, which should never happen. blame
+    // the user
 
     bool success = true;
     pe::stub_import previous_call = pe::stub_import::vm_end;
-    std::ranges::for_each
-    (
-        vm_iat_calls.begin(), vm_iat_calls.end(),
-        [&previous_call, &success](const auto call)
+    std::ranges::for_each(vm_iat_calls.begin(), vm_iat_calls.end(), [&previous_call, &success](const auto call)
+    {
+        if (call.first == previous_call)
         {
-            if (call.first == previous_call)
-            {
-                success = false;
-                return false;
-            }
+            success = false;
+            return false;
+        }
 
-            previous_call = call.first;
-            return true;
-        });
+        previous_call = call.first;
+        return true;
+    });
 
     if (!success)
     {
@@ -219,7 +279,8 @@ int main(int argc, char* argv[])
 
     std::printf("[+] successfully verified macro usage\n");
 
-    //to keep relative jumps of the image intact, it is best to just stick the vm section at the back of the pe
+    // to keep relative jumps of the image intact, it is best to just stick the vm
+    // section at the back of the pe
     pe::pe_generator generator(parser);
     generator.load_parser();
 
@@ -229,7 +290,7 @@ int main(int argc, char* argv[])
     std::vector<std::pair<uint32_t, uint32_t>> va_ran;
     std::vector<std::pair<uint32_t, asmb::code_label_ptr>> va_enters;
 
-    asmb::section_manager vm_section(false);
+    asmb::section_manager vm_section(true);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
 
     codec::setup_decoder();
@@ -262,7 +323,7 @@ int main(int argc, char* argv[])
         dasm->generate_blocks();
 
         dasm::analysis::liveness seg_live(dasm);
-        seg_live.compute_use_def();
+        seg_live.compute_blocks_use_def();
         seg_live.analyze_cross_liveness(dasm->blocks.back());
 
         for (auto& block : dasm->blocks)
@@ -282,17 +343,15 @@ int main(int argc, char* argv[])
             dasm::analysis::liveness_info& item = seg_live.live[block].first;
             for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
                 if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
-                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
-                        bitfield_to_bitstring(res, 8).c_str());
+                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)), bitfield_to_bitstring(res, 8).c_str());
 
             printf("out: \n");
             item = seg_live.live[block].second;
             for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
                 if (auto res = item.get_gpr64(static_cast<codec::reg>(k)))
-                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
-                        bitfield_to_bitstring(res, 8).c_str());
+                    printf("\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)), bitfield_to_bitstring(res, 8).c_str());
 
-            auto block_liveness = seg_live.analyze_block_liveness(block);
+            auto block_liveness = seg_live.analyze_block(block);
 
             printf("insts: \n");
             for (size_t idx = 0; auto& inst : block->decoded_insts)
@@ -303,8 +362,7 @@ int main(int argc, char* argv[])
                 printf("\tin: \n");
                 for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
                     if (auto res = block_liveness[idx].first.get_gpr64(static_cast<codec::reg>(k)))
-                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
-                            bitfield_to_bitstring(res, 8).c_str());
+                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)), bitfield_to_bitstring(res, 8).c_str());
 
                 if (auto res = block_liveness[idx].first.get_flags())
                     printf("\t\trflags:%s\n", bitfield_to_bitstring(res, 32).c_str());
@@ -312,8 +370,7 @@ int main(int argc, char* argv[])
                 printf("\tout: \n");
                 for (int k = ZYDIS_REGISTER_RAX; k <= ZYDIS_REGISTER_R15; k++)
                     if (auto res = block_liveness[idx].second.get_gpr64(static_cast<codec::reg>(k)))
-                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)),
-                            bitfield_to_bitstring(res, 8).c_str());
+                        printf("\t\t%s:%s\n", reg_to_string(static_cast<codec::reg>(k)), bitfield_to_bitstring(res, 8).c_str());
 
                 if (auto res = block_liveness[idx].second.get_flags())
                     printf("\t\trflags:%s\n", bitfield_to_bitstring(res, 32).c_str());
@@ -325,31 +382,40 @@ int main(int argc, char* argv[])
         std::printf("[>] dasm found %llu basic blocks\n", dasm->blocks.size());
         std::cout << std::endl;
 
-        ir::ir_translator ir_trans(dasm);
-        ir::preopt_block_vec preopt = ir_trans.translate(true);
+        std::shared_ptr ir_trans = std::make_shared<ir::ir_translator>(dasm, &seg_live);
+        ir::preopt_block_vec preopt = ir_trans->translate();
+
+        // run some basic pre-optimization passes
+        //ir::obfuscator::run_preopt_pass(preopt, &seg_live);
 
         // here we assign vms to each block
-        // for the current example we can assign a unique vm to each block
+        // for the current example we can assign the same vm id to each block
         uint32_t vm_index = 0;
-        std::vector<ir::preopt_vm_id> block_vm_ids;
+        std::unordered_map<ir::preopt_block_ptr, uint32_t> block_vm_ids;
         for (const auto& preopt_block : preopt)
-            block_vm_ids.emplace_back(preopt_block, vm_index++);
+            block_vm_ids[preopt_block] = vm_index;
 
-        // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
+        // we want to prevent the vmenter from being removed from the first block,
+        // therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
         for (const auto& preopt_block : preopt)
-            if (preopt_block->get_original_block() == dasm->get_block(rva_inst_begin))
+            if (preopt_block->original_block == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
         assert(entry_block != nullptr, "could not find matching preopt block for entry block");
 
-        // if we want, we can do a little optimzation which will rewrite the preopt blocks
-        // or we could simply ir_trans.flatten()
+        // if we want, we can do a little optimzation which will rewrite the preopt
+        // blocks or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
-        std::vector<ir::block_vm_id> vm_blocks = ir_trans.optimize(block_vm_ids, block_tracker, { entry_block });
+        std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
+
+        std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;
+        for (auto& [block, vmid] : vm_blocks)
+            vm_id_map[vmid].append_range(block);
 
         // // we want the same settings for every machine
-        // virt::pidg::settings_ptr machine_settings = std::make_shared<virt::pidg::settings>();
+        // virt::pidg::settings_ptr machine_settings =
+        // std::make_shared<virt::pidg::settings>();
         // machine_settings->set_temp_count(4);
         // machine_settings->set_randomize_vm_regs(true);
         // machine_settings->set_randomize_stack_regs(true);
@@ -369,19 +435,22 @@ int main(int argc, char* argv[])
                 block_labels[block] = asmb::code_label::create();
 
         asmb::code_label_ptr entry_point = asmb::code_label::create();
-        for (const auto& [blocks, vm_id] : vm_blocks)
+        for (const auto& [vm_id, blocks] : vm_id_map)
         {
-            // we create a new machine based off of the same settings to make things more annoying
-            // but the same machine could be used :)
+            // we create a new machine based off of the same settings to make things
+            // more annoying but the same machine could be used :)
 
-            // virt::pidg::machine_ptr machine = virt::pidg::machine::create(machine_settings);
+            // virt::pidg::machine_ptr machine =
+            // virt::pidg::machine::create(machine_settings);
             virt::eg::machine_ptr machine = virt::eg::machine::create(machine_settings);
             machines_used.push_back(machine);
 
             machine->add_block_context(block_labels);
 
-            for (auto& translated_block : blocks)
+            for (auto i = 0; i < blocks.size(); i++)
             {
+                auto& translated_block = blocks[i];
+
                 asmb::code_container_ptr result_container = machine->lift_block(translated_block);
                 ir::block_ptr block = block_tracker[entry_block];
                 if (block == translated_block)
@@ -389,6 +458,8 @@ int main(int argc, char* argv[])
 
                 vm_section.add_code_container(result_container);
             }
+
+            print_graphviz(blocks, block_tracker[entry_block]);
 
             // build handlers
             std::vector<asmb::code_container_ptr> handler_containers = machine->create_handlers();
@@ -467,18 +538,14 @@ int main(int argc, char* argv[])
         packer_section.num_relocs = 0;
         packer_section.num_line_numbers = 0;
 
-        codec::encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.virtual_address);
+        codec::encoded_vec packer_code_bytes = packer_sm.compile_section(code_section.virtual_address);
         auto [packer_pdb_offset, size] = pe::pe_packer::insert_pdb(packer_code_bytes);
 
         packer_section.size_raw_data = generator.align_file(packer_code_bytes.size());
         packer_section.virtual_size = generator.align_section(packer_code_bytes.size());
         packer_bytes += packer_code_bytes;
 
-        generator.add_custom_pdb(
-            packer_section.virtual_address + packer_pdb_offset,
-            packer_section.ptr_raw_data + packer_pdb_offset,
-            size
-        );
+        generator.add_custom_pdb(packer_section.virtual_address + packer_pdb_offset, packer_section.ptr_raw_data + packer_pdb_offset, size);
     }
 
     generator.save_file("EagleVMSandboxProtected.exe");

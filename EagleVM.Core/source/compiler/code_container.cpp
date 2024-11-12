@@ -1,5 +1,7 @@
 #include "eaglevm-core/compiler/code_container.h"
 
+#include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
+
 namespace eagle::asmb
 {
     uint32_t code_container::current_uid = 0;
@@ -24,34 +26,19 @@ namespace eagle::asmb
         return is_named;
     }
 
-    void code_container::add(const codec::dynamic_instruction& instruction)
-    {
-        function_segments.emplace_back(instruction);
-    }
-
-    void code_container::add(const std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
-    void code_container::add(std::vector<codec::dynamic_instruction>& instruction)
-    {
-        function_segments.append_range(instruction);
-    }
-
     void code_container::bind_start(const code_label_ptr& code_label)
     {
-        function_segments.insert(function_segments.begin(), code_label);
+        instruction_list.insert(instruction_list.begin(), code_label);
     }
 
-    void code_container::bind(const code_label_ptr& code_label)
+    void code_container::add(codec::encoder::inst_req inst)
     {
-        function_segments.emplace_back(code_label);
+        instruction_list.push_back(inst);
     }
 
-    std::vector<inst_label_v> code_container::get_instructions() const
+    std::vector<codec::encoder::inst_req_label_v> code_container::get_instructions() const
     {
-        return function_segments;
+        return instruction_list;
     }
 
     code_container::code_container()

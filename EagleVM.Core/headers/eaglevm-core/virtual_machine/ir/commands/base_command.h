@@ -13,53 +13,36 @@
 namespace eagle::ir
 {
 #define SHARED_DEFINE(x) \
-    class x; \
     using x##_ptr = std::shared_ptr<x>
-
-    SHARED_DEFINE(cmd_context_load);
-    SHARED_DEFINE(cmd_context_store);
-    SHARED_DEFINE(cmd_vm_enter);
-    SHARED_DEFINE(cmd_vm_exit);
-    SHARED_DEFINE(cmd_handler_call);
-    SHARED_DEFINE(cmd_mem_read);
-    SHARED_DEFINE(cmd_mem_write);
-    SHARED_DEFINE(cmd_pop);
-    SHARED_DEFINE(cmd_push);
-    SHARED_DEFINE(cmd_rflags_load);
-    SHARED_DEFINE(cmd_rflags_store);
-    SHARED_DEFINE(cmd_sx);
-    SHARED_DEFINE(cmd_x86_dynamic);
-    SHARED_DEFINE(cmd_x86_exec);
-    SHARED_DEFINE(cmd_branch);
 
     class base_command : public std::enable_shared_from_this<base_command>
     {
     public:
-        explicit base_command(const command_type command)
-            : command(command)
-        {
-            static uint32_t id = 0;
-
-            unique_id = id;
-            unique_id_string = command_to_string(command) + ": " + std::to_string(id++);
-        }
+        virtual ~base_command() = default;
+        explicit base_command(command_type command, bool force_inline = false);
 
         command_type get_command_type() const;
+        void set_inlined(bool inlined);
+        bool is_inlined() const;
 
-        std::shared_ptr<base_command> release(const std::vector<discrete_store_ptr>& stores);
-        std::shared_ptr<base_command> release(const discrete_store_ptr& store);
-        std::vector<discrete_store_ptr> get_release_list();
+        virtual std::vector<discrete_store_ptr> get_use_stores();
+        virtual bool is_similar(const std::shared_ptr<base_command>& other);
 
-    protected:
-        command_type command;
+        static std::string cmd_type_to_string(command_type type);
+        virtual std::string to_string();
+
+        template<typename T>
+        std::shared_ptr<T> get()
+        {
+            return std::static_pointer_cast<T>(shared_from_this());
+        }
 
         uint32_t unique_id;
         std::string unique_id_string;
 
-        std::vector<discrete_store_ptr> release_list;
-
-    private:
-        static std::string command_to_string(command_type type);
+    protected:
+        command_type type;
+        bool force_inline;
     };
 
     SHARED_DEFINE(base_command);

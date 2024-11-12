@@ -39,8 +39,7 @@ namespace eagle::codec
     }
 
     typedef std::function<enc::req(uint64_t)> recompile_promise;
-    typedef std::function<std::vector<uint8_t>(uint64_t)> recompile_chunk;
-    typedef std::variant<enc::req, recompile_promise, recompile_chunk> dynamic_instruction;
+    typedef std::variant<enc::req, recompile_promise> dynamic_instruction;
 
     typedef std::vector<dynamic_instruction> dynamic_instructions_vec;
     typedef std::vector<enc::req> instructions_vec;
@@ -60,7 +59,6 @@ namespace eagle::codec
 #define ZMEMBI(x, y, z, a)	eagle::codec::enc::op_mem{ (ZydisRegister)x, (ZydisRegister)y, (ZyanU8)z, (ZyanI64)0, (ZyanU16)a }
 
 #define RECOMPILE(...) [=](uint64_t rva) { return __VA_ARGS__ ; }
-#define RECOMPILE_CHUNK(x) (recompile_chunk)(x)
 #define ZLABEL(x) ZIMMS(int32_t(x->get_relative_address()))
 
 #define ZJMP(x, y) ZIMMU(x->get_relative_address() - y->get_relative_address())

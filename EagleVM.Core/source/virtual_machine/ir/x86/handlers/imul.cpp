@@ -1,7 +1,10 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/imul.h"
 
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_load.h"
-#include "eaglevm-core/virtual_machine/ir/commands/cmd_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_store.h"
+#include "eaglevm-core/virtual_machine/ir/x86/handlers/util/flags.h"
+
+#include "eaglevm-core/virtual_machine/ir/block_builder.h"
 
 namespace eagle::ir::handler
 {
@@ -35,15 +38,60 @@ namespace eagle::ir::handler
 
         ir_size target_size = signature.front();
 
-        const discrete_store_ptr vtemp = discrete_store::create(target_size);
-        const discrete_store_ptr vtemp2 = discrete_store::create(target_size);
+        constexpr auto affected_flags = ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_OF;
+        ir_insts insts = {
+            std::make_shared<cmd_smul>(target_size, false, true),
 
-        return {
-            std::make_shared<cmd_pop>(vtemp, target_size),
-            std::make_shared<cmd_pop>(vtemp2, target_size),
-            std::make_shared<cmd_x86_dynamic>(codec::m_imul, vtemp, vtemp2),
-            std::make_shared<cmd_push>(vtemp, target_size)
+            /*
+                For the one operand form of the instruction, the CF and OF flags are set when significant bits are carried into the upper half of the
+                result and cleared when the result fits exactly in the lower half of the result. For the two- and three-operand forms of the instruction,
+                the CF and OF flags are set when the result must be truncated to fit in the destination operand size and cleared when the result fits
+                exactly in the destination operand size. The SF, ZF, AF, and PF flags are undefined.
+            */
+            std::make_shared<cmd_context_rflags_load>(),
+            std::make_shared<cmd_push>(~affected_flags, ir_size::bit_64),
+            std::make_shared<cmd_and>(ir_size::bit_64),
         };
+
+        insts.append_range(compute_of_cf(target_size));
+        return insts;
+    }
+
+    ir_insts imul::compute_of_cf(ir_size size)
+    {
+        ir_insts insts = { };
+        insts.append_range(copy_to_top(size, util::param_one));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_abs>(size),
+            std::make_shared<cmd_log2>(size),
+        });
+
+        insts.append_range(copy_to_top(size, util::param_two, { size }));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_abs>(size),
+            std::make_shared<cmd_log2>(size),
+        });
+
+        insts.push_back(std::make_shared<cmd_add>(size));
+        insts.append_range(ir_insts{
+            std::make_shared<cmd_add>(size),
+            std::make_shared<cmd_push>(63, size),
+            std::make_shared<cmd_cmp>(size),
+            std::make_shared<cmd_dup>(size), // duplicate result
+
+            std::make_shared<cmd_flags_load>(vm_flags::ge),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_OF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_flags_load>(vm_flags::ge),
+            std::make_shared<cmd_push>(util::flag_index(ZYDIS_CPUFLAG_CF), ir_size::bit_64),
+            std::make_shared<cmd_shl>(ir_size::bit_64),
+
+            std::make_shared<cmd_or>(ir_size::bit_64),
+            std::make_shared<cmd_or>(ir_size::bit_64),
+        });
+
+        return insts;
     }
 }
 
@@ -54,28 +102,9 @@ namespace eagle::ir::lifter
         return idx == 1 ? translate_mem_result::value : base_x86_translator::translate_mem_action(op_mem, idx);
     }
 
-    void imul::finalize_translate_to_virtual()
+    void imul::finalize_translate_to_virtual(const x86_cpu_flag flags)
     {
-        //if (inst.operand_count_visible == 1)
-        //{
-        //    // use the same operand twice
-        //    translate_status status = translate_status::unsupported;
-        //    switch (const codec::dec::operand& operand = operands[0]; operand.type)
-        //    {
-        //        case ZYDIS_OPERAND_TYPE_REGISTER:
-        //            status = encode_operand(operand.reg, 0);
-        //            break;
-        //        case ZYDIS_OPERAND_TYPE_MEMORY:
-        //            status = encode_operand(operand.mem, 0);
-        //            break;
-        //    }
-
-        //    VM_ASSERT(status == translate_status::success, "failed to virtualized operand");
-        //}
-
-        block->add_command(std::make_shared<cmd_rflags_load>());
-        base_x86_translator::finalize_translate_to_virtual();
-        block->add_command(std::make_shared<cmd_rflags_store>());
+        base_x86_translator::finalize_translate_to_virtual(flags);
 
         codec::dec::operand first_op = operands[0];
         switch (inst.operand_count_visible)
@@ -83,19 +112,7 @@ namespace eagle::ir::lifter
             case 2:
             case 3:
             {
-                // 2:
-                // the product is at the top of the stack
-
-                // 3:
-                // when there are 3 operands
-                // op1 and op2 get imuld
-                // then, we store in op0 which will be a reg
-
-                // product of op1 and op2 is already on stack
-                // store in op0
-
-                block->add_command(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
-
+                block->push_back(std::make_shared<cmd_context_store>(static_cast<codec::reg>(first_op.reg.value)));
                 break;
             }
             default:
@@ -105,10 +122,12 @@ namespace eagle::ir::lifter
                 break;
             }
         }
+
+        // clean up regs on stack due to handler leaving params
+        const ir_size target_size = static_cast<ir_size>(first_op.size);
+        block->push_back(std::make_shared<cmd_pop>(target_size));
+        block->push_back(std::make_shared<cmd_pop>(target_size));
     }
 
-    bool imul::skip(const uint8_t idx)
-    {
-        return idx == 0 && inst.operand_count_visible == 3;
-    }
+    bool imul::skip(const uint8_t idx) { return idx == 0 && inst.operand_count_visible == 3; }
 }

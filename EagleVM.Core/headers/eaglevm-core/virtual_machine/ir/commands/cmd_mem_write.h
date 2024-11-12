@@ -10,9 +10,10 @@ namespace eagle::ir
         explicit cmd_mem_write(ir_size value_size, ir_size write_size, bool value_nearest = true);
 
         bool get_is_value_nearest() const;
-
         ir_size get_value_size() const;
         ir_size get_write_size() const;
+
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
     private:
         ir_size write_size;
@@ -20,4 +21,6 @@ namespace eagle::ir
 
         bool value_nearest;
     };
+
+    SHARED_DEFINE(cmd_mem_write);
 }

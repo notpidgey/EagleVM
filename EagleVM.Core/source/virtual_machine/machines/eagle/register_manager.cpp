@@ -10,7 +10,7 @@
 
 namespace eagle::virt::eg
 {
-    uint8_t register_manager::num_v_regs = 8; // regular VREGS + RSP + RAX
+    uint8_t register_manager::num_v_regs = 9; // regular VREGS + RSP + RAX
     uint8_t register_manager::num_gpr_regs = 16;
 
     uint8_t register_manager::index_vip = 0;
@@ -19,6 +19,7 @@ namespace eagle::virt::eg
     uint8_t register_manager::index_vcs = 3;
     uint8_t register_manager::index_vcsret = 4;
     uint8_t register_manager::index_vbase = 5;
+    uint8_t register_manager::index_vflags = 6;
 
     register_manager::register_manager(const settings_ptr& settings_info)
     {
@@ -108,6 +109,7 @@ namespace eagle::virt::eg
             points.push_back(64); // ending point (inclusive)
 
             constexpr auto num_ranges = 2;
+            //  TODO: remove all these comments?
             //for (uint16_t i = 0; i < num_ranges - 1; ++i)
             //{
             //    uint16_t point;

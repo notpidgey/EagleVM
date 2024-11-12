@@ -55,21 +55,22 @@ namespace eagle::dasm
 
         for (auto i = 0; i < blocks.size(); i++)
         {
-            const basic_block_ptr &block = blocks[i];
+            const basic_block_ptr& block = blocks[i];
             if (block->get_end_reason() == block_end)
                 continue;
 
-            const auto &[jump_rva, jump_type] = get_jump(block);
+            const auto& [jump_rva, jump_type] = get_jump(block);
             if (jump_type != jump_inside_segment)
                 continue;
 
+            basic_block_ptr new_block = nullptr;
             for (auto j = 0; j < blocks.size(); j++)
             {
-                const basic_block_ptr &target_block = blocks[j];
+                const basic_block_ptr& target_block = blocks[j];
                 if (jump_rva <= target_block->start_rva || jump_rva >= target_block->end_rva_inc)
                     continue;
 
-                basic_block_ptr split_block = std::make_shared<basic_block>();
+                const basic_block_ptr split_block = std::make_shared<basic_block>();
                 split_block->start_rva = jump_rva;
                 split_block->end_rva_inc = target_block->end_rva_inc;
                 target_block->end_rva_inc = jump_rva;
@@ -77,27 +78,23 @@ namespace eagle::dasm
                 uint64_t curr_rva = target_block->start_rva;
                 for (auto k = 0; k < target_block->decoded_insts.size();)
                 {
-                    codec::dec::inst_info &inst = target_block->decoded_insts[k];
+                    codec::dec::inst_info& inst = target_block->decoded_insts[k];
                     if (curr_rva >= jump_rva)
                     {
                         split_block->decoded_insts.push_back(inst);
                         target_block->decoded_insts.erase(target_block->decoded_insts.begin() + k);
                     }
-                    else
-                    {
-                        k++;
-                    }
+                    else k++;
 
                     curr_rva += inst.instruction.length;
                 }
 
-                new_blocks.push_back(std::move(split_block));
+                new_block = split_block;
                 break;
             }
-        }
 
-        for (auto &new_block : new_blocks)
-            blocks.push_back(std::move(new_block));
+            if (new_block) blocks.push_back(new_block);
+        }
 
         std::ranges::sort(blocks, [](auto a, auto b)
         {

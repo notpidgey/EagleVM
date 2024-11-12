@@ -358,7 +358,7 @@ namespace eagle::pe
         }
     }
 
-    void pe_generator::zero_memory_rva(uint32_t rva, uint32_t size)
+    void pe_generator::zero_memory_rva(uint32_t rva, const uint32_t size)
     {
         // find section where rva is located
         auto section = std::ranges::find_if(sections, [rva](const auto& section)

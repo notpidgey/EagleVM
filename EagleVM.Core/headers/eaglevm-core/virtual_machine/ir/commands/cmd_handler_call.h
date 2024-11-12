@@ -4,6 +4,7 @@
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_operand_signature.h"
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_handler_signature.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
+#include "eaglevm-core/virtual_machine/ir/x86/models/flags.h"
 
 namespace eagle::ir
 {
@@ -25,10 +26,16 @@ namespace eagle::ir
         x86_operand_sig get_x86_signature();
         handler_sig get_handler_signature();
 
+        x86_cpu_flag get_relevant_flag() const;
+        void set_relevant_flags(x86_cpu_flag flags);
+
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
     private:
         call_type call_type = call_type::none;
         codec::mnemonic mnemonic;
 
+        x86_cpu_flag relevant_flags;
         bool operand_sig_init;
 
         // operand signature initialized
@@ -38,4 +45,6 @@ namespace eagle::ir
         // handler signature initialized
         handler_sig h_sig;
     };
+
+    SHARED_DEFINE(cmd_handler_call);
 }

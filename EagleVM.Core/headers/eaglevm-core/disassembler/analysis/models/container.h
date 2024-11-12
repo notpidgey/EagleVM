@@ -26,14 +26,6 @@ namespace eagle::dasm::analysis
             return container;
         }
 
-        reg_set_container& operator|=(const reg_set_container& regs)
-        {
-            for (int i = 0; i < get_size(); i++)
-                register_state[i] |= regs.register_state[i];
-
-            return *this;
-        }
-
         friend reg_set_container operator-(const reg_set_container& regs, const reg_set_container& other)
         {
             reg_set_container container;
@@ -41,6 +33,23 @@ namespace eagle::dasm::analysis
                 container.register_state[i] = regs.register_state[i] & ~other.register_state[i];
 
             return container;
+        }
+
+        friend reg_set_container operator&(const reg_set_container& regs, const reg_set_container& other)
+        {
+            reg_set_container container;
+            for (int i = 0; i < get_size(); i++)
+                container.register_state[i] = regs.register_state[i] & other.register_state[i];
+
+            return container;
+        }
+
+        reg_set_container& operator|=(const reg_set_container& regs)
+        {
+            for (int i = 0; i < get_size(); i++)
+                register_state[i] |= regs.register_state[i];
+
+            return *this;
         }
 
         reg_set_container& operator-=(const reg_set_container& regs)
@@ -95,13 +104,14 @@ namespace eagle::dasm::analysis
             return exists;
         }
 
+
     private:
         static constexpr uint16_t get_size()
         {
             constexpr auto val = TCount * TBits / 8 / 64.0;
             return static_cast<float>(static_cast<uint16_t>(val)) == val
-               ? static_cast<uint16_t>(val)
-               : static_cast<uint16_t>(val) + (val > 0 ? 1 : 0);
+                       ? static_cast<uint16_t>(val)
+                       : static_cast<uint16_t>(val) + (val > 0 ? 1 : 0);
         }
 
     public:

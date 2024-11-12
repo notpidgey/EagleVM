@@ -13,8 +13,14 @@ namespace eagle::ir
         codec::reg get_reg() const;
         codec::reg_class get_reg_class() const;
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
+        std::string to_string() override;
+
     private:
         codec::reg source = codec::reg::none;
         codec::reg_class r_class = codec::reg_class::invalid;
     };
+
+    SHARED_DEFINE(cmd_context_load);
 }
