@@ -153,10 +153,8 @@ namespace eagle::asmb
                 }
 
                 // this also means that every instruction that was depending on the rva, after has changed
-                auto it = rva_dependent_indexes.upper_bound(target_idx);
-                while (it != rva_dependent_indexes.end()) {
-                    visit_indexes.push(*it);
-                    ++it;
+                for (auto dep_it = rva_dependent_indexes.upper_bound(target_idx); dep_it != rva_dependent_indexes.end(); ++dep_it) {
+                    visit_indexes.push(*dep_it);
                 }
             }
         }
