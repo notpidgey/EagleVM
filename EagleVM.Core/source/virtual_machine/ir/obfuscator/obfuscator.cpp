@@ -77,7 +77,7 @@ namespace eagle::ir
 
             // for each similar command list, we want to remove the commands from the block
             // we will replace it with a handler call
-            std::unordered_set<block_ptr> encountered_blocks;
+            std::unordered_map<block_ptr, uint32_t> encountered_blocks;
             for (auto& item : command_branch)
             {
                 const auto block = item->block;

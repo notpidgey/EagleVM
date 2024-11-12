@@ -206,7 +206,7 @@ namespace eagle::asmb
             auto& second_op = request.operands[1].mem;
             if (second_op.index == ZYDIS_REGISTER_RSP && second_op.scale == 1)
             {
-                auto temp = second_op.base;
+                const auto temp = second_op.base;
                 second_op.base = second_op.index;
                 second_op.index = temp;
             }
