@@ -128,6 +128,7 @@ namespace eagle::ir
                 }
                 else
                 {
+                    // no liveness so we assume all flags are relevant
                     auto inst_flags_liveness = dasm::analysis::liveness::compute_inst_flags(decoded_inst);
                     translate_success = lifter->translate_to_il(current_rva, static_cast<x86_cpu_flag>(inst_flags_liveness.get_flags()));
                 }

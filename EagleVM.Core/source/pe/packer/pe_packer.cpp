@@ -85,7 +85,7 @@ namespace eagle::pe
 
                 asmb::code_label_ptr rel_label = asmb::code_label::create();
                 builder.label(rel_label)
-                       .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_relative_address(), 8))
+                       .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_address(), 8))
                        .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rax, section_rva, 8));
 
                 for (int i = 0; i < data.size(); i += 4)
@@ -121,7 +121,7 @@ namespace eagle::pe
 
             asmb::code_label_ptr rel_label = asmb::code_label::create();
             builder.label(rel_label)
-                   .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_relative_address(), 8))
+                   .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rip, -rel_label->get_address(), 8))
                    .make(m_lea, encoder::reg_op(rax), encoder::mem_op(rax, orig_entry, 8))
                    .make(m_jmp, encoder::reg_op(rax));
 

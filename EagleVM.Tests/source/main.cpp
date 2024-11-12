@@ -171,7 +171,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     constexpr auto run_space_size = 0x500000;
     uint64_t run_space = reinterpret_cast<uint64_t>(VirtualAlloc(nullptr, run_space_size, MEM_COMMIT, PAGE_EXECUTE_READWRITE));
 
-    codec::encoded_vec virtualized_instruction = vm_section.compile_section(0, run_space);
+    codec::encoded_vec virtualized_instruction = vm_section.compile_section(0);
     memcpy(reinterpret_cast<void*>(run_space), virtualized_instruction.data(), virtualized_instruction.size());
 
     assert(run_space_size >= virtualized_instruction.size(), "run space is not big enough");
@@ -327,6 +327,8 @@ int main(int argc, char* argv[])
     }
 
     run_container::destroy_veh();
+
+    spdlog::get("console")->info("concluded all tests");
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)

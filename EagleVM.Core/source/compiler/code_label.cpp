@@ -32,19 +32,13 @@ namespace eagle::asmb
         return is_named;
     }
 
-    int64_t code_label::get_relative_address() const
+    int64_t code_label::get_address() const
     {
         return relative_address;
     }
 
-    int64_t code_label::get_address() const
+    void code_label::set_address(uint64_t address)
     {
-        return relative_address + base_address;
-    }
-
-    void code_label::set_address(const uint64_t base, const uint64_t address)
-    {
-        base_address = base;
         relative_address = address;
     }
 
@@ -56,8 +50,6 @@ namespace eagle::asmb
         name = "";
 
         relative_address = 0;
-        base_address = 0;
-
         uuid = global_uuid++;
     }
 
@@ -67,8 +59,6 @@ namespace eagle::asmb
         name = label_name;
 
         relative_address = 0;
-        base_address = 0;
-
         uuid = global_uuid++;
     }
 }

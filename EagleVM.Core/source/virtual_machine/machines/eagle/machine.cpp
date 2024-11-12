@@ -512,8 +512,9 @@ namespace eagle::virt::eg
             const reg from_reg = get_bit_version(temp_reg, from_size);
             const reg to_reg = get_bit_version(temp_reg, to_size);
 
+            const auto mnemonic = to_size == bit_64 && from_size == bit_32 ? m_movsxd : m_movsx;
             out.make(m_mov, reg_op(from_reg), mem_op(VSP, 0, from_size))
-               .make(m_movsx, reg_op(to_reg), reg_op(from_reg));
+               .make(mnemonic, reg_op(to_reg), reg_op(from_reg));
 
             const auto stack_diff = static_cast<uint32_t>(to_size) - static_cast<uint32_t>(from_size);
             const auto byte_diff = stack_diff / 8;

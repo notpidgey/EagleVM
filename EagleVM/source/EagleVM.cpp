@@ -538,7 +538,7 @@ int main(int argc, char* argv[])
         packer_section.num_relocs = 0;
         packer_section.num_line_numbers = 0;
 
-        codec::encoded_vec packer_code_bytes = packer_sm.compile_section(packer_section.virtual_address);
+        codec::encoded_vec packer_code_bytes = packer_sm.compile_section(code_section.virtual_address);
         auto [packer_pdb_offset, size] = pe::pe_packer::insert_pdb(packer_code_bytes);
 
         packer_section.size_raw_data = generator.align_file(packer_code_bytes.size());

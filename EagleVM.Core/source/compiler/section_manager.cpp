@@ -33,13 +33,13 @@ namespace eagle::asmb
         section_code_containers.append_range(code);
     }
 
-    codec::encoded_vec section_manager::compile_section(const uint64_t base_address, const uint64_t runtime_base)
+    codec::encoded_vec section_manager::compile_section(uint32_t base)
     {
         if (shuffle_functions)
             shuffle_containers();
 
         std::vector<std::vector<uint8_t>> output_encodings;
-        uint64_t base_offset = base_address;
+        uint64_t base_offset = base;
 
         std::unordered_map<code_label_ptr, std::set<uint32_t>> label_dependents;
 
@@ -81,7 +81,7 @@ namespace eagle::asmb
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
                         const code_label_ptr& label = arg;
-                        label->set_address(runtime_base, base_offset);
+                        label->set_address(base_offset);
 
                         // this is stupid but this lets us properly index into output_encodings
                         output_encodings.push_back(std::vector<uint8_t>());
@@ -121,7 +121,7 @@ namespace eagle::asmb
             const size_t original_size = output_encodings[target_idx].size();
             const auto& inst = std::get<codec::encoder::inst_req>(flat_segments[target_idx]);
 
-            uint64_t offset = base_address;
+            uint64_t offset = base;
             for (auto i = 0; i < target_idx; i++)
                 offset += output_encodings[i].size();
 
@@ -148,7 +148,7 @@ namespace eagle::asmb
 
                         // we also want to update the label based on the size change
                         const int32_t diff = static_cast<int64_t>(compiled.size()) - static_cast<int64_t>(original_size);
-                        label->set_address(runtime_base, label->get_address() + diff);
+                        label->set_address(label->get_address() + diff);
                     }
                 }
 

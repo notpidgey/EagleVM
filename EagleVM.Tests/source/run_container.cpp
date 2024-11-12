@@ -26,11 +26,11 @@ std::pair<CONTEXT, CONTEXT> run_container::run(const bool bp)
         output_target = build_context(safe_context, output_writes);
 
         // exception handler will redirect to this RIP
-        int64_t rip_diff = output_target.Rip - input_target.Rip;
+        const int64_t rip_diff = output_target.Rip - input_target.Rip;
         input_target.Rip = reinterpret_cast<uint64_t>(run_area);
         output_target.Rip = input_target.Rip + rip_diff;
 
-        int64_t rsp_diff = output_target.Rsp - input_target.Rsp;
+        const int64_t rsp_diff = output_target.Rsp - input_target.Rsp;
         input_target.Rsp = safe_context.Rsp;
         output_target.Rsp = input_target.Rsp + rsp_diff;
 
