@@ -14,25 +14,25 @@ namespace eagle::codec::encoder
     struct mem_op final
     {
         mem_op(const reg base, const int64_t displacement, const uint16_t read_size, const bool rel = false)
-            : base(base), index(none), scale(1), displacement(displacement), read_size(read_size), relative_disp(rel)
+            : base(base), index(none), scale(1), displacement(displacement), read_size(read_size), relative(rel)
         {
             VM_ASSERT(read_size > 0 && (read_size & read_size - 1) == 0, "unexpected mem_op size");
         }
 
         mem_op(const reg base, const int64_t displacement, const reg_size reg_read_size, const bool rel = false)
-            : base(base), index(none), scale(1), displacement(displacement), relative_disp(rel)
+            : base(base), index(none), scale(1), displacement(displacement), relative(rel)
         {
             read_size = reg_size_to_b(reg_read_size);
         }
 
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const uint16_t read_size)
-            : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size), relative_disp(false)
+            : base(base), index(index), scale(scale), displacement(displacement), read_size(read_size), relative(false)
         {
-            VM_ASSERT(read_size > 0 && (read_size & (read_size - 1)) == 0, "unexpected mem_op size");
+            VM_ASSERT(read_size > 0 && (read_size & read_size - 1) == 0, "unexpected mem_op size");
         }
 
         mem_op(const reg base, const reg index, const uint64_t scale, const int64_t displacement, const reg_size reg_read_size)
-            : base(base), index(index), scale(scale), displacement(displacement), relative_disp(false)
+            : base(base), index(index), scale(scale), displacement(displacement), relative(false)
         {
             read_size = reg_size_to_b(reg_read_size);
         }
@@ -43,7 +43,7 @@ namespace eagle::codec::encoder
         int64_t displacement;
         uint16_t read_size;
 
-        bool relative_disp;
+        bool relative;
     };
 
     struct reg_op final
@@ -128,6 +128,8 @@ namespace eagle::codec::encoder
                     using T = std::decay_t<decltype(inst)>;
                     if constexpr (std::is_same_v<T, imm_label_operand> || std::is_same_v<T, imm_op>)
                         return inst.relative;
+                    else if constexpr (std::is_same_v<T, mem_op>)
+                        return inst.relative;
 
                     return false;
                 }, op);
@@ -135,34 +137,37 @@ namespace eagle::codec::encoder
                 if (relative)
                     return true;
             }
+
             return false;
         }
 
-        bool get_rva_dependent() const
+        bool is_rva_dependent() const
         {
-            bool is_dependent = false;
-            for (auto& op : operands)
+            for (const auto& op : operands)
             {
-                std::visit([&](auto&& inst)
+                const bool is_dependent = std::visit([](auto&& inst) -> bool
                 {
                     using T = std::decay_t<decltype(inst)>;
                     if constexpr (std::is_same_v<T, imm_label_operand>)
                     {
-                        const imm_label_operand& label_op = inst;
-                        is_dependent |= label_op.relative;
+                        return inst.relative;
                     }
                     else if constexpr (std::is_same_v<T, imm_op>)
                     {
-                        const imm_op& imm_op = inst;
-                        is_dependent |= imm_op.relative;
+                        return inst.relative;
                     }
+                    else if constexpr (std::is_same_v<T, mem_op>)
+                    {
+                        return inst.relative;
+                    }
+
+                    return false;
                 }, op);
 
                 if (is_dependent)
-                    break;
+                    return true;
             }
-
-            return is_dependent;
+            return false;
         }
 
         enc::req build(uint64_t rva) const
@@ -199,7 +204,7 @@ namespace eagle::codec::encoder
                 req.operands[op_index].mem.scale = 0; // zydis does not like 1 scale encoding by default
 
             req.operands[op_index].mem.displacement = mem.displacement;
-            if (mem.relative_disp)
+            if (mem.relative)
                 req.operands[op_index].mem.displacement -= rva;
 
             req.operands[op_index].mem.base = static_cast<zydis_register>(mem.base);
@@ -257,7 +262,6 @@ namespace eagle::codec::encoder
         {
             inst_req instruction(mnemonic);
 
-            // Helper lambda to convert each argument to a specific variant type
             auto make_variant = [](auto&& arg) -> std::variant<mem_op, reg_op, imm_op, imm_label_operand>
             {
                 using ArgType = std::decay_t<decltype(arg)>;
@@ -271,7 +275,6 @@ namespace eagle::codec::encoder
                     return (std::in_place_type<imm_label_operand>, std::forward<ArgType>(arg));
             };
 
-            // Expand and push each argument as a variant into the operands vector
             (instruction.operands.push_back(make_variant(std::forward<Args>(args))), ...);
 
             instruction_list.push_back(instruction);

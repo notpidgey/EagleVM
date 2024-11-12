@@ -6,6 +6,7 @@
 
 #include <ranges>
 #include <set>
+#include <unordered_set>
 #include <variant>
 
 #include "eaglevm-core/codec/zydis_helper.h"
@@ -48,8 +49,7 @@ namespace eagle::asmb
 
         for (const code_container_ptr& code_container : section_code_containers)
         {
-            std::vector<codec::encoder::inst_req_label_v> segments = code_container->get_instructions();
-            for (auto& label_code_variant : segments)
+            for (auto& label_code_variant : code_container->get_instructions())
             {
                 std::visit([&](auto&& arg)
                 {
@@ -60,11 +60,12 @@ namespace eagle::asmb
                     {
                         const codec::encoder::inst_req inst = arg;
 
-                        const auto dependents = inst.get_dependents();
-                        for (auto& dependent : dependents)
+                        // at to label dependency list
+                        for (auto& dependent : inst.get_dependents())
                             label_dependents[dependent].insert(flat_index);
 
-                        if (inst.get_rva_dependent())
+                        // add to rva dependency list
+                        if (inst.is_rva_dependent())
                             rva_dependent_indexes.insert(flat_index);
 
                         codec::enc::req enc_req = inst.build(base_offset);
@@ -82,7 +83,9 @@ namespace eagle::asmb
                         const code_label_ptr& label = arg;
                         label->set_address(runtime_base, base_offset);
 
+                        // this is stupid but this lets us properly index into output_encodings
                         output_encodings.push_back(std::vector<uint8_t>());
+
                         VM_ASSERT(!label_indexes.contains(label), "redefined label found");
                         label_indexes[label] = flat_index;
 
@@ -92,6 +95,7 @@ namespace eagle::asmb
             }
         }
 
+        std::unordered_set<uint32_t> visited_indexes_set;
         std::queue<uint32_t> visit_indexes;
         for (auto& [label, dependent_indexes] : label_dependents)
         {
@@ -101,20 +105,17 @@ namespace eagle::asmb
             uint32_t label_index = label_indexes[label];
             auto it = dependent_indexes.lower_bound(label_index);
 
-            if (it != dependent_indexes.end())
-                while (it != dependent_indexes.begin())
-                {
-                    auto dependent_index = *it;
-                    visit_indexes.push(dependent_index);
-
-                    --it;
-                }
+            for (auto dep_it = dependent_indexes.begin(); dep_it != it; ++dep_it) {
+                visit_indexes.push(*dep_it);
+            }
         }
 
         while (!visit_indexes.empty())
         {
             const uint32_t target_idx = visit_indexes.front();
+            visited_indexes_set.erase(target_idx);
             visit_indexes.pop();
+
 
             // basically we want to recompile all the instructions in the visit indexes
             // if it changes size, this is a problem because that means all the labels after get redefined
@@ -142,7 +143,9 @@ namespace eagle::asmb
                         // this label got redefined
                         // means everything using the label including the label is now invalid
                         for (auto& dependents : label_dependents | std::views::values)
-                            visit_indexes.push_range(dependents);
+                            for (auto& dependent : dependents)
+                                if (std::get<1>(visited_indexes_set.insert(dependent)))
+                                    visit_indexes.push(dependent);
 
                         // we also want to update the label based on the size change
                         const int32_t diff = static_cast<int64_t>(compiled.size()) - static_cast<int64_t>(original_size);

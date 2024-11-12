@@ -1064,7 +1064,7 @@ namespace eagle::virt::eg
                 asmb::code_container_ptr builder = asmb::code_container::create();
                 target_label = asmb::code_label::create(std::to_string(handler_hash));
 
-                builder->label(target_label);
+                builder->bind_start(target_label);
                 create(builder, reg_allocator);
                 builder->make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
                        .make(m_lea, reg_op(VCS), mem_op(VCS, 8, bit_64))
