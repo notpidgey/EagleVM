@@ -116,7 +116,6 @@ namespace eagle::asmb
             visited_indexes_set.erase(target_idx);
             visit_indexes.pop();
 
-
             // basically we want to recompile all the instructions in the visit indexes
             // if it changes size, this is a problem because that means all the labels after get redefined
             const size_t original_size = output_encodings[target_idx].size();
@@ -126,7 +125,7 @@ namespace eagle::asmb
             for (auto i = 0; i < target_idx; i++)
                 offset += output_encodings[i].size();
 
-            codec::enc::req enc_req = inst.build(base_offset);
+            codec::enc::req enc_req = inst.build(offset);
             attempt_instruction_fix(enc_req);
 
             const std::vector<uint8_t> compiled = codec::compile_absolute(enc_req, 0);

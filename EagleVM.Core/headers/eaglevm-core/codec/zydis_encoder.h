@@ -126,9 +126,7 @@ namespace eagle::codec::encoder
                 const bool relative = std::visit([](auto&& inst) -> bool
                 {
                     using T = std::decay_t<decltype(inst)>;
-                    if constexpr (std::is_same_v<T, imm_label_operand> || std::is_same_v<T, imm_op>)
-                        return inst.relative;
-                    else if constexpr (std::is_same_v<T, mem_op>)
+                    if constexpr (std::is_same_v<T, imm_label_operand> || std::is_same_v<T, imm_op> || std::is_same_v<T, mem_op>)
                         return inst.relative;
 
                     return false;
@@ -149,17 +147,11 @@ namespace eagle::codec::encoder
                 {
                     using T = std::decay_t<decltype(inst)>;
                     if constexpr (std::is_same_v<T, imm_label_operand>)
-                    {
                         return inst.relative;
-                    }
                     else if constexpr (std::is_same_v<T, imm_op>)
-                    {
                         return inst.relative;
-                    }
                     else if constexpr (std::is_same_v<T, mem_op>)
-                    {
                         return inst.relative;
-                    }
 
                     return false;
                 }, op);
