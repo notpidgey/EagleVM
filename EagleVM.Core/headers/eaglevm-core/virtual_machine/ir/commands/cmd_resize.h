@@ -14,6 +14,8 @@ namespace eagle::ir
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
 
+        std::string to_string() override;
+
     private:
         ir_size target;
         ir_size current;

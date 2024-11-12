@@ -1,4 +1,5 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_resize.h"
+#include <format>
 
 namespace eagle::ir
 {
@@ -23,5 +24,10 @@ namespace eagle::ir
         return base_command::is_similar(other) &&
             get_target() == cmd->get_target() &&
             get_current() == cmd->get_current();
+    }
+
+    std::string cmd_resize::to_string()
+    {
+        return base_command::to_string() + std::format(" {}, {}", ir_size_to_string(current), ir_size_to_string(target));
     }
 }
