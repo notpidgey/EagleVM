@@ -6,7 +6,7 @@
 
 namespace eagle::ir
 {
-    trie_node_t::trie_node_t(const size_t depth): depth(depth)
+    trie_node_t::trie_node_t(const size_t depth): depth(depth), command(nullptr)
     {
     }
 
@@ -118,7 +118,7 @@ namespace eagle::ir
     {
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
 
-        // Check all children
+        // check all children
         for (const auto& child : children)
         {
             if (const auto result_pair = child->find_path_max_depth(min_child_size))
@@ -129,7 +129,7 @@ namespace eagle::ir
             }
         }
 
-        // Check the current node
+        // check the current node
         if (count_similar_commands() >= min_child_size)
         {
             if (!max_path || depth > max_path->first)

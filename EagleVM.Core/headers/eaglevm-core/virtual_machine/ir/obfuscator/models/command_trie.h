@@ -27,6 +27,8 @@ namespace eagle::ir
     {
     public:
         size_t depth;
+        base_command_ptr command;
+        std::weak_ptr<trie_node_t> parent;
 
         explicit trie_node_t(size_t depth);
 
@@ -34,14 +36,25 @@ namespace eagle::ir
         void erase_forwards(const block_ptr& ptr, size_t start_idx);
 
         std::vector<std::shared_ptr<command_node_info_t>> get_branch_similar_commands();
+
+
+        /**
+         * searchers for a path where the instance count of the pattern occurrence is maximized.
+         * this means we ignore the depth, and only care about optimizing out the greatest pattern
+         * @param min_depth the minimum depth the pattern must start at
+         */
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_similar(size_t min_depth);
+
+        /**
+         * searches for a path where the depth is maximized. this means the result may contain very few matching instances
+         * of this pattern, but the pattern will be long.
+         * @param min_child_size the minimum instances of this pattern match that may occur
+         */
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> find_path_max_depth(size_t min_child_size);
 
     private:
-        base_command_ptr command = nullptr;
         std::unordered_map<block_ptr, std::vector<std::shared_ptr<command_node_info_t>>> similar_commands;
 
-        std::weak_ptr<trie_node_t> parent;
         std::vector<std::shared_ptr<trie_node_t>> children;
 
         std::shared_ptr<trie_node_t> find_similar_child(const base_command_ptr& command) const;

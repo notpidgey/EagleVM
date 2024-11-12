@@ -31,13 +31,16 @@ namespace eagle::ir
             {
                 if (0 == block_in.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    first_block->insert(first_block->begin() + in_insert_index, std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
-                    first_block->insert(first_block->begin() + in_insert_index, std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
+                    first_block->insert(first_block->begin() + in_insert_index,
+                        std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->begin() + in_insert_index,
+                        std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                 }
 
                 if (0 == block_out.get_gpr64(static_cast<codec::reg>(k)))
                 {
-                    first_block->insert(first_block->end() - 1, std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
+                    first_block->insert(first_block->end() - 1,
+                        std::make_shared<cmd_context_store>(static_cast<codec::reg>(k), codec::reg_size::bit_64));
                     first_block->insert(first_block->end() - 1, std::make_shared<cmd_push>(util::get_ran_device().gen_16(), ir_size::bit_64));
                 }
             }
@@ -53,19 +56,57 @@ namespace eagle::ir
                 root_node->add_children(block, i);
         }
 
-        std::vector<std::vector<std::shared_ptr<command_node_info_t>>> command_groups;
+        std::vector<std::pair<block_ptr, asmb::code_label_ptr>> generated_blocks;
         while (const auto result = root_node->find_path_max_depth(4))
         {
-            auto [similar, leaf] = result.value();
-            const auto similar_commands = leaf->get_branch_similar_commands();
+            auto [path_length, leaf] = result.value();
+            const std::vector<std::shared_ptr<command_node_info_t>> command_branch = leaf->get_branch_similar_commands();
+
+            // setup block to contain the cloned command
+            block_virt_ir_ptr handler = std::make_shared<block_virt_ir>();
+            handler->push_back(std::make_shared<cmd_ret>());
+
+            std::weak_ptr start = leaf;
+            std::shared_ptr<trie_node_t> curr;
+
+            while (((curr = start.lock())) && curr != root_node)
+            {
+                handler->insert(handler->begin(), curr->command->clone());
+                start = curr->parent;
+            }
+
+            // for each similar command list, we want to remove the commands from the block
+            // we will replace it with a handler call
+            std::unordered_set<block_ptr> encountered_blocks;
+            for (auto& item : command_branch)
+            {
+                const auto block = item->block;
+                if (encountered_blocks.contains(block))
+                    continue;
+
+                const auto start_idx = item->instruction_index - leaf->depth + 1;
+                for (auto i = 0; i < path_length; i++)
+                {
+                    const auto idx = start_idx + i;
+                    block->erase(block->begin() + idx);
+                }
+
+                // insert function call
+                block->insert(block->begin() + start_idx, std::make_shared<cmd_call>(handler));
+
+                // TODO: make sure to do something about this block.
+                // it may come up again in similar commands and we do not want to remove from it again
+                // this is a really shitty way with dealing it because we may have some non overlapping commands
+                // that we should be able to merge
+                // but i dont want to do it and im too lazy
+                encountered_blocks.insert(block);
+            }
 
             // remove all related commands because we are combining it into a handler
-            for (auto& item : similar_commands)
+            for (auto& item : command_branch)
                 root_node->erase_forwards(item->block, item->instruction_index - leaf->depth + 1);
-
-            command_groups.push_back(similar_commands);
         }
 
-       __debugbreak();
+        __debugbreak();
     }
 }

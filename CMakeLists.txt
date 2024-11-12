@@ -172,6 +172,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/block_builder.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/base_command.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/cmd_cf.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/cmd_compare.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/cmd_context_load.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/ir/commands/cmd_context_rflags_load.h"
