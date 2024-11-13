@@ -23,6 +23,7 @@ namespace eagle::ir
 
         vm_flags get_flag() const;
         bool is_similar(const std::shared_ptr<base_command>& other) override;
+        BASE_COMMAND_CLONE(cmd_flags_load);
 
         static ir_size get_flag_size();
         static uint8_t get_flag_index(vm_flags flag);

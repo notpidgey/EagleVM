@@ -20,6 +20,8 @@ namespace eagle::ir
             return target;
         }
 
+        BASE_COMMAND_CLONE(cmd_call);
+
     private:
         block_ptr target;
     };
@@ -31,6 +33,8 @@ namespace eagle::ir
             : base_command(command_type::vm_ret)
         {
         }
+
+        BASE_COMMAND_CLONE(cmd_ret);
     };
 
     SHARED_DEFINE(cmd_call);

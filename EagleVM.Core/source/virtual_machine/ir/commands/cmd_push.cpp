@@ -30,14 +30,6 @@ namespace eagle::ir
             value == cmd->value;
     }
 
-    std::vector<discrete_store_ptr> cmd_push::get_use_stores()
-    {
-        if (std::holds_alternative<discrete_store_ptr>(value))
-            return { std::get<discrete_store_ptr>(value) };
-
-        return { };
-    }
-
     std::string cmd_push::to_string()
     {
         auto resolve_push = [&]

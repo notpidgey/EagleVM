@@ -9,6 +9,8 @@ namespace eagle::ir
     {
     public:
         cmd_jmp();
+
+        BASE_COMMAND_CLONE(cmd_jmp);
     };
 
     SHARED_DEFINE(cmd_jmp);

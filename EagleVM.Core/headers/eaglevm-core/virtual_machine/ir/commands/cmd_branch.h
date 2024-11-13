@@ -69,14 +69,14 @@ namespace eagle::ir
         ir_exit_result& get_condition_default();
         ir_exit_result& get_condition_special();
 
-        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
         void set_virtual(bool is_virtual);
         bool is_virtual() const;
-
         bool is_inverted() const;
 
         std::string to_string() override;
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
+
 
     private:
         exit_condition condition;

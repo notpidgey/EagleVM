@@ -10,9 +10,10 @@ namespace eagle::ir
         explicit cmd_mem_read(ir_size size);
 
         ir_size get_read_size() const;
-        bool is_similar(const std::shared_ptr<base_command>& other) override;
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override;
         std::string to_string() override;
+        BASE_COMMAND_CLONE(cmd_mem_read);
 
     private:
         ir_size size;

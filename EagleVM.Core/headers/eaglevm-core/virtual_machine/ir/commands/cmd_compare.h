@@ -15,6 +15,8 @@ namespace eagle::ir
         explicit cmd_cmp(const ir_size size) : base_command(command_type::vm_cmp), size(size) {}
         ir_size get_size() const { return size; }
 
+        BASE_COMMAND_CLONE(cmd_cmp);
+
     private:
         ir_size size;
     };

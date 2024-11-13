@@ -14,6 +14,7 @@ namespace eagle::ir
         ir_size get_write_size() const;
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
+        BASE_COMMAND_CLONE(cmd_mem_write);
 
     private:
         ir_size write_size;

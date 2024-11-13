@@ -18,11 +18,6 @@ namespace eagle::ir
     void base_command::set_inlined(const bool inlined) { force_inline = inlined; };
     bool base_command::is_inlined() const { return force_inline; }
 
-    std::vector<discrete_store_ptr> base_command::get_use_stores()
-    {
-        return { };
-    }
-
     bool base_command::is_similar(const std::shared_ptr<base_command>& other)
     {
         return other->get_command_type() == get_command_type();
@@ -100,6 +95,10 @@ namespace eagle::ir
                 return "vm_dup";
             case command_type::vm_cmp:
                 return "vm_cmp";
+            case command_type::vm_call:
+                return "vm_call";
+            case command_type::vm_ret:
+                return "vm_ret";
             default:
                 return "unknown";
         }

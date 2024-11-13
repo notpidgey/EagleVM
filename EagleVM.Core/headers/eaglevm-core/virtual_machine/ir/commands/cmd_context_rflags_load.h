@@ -11,6 +11,8 @@ namespace eagle::ir
             : base_command(command_type::vm_context_rflags_load)
         {
         }
+
+        BASE_COMMAND_CLONE(cmd_context_rflags_load);
     };
 
     SHARED_DEFINE(cmd_context_rflags_load);

@@ -13,6 +13,7 @@ namespace eagle::ir
         ir_size get_current() const;
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
+        BASE_COMMAND_CLONE(cmd_sx);
 
     private:
         ir_size target;

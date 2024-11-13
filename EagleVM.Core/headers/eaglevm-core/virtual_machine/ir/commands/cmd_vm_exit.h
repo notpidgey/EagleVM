@@ -11,6 +11,8 @@ namespace eagle::ir
 
         ir_exit_result get_exit();
         std::string to_string() override;
+
+        BASE_COMMAND_CLONE(cmd_vm_exit);
     };
 
     SHARED_DEFINE(cmd_vm_exit);
