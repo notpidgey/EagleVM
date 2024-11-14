@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
         ir::preopt_block_vec preopt = ir_trans->translate();
 
         // run some basic pre-optimization passes
-        //ir::obfuscator::run_preopt_pass(preopt, &seg_live);
+        // ir::obfuscator::run_preopt_pass(preopt, &seg_live);
 
         // here we assign vms to each block
         // for the current example we can assign the same vm id to each block
@@ -405,13 +405,21 @@ int main(int argc, char* argv[])
         assert(entry_block != nullptr, "could not find matching preopt block for entry block");
 
         // if we want, we can do a little optimzation which will rewrite the preopt
-        // blocks or we could simply ir_trans.flatten()
+        // blocks, or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
         std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;
         for (auto& [block, vmid] : vm_blocks)
+        {
+            // while setting up the map we also run the obfuscation pass for handler merging
             vm_id_map[vmid].append_range(block);
+        }
+
+        for (auto& blocks : vm_id_map | std::views::values)
+        {
+            ir::obfuscator::create_merged_handlers(blocks);
+        }
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings =

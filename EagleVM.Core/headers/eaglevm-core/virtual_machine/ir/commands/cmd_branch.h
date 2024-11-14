@@ -69,14 +69,13 @@ namespace eagle::ir
         ir_exit_result& get_condition_default();
         ir_exit_result& get_condition_special();
 
-
         void set_virtual(bool is_virtual);
         bool is_virtual() const;
         bool is_inverted() const;
 
         std::string to_string() override;
         bool is_similar(const std::shared_ptr<base_command>& other) override;
-
+        BASE_COMMAND_CLONE(cmd_branch)
 
     private:
         exit_condition condition;

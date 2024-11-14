@@ -37,9 +37,7 @@ namespace eagle::ir::lifter
     void pop::finalize_translate_to_virtual(x86_cpu_flag flags)
     {
         ir_size size = get_op_width();
-
-        discrete_store_ptr store = discrete_store::create(size);
-        block->push_back(std::make_shared<cmd_pop>(store, size));
+        block->push_back(std::make_shared<cmd_pop>(size));
 
         auto first_op = operands[0];
         switch (first_op.type)

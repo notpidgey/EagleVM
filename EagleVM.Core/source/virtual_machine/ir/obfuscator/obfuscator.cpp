@@ -56,8 +56,50 @@ namespace eagle::ir
                 root_node->add_children(block, i);
         }
 
+        std::ostringstream dot;
+        std::unordered_set<std::string> added_nodes;
+
+        dot << "digraph Trie {\n  node [shape=box, fontname=\"Courier\"];\n";
+
+        std::function<bool(const std::shared_ptr<trie_node_t>&)> add_node;
+        add_node = [&](const std::shared_ptr<trie_node_t>& node)
+        {
+            if (!node || (node != root_node && (node->matched_commands.size() < 2 || !node->command)))
+                return false;
+
+            const std::string node_id = "node_" + std::to_string(reinterpret_cast<uintptr_t>(node.get()));
+
+            added_nodes.insert(node_id);
+            dot << "    " << node_id << " [label=<";
+
+            if (node->command)
+                dot << "<b>Command: " << node->command->to_string() << "</b><br/>";
+
+            dot << "Depth: " << node->depth
+                << "<br/>Matched Commands: " << node->matched_commands.size()
+                << ">];\n";
+
+            for (const auto& child : node->children)
+            {
+                if (!child) continue;
+
+                const bool result = add_node(child);
+                if (!result)
+                    continue;
+
+                dot << "    " << node_id << " -> " << "node_" + std::to_string(reinterpret_cast<uintptr_t>(child.get())) << ";\n";
+            }
+
+            return true;
+        };
+
+        add_node(root_node);
+        dot << "}\n";
+
+        std::cout << dot.str() << std::flush;
+
         std::vector<std::pair<block_ptr, asmb::code_label_ptr>> generated_blocks;
-        while (const auto result = root_node->find_path_max_depth(4))
+        while (const auto result = root_node->find_path_max_depth(2))
         {
             auto [path_length, leaf] = result.value();
             const std::vector<std::shared_ptr<command_node_info_t>> command_branch = leaf->get_branch_similar_commands();
@@ -75,36 +117,39 @@ namespace eagle::ir
                 start = curr->parent;
             }
 
-            // for each similar command list, we want to remove the commands from the block
-            // we will replace it with a handler call
-            std::unordered_map<block_ptr, uint32_t> encountered_blocks;
+            std::unordered_map<block_ptr, std::vector<std::pair<int, int>>> block_modifications;
             for (auto& item : command_branch)
             {
                 const auto block = item->block;
-                if (encountered_blocks.contains(block))
-                    continue;
-
                 const auto start_idx = item->instruction_index - leaf->depth + 1;
-                for (auto i = 0; i < path_length; i++)
+                const auto end_idx = start_idx + path_length - 1;
+
+                block_modifications[block].push_back({ start_idx, end_idx });
+            }
+
+            for (auto& [block, ranges] : block_modifications)
+            {
+                std::ranges::sort(ranges);
+                std::vector<std::pair<int, int>> merged_ranges;
+                for (const auto& range : ranges)
                 {
-                    const auto idx = start_idx + i;
-                    block->erase(block->begin() + idx);
+                    if (merged_ranges.empty() || merged_ranges.back().second < range.first)
+                        merged_ranges.push_back(range);
+                    else
+                        merged_ranges.back().second = std::max(merged_ranges.back().second, range.second);
                 }
 
-                // insert function call
-                block->insert(block->begin() + start_idx, std::make_shared<cmd_call>(handler));
-
-                // TODO: make sure to do something about this block.
-                // it may come up again in similar commands and we do not want to remove from it again
-                // this is a really shitty way with dealing it because we may have some non overlapping commands
-                // that we should be able to merge
-                // but i dont want to do it and im too lazy
-                encountered_blocks.insert(block);
+                for (auto it = merged_ranges.rbegin(); it != merged_ranges.rend(); ++it)
+                {
+                    const auto& [start_idx, end_idx] = *it;
+                    block->erase(block->begin() + start_idx, block->begin() + end_idx + 1);
+                    block->insert(block->begin() + start_idx, std::make_shared<cmd_call>(handler));
+                }
             }
 
             // remove all related commands because we are combining it into a handler
             for (auto& item : command_branch)
-                root_node->erase_forwards(item->block, item->instruction_index - leaf->depth + 1);
+                root_node->erase_forwards(item->block, item->instruction_index, path_length);
         }
 
         __debugbreak();

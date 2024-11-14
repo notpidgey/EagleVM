@@ -71,6 +71,14 @@ namespace eagle::ir
             return it;
         }
 
+        iterator erase(const const_iterator& pos, const const_iterator& pos2)
+        {
+            auto it = commands_.erase(pos, pos2);
+            handle_cmd_insert();
+
+            return it;
+        }
+
         void push_back(const base_command_ptr& command)
         {
             commands_.push_back(command);

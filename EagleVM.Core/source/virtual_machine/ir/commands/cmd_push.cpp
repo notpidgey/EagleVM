@@ -56,8 +56,7 @@ namespace eagle::ir
                     const reg_vm reg = arg;
                     return reg_vm_to_string(reg);
                 }
-                else
-                VM_ASSERT("unknown push type handled");
+                else VM_ASSERT("unknown push type handled");
 
                 return "";
             }, value);

@@ -373,8 +373,6 @@ namespace eagle::virt::eg
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd)
     {
-        VM_ASSERT(cmd->get_destination_reg() == nullptr, "unsupported instruction type");
-
         const auto pop_size = cmd->get_size();
         const auto pop_reg_size = to_reg_size(pop_size);
 
