@@ -1,12 +1,11 @@
 #pragma once
 #include <array>
 #include <vector>
-
-#include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
 namespace eagle::ir
 {
+    using block_ptr = std::shared_ptr<class block_ir>;
     class cmd_call final : public base_command
     {
     public:
@@ -22,9 +21,8 @@ namespace eagle::ir
 
         bool is_similar(const std::shared_ptr<base_command>& other) override
         {
-            // for now keep it like this because handler merger might start infinitely looping
-            // because of multiple cmd_call calls and that would not end up well
-            return false;
+            const auto cmd = std::static_pointer_cast<cmd_call>(other);
+            return base_command::is_similar(other) && target == cmd->target;
         }
 
         BASE_COMMAND_CLONE(cmd_call);

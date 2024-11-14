@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iterator>
 
+#include "commands/cmd_cf.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_branch.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_vm_exit.h"
@@ -174,13 +175,21 @@ namespace eagle::ir
             return nullptr;
         }
 
+        cmd_ret_ptr exit_as_ret() const
+        {
+            if (exit_cmd->get_command_type() == command_type::vm_ret)
+                return std::static_pointer_cast<cmd_ret>(exit_cmd);
+
+            return nullptr;
+        }
+
     private:
         void handle_cmd_insert(const base_command_ptr& command) override
         {
             if (command)
             {
                 const auto command_type = command->get_command_type();
-                if (command_type == command_type::vm_branch || command_type == command_type::vm_exit)
+                if (command_type == command_type::vm_branch || command_type == command_type::vm_exit || command_type == command_type::vm_ret)
                 {
                     VM_ASSERT(exit_cmd == nullptr, "unable to have 2 exiting instructions at the end of block");
 

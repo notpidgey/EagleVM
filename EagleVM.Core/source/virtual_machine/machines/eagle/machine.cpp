@@ -943,6 +943,39 @@ namespace eagle::virt::eg
         }, cmd->get_size());
     }
 
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_call_ptr& cmd)
+    {
+        auto& out = *block;
+
+        VM_ASSERT(block_context.contains(cmd->get_target()), "target must be defined");
+        const auto target_label = block_context[cmd->get_target()];
+        const auto return_label = asmb::code_label::create();
+
+        // lea VCS, [VCS - 8]       ; allocate space for new return address
+        // mov [VCS], code_label    ; place return rva on the stack
+        out.make(m_lea, reg_op(VCS), mem_op(VCS, -8, bit_64))
+           .make(m_mov, mem_op(VCS, 0, bit_64), imm_label_operand(return_label));
+
+        // lea VIP, [VBASE + VCSRET]  ; add rva to base
+        // jmp VIP
+        out.make(m_mov, reg_op(VIP), imm_label_operand(target_label))
+           .make(m_lea, reg_op(VIP), mem_op(VBASE, VIP, 1, 0, bit_64))
+           .make(m_jmp, reg_op(VIP));
+
+        // execution after VM handler should end up here
+        out.label(return_label);
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_ret_ptr& cmd)
+    {
+        auto& out = *block;
+
+        out.make(m_mov, reg_op(VCSRET), mem_op(VCS, 0, bit_64))
+           .make(m_lea, reg_op(VCS), mem_op(VCS, 8, bit_64))
+           .make(m_lea, reg_op(VIP), mem_op(VBASE, VCSRET, 1, 0, bit_64))
+           .make(m_jmp, reg_op(VIP));
+    }
+
     std::vector<asmb::code_container_ptr> machine::create_handlers()
     {
         std::vector<asmb::code_container_ptr> out;

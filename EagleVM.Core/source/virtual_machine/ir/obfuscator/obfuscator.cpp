@@ -47,7 +47,7 @@ namespace eagle::ir
         }
     }
 
-    void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
+    std::vector<block_ptr> obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
     {
         std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>(0);
         for (const block_ptr& block : blocks)
@@ -63,22 +63,22 @@ namespace eagle::ir
             std::cout << out.str() << std::flush;
         }
 
-        std::vector<std::pair<block_ptr, asmb::code_label_ptr>> generated_blocks;
+        std::vector<block_ptr> generated_handlers;
         while (const auto result = root_node->find_path_max_depth(4))
         {
             auto [path_length, leaf] = result.value();
             const std::vector<std::shared_ptr<command_node_info_t>> block_occurrences = leaf->get_branch_similar_commands();
 
             // setup block to contain the cloned command
-            block_virt_ir_ptr handler = std::make_shared<block_virt_ir>();
-            handler->push_back(std::make_shared<cmd_ret>());
+            block_virt_ir_ptr merge_handler = std::make_shared<block_virt_ir>();
+            merge_handler->push_back(std::make_shared<cmd_ret>());
 
             std::weak_ptr curr_it = leaf;
             std::shared_ptr<trie_node_t> curr;
 
             while (((curr = curr_it.lock())) && curr != root_node)
             {
-                handler->insert(handler->begin(), curr->command->clone());
+                merge_handler->insert(merge_handler->begin(), curr->command->clone());
                 curr_it = curr->parent;
             }
 
@@ -113,7 +113,7 @@ namespace eagle::ir
                 for (int i = path_length - 1; i >= 0; i--)
                     cmd->block->erase(cmd->block->begin() + deletion_idx);
 
-                cmd->block->insert(cmd->block->begin() + deletion_idx, std::make_shared<cmd_call>(handler));
+                cmd->block->insert(cmd->block->begin() + deletion_idx, std::make_shared<cmd_call>(merge_handler));
                 block_info[cmd->block].push_back(start);
             }
 
@@ -129,8 +129,10 @@ namespace eagle::ir
                 for (int i = 0; i < block->size(); i++)
                     root_node->add_children(block, i);
             }
+
+            generated_handlers.emplace_back(merge_handler);
         }
 
-        __debugbreak();
+        return generated_handlers;
     }
 }

@@ -47,6 +47,8 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
                 branches = exit->get_branches();
             else if (const auto vmexit = ptr->exit_as_vmexit())
                 branches = vmexit->get_branches();
+            else if (const auto ret = ptr->exit_as_ret())
+                branches = { };
         }
         else if (auto ptr = block->as_x86())
         {
@@ -418,7 +420,8 @@ int main(int argc, char* argv[])
 
         for (auto& blocks : vm_id_map | std::views::values)
         {
-            ir::obfuscator::create_merged_handlers(blocks);
+            std::vector<ir::block_ptr> handler_blocks = ir::obfuscator::create_merged_handlers(blocks);
+            blocks.append_range(handler_blocks);
         }
 
         // // we want the same settings for every machine
@@ -438,12 +441,12 @@ int main(int argc, char* argv[])
 
         // initialize block code labels
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
-        for (auto& blocks : vm_blocks | std::views::keys)
+        for (auto& blocks : vm_id_map | std::views::values)
             for (const auto& block : blocks)
                 block_labels[block] = asmb::code_label::create();
 
         asmb::code_label_ptr entry_point = asmb::code_label::create();
-        for (const auto& [vm_id, blocks] : vm_id_map)
+        for (const auto& blocks : vm_id_map | std::views::values)
         {
             // we create a new machine based off of the same settings to make things
             // more annoying but the same machine could be used :)

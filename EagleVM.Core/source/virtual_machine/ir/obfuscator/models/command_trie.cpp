@@ -16,7 +16,7 @@ namespace eagle::ir
             return;
 
         const auto cmd = block->at(idx);
-        if (cmd->get_command_type() == command_type::vm_exit)
+        if (cmd->get_command_type() == command_type::vm_exit || cmd->get_command_type() == command_type::vm_ret)
             return;
 
         if (const auto existing_child = find_similar_child(block->at(idx)))
