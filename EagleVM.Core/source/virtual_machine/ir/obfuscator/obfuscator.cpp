@@ -49,107 +49,86 @@ namespace eagle::ir
 
     void obfuscator::create_merged_handlers(const std::vector<block_ptr>& blocks)
     {
-        const std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>(0);
+        std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>(0);
         for (const block_ptr& block : blocks)
         {
             for (int i = 0; i < block->size(); i++)
                 root_node->add_children(block, i);
         }
 
-        std::ostringstream dot;
-        std::unordered_set<std::string> added_nodes;
-
-        dot << "digraph Trie {\n  node [shape=box, fontname=\"Courier\"];\n";
-
-        std::function<bool(const std::shared_ptr<trie_node_t>&)> add_node;
-        add_node = [&](const std::shared_ptr<trie_node_t>& node)
         {
-            if (!node || (node != root_node && (node->matched_commands.size() < 2 || !node->command)))
-                return false;
+            std::ostringstream out;
+            root_node->print(out);
 
-            const std::string node_id = "node_" + std::to_string(reinterpret_cast<uintptr_t>(node.get()));
-
-            added_nodes.insert(node_id);
-            dot << "    " << node_id << " [label=<";
-
-            if (node->command)
-                dot << "<b>Command: " << node->command->to_string() << "</b><br/>";
-
-            dot << "Depth: " << node->depth
-                << "<br/>Matched Commands: " << node->matched_commands.size()
-                << ">];\n";
-
-            for (const auto& child : node->children)
-            {
-                if (!child) continue;
-
-                const bool result = add_node(child);
-                if (!result)
-                    continue;
-
-                dot << "    " << node_id << " -> " << "node_" + std::to_string(reinterpret_cast<uintptr_t>(child.get())) << ";\n";
-            }
-
-            return true;
-        };
-
-        add_node(root_node);
-        dot << "}\n";
-
-        std::cout << dot.str() << std::flush;
+            std::cout << out.str() << std::flush;
+        }
 
         std::vector<std::pair<block_ptr, asmb::code_label_ptr>> generated_blocks;
-        while (const auto result = root_node->find_path_max_depth(2))
+        while (const auto result = root_node->find_path_max_depth(4))
         {
             auto [path_length, leaf] = result.value();
-            const std::vector<std::shared_ptr<command_node_info_t>> command_branch = leaf->get_branch_similar_commands();
+            const std::vector<std::shared_ptr<command_node_info_t>> block_occurrences = leaf->get_branch_similar_commands();
 
             // setup block to contain the cloned command
             block_virt_ir_ptr handler = std::make_shared<block_virt_ir>();
             handler->push_back(std::make_shared<cmd_ret>());
 
-            std::weak_ptr start = leaf;
+            std::weak_ptr curr_it = leaf;
             std::shared_ptr<trie_node_t> curr;
 
-            while (((curr = start.lock())) && curr != root_node)
+            while (((curr = curr_it.lock())) && curr != root_node)
             {
                 handler->insert(handler->begin(), curr->command->clone());
-                start = curr->parent;
+                curr_it = curr->parent;
             }
 
-            std::unordered_map<block_ptr, std::vector<std::pair<int, int>>> block_modifications;
-            for (auto& item : command_branch)
+            std::unordered_map<block_ptr, std::vector<size_t>> block_info;
+            for (auto& cmd : block_occurrences)
             {
-                const auto block = item->block;
-                const auto start_idx = item->instruction_index - leaf->depth + 1;
-                const auto end_idx = start_idx + path_length - 1;
+                size_t start = cmd->instruction_index;
+                size_t end = start + path_length;
 
-                block_modifications[block].push_back({ start_idx, end_idx });
-            }
+                bool any_overlap = false;
 
-            for (auto& [block, ranges] : block_modifications)
-            {
-                std::ranges::sort(ranges);
-                std::vector<std::pair<int, int>> merged_ranges;
-                for (const auto& range : ranges)
+                for (auto& index : block_info[cmd->block])
                 {
-                    if (merged_ranges.empty() || merged_ranges.back().second < range.first)
-                        merged_ranges.push_back(range);
-                    else
-                        merged_ranges.back().second = std::max(merged_ranges.back().second, range.second);
+                    size_t exist_start = index;
+                    size_t exist_end = index + path_length;
+
+                    // [start, end)
+                    // [exist_start, exist_end)
+                    // check if they overlap
+
+                    if (std::max(start, exist_start) < std::min(end, exist_end))
+                    {
+                        any_overlap = true;
+                        break;
+                    }
                 }
 
-                for (auto it = merged_ranges.rbegin(); it != merged_ranges.rend(); ++it)
-                {
-                    const auto& [start_idx, end_idx] = *it;
-                    block->erase(block->begin() + start_idx, block->begin() + end_idx + 1);
-                    block->insert(block->begin() + start_idx, std::make_shared<cmd_call>(handler));
-                }
+                if (any_overlap)
+                    continue;
+
+                const auto deletion_idx = cmd->instruction_index - (path_length - 1);
+                for (int i = path_length - 1; i >= 0; i--)
+                    cmd->block->erase(cmd->block->begin() + deletion_idx);
+
+                cmd->block->insert(cmd->block->begin() + deletion_idx, std::make_shared<cmd_call>(handler));
+                block_info[cmd->block].push_back(start);
             }
 
-            // remove all related commands because we are combining it into a handler
-            for (auto& item : command_branch)
-                root_node->erase_forwards(item->block, item->instruction_index, path_length);
+            // this is actually not quite as easy as erasing, the best thing we can do right now is just
+            // rebuild the tree
+            // // remove all related commands because we are combining it into a handler
+            // for (auto& item : block_occurrences)
+            //     root_node->erase_forwards(item->block, item->instruction_index - (path_length - 1), path_length);
+
+            root_node = std::make_shared<trie_node_t>(0);
+            for (const block_ptr& block : blocks)
+            {
+                for (int i = 0; i < block->size(); i++)
+                    root_node->add_children(block, i);
+            }
         }
 
         __debugbreak();

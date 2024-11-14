@@ -40,9 +40,6 @@ namespace eagle::ir
                     it = matched_commands.erase(it);
                     continue;
                 }
-
-                if (cmd_info->instruction_index >= end_idx)
-                    cmd_info->instruction_index -= length;
             }
 
             ++it;
@@ -112,6 +109,41 @@ namespace eagle::ir
         }
 
         return max_path;
+    }
+
+    bool trie_node_t::print(std::ostringstream& out)
+    {
+        std::unordered_set<std::string> added_nodes;
+
+        if (depth == 0)
+            out << "digraph Trie {\n  node [shape=box, fontname=\"Courier\"];\n";
+
+        if (this->depth != 0 && matched_commands.size() < 2)
+            return false;
+
+        const std::string node_id = "node_" + std::to_string(reinterpret_cast<uintptr_t>(this));
+        out << "    " << node_id << " [label=<";
+        if (command)
+            out << "<b>Command: " << command->to_string() << "</b><br/>";
+        out << "Depth: " << depth
+            << "<br/>Matched Commands: " << matched_commands.size()
+            << ">];\n";
+
+        for (const auto& child : children)
+        {
+            if (!child) continue;
+
+            const bool result = child->print(out);
+            if (!result)
+                continue;
+
+            out << "    " << node_id << " -> " << "node_" + std::to_string(reinterpret_cast<uintptr_t>(child.get())) << ";\n";
+        }
+
+        if (depth == 0)
+            out << "}\n";
+
+        return true;
     }
 
     std::shared_ptr<trie_node_t> trie_node_t::find_similar_child(const base_command_ptr& command) const

@@ -22,12 +22,20 @@ namespace eagle::ir
         return value;
     }
 
+    template<class... Ts>
+    struct overloaded : Ts... { using Ts::operator()...; };
+
     bool cmd_push::is_similar(const std::shared_ptr<base_command>& other)
     {
         const auto cmd = std::static_pointer_cast<cmd_push>(other);
         return base_command::is_similar(other) &&
             get_size() == cmd->get_size() &&
-            value == cmd->value;
+            std::visit(overloaded{
+                [](const uint64_t a, const uint64_t b) { return a == b; },
+                [](const reg_vm a, const reg_vm b) { return a == b; },
+                [](const block_ptr& a, const block_ptr& b) { return a == b; },
+                [](auto a, auto b) { return false; },
+            }, value, cmd->value);
     }
 
     std::string cmd_push::to_string()
@@ -56,7 +64,8 @@ namespace eagle::ir
                     const reg_vm reg = arg;
                     return reg_vm_to_string(reg);
                 }
-                else VM_ASSERT("unknown push type handled");
+                else
+                VM_ASSERT("unknown push type handled");
 
                 return "";
             }, value);

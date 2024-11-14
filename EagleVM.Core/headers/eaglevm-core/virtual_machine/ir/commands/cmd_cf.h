@@ -20,6 +20,13 @@ namespace eagle::ir
             return target;
         }
 
+        bool is_similar(const std::shared_ptr<base_command>& other) override
+        {
+            // for now keep it like this because handler merger might start infinitely looping
+            // because of multiple cmd_call calls and that would not end up well
+            return false;
+        }
+
         BASE_COMMAND_CLONE(cmd_call);
 
     private:

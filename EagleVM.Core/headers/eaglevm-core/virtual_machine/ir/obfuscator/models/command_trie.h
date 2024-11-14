@@ -15,7 +15,7 @@ namespace eagle::ir
     struct command_node_info_t
     {
         block_ptr block = nullptr;
-        uint16_t instruction_index = 0;
+        size_t instruction_index = 0;
     };
 
     using command_node_removal_ptr = std::shared_ptr<command_node_removal_t>;
@@ -53,6 +53,8 @@ namespace eagle::ir
          * @param min_child_size the minimum instances of this pattern match that may occur
          */
         std::optional<std::pair<size_t, trie_node_ptr>> find_path_max_depth(size_t min_child_size);
+
+        bool print(std::ostringstream& out);
 
     private:
         trie_node_ptr find_similar_child(const base_command_ptr& command) const;
