@@ -193,24 +193,28 @@ namespace eagle::ir
     private:
         void handle_cmd_insert(const base_command_ptr& command) override
         {
-            if (command)
+            if (commands_.empty())
             {
-                const auto command_type = command->get_command_type();
-                if (command_type == command_type::vm_branch || command_type == command_type::vm_exit || command_type == command_type::vm_ret)
-                {
-                    VM_ASSERT(exit_cmd == nullptr, "unable to have 2 exiting instructions at the end of block");
-
-                    exit_cmd = command;
-                    if (const auto branch = exit_as_branch())
-                        VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
-                }
-                else
-                {
-                    VM_ASSERT(command_type != command_type::vm_exec_x86,
-                        "vm block may not execute x86 instructions");
-                }
+                exit_cmd = nullptr;
+                return;
             }
-            else exit_cmd = nullptr;
+
+            const auto& last_command = commands_.back();
+            const auto cmd_type = last_command->get_command_type();
+
+            if (cmd_type == command_type::vm_branch || cmd_type == command_type::vm_exit || cmd_type == command_type::vm_ret)
+            {
+                // Update exit_cmd to the last command
+                exit_cmd = last_command;
+
+                // Additional validation
+                if (const auto branch = exit_as_branch())
+                    VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
+            }
+            else
+            {
+                exit_cmd = nullptr;
+            }
         }
     };
 
@@ -233,23 +237,27 @@ namespace eagle::ir
     private:
         void handle_cmd_insert(const base_command_ptr& command) override
         {
-            if (command)
+            if (commands_.empty())
             {
-                const auto command_type = command->get_command_type();
-                if (command_type == command_type::vm_branch)
-                {
-                    VM_ASSERT(exit_cmd == nullptr, "unable to have 2 exiting instructions at the end of block");
-
-                    exit_cmd = command;
-                    VM_ASSERT(exit_as_branch()->is_virtual() == false, "branch from x86 block must not be virtual");
-                }
-                else
-                {
-                    VM_ASSERT(command_type == command_type::vm_exec_x86,
-                        "x86 block may only execute x86 instructions");
-                }
+                exit_cmd = nullptr;
+                return;
             }
-            else exit_cmd = nullptr;
+
+            const auto& last_command = commands_.back();
+            const auto cmd_type = last_command->get_command_type();
+
+            if (cmd_type == command_type::vm_branch)
+            {
+                // Update exit_cmd to the last command
+                exit_cmd = last_command;
+
+                // Additional validation
+                VM_ASSERT(exit_as_branch()->is_virtual() == false, "branch from x86 block must not be virtual");
+            }
+            else
+            {
+                exit_cmd = nullptr;
+            }
         }
     };
 
