@@ -47,8 +47,9 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
                 branches = exit->get_branches();
             else if (const auto vmexit = ptr->exit_as_vmexit())
                 branches = vmexit->get_branches();
-            else if (const auto ret = ptr->exit_as_ret())
-                branches = { };
+
+            for (const auto& call : ptr->get_calls())
+                std::cout << std::format("  \"{}\" -> \"0x{:x}\";\n", node_id, call->block_id);
         }
         else if (auto ptr = block->as_x86())
         {
@@ -66,6 +67,8 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
 
             std::cout << std::format("  \"{}\" -> \"{}\";\n", node_id, target_id);
         }
+
+
     }
 
     std::cout << "}\n" << std::flush;

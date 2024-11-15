@@ -125,10 +125,8 @@ namespace eagle::ir
 
             root_node = std::make_shared<trie_node_t>(0);
             for (const block_ptr& block : blocks)
-            {
                 for (int i = 0; i < block->size(); i++)
                     root_node->add_children(block, i);
-            }
 
             generated_handlers.emplace_back(merge_handler);
         }

@@ -161,7 +161,7 @@ namespace eagle::ir
 
         cmd_vm_exit_ptr exit_as_vmexit() const
         {
-            if (exit_cmd->get_command_type() == command_type::vm_exit)
+            if (exit_cmd && exit_cmd->get_command_type() == command_type::vm_exit)
                 return std::static_pointer_cast<cmd_vm_exit>(exit_cmd);
 
             return nullptr;
@@ -169,18 +169,25 @@ namespace eagle::ir
 
         cmd_branch_ptr exit_as_branch() const
         {
-            if (exit_cmd->get_command_type() == command_type::vm_branch)
+            if (exit_cmd && exit_cmd->get_command_type() == command_type::vm_branch)
                 return std::static_pointer_cast<cmd_branch>(exit_cmd);
 
             return nullptr;
         }
 
-        cmd_ret_ptr exit_as_ret() const
+        std::vector<block_ptr> get_calls() const
         {
-            if (exit_cmd->get_command_type() == command_type::vm_ret)
-                return std::static_pointer_cast<cmd_ret>(exit_cmd);
+            std::vector<block_ptr> calls;
+            for (auto cmd : commands_)
+            {
+                if (cmd->get_command_type() == command_type::vm_call)
+                {
+                    const auto call = std::static_pointer_cast<cmd_call>(cmd);
+                    calls.push_back(call->get_target());
+                }
+            }
 
-            return nullptr;
+            return calls;
         }
 
     private:
@@ -195,9 +202,7 @@ namespace eagle::ir
 
                     exit_cmd = command;
                     if (const auto branch = exit_as_branch())
-                    {
                         VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
-                    }
                 }
                 else
                 {
@@ -219,7 +224,7 @@ namespace eagle::ir
 
         cmd_branch_ptr exit_as_branch() const
         {
-            if (exit_cmd->get_command_type() == command_type::vm_branch)
+            if (exit_cmd && exit_cmd->get_command_type() == command_type::vm_branch)
                 return std::static_pointer_cast<cmd_branch>(exit_cmd);
 
             return nullptr;
