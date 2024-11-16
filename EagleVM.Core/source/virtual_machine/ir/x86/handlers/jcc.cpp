@@ -1,5 +1,4 @@
 #include "eaglevm-core/virtual_machine/ir/x86/handlers/jcc.h"
-#include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
 #include "eaglevm-core/virtual_machine/ir/x86/util.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 

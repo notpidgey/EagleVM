@@ -56,10 +56,6 @@ namespace eagle::ir
                     const block_ptr block = arg;
                     return "block(" + std::to_string(block->block_id) + ")";
                 }
-                else if constexpr (std::is_same_v<T, discrete_store_ptr>)
-                {
-                    return "(store)";
-                }
                 else if constexpr (std::is_same_v<T, reg_vm>)
                 {
                     const reg_vm reg = arg;

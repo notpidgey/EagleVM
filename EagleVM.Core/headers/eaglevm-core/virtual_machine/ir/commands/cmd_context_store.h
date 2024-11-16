@@ -1,5 +1,6 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
+#include "eaglevm-core/codec/zydis_defs.h"
 
 namespace eagle::ir
 {

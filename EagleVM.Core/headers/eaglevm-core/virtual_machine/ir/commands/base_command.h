@@ -6,7 +6,7 @@
 
 #include "eaglevm-core/util/random.h"
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
-#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
+#include "eaglevm-core/virtual_machine/ir/models/ir_size.h"
 
 #include "eaglevm-core/util/assert.h"
 

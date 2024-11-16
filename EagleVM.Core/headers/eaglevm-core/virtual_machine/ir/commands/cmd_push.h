@@ -3,7 +3,6 @@
 #include <utility>
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
-#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_modifier.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_store.h"
 
