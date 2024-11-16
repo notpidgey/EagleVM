@@ -80,7 +80,10 @@ namespace eagle::ir
 
             while (((curr = curr_it.lock())) && curr != root_node)
             {
-                merge_handler->insert(merge_handler->begin(), curr->command->clone());
+                auto clone = curr->command->clone();
+                clone->set_inlined(true);
+
+                merge_handler->insert(merge_handler->begin(), clone);
                 curr_it = curr->parent;
             }
 
