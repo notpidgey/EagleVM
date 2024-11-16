@@ -64,10 +64,12 @@ namespace eagle::ir
         }
 
         std::vector<block_ptr> generated_handlers;
-        while (const auto result = root_node->find_path_max_depth(4))
+        while (const auto result = root_node->find_path_max_similar(3))
         {
-            auto [path_length, leaf] = result.value();
+            auto [similar_count, leaf] = result.value();
             const std::vector<std::shared_ptr<command_node_info_t>> block_occurrences = leaf->get_branch_similar_commands();
+
+            auto path_length = leaf->depth;
 
             // setup block to contain the cloned command
             block_virt_ir_ptr merge_handler = std::make_shared<block_virt_ir>();
@@ -109,8 +111,15 @@ namespace eagle::ir
                 if (any_overlap)
                     continue;
 
-                const auto deletion_idx = cmd->instruction_index - (path_length - 1);
-                for (int i = path_length - 1; i >= 0; i--)
+                int del_idx = cmd->instruction_index;
+                if (auto count = block_info[cmd->block].size())
+                {
+                    count *= path_length - 1; // because we push back a call
+                    del_idx -= count; // this is how far it shifted back
+                }
+
+                const auto deletion_idx = del_idx - (path_length - 1);
+                for (auto i = path_length; i--;)
                     cmd->block->erase(cmd->block->begin() + deletion_idx);
 
                 cmd->block->insert(cmd->block->begin() + deletion_idx, std::make_shared<cmd_call>(merge_handler));

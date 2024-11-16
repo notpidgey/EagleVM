@@ -25,6 +25,8 @@ namespace eagle::ir
             return base_command::is_similar(other) && target == cmd->target;
         }
 
+        std::string to_string() override;
+
         BASE_COMMAND_CLONE(cmd_call);
 
     private:

@@ -30,6 +30,7 @@ namespace eagle::ir
         const auto cmd = std::static_pointer_cast<cmd_push>(other);
         return base_command::is_similar(other) &&
             get_size() == cmd->get_size() &&
+            value.index() == cmd->value.index() &&
             std::visit(overloaded{
                 [](const uint64_t a, const uint64_t b) { return a == b; },
                 [](const reg_vm a, const reg_vm b) { return a == b; },

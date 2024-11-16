@@ -2,9 +2,8 @@
 
 namespace eagle::ir
 {
-
     cmd_x86_exec::cmd_x86_exec(const codec::encoder::inst_req& enc_req)
-    : base_command(command_type::vm_exec_x86), request(enc_req)
+        : base_command(command_type::vm_exec_x86), request(enc_req)
     {
     }
 
@@ -28,7 +27,7 @@ namespace eagle::ir
         //         auto reg = arg;
         //         codec::encode
         //         auto str = codec::instruction_to_string(reg);
-//
+        //
         //         return base_command::to_string() + " " + str;
         //     }
         //     else

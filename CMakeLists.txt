@@ -94,6 +94,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/virtual_machine/ir/analyzer/store.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/base_command.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_branch.cpp"
+	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_cf.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_context_load.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_context_store.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_exit.cpp"

@@ -113,8 +113,10 @@ namespace eagle::ir
         std::shared_ptr<T> get_command(const size_t i, const command_type command_assert = command_type::none) const
         {
             const auto& command = at(i);
-            VM_ASSERT(command_assert != command_type::none &&
-                command->get_command_type() == command_assert, "command assert failed, invalid command type");
+            if (command_assert != command_type::none)
+            {
+                VM_ASSERT(command->get_command_type() == command_assert, "command assert failed, invalid command type");
+            }
 
             return std::static_pointer_cast<T>(command);
         }
@@ -209,7 +211,7 @@ namespace eagle::ir
 
                 // Additional validation
                 if (const auto branch = exit_as_branch())
-                    VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
+                VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
             }
             else
             {

@@ -67,8 +67,6 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
 
             std::cout << std::format("  \"{}\" -> \"{}\";\n", node_id, target_id);
         }
-
-
     }
 
     std::cout << "}\n" << std::flush;
@@ -425,6 +423,26 @@ int main(int argc, char* argv[])
         {
             std::vector<ir::block_ptr> handler_blocks = ir::obfuscator::create_merged_handlers(blocks);
             blocks.append_range(handler_blocks);
+
+            // restore calls, for whatever debug reason
+            //for (auto& block : blocks)
+            //{
+            //    if (block->block_id == 0x5f)
+            //        __debugbreak();
+
+            //    for (int i = 0; i < block->size(); i++)
+            //    {
+            //        if (block->at(i)->get_command_type() == ir::command_type::vm_call)
+            //        {
+            //            auto call_s = block->get_command<ir::cmd_call>(i);
+            //            block->erase(block->begin() + i);
+
+            //            auto target = call_s->get_target();
+            //            for (int j = target->size() - 2; j >= 0; j--)
+            //                block->insert(block->begin() + i, target->at(j));
+            //        }
+            //    }
+            //}
         }
 
         // // we want the same settings for every machine
