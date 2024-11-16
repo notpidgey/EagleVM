@@ -78,15 +78,19 @@ namespace eagle::dasm
                 uint64_t curr_rva = target_block->start_rva;
                 for (auto k = 0; k < target_block->decoded_insts.size();)
                 {
-                    codec::dec::inst_info& inst = target_block->decoded_insts[k];
+                    codec::dec::inst_info inst = target_block->decoded_insts[k];
                     if (curr_rva >= jump_rva)
                     {
                         split_block->decoded_insts.push_back(inst);
                         target_block->decoded_insts.erase(target_block->decoded_insts.begin() + k);
                     }
-                    else k++;
+                    else
+                    {
+                        k++;
+                    }
 
-                    curr_rva += inst.instruction.length;
+                    auto length = inst.instruction.length;
+                    curr_rva += length;
                 }
 
                 new_block = split_block;

@@ -211,7 +211,7 @@ namespace eagle::ir
 
                 // Additional validation
                 if (const auto branch = exit_as_branch())
-                VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
+                    VM_ASSERT(branch->is_virtual(), "branch from virtual block must be virtual");
             }
             else
             {

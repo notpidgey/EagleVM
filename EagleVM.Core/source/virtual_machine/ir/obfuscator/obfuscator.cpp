@@ -95,7 +95,7 @@ namespace eagle::ir
 
                 bool any_overlap = false;
 
-                for (auto& index : block_info[cmd->block])
+                for (auto index : block_info[cmd->block])
                 {
                     size_t exist_start = index;
                     size_t exist_end = index + path_length;
@@ -114,18 +114,16 @@ namespace eagle::ir
                 if (any_overlap)
                     continue;
 
-                int del_idx = cmd->instruction_index;
-                if (auto count = block_info[cmd->block].size())
-                {
-                    count *= path_length - 1; // because we push back a call
-                    del_idx -= count; // this is how far it shifted back
-                }
+                int end_idx = cmd->instruction_index;
 
-                const auto deletion_idx = del_idx - (path_length - 1);
-                for (auto i = path_length; i--;)
-                    cmd->block->erase(cmd->block->begin() + deletion_idx);
+                size_t count = block_info[cmd->block].size();
+                count *= path_length - 1; // because we push back a call
+                end_idx -= count; // this is how far it shifted back
 
-                cmd->block->insert(cmd->block->begin() + deletion_idx, std::make_shared<cmd_call>(merge_handler));
+                const auto start_idx = end_idx - (path_length - 1);
+                cmd->block->erase(cmd->block->begin() + start_idx, cmd->block->begin() + end_idx + 1);
+                cmd->block->insert(cmd->block->begin() + start_idx, std::make_shared<cmd_call>(merge_handler));
+
                 block_info[cmd->block].push_back(start);
             }
 
@@ -140,7 +138,7 @@ namespace eagle::ir
                 for (int i = 0; i < block->size(); i++)
                     root_node->add_children(block, i);
 
-            generated_handlers.emplace_back(merge_handler);
+            generated_handlers.push_back(merge_handler);
         }
 
         return generated_handlers;

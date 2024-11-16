@@ -57,7 +57,7 @@ namespace eagle::ir
         bool print(std::ostringstream& out);
 
     private:
-        trie_node_ptr find_similar_child(const base_command_ptr& command) const;
+        trie_node_ptr find_similar_child(const base_command_ptr& cmd) const;
 
         void update_existing_child(const trie_node_ptr& child, const block_ptr& block, uint16_t idx);
         void add_new_child(const block_ptr& block, uint16_t idx);

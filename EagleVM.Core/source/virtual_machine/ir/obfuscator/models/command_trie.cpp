@@ -148,10 +148,10 @@ namespace eagle::ir
         return true;
     }
 
-    std::shared_ptr<trie_node_t> trie_node_t::find_similar_child(const base_command_ptr& command) const
+    std::shared_ptr<trie_node_t> trie_node_t::find_similar_child(const base_command_ptr& cmd) const
     {
         for (const auto& child : children)
-            if (child->command->is_similar(command))
+            if (child->command->is_similar(cmd))
                 return child;
 
         return nullptr;
