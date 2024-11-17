@@ -453,9 +453,6 @@ int main(int argc, char* argv[])
         // machine_settings->set_randomize_stack_regs(true);
 
         virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
-        machine_settings->randomize_working_register = false;
-        machine_settings->single_vm_handlers = false;
-
         machine_settings->shuffle_push_order = true;
         machine_settings->shuffle_vm_gpr_order = true;
         machine_settings->shuffle_vm_xmm_order = true;
