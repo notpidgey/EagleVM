@@ -18,12 +18,10 @@ namespace eagle::ir
             return;
 
         constexpr std::array skip_calls = {
-            command_type::vm_enter,
-            command_type::vm_exit,
-            command_type::vm_ret,
-            command_type::vm_call,
-            command_type::vm_branch,
-            command_type::vm_handler_call
+            command_type::vm_enter,     // because we must be in a vm to call to merged handler
+            command_type::vm_ret,       // a call will push to the call stack, so the merged ret will do nothing
+            command_type::vm_call,      // potential infinite handler creation
+            command_type::vm_branch,    // do not want to think about this yet
         };
 
         const auto cmd = block->at(idx);

@@ -9,6 +9,20 @@ namespace eagle::ir
         branches.push_back(result);
     }
 
+    template<class... Ts>
+    struct overloaded : Ts... { using Ts::operator()...; };
+
+    bool cmd_vm_exit::is_similar(const std::shared_ptr<base_command>& other)
+    {
+        const auto cmd = std::static_pointer_cast<cmd_vm_exit>(other);
+        return base_command::is_similar(other) && branches[0].index() == cmd->branches[0].index() &&
+            std::visit(overloaded{
+                [](const uint64_t a, const uint64_t b) { return a == b; },
+                [](const block_ptr& a, const block_ptr& b) { return a == b; },
+                [](auto a, auto b) { return false; },
+            }, cmd->branches[0], branches[0]);
+    }
+
     ir_exit_result cmd_vm_exit::get_exit()
     {
         return branches.front();

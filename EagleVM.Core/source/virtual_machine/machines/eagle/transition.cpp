@@ -55,10 +55,7 @@ namespace eagle::virt::eg
                     builder.make(m_lea, reg_op(rsp), mem_op(rsp, -16, TOB(bit_64)))
                            .make(m_movq, mem_op(rsp, 0, TOB(bit_128)), reg_op(reg));
                 }
-                else
-                {
-                    builder.make(m_push, reg_op(reg));
-                }
+                else builder.make(m_push, reg_op(reg));
             });
 
         // mov VSP, rsp         ; begin virtualization by setting VSP to rsp
@@ -141,8 +138,9 @@ namespace eagle::virt::eg
         }
 
         // push exits
-        handle_cmd(block, std::make_shared<ir::cmd_push>(std::visit([](auto&& arg) -> ir::push_v {
-            return ir::push_v{std::forward<decltype(arg)>(arg)};
+        handle_cmd(block, std::make_shared<ir::cmd_push>(std::visit([](auto&& arg) -> ir::push_v
+        {
+            return ir::push_v{ std::forward<decltype(arg)>(arg) };
         }, cmd->get_exit()), ir::ir_size::bit_64));
 
         builder.make(m_mov, reg_op(VCSRET), mem_op(VSP, 0, bit_64))
@@ -179,10 +177,7 @@ namespace eagle::virt::eg
                     builder.make(m_movdqu, reg_op(reg), mem_op(rsp, 0, bit_128))
                            .make(m_lea, reg_op(rsp), mem_op(rsp, 16, bit_64));
                 }
-                else
-                {
-                    builder.make(m_pop, reg_op(reg));
-                }
+                else builder.make(m_pop, reg_op(reg));
             }
         }, true);
 

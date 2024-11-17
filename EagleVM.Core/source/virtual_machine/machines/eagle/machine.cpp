@@ -1107,7 +1107,7 @@ namespace eagle::virt::eg
             }
             else
             {
-                constexpr float chance_to_generate = 0.0;
+                constexpr float chance_to_generate = 0.3;
                 if (!(flags & force_unique) && (handler_map[handler_hash].empty() || util::get_ran_device().gen_chance(chance_to_generate)))
                     goto HANDLE_CREATE;
 
