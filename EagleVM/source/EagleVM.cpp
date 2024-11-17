@@ -41,19 +41,19 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
             node_id, graph_title, insts_nodes.str());
 
         std::vector<ir::ir_exit_result> branches;
-        if (const auto ptr = block->as_virt())
+        if (const auto ptr_virt = block->as_virt())
         {
-            if (const auto exit = ptr->exit_as_branch())
+            if (const auto exit = ptr_virt->exit_as_branch())
                 branches = exit->get_branches();
-            else if (const auto vmexit = ptr->exit_as_vmexit())
+            else if (const auto vmexit = ptr_virt->exit_as_vmexit())
                 branches = vmexit->get_branches();
 
-            for (const auto& call : ptr->get_calls())
+            for (const auto& call : ptr_virt->get_calls())
                 std::cout << std::format("  \"{}\" -> \"0x{:x}\";\n", node_id, call->block_id);
         }
-        else if (auto ptr = block->as_x86())
+        else if (auto ptr_x86 = block->as_x86())
         {
-            if (const auto exit = ptr->exit_as_branch())
+            if (const auto exit = ptr_x86->exit_as_branch())
                 branches = exit->get_branches();
         }
 
@@ -405,7 +405,7 @@ int main(int argc, char* argv[])
             if (preopt_block->original_block == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
-        assert(entry_block != nullptr, "could not find matching preopt block for entry block");
+        VM_ASSERT(entry_block != nullptr, "could not find matching preopt block for entry block");
 
         // if we want, we can do a little optimzation which will rewrite the preopt
         // blocks, or we could simply ir_trans.flatten()

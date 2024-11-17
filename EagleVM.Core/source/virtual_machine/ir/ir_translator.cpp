@@ -67,7 +67,7 @@ namespace eagle::ir
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            constexpr auto ignored_mnemonics = { codec::m_nop };
+            constexpr std::array<codec::mnemonic, 1> ignored_mnemonics = { codec::m_nop };
             if (std::ranges::find(ignored_mnemonics, static_cast<codec::mnemonic>(inst.mnemonic)) != ignored_mnemonics.end())
                 continue;
 

@@ -25,6 +25,7 @@ namespace eagle::ir
     class trie_node_t : public std::enable_shared_from_this<trie_node_t>
     {
     public:
+        uint32_t uuid;
         size_t depth;
 
         base_command_ptr command;

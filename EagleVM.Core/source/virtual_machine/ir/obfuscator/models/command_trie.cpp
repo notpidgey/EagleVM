@@ -8,6 +8,8 @@ namespace eagle::ir
 {
     trie_node_t::trie_node_t(const size_t depth): depth(depth), command(nullptr)
     {
+        static uint32_t id = 0;
+        uuid = id++;
     }
 
     void trie_node_t::add_children(const block_ptr& block, const uint16_t idx)
@@ -15,10 +17,17 @@ namespace eagle::ir
         if (block->size() == idx)
             return;
 
+        constexpr std::array skip_calls = {
+            command_type::vm_enter,
+            command_type::vm_exit,
+            command_type::vm_ret,
+            command_type::vm_call,
+            command_type::vm_branch,
+            command_type::vm_handler_call
+        };
+
         const auto cmd = block->at(idx);
-        if (cmd->get_command_type() == command_type::vm_exit || cmd->get_command_type() == command_type::vm_ret
-            || cmd->get_command_type() == command_type::vm_call || cmd->get_command_type() == command_type::vm_branch || cmd->get_command_type() ==
-            command_type::vm_enter)
+        if (std::ranges::find(skip_calls, cmd->get_command_type()) != skip_calls.end())
             return;
 
         if (const auto existing_child = find_similar_child(block->at(idx)))
@@ -116,7 +125,6 @@ namespace eagle::ir
     bool trie_node_t::print(std::ostringstream& out)
     {
         std::unordered_set<std::string> added_nodes;
-
         if (depth == 0)
             out << "digraph Trie {\n  node [shape=box, fontname=\"Courier\"];\n";
 

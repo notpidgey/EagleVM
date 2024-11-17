@@ -91,6 +91,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/source/pe/packer/pe_packer.cpp"
 	"EagleVM.Core/source/pe/pe_generator.cpp"
 	"EagleVM.Core/source/util/random.cpp"
+	"EagleVM.Core/source/virtual_machine/ir/block.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/base_command.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_branch.cpp"
 	"EagleVM.Core/source/virtual_machine/ir/commands/cmd_cf.cpp"

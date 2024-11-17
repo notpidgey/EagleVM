@@ -76,7 +76,7 @@ namespace eagle::ir
             merge_handler->push_back(std::make_shared<cmd_ret>());
 
             std::weak_ptr curr_it = leaf;
-            std::shared_ptr<trie_node_t> curr;
+            std::shared_ptr<trie_node_t> curr = nullptr;
 
             while (((curr = curr_it.lock())) && curr != root_node)
             {
@@ -90,11 +90,10 @@ namespace eagle::ir
             std::unordered_map<block_ptr, std::vector<size_t>> block_info;
             for (auto& cmd : block_occurrences)
             {
-                size_t start = cmd->instruction_index;
-                size_t end = start + path_length;
+                size_t end = cmd->instruction_index;
+                size_t start = end - path_length;
 
                 bool any_overlap = false;
-
                 for (auto index : block_info[cmd->block])
                 {
                     size_t exist_start = index;
@@ -115,12 +114,23 @@ namespace eagle::ir
                     continue;
 
                 int end_idx = cmd->instruction_index;
-
-                size_t count = block_info[cmd->block].size();
-                count *= path_length - 1; // because we push back a call
-                end_idx -= count; // this is how far it shifted back
+                for (auto& idx : block_info[cmd->block])
+                    if (idx < cmd->instruction_index)
+                        end_idx -= (path_length - 1); // this is how far it shifted back
 
                 const auto start_idx = end_idx - (path_length - 1);
+
+                // compare to make sure we have the right ones
+                // schizo debug code
+                // for (int j = 0; j < path_length; j++)
+                // {
+                //     auto block = cmd->block->at(end_idx - j);
+                //     auto handler = merge_handler->at(path_length - j - 1);
+
+                //     if (!block->is_similar(handler))
+                //         __debugbreak();
+                // }
+
                 cmd->block->erase(cmd->block->begin() + start_idx, cmd->block->begin() + end_idx + 1);
                 cmd->block->insert(cmd->block->begin() + start_idx, std::make_shared<cmd_call>(merge_handler));
 
@@ -133,12 +143,12 @@ namespace eagle::ir
             // for (auto& item : block_occurrences)
             //     root_node->erase_forwards(item->block, item->instruction_index - (path_length - 1), path_length);
 
+            generated_handlers.push_back(merge_handler);
+
             root_node = std::make_shared<trie_node_t>(0);
             for (const block_ptr& block : blocks)
                 for (int i = 0; i < block->size(); i++)
                     root_node->add_children(block, i);
-
-            generated_handlers.push_back(merge_handler);
         }
 
         return generated_handlers;
