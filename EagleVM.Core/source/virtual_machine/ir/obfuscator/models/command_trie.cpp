@@ -22,6 +22,7 @@ namespace eagle::ir
             command_type::vm_ret,       // a call will push to the call stack, so the merged ret will do nothing
             command_type::vm_call,      // potential infinite handler creation
             command_type::vm_branch,    // do not want to think about this yet
+            command_type::vm_exit,      // eh its fine but it ruins the control flow graph so idk
         };
 
         const auto cmd = block->at(idx);
