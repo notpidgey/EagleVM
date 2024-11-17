@@ -186,6 +186,12 @@ namespace eagle::virt
             case ir::command_type::vm_dup:
                 handle_cmd(code, std::static_pointer_cast<ir::cmd_dup>(command));
                 break;
+            case ir::command_type::vm_call:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_call>(command));
+                break;
+            case ir::command_type::vm_ret:
+                handle_cmd(code, std::static_pointer_cast<ir::cmd_ret>(command));
+                break;
             case ir::command_type::none:
                 VM_ASSERT("unexpected command type generated");
                 break;

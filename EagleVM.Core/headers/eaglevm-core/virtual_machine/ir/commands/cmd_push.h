@@ -3,13 +3,12 @@
 #include <utility>
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
-#include "eaglevm-core/virtual_machine/ir/commands/models/cmd_modifier.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 #include "eaglevm-core/virtual_machine/ir/models/ir_store.h"
 
 namespace eagle::ir
 {
-    using push_v = std::variant<uint64_t, block_ptr, discrete_store_ptr, reg_vm>;
+    using push_v = std::variant<uint64_t, block_ptr, reg_vm>;
     class cmd_push : public base_command
     {
     public:
@@ -20,10 +19,8 @@ namespace eagle::ir
         push_v get_value() const;
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
-
-        std::vector<discrete_store_ptr> get_use_stores() override;
-
         std::string to_string() override;
+        BASE_COMMAND_CLONE(cmd_push);
 
     private:
         ir_size size;

@@ -23,14 +23,16 @@ namespace eagle::ir
         bool is_similar(const std::shared_ptr<base_command>& other) override
         {
             std::shared_ptr<cmd_arith_base> cmd = std::static_pointer_cast<cmd_arith_base>(other);
-            return cmd->get_preserved() == preserved && cmd->get_param_count() == get_param_count() && cmd->get_size() == size &&
-                cmd->get_reversed() == reversed;
+            return base_command::is_similar(other) && cmd->get_preserved() == preserved && cmd->get_param_count() == get_param_count() && cmd->
+                get_size() == size && cmd->get_reversed() == reversed;
         }
 
         std::string to_string() override
         {
             return base_command::to_string() + " (" + ir_size_to_string(size) + ", " + ir_size_to_string(size) + ")";
         }
+
+        BASE_COMMAND_CLONE(cmd_arith_base);
 
     private:
         ir_size size;
@@ -57,6 +59,8 @@ namespace eagle::ir
             std::shared_ptr<cmd_arith_base> cmd = std::static_pointer_cast<cmd_arith_base>(other);
             return cmd->get_preserved() == preserved && cmd->get_param_count() == get_param_count() && cmd->get_size() == size;
         }
+
+        BASE_COMMAND_CLONE(cmd_arith_base);
 
     private:
         ir_size size;

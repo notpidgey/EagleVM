@@ -49,6 +49,8 @@ namespace eagle::virt::eg
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_abs_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_log2_ptr& cmd) override;
         void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_call_ptr& cmd) override;
+        void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_ret_ptr& cmd) override;
 
         std::vector<asmb::code_container_ptr> create_handlers() override;
 

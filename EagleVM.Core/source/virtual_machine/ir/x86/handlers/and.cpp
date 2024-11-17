@@ -42,11 +42,6 @@ namespace eagle::ir::handler
         // however because of the way this IL is written, there is far more room to expand how the virtual context is stored
         // in addition, it gives room for mapping x86 context into random places as well
 
-        const discrete_store_ptr p_one = discrete_store::create(target_size);
-        const discrete_store_ptr p_two = discrete_store::create(target_size);
-
-        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
-
         // todo: some kind of virtual machine implementation where it could potentially try to optimize a pop and use of the register in the next
         // instruction using stack dereference
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_CF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_PF;

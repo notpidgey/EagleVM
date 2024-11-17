@@ -11,6 +11,8 @@ namespace eagle::ir
         {
         }
 
+        BASE_COMMAND_CLONE(cmd_vm_enter);
+
     private:
     };
 

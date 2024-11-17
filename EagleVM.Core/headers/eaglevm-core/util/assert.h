@@ -18,6 +18,7 @@
         __DBG_MACRO_DISPATCH(VM_ASSERT, __VA_ARGS__)(__VA_ARGS__)
     #define VM_ASSERT1(expr) assert(expr)
     #define VM_ASSERT2(expr, message) assert((expr) && (message))
+    #define VM_ASSERT_FALSE(...) assert(false, __VA_ARGS__)
 #else
     #define VM_ASSERT(...) do { } while (false)
 #endif

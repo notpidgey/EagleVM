@@ -14,8 +14,8 @@ namespace eagle::ir
         codec::reg_class get_reg_class() const;
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
-
         std::string to_string() override;
+        BASE_COMMAND_CLONE(cmd_context_load);
 
     private:
         codec::reg source = codec::reg::none;

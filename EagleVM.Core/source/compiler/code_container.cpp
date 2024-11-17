@@ -1,7 +1,5 @@
 #include "eaglevm-core/compiler/code_container.h"
 
-#include "eaglevm-core/virtual_machine/ir/dynamic_encoder/encoder.h"
-
 namespace eagle::asmb
 {
     uint32_t code_container::current_uid = 0;

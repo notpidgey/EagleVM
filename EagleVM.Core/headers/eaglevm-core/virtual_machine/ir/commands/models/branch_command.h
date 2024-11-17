@@ -1,4 +1,5 @@
 #pragma once
+#include <variant>
 
 namespace eagle::ir
 {

@@ -56,6 +56,10 @@ namespace eagle::ir
 
         // compare
         vm_cmp,
+
+        // control flow
+        vm_call,
+        vm_ret
     };
 
     std::string command_to_string(command_type cmd);

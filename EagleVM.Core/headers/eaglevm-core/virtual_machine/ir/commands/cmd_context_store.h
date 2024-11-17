@@ -1,5 +1,6 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
+#include "eaglevm-core/codec/zydis_defs.h"
 
 namespace eagle::ir
 {
@@ -13,8 +14,8 @@ namespace eagle::ir
         codec::reg_size get_value_size() const;
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
-
         std::string to_string() override;
+        BASE_COMMAND_CLONE(cmd_context_store);
 
     private:
         codec::reg dest;

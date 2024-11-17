@@ -6,80 +6,61 @@
 
 namespace eagle::ir
 {
-    trie_node_t::trie_node_t(const size_t depth): depth(depth)
+    trie_node_t::trie_node_t(const size_t depth): depth(depth), command(nullptr)
     {
+        static uint32_t id = 0;
+        uuid = id++;
     }
 
-    void trie_node_t::add_children(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t>& previous)
+    void trie_node_t::add_children(const block_ptr& block, const uint16_t idx)
     {
         if (block->size() == idx)
             return;
 
+        constexpr std::array skip_calls = {
+            command_type::vm_enter,     // because we must be in a vm to call to merged handler
+            command_type::vm_ret,       // a call will push to the call stack, so the merged ret will do nothing
+            command_type::vm_call,      // potential infinite handler creation
+            command_type::vm_branch,    // do not want to think about this yet
+        };
+
         const auto cmd = block->at(idx);
-        if (cmd->get_command_type() == command_type::vm_enter ||
-            cmd->get_command_type() == command_type::vm_exit)
+        if (std::ranges::find(skip_calls, cmd->get_command_type()) != skip_calls.end())
             return;
 
         if (const auto existing_child = find_similar_child(block->at(idx)))
-            update_existing_child(existing_child, block, idx, previous);
+            update_existing_child(existing_child, block, idx);
         else
-            add_new_child(block, idx, previous);
+            add_new_child(block, idx);
     }
 
-    void trie_node_t::erase_forwards(const block_ptr& ptr, const size_t start_idx)
+    void trie_node_t::erase_forwards(const block_ptr& ptr, const size_t start_idx, const size_t length)
     {
-        // erase forwards
-        std::deque<std::shared_ptr<trie_node_t>> search_nodes;
-        if (depth == 0) // root node
-            for (auto& child : children)
-                search_nodes.emplace_back(child);
-        else
-            search_nodes.emplace_back(shared_from_this());
+        const size_t end_idx = start_idx + length;
+        auto it = matched_commands.begin();
 
-        while (!search_nodes.empty())
+        while (it != matched_commands.end())
         {
-            const auto layer_nodes = search_nodes.size();
-            for (auto i = 0; i < layer_nodes; i++)
+            const auto& cmd_info = *it;
+            if (cmd_info->block == ptr)
             {
-                std::unordered_set<std::shared_ptr<trie_node_t>> next_layer;
-
-                const std::shared_ptr<trie_node_t> search_node = search_nodes.front();
-                if (!search_node->similar_commands.contains(ptr))
+                if (cmd_info->instruction_index >= start_idx && cmd_info->instruction_index < end_idx)
                 {
-                    search_nodes.pop_front();
+                    it = matched_commands.erase(it);
                     continue;
                 }
-
-                auto& block_commands = search_node->similar_commands[ptr];
-                for (auto j = 0; j < block_commands.size();)
-                {
-                    const auto cmd = block_commands[j];
-                    if (cmd->instruction_index >= start_idx)
-                        block_commands.erase(block_commands.begin() + j);
-                    else
-                        j++;
-
-                    if (const auto next = cmd->next.lock())
-                        next_layer.insert(next->current_node.lock());
-                }
-
-
-                search_nodes.insert(search_nodes.end(), next_layer.begin(), next_layer.end());
-                search_nodes.pop_front();
             }
+
+            ++it;
         }
+
+        for (const auto& child : children)
+            child->erase_forwards(ptr, start_idx, length);
     }
 
-    std::vector<std::shared_ptr<command_node_info_t>> trie_node_t::get_branch_similar_commands()
+    std::vector<command_node_info_ptr> trie_node_t::get_branch_similar_commands()
     {
-        std::vector<std::shared_ptr<command_node_info_t>> branch;
-        branch.reserve(similar_commands.size());
-
-        for (auto& block_similars : similar_commands | std::views::values)
-            for (const auto& similar : block_similars)
-                branch.push_back(similar);
-
-        return branch;
+        return matched_commands;
     }
 
     std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> trie_node_t::find_path_max_similar(const size_t min_depth)
@@ -87,7 +68,7 @@ namespace eagle::ir
         if (children.empty())
         {
             if (depth >= min_depth)
-                return std::make_pair(similar_commands.size(), shared_from_this());
+                return std::make_pair(matched_commands.size(), shared_from_this());
 
             return std::nullopt;
         }
@@ -106,7 +87,7 @@ namespace eagle::ir
         if (max_path)
         {
             // we want to check if the current node meets the conditions better
-            auto current_similar = similar_commands.size();
+            auto current_similar = matched_commands.size();
             if (depth >= min_depth && max_path->first < current_similar)
                 return std::make_pair(current_similar, shared_from_this());
         }
@@ -118,7 +99,7 @@ namespace eagle::ir
     {
         std::optional<std::pair<size_t, std::shared_ptr<trie_node_t>>> max_path = std::nullopt;
 
-        // Check all children
+        // check all children
         for (const auto& child : children)
         {
             if (const auto result_pair = child->find_path_max_depth(min_child_size))
@@ -129,7 +110,7 @@ namespace eagle::ir
             }
         }
 
-        // Check the current node
+        // check the current node
         if (count_similar_commands() >= min_child_size)
         {
             if (!max_path || depth > max_path->first)
@@ -139,75 +120,85 @@ namespace eagle::ir
         return max_path;
     }
 
-    std::shared_ptr<trie_node_t> trie_node_t::find_similar_child(const base_command_ptr& command) const
+    bool trie_node_t::print(std::ostringstream& out)
+    {
+        std::unordered_set<std::string> added_nodes;
+        if (depth == 0)
+            out << "digraph Trie {\n  node [shape=box, fontname=\"Courier\"];\n";
+
+        if (this->depth != 0 && matched_commands.size() < 2)
+            return false;
+
+        const std::string node_id = "node_" + std::to_string(reinterpret_cast<uintptr_t>(this));
+        out << "    " << node_id << " [label=<";
+        if (command)
+            out << "<b>Command: " << command->to_string() << "</b><br/>";
+        out << "Depth: " << depth
+            << "<br/>Matched Commands: " << matched_commands.size()
+            << ">];\n";
+
+        for (const auto& child : children)
+        {
+            if (!child) continue;
+
+            const bool result = child->print(out);
+            if (!result)
+                continue;
+
+            out << "    " << node_id << " -> " << "node_" + std::to_string(reinterpret_cast<uintptr_t>(child.get())) << ";\n";
+        }
+
+        if (depth == 0)
+            out << "}\n";
+
+        return true;
+    }
+
+    std::shared_ptr<trie_node_t> trie_node_t::find_similar_child(const base_command_ptr& cmd) const
     {
         for (const auto& child : children)
-            if (child->command->get_command_type() == command->get_command_type() &&
-                child->command->is_similar(command))
+            if (child->command->is_similar(cmd))
                 return child;
 
         return nullptr;
     }
 
-    void trie_node_t::update_existing_child(const std::shared_ptr<trie_node_t>& child, const block_ptr& block, const uint16_t idx,
-        const std::shared_ptr<command_node_info_t>& previous)
+    void trie_node_t::update_existing_child(const std::shared_ptr<trie_node_t>& child, const block_ptr& block, const uint16_t idx)
     {
         // Check if this block already has an entry in similar_commands
-        const auto it = child->similar_commands.find(block);
-        if (it != child->similar_commands.end())
+        const auto it = std::ranges::find_if(child->matched_commands, [&](auto& item)
         {
-            const auto& entries = it->second;
-            for (const auto& entry : entries)
-            {
-                if (entry->instruction_index <= idx)
-                {
-                    // We've found an existing entry that starts at or before this index
-                    // Don't add a new entry to prevent overlap
-                    return;
-                }
-            }
-        }
+            return item->block == block && item->instruction_index == idx;
+        });
 
-        const std::shared_ptr<command_node_info_t> cmd_info = std::make_shared<command_node_info_t>();
+        if (it != child->matched_commands.end())
+            return;
+
+        const command_node_info_ptr cmd_info = std::make_shared<command_node_info_t>();
         cmd_info->block = block;
         cmd_info->instruction_index = idx;
-        cmd_info->previous = std::weak_ptr(previous);
-        cmd_info->next = std::weak_ptr<command_node_info_t>();
-        cmd_info->current_node = child;
 
-        child->similar_commands[block].push_back(cmd_info);
-        child->add_children(block, idx + 1, cmd_info);
-
-        if (previous)
-            previous->next = cmd_info;
+        child->matched_commands.push_back(cmd_info);
+        child->add_children(block, idx + 1);
     }
 
-    void trie_node_t::add_new_child(const block_ptr& block, const uint16_t idx, const std::shared_ptr<command_node_info_t>& previous)
+    void trie_node_t::add_new_child(const block_ptr& block, const uint16_t idx)
     {
-        const std::shared_ptr<trie_node_t> new_child = std::make_shared<trie_node_t>(depth + 1);
-        const std::shared_ptr<command_node_info_t> cmd_info = std::make_shared<command_node_info_t>();
+        const auto new_child = std::make_shared<trie_node_t>(depth + 1);
+        const auto cmd_info = std::make_shared<command_node_info_t>();
         cmd_info->block = block;
         cmd_info->instruction_index = idx;
-        cmd_info->previous = std::weak_ptr(previous);
-        cmd_info->next = std::weak_ptr<command_node_info_t>();
-        cmd_info->current_node = new_child;
 
         new_child->parent = weak_from_this();
-        new_child->command = block->at(idx);
-        new_child->similar_commands[block].push_back(cmd_info);
-        new_child->add_children(block, idx + 1, cmd_info);
-        children.emplace_back(new_child);
+        new_child->command = block->at(idx)->clone();
+        new_child->matched_commands.push_back(cmd_info);
 
-        if (previous)
-            previous->next = cmd_info;
+        children.push_back(new_child);
+        new_child->add_children(block, idx + 1);
     }
 
     size_t trie_node_t::count_similar_commands() const
     {
-        size_t total = 0;
-        for (const auto& cmd_infos : similar_commands | std::views::values)
-            total += cmd_infos.size();
-
-        return total;
+        return matched_commands.size();
     }
 }

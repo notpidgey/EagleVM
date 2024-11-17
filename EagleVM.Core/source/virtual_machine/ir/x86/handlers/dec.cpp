@@ -30,11 +30,6 @@ namespace eagle::ir::handler
         VM_ASSERT(signature.size() == 1, "invalid signature. must contain 1 operand");
         ir_size target_size = signature.front();
 
-        const discrete_store_ptr p_one = discrete_store::create(target_size);
-        const discrete_store_ptr result = discrete_store::create(target_size);
-
-        const discrete_store_ptr flags_result = discrete_store::create(ir_size::bit_64);
-
         constexpr auto affected_flags = ZYDIS_CPUFLAG_OF | ZYDIS_CPUFLAG_SF | ZYDIS_CPUFLAG_ZF | ZYDIS_CPUFLAG_AF | ZYDIS_CPUFLAG_PF;
         ir_insts insts = {
             std::make_shared<cmd_push>(1, target_size),

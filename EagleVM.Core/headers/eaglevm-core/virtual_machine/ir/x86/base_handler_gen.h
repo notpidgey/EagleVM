@@ -8,8 +8,6 @@
 #include "eaglevm-core/virtual_machine/ir/commands/include.h"
 #include "eaglevm-core/virtual_machine/ir/commands/base_command.h"
 
-#include "eaglevm-core/virtual_machine/ir/models/ir_discrete_reg.h"
-
 #include "eaglevm-core/virtual_machine/ir/x86/models/op_signature.h"
 #include "eaglevm-core/virtual_machine/ir/x86/models/handler_op.h"
 #include "eaglevm-core/virtual_machine/ir/x86/models/handler_build.h"

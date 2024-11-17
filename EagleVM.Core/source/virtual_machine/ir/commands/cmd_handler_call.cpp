@@ -47,10 +47,6 @@ namespace eagle::ir
     bool cmd_handler_call::is_similar(const std::shared_ptr<base_command>& other)
     {
         const auto cmd = std::static_pointer_cast<cmd_handler_call>(other);
-        return base_command::is_similar(other) &&
-            is_operand_sig() == cmd->is_operand_sig() &&
-            get_mnemonic() == cmd->get_mnemonic() &&
-            get_x86_signature() == cmd->get_x86_signature() &&
-            get_handler_signature() == cmd->get_handler_signature();
+        return false;
     }
 }

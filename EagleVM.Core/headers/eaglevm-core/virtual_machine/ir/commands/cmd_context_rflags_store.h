@@ -29,6 +29,8 @@ namespace eagle::ir
             return base_command::to_string() + " " + x86_cpu_flag_to_string(relevant_flags);
         };
 
+        BASE_COMMAND_CLONE(cmd_context_rflags_store);
+
     private:
         x86_cpu_flag relevant_flags;
     };

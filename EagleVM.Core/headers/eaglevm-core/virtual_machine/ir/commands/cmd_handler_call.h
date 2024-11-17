@@ -30,6 +30,7 @@ namespace eagle::ir
         void set_relevant_flags(x86_cpu_flag flags);
 
         bool is_similar(const std::shared_ptr<base_command>& other) override;
+        BASE_COMMAND_CLONE(cmd_handler_call);
 
     private:
         call_type call_type = call_type::none;

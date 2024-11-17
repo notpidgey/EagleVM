@@ -41,16 +41,19 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
             node_id, graph_title, insts_nodes.str());
 
         std::vector<ir::ir_exit_result> branches;
-        if (const auto ptr = block->as_virt())
+        if (const auto ptr_virt = block->as_virt())
         {
-            if (const auto exit = ptr->exit_as_branch())
+            if (const auto exit = ptr_virt->exit_as_branch())
                 branches = exit->get_branches();
-            else if (const auto vmexit = ptr->exit_as_vmexit())
+            else if (const auto vmexit = ptr_virt->exit_as_vmexit())
                 branches = vmexit->get_branches();
+
+            for (const auto& call : ptr_virt->get_calls())
+                std::cout << std::format("  \"{}\" -> \"0x{:x}\";\n", node_id, call->block_id);
         }
-        else if (auto ptr = block->as_x86())
+        else if (auto ptr_x86 = block->as_x86())
         {
-            if (const auto exit = ptr->exit_as_branch())
+            if (const auto exit = ptr_x86->exit_as_branch())
                 branches = exit->get_branches();
         }
 
@@ -386,7 +389,7 @@ int main(int argc, char* argv[])
         ir::preopt_block_vec preopt = ir_trans->translate();
 
         // run some basic pre-optimization passes
-        //ir::obfuscator::run_preopt_pass(preopt, &seg_live);
+        // ir::obfuscator::run_preopt_pass(preopt, &seg_live);
 
         // here we assign vms to each block
         // for the current example we can assign the same vm id to each block
@@ -402,16 +405,45 @@ int main(int argc, char* argv[])
             if (preopt_block->original_block == dasm->get_block(rva_inst_begin))
                 entry_block = preopt_block;
 
-        assert(entry_block != nullptr, "could not find matching preopt block for entry block");
+        VM_ASSERT(entry_block != nullptr, "could not find matching preopt block for entry block");
 
         // if we want, we can do a little optimzation which will rewrite the preopt
-        // blocks or we could simply ir_trans.flatten()
+        // blocks, or we could simply ir_trans.flatten()
         std::unordered_map<ir::preopt_block_ptr, ir::block_ptr> block_tracker = { { entry_block, nullptr } };
         std::vector<ir::flat_block_vmid> vm_blocks = ir_trans->optimize(block_vm_ids, block_tracker, { entry_block });
 
         std::unordered_map<uint32_t, std::vector<ir::block_ptr>> vm_id_map;
         for (auto& [block, vmid] : vm_blocks)
+        {
+            // while setting up the map we also run the obfuscation pass for handler merging
             vm_id_map[vmid].append_range(block);
+        }
+
+        for (auto& blocks : vm_id_map | std::views::values)
+        {
+            std::vector<ir::block_ptr> handler_blocks = ir::obfuscator::create_merged_handlers(blocks);
+            blocks.append_range(handler_blocks);
+
+            // restore calls, for whatever debug reason
+            //for (auto& block : blocks)
+            //{
+            //    if (block->block_id == 0x5f)
+            //        __debugbreak();
+
+            //    for (int i = 0; i < block->size(); i++)
+            //    {
+            //        if (block->at(i)->get_command_type() == ir::command_type::vm_call)
+            //        {
+            //            auto call_s = block->get_command<ir::cmd_call>(i);
+            //            block->erase(block->begin() + i);
+
+            //            auto target = call_s->get_target();
+            //            for (int j = target->size() - 2; j >= 0; j--)
+            //                block->insert(block->begin() + i, target->at(j));
+            //        }
+            //    }
+            //}
+        }
 
         // // we want the same settings for every machine
         // virt::pidg::settings_ptr machine_settings =
@@ -430,12 +462,12 @@ int main(int argc, char* argv[])
 
         // initialize block code labels
         std::unordered_map<ir::block_ptr, asmb::code_label_ptr> block_labels;
-        for (auto& blocks : vm_blocks | std::views::keys)
+        for (auto& blocks : vm_id_map | std::views::values)
             for (const auto& block : blocks)
                 block_labels[block] = asmb::code_label::create();
 
         asmb::code_label_ptr entry_point = asmb::code_label::create();
-        for (const auto& [vm_id, blocks] : vm_id_map)
+        for (const auto& blocks : vm_id_map | std::views::values)
         {
             // we create a new machine based off of the same settings to make things
             // more annoying but the same machine could be used :)

@@ -272,15 +272,9 @@ int main(int argc, char* argv[])
     spdlog::flush_every(std::chrono::seconds(5));
 
     virt::eg::settings_ptr machine_settings = std::make_shared<virt::eg::settings>();
-    machine_settings->randomize_working_register = false;
-    machine_settings->single_vm_handlers = false;
-
     machine_settings->shuffle_push_order = false;
     machine_settings->shuffle_vm_gpr_order = false;
     machine_settings->shuffle_vm_xmm_order = false;
-    machine_settings->relative_addressing = false;
-
-    machine_settings->complex_temp_loading = false;
 
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))

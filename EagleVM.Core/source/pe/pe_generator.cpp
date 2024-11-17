@@ -71,7 +71,7 @@ namespace eagle::pe
     generator_section_t& pe_generator::add_section(const char* name)
     {
         generator_section_t new_section = { };
-        for (auto i = 0; i < sizeof(new_section.first.name.short_name); i++)
+        for (auto i = 0; i < strlen(name); i++)
             new_section.first.name.short_name[i] = name[i];
 
         sections.push_back(new_section);
