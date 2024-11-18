@@ -1,7 +1,7 @@
 #pragma once
 #include "eaglevm-core/virtual_machine/ir/commands/models/cmd_type.h"
 
-namespace eagle::virt::eg
+namespace eagle::virt
 {
     template <class T>
     void hash_combine(std::size_t& seed, const T& val)

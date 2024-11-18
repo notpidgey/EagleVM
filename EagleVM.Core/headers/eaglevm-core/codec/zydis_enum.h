@@ -219,6 +219,15 @@ namespace eagle::codec
         flags = ZYDIS_REGISTER_FLAGS,
         eflags = ZYDIS_REGISTER_EFLAGS,
         rflags = ZYDIS_REGISTER_RFLAGS,
+
+        k0 = ZYDIS_REGISTER_K0,
+        k1 = ZYDIS_REGISTER_K1,
+        k2 = ZYDIS_REGISTER_K2,
+        k3 = ZYDIS_REGISTER_K3,
+        k4 = ZYDIS_REGISTER_K4,
+        k5 = ZYDIS_REGISTER_K5,
+        k6 = ZYDIS_REGISTER_K6,
+        k7 = ZYDIS_REGISTER_K7,
     };
 
     using zyids_mnemonic = ZydisMnemonic;
