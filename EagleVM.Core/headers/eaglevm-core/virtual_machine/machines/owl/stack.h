@@ -140,8 +140,85 @@ namespace eagle::virt::owl
         sub_vsp(out);
     }
 
-    inline void pop_64(codec::reg dest, encode_builder& out)
+    inline void pop_64(reg dest, encode_builder& out)
     {
         add_vsp(out);
+
+        scope_register_manager ymm_context = reg_256_container->create_scope();
+        const auto ymm_bound = ymm_context.reserve();
+        const auto ymm_vsp = ymm_context.reserve();
+        const auto ymm_cmp = ymm_vsp;
+        const auto ymm_out = ymm_cmp;
+
+        scope_register_manager gpr_scope = reg_64_container->create_scope();
+        const reg vsp = gpr_scope.reserve();
+        const reg temp = gpr_scope.reserve();
+        const reg lane_holder = gpr_scope.reserve();
+        const reg ymm_index_holder = vsp;
+
+        auto [vsp_ymm, vsp_lane] = reg_man->get_vsp_map();
+        const auto vsp_xmm = get_bit_version(vsp_ymm, bit_128); // get the xmm
+
+        if (vsp_lane != 0)
+        {
+            auto move_mask = 0b'11'10'10'00;
+
+            // we want to swap whatever vsp_lane and 0 is
+            const auto vsp_lane_mask = 0b11 << vsp_lane * 2;
+            move_mask &= ~vsp_lane_mask; // remove those bits which represent the lane because we want them at 0
+            move_mask &= vsp_lane; // this will move qword0 to vsp lane
+
+            out.make(m_vpermq, reg_op(ymm_vsp), reg_op(ymm_vsp), imm_op(move_mask))
+               .make(m_vmovq, reg_op(vsp), reg_op(vsp_xmm))
+               .make(m_vpermq, reg_op(ymm_vsp), reg_op(ymm_vsp), imm_op(move_mask));
+        }
+        else out.make(m_vmovq, reg_op(vsp), reg_op(vsp_xmm));
+
+        out
+            // calculate target lane where our value will be stored
+            // vsp % 256 / 64
+            .make(m_mov, reg_op(lane_holder), reg_op(vsp))
+            .make(m_and, reg_op(lane_holder), imm_op(0xFF))
+            .make(m_shr, reg_op(lane_holder), imm_op(6))
+            .make(m_mov, reg_op(temp), imm_op(1))
+            .make(m_shlx, reg_op(lane_holder), reg_op(temp), reg_op(lane_holder))
+            .make(m_kmovb, reg_op(k1), reg_op(lane_holder))
+
+            // set up all ranges
+            // each range represents a uint16 in the "range_boundaries" YMM register
+            // [256, 512, 768, 1024, 1280, 1536, 1792, 2048]
+            // range_boundaries now contains u32 lanes which hold boundaries
+            .make(m_vmovdqu, reg_op(ymm_bound), reg_mem())
+
+            // broadcast VSP to every single u32 in vsp_holder
+            // compare vsp_holder < range_boundaries
+            // get mask for cmp_holder
+            .make(m_vbroadcastss, reg_op(ymm_vsp), reg_op(vsp)) // change to read from ymm
+            .make(m_vpcmpgtd, reg_op(ymm_cmp), reg_op(ymm_bound), reg_op(ymm_vsp))
+            .make(m_vpmovmskb, reg_op(ymm_index_holder), reg_op(ymm_cmp))
+
+            // move the mask generate by m_vpmovmskb into a reg
+            // calculate target YMM
+            .make(m_tzcnt, reg_op(ymm_index_holder), reg_op(ymm_index_holder))
+            .make(m_shr, reg_op(ymm_index_holder), imm_op(3));
+
+        const auto stack_order = reg_man->get_stack_order();
+        for (int i = 0; i < stack_order.size(); i++)
+        {
+            const bool is_not_last = i != stack_order.size() - 1;
+            auto skip_label = asmb::code_label::create();
+
+            const reg reg = stack_order[i];
+            if (is_not_last)
+                out.make(m_cmp, reg_op(ymm_index_holder), imm_op((i + 1) * 256))
+                   .make(m_jnl, imm_label_operand(skip_label));
+
+            out.make(m_vmovdqu32, reg_op(ymm_out), reg_op(k1), reg_op(reg));
+
+            // todo: now ymm_out has our qword in some lane.
+
+            if (is_not_last)
+                out.label(skip_label);
+        }
     }
 }
