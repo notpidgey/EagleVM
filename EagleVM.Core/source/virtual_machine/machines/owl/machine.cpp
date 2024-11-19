@@ -21,7 +21,7 @@
 #define VTEMP2 regs->get_reserved_temp(1)
 #define VTEMPX(x) regs->get_reserved_temp(x)
 
-namespace eagle::virt::eg
+namespace eagle::virt::owl
 {
     using namespace codec;
     using namespace codec::encoder;
@@ -85,9 +85,7 @@ namespace eagle::virt::eg
             create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
             {
                 encode_builder& out = *out_container;
-
-                out.make(m_sub, reg_op(VSP), imm_op(bit_64))
-                   .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(load_reg));
+                push_64(load_reg, out); // segments are going to be preserved
             }, load_reg);
         }
         else
@@ -96,17 +94,26 @@ namespace eagle::virt::eg
             {
                 encode_builder& out = *out_container;
 
-                const auto size = get_reg_size(load_reg);
-
-                const auto output_reg_64 = alloc_reg();
-                const auto output_reg = get_bit_version(output_reg_64, size);
-
-                const register_loader loader(regs, reg_64_container, reg_128_container);
-                loader.load_register(load_reg, output_reg_64, out);
-
+                auto [ymm_target, ymm_qword_lane] = regs->get_gpr_map(load_reg);
+                const reg temp_ymm = alloc_reg(ymm_256);
                 out
-                    .make(m_sub, reg_op(VSP), imm_op(size))
-                    .make(m_mov, mem_op(VSP, 0, size), reg_op(output_reg));
+                    .make(m_vmovdqu64, reg_op(temp_ymm), reg_op(ymm_target))
+                    .make(m_vpshrdq, reg_op(temp_ymm), imm_op(ymm_qword_lane));
+
+                if (load_reg == ah || load_reg == bh || load_reg == ch || load_reg == dh)
+                {
+                    // ... why IS THERE NO VPERMB ON AVX2??????
+                    const auto temp_xmm = get_bit_version(temp_ymm, bit_128);
+                    const auto temp_gpr = alloc_reg();
+
+                    // upper reg means we have to apply a little truncation
+                    out
+                        .make(m_mov, reg_op(temp_gpr), imm_op(1))
+                        .make(m_pshufb, reg_op(temp_xmm), reg_op(temp_gpr));
+                }
+
+                // all stack operations are bit 64 so it actually doesnt matter : )
+                push_64(temp_ymm, out);
             }, load_reg);
         }
     }
@@ -118,17 +125,10 @@ namespace eagle::virt::eg
         {
             encode_builder& out = *out_container;
 
-            const auto size = get_reg_size(store_reg);
+            // auto [ymm_target, ymm_lane] = regs->get_gpr_map(store_reg);
+            // pop_lane_64(ymm_target, ymm_lane, out);
 
-            const auto output_reg_64 = alloc_reg();
-            const auto output_reg = get_bit_version(output_reg_64, size);
-
-            const register_loader loader(regs, reg_64_container, reg_128_container);
-            out
-                .make(m_mov, reg_op(output_reg), mem_op(VSP, 0, size))
-                .make(m_add, reg_op(VSP), imm_op(size));
-
-            loader.store_register(store_reg, output_reg_64, out);
+            // todo
         }, store_reg);
     }
 
@@ -144,6 +144,7 @@ namespace eagle::virt::eg
         if (condition != ir::exit_condition::jmp && cmd->is_inverted())
             std::swap(push_order[0], push_order[1]);
 
+        // todo: dont even want to think about this
         if (cmd->is_virtual())
         {
             create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
@@ -315,15 +316,12 @@ namespace eagle::virt::eg
         {
             encode_builder& out = *out_container;
 
-            const auto address_reg = alloc_reg();
-            const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
+            auto [ymm_out, gpr_lane] = peek_stack();
+            move_qlane_to_bottom(ymm_out, gpr_lane, out);
+            read_qlane_to_gpr(ymm_out, gpr_lane, out);
 
-            out.make(m_mov, reg_op(address_reg), mem_op(VSP, 0, bit_64))
-               .make(m_add, reg_op(VSP), imm_op(bit_64))
-               .make(m_mov, reg_op(value_reg), mem_op(address_reg, 0, value_reg_size))
-
-               .make(m_sub, reg_op(VSP), imm_op(value_reg_size))
-               .make(m_mov, mem_op(VSP, 0, value_reg_size), reg_op(value_reg));
+            const auto value_reg = get_bit_version(gpr_lane, value_reg_size);
+            out.make(m_mov, reg_op(value_reg), mem_op(gpr_lane, 0, value_reg_size));
         }, value_size);
     }
 

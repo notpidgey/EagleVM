@@ -69,6 +69,23 @@ namespace eagle::virt::owl
         void handle_generic_logic_cmd(codec::mnemonic command, ir::ir_size ir_size, bool preserved, codec::encoder::encode_builder& out,
             const std::function<codec::reg()>& alloc_reg);
 
+        void push_lane_64(codec::reg input_reg, uint16_t input_lane, codec::encoder::encode_builder& out);
+        void push_64(codec::reg input_reg, codec::encoder::encode_builder& out);
+
+        std::pair<codec::reg, codec::reg> peek_stack(uint8_t index = 0);
+        void pop_lane_64(codec::reg input_reg, uint16_t input_lane, codec::encoder::encode_builder& out);
+        void pop_64(codec::reg dest, codec::encoder::encode_builder& out);
+
+        void gen_vsp_modification(codec::encoder::encode_builder& out, bool sub);
+        void sub_vsp(codec::encoder::encode_builder& out);
+        void add_vsp(codec::encoder::encode_builder& out);
+
+        // has to set lane register to 0
+        void move_qlane_to_bottom(codec::reg ymm, codec::reg lane, codec::encoder::encode_builder& out);
+
+        // reads value into lane register
+        void read_qlane_to_gpr(codec::reg ymm, codec::reg lane, codec::encoder::encode_builder& out);
+
         enum handler_call_flags
         {
             default_create = 0,

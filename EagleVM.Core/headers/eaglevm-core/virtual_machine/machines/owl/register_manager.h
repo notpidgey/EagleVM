@@ -70,7 +70,7 @@ namespace eagle::virt::owl
         [[nodiscard]] codec::reg get_reserved_temp_xmm(uint8_t i) const;
 
         template <typename T>
-        void enumerate_regs(const T& enumerable, const bool from_back = false)
+        void enumerate_ymm(const T& enumerable, const bool from_back = false)
         {
             if (from_back)
                 std::ranges::for_each(push_order, enumerable);
@@ -84,6 +84,7 @@ namespace eagle::virt::owl
         static std::array<codec::reg, 16> get_gpr64_regs();
         static std::array<codec::reg, 16> get_xmm_regs();
 
+        std::pair<codec::reg, uint16_t> get_gpr_map(codec::reg gpr);
         std::pair<codec::reg, uint16_t> get_vsp_map();
         std::array<codec::reg, 10> get_stack_order();
 
