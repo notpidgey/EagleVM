@@ -251,6 +251,7 @@ set(EagleVMCore_SOURCES
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/owl/machine.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/owl/register_manager.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/owl/settings.h"
+	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/owl/stack.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/register_context.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/util.h"
 	"EagleVM.Core/headers/eaglevm-core/virtual_machine/machines/util/hash.h"

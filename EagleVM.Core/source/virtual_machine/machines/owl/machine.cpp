@@ -8,6 +8,7 @@
 #include "eaglevm-core/virtual_machine/machines/util.h"
 #include "eaglevm-core/virtual_machine/machines/owl/handler.h"
 #include "eaglevm-core/virtual_machine/machines/owl/loader.h"
+#include "eaglevm-core/virtual_machine/machines/owl/stack.h"
 
 #define VIP regs->get_vm_reg(register_manager::index_vip)
 #define VSP regs->get_vm_reg(register_manager::index_vsp)
@@ -82,53 +83,59 @@ namespace eagle::virt::owl
         const auto load_reg = cmd->get_reg();
         if (get_reg_class(load_reg) == seg)
         {
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
-                push_64(load_reg, out); // segments are going to be preserved
-            }, load_reg);
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
+                    push_64(load_reg, out); // segments are going to be preserved
+                }, load_reg);
         }
         else
         {
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
-
-                auto [ymm_target, ymm_qword_lane] = regs->get_gpr_map(load_reg);
-                const reg temp_ymm = alloc_reg(ymm_256);
-                out
-                    .make(m_vmovdqu64, reg_op(temp_ymm), reg_op(ymm_target))
-                    .make(m_vpshrdq, reg_op(temp_ymm), imm_op(ymm_qword_lane));
-
-                if (load_reg == ah || load_reg == bh || load_reg == ch || load_reg == dh)
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
                 {
-                    // ... why IS THERE NO VPERMB ON AVX2??????
-                    const auto temp_xmm = get_bit_version(temp_ymm, bit_128);
-                    const auto temp_gpr = alloc_reg();
+                    encode_builder& out = *out_container;
+                    stack_loader stack(out, alloc_reg);
 
-                    // upper reg means we have to apply a little truncation
+                    auto [ymm_target, ymm_qword_lane] = regs->get_gpr_map(load_reg);
+                    const reg temp_ymm = alloc_reg(ymm_256);
                     out
-                        .make(m_mov, reg_op(temp_gpr), imm_op(1))
-                        .make(m_pshufb, reg_op(temp_xmm), reg_op(temp_gpr));
-                }
+                        .make(m_vmovdqu64, reg_op(temp_ymm), reg_op(ymm_target))
+                        .make(m_vpshrdq, reg_op(temp_ymm), imm_op(ymm_qword_lane));
 
-                // all stack operations are bit 64 so it actually doesnt matter : )
-                push_64(temp_ymm, out);
-            }, load_reg);
+                    if (load_reg == ah || load_reg == bh || load_reg == ch || load_reg == dh)
+                    {
+                        // ... why IS THERE NO VPERMB ON AVX2??????
+                        const auto temp_xmm = get_bit_version(temp_ymm, bit_128);
+                        const auto temp_gpr = alloc_reg();
+
+                        // upper reg means we have to shuffle to the lowest byte of xmm reg
+                        out
+                            .make(m_mov, reg_op(temp_gpr), imm_op(1))
+                            .make(m_pshufb, reg_op(temp_xmm), reg_op(temp_gpr));
+                    }
+
+                    // all stack operations are bit 64 so it actually doesnt matter : )
+                    stack.push_gpr(temp_ymm);
+                }, load_reg);
         }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         const auto store_reg = cmd->get_reg();
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        const auto size = get_reg_size(store_reg);
+
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            // auto [ymm_target, ymm_lane] = regs->get_gpr_map(store_reg);
-            // pop_lane_64(ymm_target, ymm_lane, out);
+            auto [ymm_target, ymm_qword_lane] = regs->get_gpr_map(store_reg);
 
-            // todo
+            VM_ASSERT(store_reg != ah && store_reg != bh && store_reg != ch && store_reg != dh, "not implemented for now");
+            stack.pop_to_ymm(ymm_target, ymm_qword_lane, size);
         }, store_reg);
     }
 
@@ -147,114 +154,116 @@ namespace eagle::virt::owl
         // todo: dont even want to think about this
         if (cmd->is_virtual())
         {
-            create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
-
-                // push all
-                for (const ir::ir_exit_result& exit_result : push_order)
+            create_handler(force_inline, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
                 {
-                    std::visit([&](auto&& arg)
+                    encode_builder& out = *out_container;
+
+                    // push all
+                    for (const ir::ir_exit_result& exit_result : push_order)
                     {
-                        const reg temp_reg = alloc_reg();
-
-                        using T = std::decay_t<decltype(arg)>;
-                        if constexpr (std::is_same_v<T, uint64_t>)
+                        std::visit([&](auto&& arg)
                         {
-                            const uint64_t immediate_value = arg;
+                            const reg temp_reg = alloc_reg();
 
-                            out.make(m_lea, reg_op(temp_reg), mem_op(VBASE, immediate_value, 8))
-                               .make(m_sub, reg_op(VSP), imm_op(bit_64))
-                               .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
-                        }
-                        else if constexpr (std::is_same_v<T, ir::block_ptr>)
-                        {
-                            const ir::block_ptr target = arg;
+                            using T = std::decay_t<decltype(arg)>;
+                            if constexpr (std::is_same_v<T, uint64_t>)
+                            {
+                                const uint64_t immediate_value = arg;
 
-                            const asmb::code_label_ptr label = get_block_label(target);
-                            VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+                                out.make(m_lea, reg_op(temp_reg), mem_op(VBASE, immediate_value, 8))
+                                   .make(m_sub, reg_op(VSP), imm_op(bit_64))
+                                   .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
+                            }
+                            else if constexpr (std::is_same_v<T, ir::block_ptr>)
+                            {
+                                const ir::block_ptr target = arg;
 
-                            out.make(m_mov, reg_op(temp_reg), reg_op(VBASE))
-                               .make(m_add, reg_op(temp_reg), imm_label_operand(label))
-                               .make(m_sub, reg_op(VSP), imm_op(bit_64))
-                               .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
-                        }
-                        else
-                        VM_ASSERT("unimplemented exit result");
-                    }, exit_result);
-                }
+                                const asmb::code_label_ptr label = get_block_label(target);
+                                VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
 
-                // this is a hacky solution but the exit condition maps to an actual handler id.
-                // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
-                // we also want to inline this so we are inserting it in place
-                const ir::ir_insts jcc_instructions = handler_manager::generate_handler(m_jmp, static_cast<uint64_t>(condition));
-                for (auto& inst : jcc_instructions)
-                    dispatch_handle_cmd(block, inst);
-            });
+                                out.make(m_mov, reg_op(temp_reg), reg_op(VBASE))
+                                   .make(m_add, reg_op(temp_reg), imm_label_operand(label))
+                                   .make(m_sub, reg_op(VSP), imm_op(bit_64))
+                                   .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
+                            }
+                            else
+                            VM_ASSERT("unimplemented exit result");
+                        }, exit_result);
+                    }
+
+                    // this is a hacky solution but the exit condition maps to an actual handler id.
+                    // so we can just cast the exit_condition to a uint64_t and that will give us the handler id :)
+                    // we also want to inline this so we are inserting it in place
+                    const ir::ir_insts jcc_instructions = handler_manager::generate_handler(m_jmp, static_cast<uint64_t>(condition));
+                    for (auto& inst : jcc_instructions)
+                        dispatch_handle_cmd(block, inst);
+                });
         }
         else
         {
-            create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
-
-                auto jmp_non_virtual = [&](ir::ir_exit_result result)
+            create_handler(force_inline, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
                 {
-                    return std::visit([&]<typename result>(result&& arg)
+                    encode_builder& out = *out_container;
+
+                    auto jmp_non_virtual = [&](ir::ir_exit_result result)
                     {
-                        using T = std::decay_t<result>;
-                        if constexpr (std::is_same_v<T, uint64_t>)
+                        return std::visit([&]<typename result>(result&& arg)
                         {
-                            const uint64_t immediate_value = arg;
-                            out.make(m_jmp, imm_op(immediate_value, true));
-                        }
-                        else if constexpr (std::is_same_v<T, ir::block_ptr>)
-                        {
-                            const ir::block_ptr target = arg;
+                            using T = std::decay_t<result>;
+                            if constexpr (std::is_same_v<T, uint64_t>)
+                            {
+                                const uint64_t immediate_value = arg;
+                                out.make(m_jmp, imm_op(immediate_value, true));
+                            }
+                            else if constexpr (std::is_same_v<T, ir::block_ptr>)
+                            {
+                                const ir::block_ptr target = arg;
 
-                            const asmb::code_label_ptr label = get_block_label(target);
-                            VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
+                                const asmb::code_label_ptr label = get_block_label(target);
+                                VM_ASSERT(label != nullptr, "block must not be pointing to null label, missing context");
 
-                            out.make(m_jmp, imm_label_operand(label, true));
-                        }
-                        else
-                        VM_ASSERT("unimplemented exit result");
-                    }, result);
-                };
-
-                if (condition != ir::exit_condition::jmp)
-                {
-                    // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
-                    static const std::unordered_map<ir::exit_condition, std::array<mnemonic, 2>> jcc_lookup =
-                    {
-                        { ir::exit_condition::jo, { m_jo, m_jno } },
-                        { ir::exit_condition::js, { m_js, m_jns } },
-                        { ir::exit_condition::je, { m_jz, m_jnz } },
-                        { ir::exit_condition::jb, { m_jb, m_jnb } },
-                        { ir::exit_condition::jbe, { m_jbe, m_jnbe } },
-                        { ir::exit_condition::jl, { m_jl, m_jnl } },
-                        { ir::exit_condition::jle, { m_jle, m_jnle } },
-                        { ir::exit_condition::jp, { m_jp, m_jnp } },
-
-                        { ir::exit_condition::jcxz, { m_jcxz, m_invalid } },
-                        { ir::exit_condition::jecxz, { m_jecxz, m_invalid } },
-                        { ir::exit_condition::jrcxz, { m_jrcxz, m_invalid } },
-
-                        { ir::exit_condition::jmp, { m_jmp, m_invalid } }
+                                out.make(m_jmp, imm_label_operand(label, true));
+                            }
+                            else
+                            VM_ASSERT("unimplemented exit result");
+                        }, result);
                     };
 
-                    const asmb::code_label_ptr special_label = asmb::code_label::create();
-                    out.make(jcc_lookup.at(condition)[0], imm_label_operand(special_label, true));
+                    if (condition != ir::exit_condition::jmp)
+                    {
+                        // the inverted (second) mnemonic is useless for now, but im going to keep it here anyways
+                        static const std::unordered_map<ir::exit_condition, std::array<mnemonic, 2>> jcc_lookup =
+                        {
+                            { ir::exit_condition::jo, { m_jo, m_jno } },
+                            { ir::exit_condition::js, { m_js, m_jns } },
+                            { ir::exit_condition::je, { m_jz, m_jnz } },
+                            { ir::exit_condition::jb, { m_jb, m_jnb } },
+                            { ir::exit_condition::jbe, { m_jbe, m_jnbe } },
+                            { ir::exit_condition::jl, { m_jl, m_jnl } },
+                            { ir::exit_condition::jle, { m_jle, m_jnle } },
+                            { ir::exit_condition::jp, { m_jp, m_jnp } },
 
-                    // normal condition
-                    jmp_non_virtual(push_order[0]);
+                            { ir::exit_condition::jcxz, { m_jcxz, m_invalid } },
+                            { ir::exit_condition::jecxz, { m_jecxz, m_invalid } },
+                            { ir::exit_condition::jrcxz, { m_jrcxz, m_invalid } },
 
-                    // special condition
-                    out.label(special_label);
-                    jmp_non_virtual(push_order[1]);
-                }
-                else jmp_non_virtual(push_order[0]);
-            });
+                            { ir::exit_condition::jmp, { m_jmp, m_invalid } }
+                        };
+
+                        const asmb::code_label_ptr special_label = asmb::code_label::create();
+                        out.make(jcc_lookup.at(condition)[0], imm_label_operand(special_label, true));
+
+                        // normal condition
+                        jmp_non_virtual(push_order[0]);
+
+                        // special condition
+                        out.label(special_label);
+                        jmp_non_virtual(push_order[1]);
+                    }
+                    else jmp_non_virtual(push_order[0]);
+                });
         }
     }
 
@@ -312,16 +321,19 @@ namespace eagle::virt::owl
         const ir::ir_size value_size = cmd->get_read_size();
         const auto value_reg_size = to_reg_size(value_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            auto [ymm_out, gpr_lane] = peek_stack();
+            const auto [ymm_out, gpr_lane] = stack.pop_64(true);
             move_qlane_to_bottom(ymm_out, gpr_lane, out);
             read_qlane_to_gpr(ymm_out, gpr_lane, out);
 
             const auto value_reg = get_bit_version(gpr_lane, value_reg_size);
             out.make(m_mov, reg_op(value_reg), mem_op(gpr_lane, 0, value_reg_size));
+
+            stack.push_gpr(gpr_lane);
         }, value_size);
     }
 
@@ -333,51 +345,49 @@ namespace eagle::virt::owl
 
         if (const auto nearest = cmd->get_is_value_nearest())
         {
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
+                    stack_loader stack(out, alloc_reg);
 
-                const auto mem_reg = alloc_reg();
-                const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
+                    auto& [ymm_value, gpr_value_lane] = stack.pop_64();
+                    auto& [ymm_mem, gpr_mem_lane] = stack.pop_64();
 
-                out.make(m_mov, reg_op(value_reg), mem_op(VSP, 0, value_reg_size))
-                   .make(m_add, reg_op(VSP), imm_op(value_reg_size))
+                    read_qlane_to_gpr(ymm_value, gpr_value_lane, out);
+                    read_qlane_to_gpr(ymm_mem, gpr_mem_lane, out);
 
-                   .make(m_mov, reg_op(mem_reg), mem_op(VSP, 0, 8))
-                   .make(m_add, reg_op(VSP), imm_op(bit_64))
-
-                   .make(m_mov, mem_op(mem_reg, 0, value_reg_size), reg_op(value_reg));
-            }, nearest, value_reg_size);
+                    out.make(m_mov, mem_op(gpr_mem_lane, 0, value_reg_size), reg_op(get_bit_version(gpr_value_lane, value_reg_size)));
+                }, nearest, value_reg_size);
         }
         else
         {
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
+                    stack_loader stack(out, alloc_reg);
 
-                const auto mem_reg = alloc_reg();
-                const auto value_reg = get_bit_version(alloc_reg(), value_reg_size);
+                    auto& [ymm_mem, gpr_mem_lane] = stack.pop_64();
+                    auto& [ymm_value, gpr_value_lane] = stack.pop_64();
 
-                out.make(m_mov, reg_op(mem_reg), mem_op(VSP, 0, 8))
-                   .make(m_add, reg_op(VSP), imm_op(bit_64))
+                    read_qlane_to_gpr(ymm_value, gpr_value_lane, out);
+                    read_qlane_to_gpr(ymm_mem, gpr_mem_lane, out);
 
-                   .make(m_mov, reg_op(value_reg), mem_op(VSP, 0, value_reg_size))
-                   .make(m_add, reg_op(VSP), imm_op(value_reg_size))
-
-                   .make(m_mov, mem_op(mem_reg, 0, value_reg_size), reg_op(value_reg));
-            }, nearest, value_reg_size);
+                    out.make(m_mov, mem_op(gpr_mem_lane, 0, value_reg_size), reg_op(get_bit_version(gpr_value_lane, value_reg_size)));
+                }, nearest, value_reg_size);
         }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_pop_ptr& cmd)
     {
         const auto pop_size = cmd->get_size();
-        const auto pop_reg_size = to_reg_size(pop_size);
-
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
-            out.make(m_add, reg_op(VSP), imm_op(pop_reg_size));
+            stack_loader stack(out, alloc_reg);
+
+            stack.pop_64();
         }, pop_size);
     }
 
@@ -394,16 +404,24 @@ namespace eagle::virt::owl
             {
                 const uint64_t immediate_value = arg;
 
-                create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-                {
-                    encode_builder& out = *out_container;
+                create_handler(force_inline, block, cmd,
+                    [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                    {
+                        encode_builder& out = *out_container;
+                        stack_loader stack(out, alloc_reg);
 
-                    const auto reg = alloc_reg();
-                    const auto reg_sized = get_bit_version(reg, push_reg_size);
-                    out.make(m_mov, reg_op(reg), imm_op(immediate_value))
-                       .make(m_sub, reg_op(VSP), imm_op(push_reg_size))
-                       .make(m_mov, mem_op(VSP, 0, push_reg_size), reg_op(reg_sized));
-                });
+                        const auto ymm_temp = alloc_reg(ymm_256);
+                        const auto gpr_temp = alloc_reg(gpr_64);
+
+                        out
+                            .make(m_mov, reg_op(gpr_temp), imm_op(immediate_value))
+                            .make(m_vpbroadcastq, reg_op(ymm_temp), reg_op(gpr_temp));
+
+                        if (settings->randomize_push_lane)
+                            stack.push_ymm_lane(ymm_temp, util::get_ran_device().gen_8() % 4);
+                        else
+                            stack.push_ymm_lane(ymm_temp, 0);
+                    });
             }
             else if constexpr (std::is_same_v<T, ir::block_ptr>)
             {
@@ -411,30 +429,24 @@ namespace eagle::virt::owl
                 const asmb::code_label_ptr label = get_block_label(target);
                 VM_ASSERT(label != nullptr, "block contains missing context");
 
-                create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-                {
-                    encode_builder& out = *out_container;
+                create_handler(force_inline, block, cmd,
+                    [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                    {
+                        encode_builder& out = *out_container;
+                        stack_loader stack(out, alloc_reg);
 
-                    const auto reg = get_bit_version(alloc_reg(), push_reg_size);
-                    out.make(m_mov, reg_op(reg), imm_label_operand(label))
-                       .make(m_sub, reg_op(VSP), imm_op(push_reg_size))
-                       .make(m_mov, mem_op(VSP, 0, push_reg_size), reg_op(reg));
-                });
-            }
-            else if constexpr (std::is_same_v<T, ir::reg_vm>)
-            {
-                const ir::reg_vm& target = arg;
-                const auto vm_reg = reg_vm_to_register(target);
+                        const auto ymm_temp = alloc_reg(ymm_256);
+                        const auto gpr_temp = alloc_reg(gpr_64);
 
-                create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-                {
-                    encode_builder& out = *out_container;
+                        out
+                            .make(m_mov, reg_op(gpr_temp), imm_label_operand(label))
+                            .make(m_vpbroadcastq, reg_op(ymm_temp), reg_op(gpr_temp));
 
-                    const auto reg = get_bit_version(alloc_reg(), push_reg_size);
-                    out.make(m_mov, reg_op(reg), reg_op(vm_reg))
-                       .make(m_sub, reg_op(VSP), imm_op(push_reg_size))
-                       .make(m_mov, mem_op(VSP, 0, push_reg_size), reg_op(reg));
-                });
+                        if (settings->randomize_push_lane)
+                            stack.push_ymm_lane(ymm_temp, util::get_ran_device().gen_8() % 4);
+                        else
+                            stack.push_ymm_lane(ymm_temp, 0);
+                    });
             }
             else
             VM_ASSERT("deprecated command type");
@@ -443,22 +455,18 @@ namespace eagle::virt::owl
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_rflags_load_ptr& cmd)
     {
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            // prepare to pop flags from stack
-            out.make(m_sub, reg_op(rsp), imm_op(bit_64))
-               .make(m_popfq)
+            const auto gpr_temp = alloc_reg(gpr_64);
+            out
+                .make(m_sub, reg_op(rsp), imm_op(bit_64))
+                .make(m_mov, reg_op(gpr_temp), mem_op(rsp, 0, bit_64));
 
-               // set rsp to be vsp
-               .make(m_xchg, reg_op(VSP), reg_op(rsp))
-
-               // push flags to virtual stack
-               .make(m_pushfq)
-
-               // reset rsp
-               .make(m_xchg, reg_op(VSP), reg_op(rsp));
+            stack.push_gpr(gpr_temp);
+            out.make(m_add, reg_op(rsp), imm_op(bit_64));
         });
     }
 
@@ -470,34 +478,48 @@ namespace eagle::virt::owl
         handle_cmd(block, std::make_shared<ir::cmd_push>(flags, ir::ir_size::bit_64));
 
         // we can treat the actual context store as a generic handler because we got rid of the flags store
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            const auto mask_reg = alloc_reg();
-            const auto flag_reg = alloc_reg();
+            const auto ymm_temp = alloc_reg(ymm_256);
+            const auto xmm_temp = get_bit_version(ymm_temp, xmm_128);
 
-            out.make(m_mov, reg_op(mask_reg), mem_op(VSP, 0, bit_64))
-               .make(m_mov, reg_op(flag_reg), mem_op(VSP, 8, bit_64))
+            auto [ymm_mask, gpr_mask_lane] = stack.pop_64();
+            auto [ymm_flag, gpr_flag_lane] = stack.pop_64();
 
-               // mask off the wanted bits from flags
-               .make(m_and, reg_op(flag_reg), reg_op(mask_reg))
+            move_qlane_to_bottom(ymm_mask, gpr_mask_lane, out);
+            move_qlane_to_bottom(ymm_flag, gpr_flag_lane, out);
 
-               // flip the mask, and remove unwanted bits from destination
-               .make(m_not, reg_op(mask_reg))
-               .make(m_and, mem_op(rsp, -8, bit_64), reg_op(mask_reg))
+            // todo: instead of moving to lowest lane, have an option to randomly gen a lane
+            // this way, the push_ymm_lane can use that lane
 
-               // combine
-               .make(m_or, mem_op(rsp, -8, bit_64), reg_op(flag_reg))
+            out
+                // mask off the wanted bits from flags
+                .make(m_vpandq, reg_op(ymm_flag), reg_op(ymm_mask))
 
-               // pop the mask
-               .make(m_add, reg_op(VSP), imm_op(bit_64));
+                // flip the mask, and remove unwanted bits from destination
+                .make(m_vpcmpeqd, reg_op(ymm_temp), reg_op(ymm_temp), reg_op(ymm_temp))
+                .make(m_vpxor, reg_op(ymm_mask), reg_op(ymm_mask), reg_op(ymm_temp))
+                .make(m_vpandq, reg_op(ymm_flag), reg_op(ymm_mask))
+
+                // load rflags
+                .make(m_vpbroadcastq, reg_op(ymm_temp), mem_op(rsp, -8, bit_64))
+
+                // combine
+                .make(m_vporq, reg_op(ymm_flag), reg_op(ymm_mask))
+
+                // write to rflags
+                .make(m_vmovq, mem_op(rsp, -8, 0), reg_op(xmm_temp));
+
+            stack.push_ymm_lane(ymm_flag, 0);
         });
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sx_ptr& cmd)
     {
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -530,7 +552,7 @@ namespace eagle::virt::owl
         const reg vflag_reg = regs->get_vm_reg(register_manager::index_vflags);
         const uint32_t flag_index = ir::cmd_flags_load::get_flag_index(cmd->get_flag());
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -546,7 +568,7 @@ namespace eagle::virt::owl
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_jmp_ptr& cmd)
     {
-        create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(force_inline, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -561,7 +583,7 @@ namespace eagle::virt::owl
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
             handle_generic_logic_cmd(m_and, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
@@ -572,7 +594,7 @@ namespace eagle::virt::owl
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
             handle_generic_logic_cmd(m_or, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
@@ -583,7 +605,7 @@ namespace eagle::virt::owl
     {
         // TODO: handle reversed parameters
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
             handle_generic_logic_cmd(m_xor, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
@@ -595,7 +617,7 @@ namespace eagle::virt::owl
         // TODO: handle reversed parameters
 
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -632,7 +654,7 @@ namespace eagle::virt::owl
         // TODO: handle reversed parameters
 
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -666,7 +688,7 @@ namespace eagle::virt::owl
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_add_ptr& cmd)
     {
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
             handle_generic_logic_cmd(m_add, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
@@ -675,7 +697,7 @@ namespace eagle::virt::owl
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_sub_ptr& cmd)
     {
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
             handle_generic_logic_cmd(m_sub, cmd->get_size(), cmd->get_preserved(), out, alloc_reg);
@@ -685,7 +707,7 @@ namespace eagle::virt::owl
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_cmp_ptr& cmd)
     {
         const reg_size size = to_reg_size(cmd->get_size());
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -755,35 +777,37 @@ namespace eagle::virt::owl
         if (target_size > from_size)
         {
             const auto bit_diff = static_cast<uint32_t>(target_size) - static_cast<uint32_t>(from_size);
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
 
-                const auto target_reg = alloc_reg();
-                const auto pop_reg_size = get_bit_version(target_reg, from_size);
-                const auto target_reg_size = get_bit_version(target_reg, target_size);
+                    const auto target_reg = alloc_reg();
+                    const auto pop_reg_size = get_bit_version(target_reg, from_size);
+                    const auto target_reg_size = get_bit_version(target_reg, target_size);
 
-                out.make(m_xor, reg_op(target_reg), reg_op(target_reg))
-                   .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
-                   .make(m_sub, reg_op(VSP), imm_op(bit_diff / 8))
-                   .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
-            }, cmd->get_current(), cmd->get_target());
+                    out.make(m_xor, reg_op(target_reg), reg_op(target_reg))
+                       .make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
+                       .make(m_sub, reg_op(VSP), imm_op(bit_diff / 8))
+                       .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
+                }, cmd->get_current(), cmd->get_target());
         }
         else if (from_size > target_size)
         {
             const auto bit_diff = static_cast<uint32_t>(from_size) - static_cast<uint32_t>(target_size);
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
-            {
-                encode_builder& out = *out_container;
+            create_handler(default_create, block, cmd,
+                [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
 
-                const auto target_reg = alloc_reg();
-                const auto pop_reg_size = get_bit_version(target_reg, from_size);
-                const auto target_reg_size = get_bit_version(target_reg, target_size);
+                    const auto target_reg = alloc_reg();
+                    const auto pop_reg_size = get_bit_version(target_reg, from_size);
+                    const auto target_reg_size = get_bit_version(target_reg, target_size);
 
-                out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
-                   .make(m_add, reg_op(VSP), imm_op(bit_diff / 8))
-                   .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
-            }, cmd->get_current(), cmd->get_target());
+                    out.make(m_mov, reg_op(pop_reg_size), mem_op(VSP, 0, from_size))
+                       .make(m_add, reg_op(VSP), imm_op(bit_diff / 8))
+                       .make(m_mov, mem_op(VSP, 0, target_size), reg_op(target_reg_size));
+                }, cmd->get_current(), cmd->get_target());
         }
     }
 
@@ -792,7 +816,7 @@ namespace eagle::virt::owl
         const ir::ir_size ir_size = cmd->get_size();
         reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -827,7 +851,7 @@ namespace eagle::virt::owl
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -859,7 +883,7 @@ namespace eagle::virt::owl
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -888,7 +912,7 @@ namespace eagle::virt::owl
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -930,7 +954,7 @@ namespace eagle::virt::owl
         const ir::ir_size ir_size = cmd->get_size();
         const reg_size size = to_reg_size(ir_size);
 
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
 
@@ -1051,7 +1075,7 @@ namespace eagle::virt::owl
     }
 
     void machine::handle_generic_logic_cmd(const mnemonic command, const ir::ir_size ir_size, const bool preserved,
-        encode_builder& out, const std::function<reg()>& alloc_reg)
+        encode_builder& out, const reg_allocator& alloc_reg)
     {
         const reg_size size = to_reg_size(ir_size);
         const reg r_arg1 = get_bit_version(alloc_reg(), size);

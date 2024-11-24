@@ -11,6 +11,7 @@
 namespace eagle::virt::owl
 {
     using machine_ptr = std::shared_ptr<class machine>;
+
     class machine final : public base_machine
     {
     public:
@@ -67,18 +68,7 @@ namespace eagle::virt::owl
 
         [[nodiscard]] codec::reg reg_vm_to_register(ir::reg_vm store) const;
         void handle_generic_logic_cmd(codec::mnemonic command, ir::ir_size ir_size, bool preserved, codec::encoder::encode_builder& out,
-            const std::function<codec::reg()>& alloc_reg);
-
-        void push_lane_64(codec::reg input_reg, uint16_t input_lane, codec::encoder::encode_builder& out);
-        void push_64(codec::reg input_reg, codec::encoder::encode_builder& out);
-
-        std::pair<codec::reg, codec::reg> peek_stack(uint8_t index = 0);
-        void pop_lane_64(codec::reg input_reg, uint16_t input_lane, codec::encoder::encode_builder& out);
-        void pop_64(codec::reg dest, codec::encoder::encode_builder& out);
-
-        void gen_vsp_modification(codec::encoder::encode_builder& out, bool sub);
-        void sub_vsp(codec::encoder::encode_builder& out);
-        void add_vsp(codec::encoder::encode_builder& out);
+            const std::function<codec::reg(codec::reg_size)>& alloc_reg);
 
         // has to set lane register to 0
         void move_qlane_to_bottom(codec::reg ymm, codec::reg lane, codec::encoder::encode_builder& out);
@@ -93,7 +83,8 @@ namespace eagle::virt::owl
             force_unique = 2,
         };
 
-        using handler_generator = std::function<void(const asmb::code_container_ptr&, std::function<codec::reg()>)>;
+        using reg_allocator = std::function<codec::reg(codec::reg_class)>;
+        using handler_generator = std::function<void(const asmb::code_container_ptr&, reg_allocator)>;
 
         template <typename... Params>
         void create_handler(handler_call_flags flags, const asmb::code_container_ptr& block, const ir::base_command_ptr& command,

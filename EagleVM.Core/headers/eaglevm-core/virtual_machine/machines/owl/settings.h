@@ -19,6 +19,8 @@ namespace eagle::virt::owl
         bool shuffle_vm_gpr_order = false;
         bool shuffle_vm_xmm_order = false;
         bool random_kmask;
+
+        bool randomize_push_lane = false;
     };
 
     using settings_ptr = std::shared_ptr<settings>;
