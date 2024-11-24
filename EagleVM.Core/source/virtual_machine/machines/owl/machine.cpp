@@ -108,7 +108,7 @@ namespace eagle::virt::owl
                     {
                         // ... why IS THERE NO VPERMB ON AVX2??????
                         const auto temp_xmm = get_bit_version(temp_ymm, bit_128);
-                        const auto temp_gpr = alloc_reg();
+                        const auto temp_gpr = alloc_reg(gpr_64);
 
                         // upper reg means we have to shuffle to the lowest byte of xmm reg
                         out
@@ -461,12 +461,8 @@ namespace eagle::virt::owl
             stack_loader stack(out, alloc_reg);
 
             const auto gpr_temp = alloc_reg(gpr_64);
-            out
-                .make(m_sub, reg_op(rsp), imm_op(bit_64))
-                .make(m_mov, reg_op(gpr_temp), mem_op(rsp, 0, bit_64));
-
+            out.make(m_mov, reg_op(gpr_temp), mem_op(rsp, -8, bit_64));
             stack.push_gpr(gpr_temp);
-            out.make(m_add, reg_op(rsp), imm_op(bit_64));
         });
     }
 
@@ -505,10 +501,10 @@ namespace eagle::virt::owl
                 .make(m_vpandq, reg_op(ymm_flag), reg_op(ymm_mask))
 
                 // load rflags
-                .make(m_vpbroadcastq, reg_op(ymm_temp), mem_op(rsp, -8, bit_64))
-
                 // combine
-                .make(m_vporq, reg_op(ymm_flag), reg_op(ymm_mask))
+                .make(m_vpbroadcastq, reg_op(ymm_temp), mem_op(rsp, -8, bit_64))
+                .make(m_vpandq, reg_op(ymm_temp), reg_op(ymm_mask))
+                .make(m_vporq, reg_op(ymm_temp), reg_op(ymm_flag))
 
                 // write to rflags
                 .make(m_vmovq, mem_op(rsp, -8, 0), reg_op(xmm_temp));
@@ -522,23 +518,62 @@ namespace eagle::virt::owl
         create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            const auto temp_reg = alloc_reg();
             const auto from_size = to_reg_size(cmd->get_current());
             const auto to_size = to_reg_size(cmd->get_target());
 
-            const reg from_reg = get_bit_version(temp_reg, from_size);
-            const reg to_reg = get_bit_version(temp_reg, to_size);
+            mnemonic target = m_invalid;
+            switch (from_size)
+            {
+                case bit_32:
+                {
+                    switch (to_size)
+                    {
+                        case bit_64:
+                            target = m_vpmovsxdq;
+                            break;
+                    }
+                    break;
+                }
+                case bit_16:
+                {
+                    switch (to_size)
+                    {
+                        case bit_64:
+                            target = m_vpmovsxwq;
+                            break;
+                        case bit_32:
+                            target = m_vpmovsxwd;
+                            break;
+                    }
+                    break;
+                }
+                case bit_8:
+                {
+                    switch (to_size)
+                    {
+                        case bit_64:
+                            target = m_vpmovsxbq;
+                            break;
+                        case bit_32:
+                            target = m_vpmovsxbd;
+                            break;
+                        case bit_16:
+                            target = m_vpmovsxbw;
+                            break;
+                    }
+                    break;
+                }
+            }
+            VM_ASSERT(target != m_invalid, "invalid sx instruction");
 
-            const auto mnemonic = to_size == bit_64 && from_size == bit_32 ? m_movsxd : m_movsx;
-            out.make(m_mov, reg_op(from_reg), mem_op(VSP, 0, from_size))
-               .make(mnemonic, reg_op(to_reg), reg_op(from_reg));
+            auto [ymm_out, gpr_lane] = stack.pop_64();
 
-            const auto stack_diff = static_cast<uint32_t>(to_size) - static_cast<uint32_t>(from_size);
-            const auto byte_diff = stack_diff / 8;
+            move_qlane_to_bottom(ymm_out, gpr_lane, out);
+            out.make(target, reg_op(ymm_out), reg_op(get_bit_version(ymm_out, bit_128)));
 
-            out.make(m_sub, reg_op(VSP), imm_op(byte_diff))
-               .make(m_mov, mem_op(VSP, 0, to_size), reg_op(to_reg));
+            stack.push_ymm_lane(ymm_out, 0);
         }, cmd->get_current(), cmd->get_target());
     }
 
@@ -555,14 +590,19 @@ namespace eagle::virt::owl
         create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const reg_allocator& alloc_reg)
         {
             encode_builder& out = *out_container;
+            stack_loader stack(out, alloc_reg);
 
-            const reg flag_hold = alloc_reg();
-            out.make(m_mov, reg_op(flag_hold), reg_op(vflag_reg))
-               .make(m_shr, reg_op(flag_hold), imm_op(flag_index))
-               .make(m_and, reg_op(flag_hold), imm_op(1))
+            const reg flag_hold = alloc_reg(ymm_256);
+            const reg gpr_temp = alloc_reg(gpr_64);
 
-               .make(m_sub, reg_op(VSP), imm_op(bit_64))
-               .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(flag_hold));
+            // todo: this is super shit. fix thsi
+            out
+                // load flag reg. doesnt have to be a broadcast but it will make for some nicer obf passes
+                .make(m_vpbroadcastq, reg_op(flag_hold), reg_op(vflag_reg))
+                .make(m_vpshrdq, reg_op(flag_hold), imm_op(flag_index)) // todo: vpshrdq not supported
+                .make(m_vpand, reg_op(flag_hold), imm_op(1)); // todo: invalid
+
+            stack.push_ymm_lane(flag_hold, 0);
         }, flag_index);
     }
 

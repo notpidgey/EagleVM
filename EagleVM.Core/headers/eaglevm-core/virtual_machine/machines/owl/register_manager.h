@@ -23,9 +23,13 @@ namespace eagle::virt::owl
 
     using register_manager_ptr = std::shared_ptr<class register_manager>;
 
+
     class register_manager
     {
     public:
+        static uint8_t index_vflags = 0;
+        static uint8_t index_vsp = 1;
+
         explicit register_manager(const settings_ptr& settings_info);
 
         /**
@@ -87,6 +91,8 @@ namespace eagle::virt::owl
         std::pair<codec::reg, uint16_t> get_gpr_map(codec::reg gpr);
         std::pair<codec::reg, uint16_t> get_vsp_map();
         std::array<codec::reg, 10> get_stack_order();
+
+        codec::reg get_vm_reg(uint8_t idx);
 
     private:
         settings_ptr settings;
