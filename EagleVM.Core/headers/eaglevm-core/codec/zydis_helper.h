@@ -81,4 +81,5 @@ namespace eagle::codec
     }
 
     std::vector<dec::inst_info> get_instructions(void* data, size_t size);
+    dec::inst_info get_instruction(void* data, size_t size);
 }

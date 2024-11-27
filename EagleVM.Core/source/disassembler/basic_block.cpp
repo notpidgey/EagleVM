@@ -17,6 +17,9 @@ namespace eagle::dasm
             if (inst.mnemonic == ZYDIS_MNEMONIC_JMP)
                 return block_jump;
 
+            if (inst.mnemonic == ZYDIS_MNEMONIC_RET)
+                return block_ret;
+
             return block_conditional_jump;
         }
 

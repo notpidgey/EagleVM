@@ -66,6 +66,12 @@ namespace eagle::dasm
     class segment_dasm : public base_segment_dasm
     {
     public:
+        segment_dasm(uint8_t* buffer, size_t size)
+            : instruction_buffer(buffer), instruction_size(size)
+        {
+
+        }
+
         std::vector<basic_block> explore_blocks(const uint32_t entry_rva) override
         {
             std::vector<basic_block> collected_blocks;
@@ -156,6 +162,16 @@ namespace eagle::dasm
             }
 
             return collected_blocks;
+        }
+
+    private:
+        uint8_t* instruction_buffer;
+        size_t instruction_size;
+
+        std::vector<branch_info_t> get_branches() override
+        {
+            auto inst = codec::get_instruction(instruction_buffer, instruction_size);
+
         }
     };
 }
