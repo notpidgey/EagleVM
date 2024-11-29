@@ -28,33 +28,40 @@ namespace eagle::dasm
 
                 // check if we are in the middle of an already existing block
                 // if so, we split up the block and we just continue
-                for (const auto& created_block : collected_blocks)
+                bool should_continue = false;
+                for (const auto& existing : collected_blocks)
                 {
-                    if (layer_rva >= created_block->start_rva && layer_rva < created_block->end_rva_inc)
+                    if (layer_rva >= existing->start_rva && layer_rva < existing->end_rva_inc)
                     {
-                        auto previous_block = std::make_shared<basic_block>();
-                        previous_block->start_rva = created_block->start_rva;
-                        previous_block->end_rva_inc = previous_block->start_rva;
+                        auto prev = std::make_shared<basic_block>();
+                        prev->start_rva = existing->start_rva;
+                        prev->end_rva_inc = prev->start_rva;
 
-                        created_block->start_rva = layer_rva;
+                        existing->start_rva = layer_rva;
 
-                        while (previous_block->end_rva_inc < layer_rva)
+                        while (prev->end_rva_inc < layer_rva)
                         {
-                            auto block_inst = created_block->decoded_insts.front();
-                            previous_block->decoded_insts.push_back(block_inst);
-                            created_block->decoded_insts.erase(created_block->decoded_insts.begin());
+                            auto block_inst = existing->decoded_insts.front();
+                            prev->decoded_insts.push_back(block_inst);
+                            existing->decoded_insts.erase(existing->decoded_insts.begin());
 
-                            previous_block->end_rva_inc += block_inst.instruction.length;
+                            prev->end_rva_inc += block_inst.instruction.length;
                         }
 
                         // this means there is some tricky control flow happening
                         // for instance, there may be an opaque branch to some garbage code
                         // another reason could be is we explored the wrong branch first of some obfuscated code and found garbage
                         // this will not happen with normally compiled code
-                        VM_ASSERT(previous_block->end_rva_inc == layer_rva, "resulting jump is between an already explored instruction");
-                        collected_blocks.push_back(previous_block);
+                        VM_ASSERT(prev->end_rva_inc == layer_rva, "resulting jump is between an already explored instruction");
+                        collected_blocks.push_back(prev);
+
+                        should_continue = true;
+                        break;
                     }
                 }
+
+                if (should_continue)
+                    continue;
 
                 auto block = std::make_shared<basic_block>();
                 block->start_rva = layer_rva;

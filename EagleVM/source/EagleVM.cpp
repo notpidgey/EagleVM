@@ -187,8 +187,8 @@ int main(int argc, char* argv[])
 
         for (auto& [start, end] : marked_function)
         {
-            vm_iat_calls.emplace_back(pe::stub_import::vm_begin, start);
-            vm_iat_calls.emplace_back(pe::stub_import::vm_end, end);
+            vm_iat_calls.emplace_back(pe::stub_import::vm_begin, parser->rva_to_fo(start));
+            vm_iat_calls.emplace_back(pe::stub_import::vm_end, parser->rva_to_fo(end));
         }
     }
     else
