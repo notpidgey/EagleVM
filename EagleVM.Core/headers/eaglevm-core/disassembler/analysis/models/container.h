@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include "eaglevm-core/disassembler/disassembler.h"
 
 namespace eagle::dasm::analysis
 {

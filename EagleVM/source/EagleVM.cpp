@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <ranges>
 
+#include "eaglevm-core/util/util.h"
+
 #include "eaglevm-core/compiler/section_manager.h"
 #include "eaglevm-core/pe/packer/pe_packer.h"
 #include "eaglevm-core/pe/pe_generator.h"
@@ -378,7 +380,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        std::printf("[>] dasm found %llu basic blocks\n", dasm->blocks.size());
+        std::printf("[>] dasm found %llu basic blocks\n", dasm->get_blocks().size());
         std::cout << std::endl;
 
         std::shared_ptr ir_trans = std::make_shared<ir::ir_translator>(dasm, &seg_live);

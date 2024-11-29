@@ -454,7 +454,7 @@ namespace eagle::codec
 
     bool is_jmp_or_jcc(const mnemonic mnemonic)
     {
-        constexpr auto target_jmp_mnemonics[] = {
+        constexpr codec::mnemonic target_jmp_mnemonics[] = {
             m_jb,
             m_jbe,
             m_jcxz,

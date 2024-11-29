@@ -1,5 +1,4 @@
 #pragma once
-#include <cstdint>
 #include <queue>
 #include <tuple>
 
@@ -31,7 +30,7 @@ namespace eagle::dasm
         /// @param rva_begin the rva at which the starting instruction is at
         /// @param rva_end the inclusive rva at which the last instruction ends
         /// @return the list of instructions which are contained within this range
-        virtual basic_block_ptr dump_section(uint64_t rva_begin, uint64_t rva_end) = 0;
+        // virtual basic_block_ptr dump_section(uint64_t rva_begin, uint64_t rva_end) = 0;
 
         /// @brief dissasembled instructions until a branching instruction is reached at the current block
         /// @param rva the rva at which the target block begins
