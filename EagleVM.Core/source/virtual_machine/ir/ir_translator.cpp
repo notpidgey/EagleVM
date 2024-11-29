@@ -641,11 +641,11 @@ namespace eagle::ir
         current_block->push_back(std::make_shared<cmd_x86_exec>(request));
     }
 
-    branch_info ir_translator::get_branch_info(const uint32_t rva)
+    branch_info ir_translator::get_branch_info(const uint32_t inst_rva)
     {
         branch_info info = { };
 
-        const auto bb = dasm->get_block(rva);
+        const auto bb = dasm->get_block(inst_rva, true);
         auto branches = bb->branches;
 
         switch (bb->get_end_reason())

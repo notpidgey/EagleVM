@@ -1,5 +1,7 @@
 #include "eaglevm-core/disassembler/dasm.h"
 
+#include <unordered_set>
+
 namespace eagle::dasm
 {
     segment_dasm::segment_dasm(const uint64_t rva_base, uint8_t* buffer, const size_t size):
@@ -11,8 +13,10 @@ namespace eagle::dasm
     {
         std::vector<basic_block_ptr> collected_blocks;
 
+        std::unordered_set<uint64_t> discovered;
         std::queue<uint64_t> explore_queue;
         explore_queue.push(entry_rva);
+        discovered.insert(entry_rva);
 
         while (!explore_queue.empty())
         {
@@ -60,31 +64,45 @@ namespace eagle::dasm
                 {
                     // we must do a check to see if our rva is at some already existing block,
                     // if so, we are going to end this block
+                    bool force_create = false;
                     for (const auto& created_block : collected_blocks)
                     {
                         if (current_rva >= created_block->start_rva && current_rva < created_block->end_rva_inc)
                         {
                             // we are inside
                             VM_ASSERT(current_rva == created_block->start_rva, "instruction overlap caused by seeking block");
+                            force_create = true;
                             break;
                         }
                     }
 
+                    if (force_create || current_rva >= rva_base + instruction_size)
+                        break;
+
                     auto [decode_info, inst_size] = decode_instruction(current_rva);
                     block->decoded_insts.push_back(decode_info);
 
-                    if (decode_info.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
+                    if (decode_info.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE &&
+                        decode_info.instruction.mnemonic != ZYDIS_MNEMONIC_CALL)
                     {
                         // branching instruction encountered
                         auto branches = get_branches(current_rva);
                         for (auto& [is_resolved, is_ret, target_rva] : branches)
                             if (is_resolved)
-                                explore_queue.push(target_rva);
+                            {
+                                if (!discovered.contains(target_rva))
+                                {
+                                    explore_queue.push(target_rva);
+                                    discovered.insert(target_rva);
+                                }
+                            }
 
-                        break;
+                        force_create = true;
                     }
 
                     current_rva += inst_size;
+                    if (force_create)
+                        break;
                 }
 
                 block->end_rva_inc = current_rva;
@@ -102,15 +120,25 @@ namespace eagle::dasm
             block->branches = get_branches(end_inst);
         }
 
+        blocks = collected_blocks;
         return collected_blocks;
     }
 
-    basic_block_ptr segment_dasm::get_block(const uint32_t rva)
+    basic_block_ptr segment_dasm::get_block(const uint32_t rva, bool inclusive)
     {
         for (auto block : blocks)
         {
-            if (rva == block->start_rva)
-                return block;
+            if (inclusive)
+            {
+                if (rva >= block->start_rva && rva < block->end_rva_inc)
+                    return block;
+            }
+            else
+            {
+                if (rva == block->start_rva)
+                    return block;
+            }
+
         }
 
         return nullptr;

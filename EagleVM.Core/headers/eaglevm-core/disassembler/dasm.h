@@ -35,7 +35,7 @@ namespace eagle::dasm
         /// @brief dissasembled instructions until a branching instruction is reached at the current block
         /// @param rva the rva at which the target block begins
         /// @return the basic block the instructions create
-        virtual basic_block_ptr get_block(uint32_t rva) = 0;
+        virtual basic_block_ptr get_block(uint32_t rva, bool inclusive) = 0;
     };
 
     class segment_dasm : public base_segment_dasm
@@ -44,7 +44,7 @@ namespace eagle::dasm
         segment_dasm(uint64_t rva_base, uint8_t* buffer, size_t size);
 
         std::vector<basic_block_ptr> explore_blocks(uint64_t entry_rva) override;
-        basic_block_ptr get_block(uint32_t rva) override;
+        basic_block_ptr get_block(uint32_t rva, bool inclusive = false) override;
 
         std::vector<basic_block_ptr>& get_blocks();
 

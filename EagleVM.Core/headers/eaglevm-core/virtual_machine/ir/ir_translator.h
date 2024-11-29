@@ -44,10 +44,10 @@ namespace eagle::ir
 
         /**
          *
-         * @param rva can be any rva that is within the target block's bounds (including the rva of the branching instruction)
+         * @param inst_rva can be any rva that is within the target block's bounds (including the rva of the branching instruction)
          * @return branching information of the found block within the translator's context
          */
-        branch_info get_branch_info(uint32_t rva);
+        branch_info get_branch_info(uint32_t inst_rva);
 
     private:
         dasm::segment_dasm_ptr dasm;
