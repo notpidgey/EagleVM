@@ -23,17 +23,17 @@ namespace eagle::ir
 
     std::vector<preopt_block_ptr> ir_translator::translate()
     {
-        // we want to initialzie the entire map with bb translates
-        for (dasm::basic_block_ptr block : dasm->blocks)
+        // we want to initialize the entire map with bb translates
+        for (const dasm::basic_block_ptr& block : dasm->get_blocks())
         {
-            const preopt_block_ptr vm_il = std::make_shared<preopt_block>();
+            const auto vm_il = std::make_shared<preopt_block>();
             vm_il->init(block);
 
             bb_map[block] = vm_il;
         }
 
         std::vector<preopt_block_ptr> result;
-        for (const dasm::basic_block_ptr& block : dasm->blocks)
+        for (const dasm::basic_block_ptr& block : dasm->get_blocks())
             result.push_back(translate_block_split(block));
 
         return result;
@@ -45,9 +45,9 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
-        const block_ptr entry = block_info->head;
+        const block_ptr& entry = block_info->head;
         block_ptr current_block = nullptr;
-        const block_ptr exit = block_info->tail;
+        const block_ptr& exit = block_info->tail;
 
         //
         // entry
@@ -67,7 +67,7 @@ namespace eagle::ir
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            constexpr std::array<codec::mnemonic, 1> ignored_mnemonics = { codec::m_nop };
+            constexpr std::array ignored_mnemonics = { codec::m_nop };
             if (std::ranges::find(ignored_mnemonics, static_cast<codec::mnemonic>(inst.mnemonic)) != ignored_mnemonics.end())
                 continue;
 
@@ -187,34 +187,46 @@ namespace eagle::ir
         // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
         cmd_branch_ptr branch_cmd;
 
-        auto end_reason = bb->get_end_reason();
-        if (end_reason == dasm::block_end)
+        switch (bb->get_end_reason())
         {
-            // add a branch to make sure we account for this case
-            // where there's on instruction to virtualize
-            ir_exit_result target_exit;
+            case dasm::block_end:
+            {
+                // add a branch to make sure we account for this case
+                // where there's on instruction to virtualize
+                ir_exit_result target_exit;
 
-            auto [target, type] = dasm->get_jump(bb);
-            if (type == dasm::jump_outside_segment)
-                target_exit = target;
-            else
-                target_exit = bb_map[dasm->get_block(target)]->head;
+                auto next_block_rva = bb->start_rva + bb->get_block_size();
 
-            branch_cmd = std::make_shared<cmd_branch>(target_exit);
+                dasm::basic_block_ptr target = dasm->get_block(next_block_rva);
+                if (target == nullptr)
+                    target_exit = next_block_rva;
+                else
+                    target_exit = bb_map[target]->head;
+
+                branch_cmd = std::make_shared<cmd_branch>(target_exit);
+                break;
+            }
+            case dasm::block_jump:
+            case dasm::block_conditional_jump:
+            {
+                // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
+                branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+                VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
+
+                current_block->pop_back();
+                break;
+            }
+            case dasm::block_ret:
+            {
+                // in this case we are just going to completely ignore the idea of
+                // adding a tail block
+                // im not actually quite sure this is the correct solution
+                block_info->body.push_back(current_block);
+                block_info->tail = nullptr; // delete the tail
+
+                return block_info;
+            }
         }
-        else if (end_reason == dasm::block_jump || end_reason == dasm::block_conditional_jump)
-        {
-            // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
-            branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
-            VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
-
-            current_block->pop_back();
-        }
-        else
-        {
-            
-        }
-
 
         // we want to jump to the exit block now
         if (current_block->get_block_state() == vm_block)
@@ -304,6 +316,8 @@ namespace eagle::ir
                 for (const auto& seek_preopt : block_vm_ids | std::views::keys)
                 {
                     const auto tail = seek_preopt->tail;
+                    if (!tail)
+                        continue;
 
                     const auto tail_branch = tail->exit_as_branch();
                     VM_ASSERT(tail_branch, "tail branch cannot be null");
@@ -323,14 +337,23 @@ namespace eagle::ir
         for (const auto& preopt : block_vm_ids | std::views::keys)
         {
             const auto tail = preopt->tail;
-            const auto last_body = preopt->body.back();
+            if (!tail)
+                continue;
 
             // check for body size of two, i will figure a better way of oding this better
             // but wwhat this means is that the last instruction generated a branch which got copied to the tail
             // and that hte last body only contains a vm enter and vmexit ( as by design a VM preopt body MINIMALY SHOULD)
             // so we will remove it because this is not supposed to ahppen
+            const auto last_body = preopt->body.back();
             if (last_body->get_block_state() == vm_block && last_body->size() == 2)
             {
+                const auto first = last_body->as_virt()->at(0);
+                const auto second = last_body->as_virt()->at(1);
+
+                if (first->get_command_type() != command_type::vm_enter ||
+                    second->get_command_type() != command_type::vm_exit)
+                    continue;
+
                 // this means the last body is useless
                 VM_ASSERT(preopt->body.size() > 1,
                     "there should never be a case where a generated preopt body should have only 1 body that is broken");
@@ -559,17 +582,17 @@ namespace eagle::ir
                 {
                     case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        request.operands.emplace_back(reg_op(static_cast<reg>(op.reg.value)));
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_MEMORY:
                     {
                         auto& mem = op.mem;
                         if (i == op_i)
-                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), target_address,
+                            request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), target_address,
                                 mem.size, true));
                         else
-                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                            request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                                 mem.size));
 
                         break;
@@ -577,9 +600,9 @@ namespace eagle::ir
                     case ZYDIS_OPERAND_TYPE_IMMEDIATE:
                     {
                         if (i == op_i)
-                            request.operands.push_back(imm_op(target_address, i == op_i));
+                            request.operands.emplace_back(imm_op(target_address, i == op_i));
                         else
-                            request.operands.push_back(imm_op(op.imm.s));
+                            request.operands.emplace_back(imm_op(op.imm.s));
                         break;
                     }
                 }
@@ -594,20 +617,20 @@ namespace eagle::ir
                 {
                     case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        request.operands.emplace_back(reg_op(static_cast<reg>(op.reg.value)));
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_MEMORY:
                     {
                         auto& mem = op.mem;
-                        request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                        request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                             mem.size));
 
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_IMMEDIATE:
                     {
-                        request.operands.push_back(imm_op(op.imm.s));
+                        request.operands.emplace_back(imm_op(op.imm.s));
                         break;
                     }
                 }

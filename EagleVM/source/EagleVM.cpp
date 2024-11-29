@@ -8,7 +8,7 @@
 #include <linuxpe>
 
 #include "eaglevm-core/disassembler/analysis/liveness.h"
-#include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/disassembler/dasm.h"
 #include "eaglevm-core/pe/models/stub.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 #include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
@@ -75,14 +75,11 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
 
 void print_ir(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
 {
-    for (auto& translated_block : blocks)
+    for (const ir::block_ptr& translated_block : blocks)
     {
         std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == entry ? "(entry)" : "");
-        for (auto j = 0; j < translated_block->size(); j++)
-        {
-            const auto inst = translated_block->at(j);
+        for (const auto& inst : *translated_block)
             std::printf("\t%s\n", inst->to_string().c_str());
-        }
     }
 }
 
@@ -321,15 +318,14 @@ int main(int argc, char* argv[])
          * but this creates sort of a mess which i dont really like
          */
 
-        codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
-        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(instructions, rva_inst_begin, rva_inst_end);
-        dasm->generate_blocks();
+        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(rva_inst_begin, pinst_begin, rva_inst_end - rva_inst_begin);
+        std::vector result = dasm->explore_blocks(rva_inst_begin);
 
         dasm::analysis::liveness seg_live(dasm);
         seg_live.compute_blocks_use_def();
-        seg_live.analyze_cross_liveness(dasm->blocks.back());
+        seg_live.analyze_cross_liveness(result.back());
 
-        for (auto& block : dasm->blocks)
+        for (auto& block : dasm->get_blocks())
         {
             printf("\nblock 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
 

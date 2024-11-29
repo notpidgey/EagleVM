@@ -50,4 +50,13 @@ namespace eagle::dasm
 
         return current_rva;
     }
+
+    uint64_t basic_block::get_block_size()
+    {
+        uint64_t size = 0;
+        for (auto& [instruction, operands] : decoded_insts)
+            size += instruction.length;
+
+        return size;
+    }
 }
