@@ -24,7 +24,7 @@ namespace eagle::codec
 {
     void setup_decoder();
 
-    reg get_bit_version(reg input_reg, const reg_size target_size);
+    reg get_bit_version(reg input_reg, reg_size target_size);
     reg get_bit_version(reg input_reg, reg_class target_size);
     reg get_bit_version(zydis_register input_reg, reg_class target_size);
     reg get_largest_enclosing(reg input_reg);
@@ -32,7 +32,7 @@ namespace eagle::codec
     uint16_t reg_size_to_b(reg_size size);
     bool is_upper_8(reg reg);
 
-    reg_class get_class_from_size(const reg_size size);
+    reg_class get_class_from_size(reg_size size);
 
     reg_class get_reg_class(reg reg);
     reg_class get_reg_class(zydis_register reg);
@@ -65,21 +65,19 @@ namespace eagle::codec
     std::vector<std::string> print(enc::req& queue, uint32_t address);
     std::vector<std::string> print_queue(const std::vector<enc::req>& queue, uint32_t address);
 
-    bool has_relative_operand(dec::inst_info& decode);
+    bool contains_rip_relative_operand(dec::inst_info& decode);
+    bool is_jmp_or_jcc(mnemonic mnemonic);
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst& instruction, const dec::operand* operands, uint32_t rva, int8_t operand = -1);
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode, uint32_t rva, int8_t operand = -1);
 
-    enc::req encode(mnemonic mnemonic, auto&&... args)
+    enc::req encode(const mnemonic mnemonic, auto&&... args)
     {
         auto encoder = create_encode_request(mnemonic);
         (add_op(encoder, std::forward<decltype(args)>(args)), ...);
-
-        // if(encoder.operands[0].reg.value == ZYDIS_REGISTER_NONE && encoder.operands[1].reg.value == ZYDIS_REGISTER_NONE && encoder.operand_count == 2)
-        //     __debugbreak();
 
         return encoder;
     }
 
     std::vector<dec::inst_info> get_instructions(void* data, size_t size);
-    dec::inst_info get_instruction(void* data, size_t size);
+    dec::inst_info get_instruction(void* data, size_t size, uint64_t offset);
 }

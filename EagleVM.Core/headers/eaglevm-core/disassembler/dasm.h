@@ -18,7 +18,7 @@ namespace eagle::dasm
         bool is_ret;
 
         // target rva of branch
-        uint32_t target_rva;
+        uint64_t target_rva;
     };
 
     class segment_dasm_kernel
@@ -37,18 +37,18 @@ namespace eagle::dasm
 
         /// @brief getter for the current rva
         /// @return the current rva
-        virtual uint32_t get_current_rva() = 0;
+        virtual uint64_t get_current_rva() = 0;
 
         /// @brief updates the current rva
         /// @param rva new rva
         /// @return old rva before replacement
-        virtual uint32_t set_current_rva(uint32_t rva) = 0;
+        virtual uint64_t set_current_rva(uint64_t rva) = 0;
     };
 
     class base_segment_dasm : public segment_dasm_kernel
     {
     public:
-        virtual std::vector<basic_block> explore_blocks(uint32_t entry_rva) = 0;
+        virtual std::vector<basic_block> explore_blocks(uint64_t entry_rva) = 0;
 
     private:
         /// @brief dissasembled instructions until a branching instruction is reached at the current block
@@ -60,23 +60,22 @@ namespace eagle::dasm
         /// @param rva_begin the rva at which the starting instruction is at
         /// @param rva_end the inclusive rva at which the last instruction ends
         /// @return the list of instructions which are contained within this range
-        virtual std::vector<codec::dec::inst> dump_section(uint32_t rva_begin, uint32_t rva_end) = 0;
+        virtual std::vector<codec::dec::inst> dump_section(uint64_t rva_begin, uint64_t rva_end) = 0;
     };
 
     class segment_dasm : public base_segment_dasm
     {
     public:
-        segment_dasm(uint8_t* buffer, size_t size)
-            : instruction_buffer(buffer), instruction_size(size)
+        segment_dasm(const uint64_t rva_base, uint8_t* buffer, const size_t size)
+            : rva_base(rva_base), instruction_buffer(buffer), instruction_size(size)
         {
-
         }
 
-        std::vector<basic_block> explore_blocks(const uint32_t entry_rva) override
+        std::vector<basic_block> explore_blocks(const uint64_t entry_rva) override
         {
             std::vector<basic_block> collected_blocks;
 
-            std::queue<uint32_t> explore_queue;
+            std::queue<uint64_t> explore_queue;
             explore_queue.push(entry_rva);
 
             while (!explore_queue.empty())
@@ -145,12 +144,10 @@ namespace eagle::dasm
                         if (decode_info.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
                         {
                             // branching instruction encountered
-                            std::vector<branch_info_t> branches = get_branches();
+                            auto branches = get_branches();
                             for (auto& [is_resolved, is_ret, target_rva] : branches)
-                            {
                                 if (is_resolved)
                                     explore_queue.push(target_rva);
-                            }
 
                             break;
                         }
@@ -165,13 +162,51 @@ namespace eagle::dasm
         }
 
     private:
+        uint64_t rva_base;
+
         uint8_t* instruction_buffer;
         size_t instruction_size;
 
         std::vector<branch_info_t> get_branches() override
         {
-            auto inst = codec::get_instruction(instruction_buffer, instruction_size);
+            auto [instruction, operands] = codec::get_instruction(
+                instruction_buffer,
+                instruction_size,
+                get_current_rva() - rva_base
+            );
 
+            std::vector<branch_info_t> branches;
+            if (instruction.mnemonic == codec::m_ret)
+            {
+                branches.push_back(branch_info_t{
+                    false,
+                    true,
+                    0
+                });
+
+                return branches;
+            }
+
+            if (is_jmp_or_jcc(static_cast<codec::mnemonic>(instruction.mnemonic)))
+            {
+                auto [target, op_idx] = codec::calc_relative_rva(instruction, operands, get_current_rva());
+                branches.push_back(branch_info_t{
+                    op_idx != -1,
+                    false,
+                    target
+                });
+
+                if (instruction.mnemonic == codec::m_jmp)
+                    return branches;
+            }
+
+            branches.push_back(branch_info_t{
+                true,
+                false,
+                get_current_rva() + instruction.length
+            });
+
+            return branches;
         }
     };
 }

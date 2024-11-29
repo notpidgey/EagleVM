@@ -114,10 +114,10 @@ namespace eagle::dasm
         if (last) end_reason = block_end;
         switch (end_reason)
         {
+            case block_ret:
+                return { 0, jump_unknown };
             case block_end:
-            {
                 return { block->end_rva_inc, get_jump_location(block->end_rva_inc) };
-            }
             case block_conditional_jump:
             case block_jump:
             {

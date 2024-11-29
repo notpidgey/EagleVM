@@ -60,25 +60,25 @@ namespace eagle::codec
         {
             case bit_512:
                 read_size = 512 / 8;
-            break;
+                break;
             case bit_256:
                 read_size = 256 / 8;
-            break;
+                break;
             case bit_128:
                 read_size = 128 / 8;
-            break;
+                break;
             case bit_64:
                 read_size = 64 / 8;
-            break;
+                break;
             case bit_32:
                 read_size = 32 / 8;
-            break;
+                break;
             case bit_16:
                 read_size = 16 / 8;
-            break;
+                break;
             case bit_8:
                 read_size = 8 / 8;
-            break;
+                break;
             default:
                 VM_ASSERT("invalid reg size handled");
         }
@@ -342,10 +342,8 @@ namespace eagle::codec
             &encoded_length, address);
         if (!ZYAN_SUCCESS(result))
         {
-            auto target = ZYAN_STATUS_OUT_OF_RESOURCES;
             auto status_code = ZYAN_STATUS_CODE(result);
             __debugbreak();
-            __nop();
         }
 
         instruction_data.resize(encoded_length);
@@ -423,7 +421,7 @@ namespace eagle::codec
         return data;
     }
 
-    bool has_relative_operand(dec::inst_info& decode)
+    bool contains_rip_relative_operand(dec::inst_info& decode)
     {
         const auto& [instruction, operands] = decode;
         for (int i = 0; i < instruction.operand_count; i++)
@@ -434,10 +432,6 @@ namespace eagle::codec
                 case ZYDIS_OPERAND_TYPE_MEMORY:
                 {
                     if (operand.mem.base == ZYDIS_REGISTER_RIP)
-                        return true;
-
-                    if (operand.mem.base == ZYDIS_REGISTER_NONE && operand.mem.index ==
-                        ZYDIS_REGISTER_NONE)
                         return true;
 
                     break;
@@ -456,6 +450,36 @@ namespace eagle::codec
         }
 
         return false;
+    }
+
+    bool is_jmp_or_jcc(const mnemonic mnemonic)
+    {
+        constexpr auto target_jmp_mnemonics[] = {
+            m_jb,
+            m_jbe,
+            m_jcxz,
+            m_jecxz,
+            m_jknzd,
+            m_jkzd,
+            m_jl,
+            m_jle,
+            m_jmp,
+            m_jnb,
+            m_jnbe,
+            m_jnl,
+            m_jnle,
+            m_jno,
+            m_jnp,
+            m_jns,
+            m_jnz,
+            m_jo,
+            m_jp,
+            m_jrcxz,
+            m_js,
+            m_jz,
+        };
+
+        return std::ranges::find(target_jmp_mnemonics, mnemonic) != std::end(target_jmp_mnemonics);
     }
 
     std::pair<uint64_t, uint8_t> calc_relative_rva(
@@ -489,32 +513,14 @@ namespace eagle::codec
     std::pair<uint64_t, uint8_t> calc_relative_rva(const dec::inst_info& decode, const uint32_t rva, const int8_t operand)
     {
         const auto& [instruction, operands] = decode;
-
-        uint64_t target_address = rva;
-        if (operand < 0)
-        {
-            for (int i = 0; i < instruction.operand_count; i++)
-            {
-                auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[i], rva, &target_address);
-                if (result == ZYAN_STATUS_SUCCESS)
-                    return { target_address, i };
-            }
-        }
-        else
-        {
-            auto result = ZydisCalcAbsoluteAddress(&instruction, &operands[operand], rva, &target_address);
-            if (result == ZYAN_STATUS_SUCCESS)
-                return { target_address, operand };
-        }
-
-        return { target_address, -1 };
+        return calc_relative_rva(instruction, operands, rva, operand);
     }
 
-    std::vector<dec::inst_info> get_instructions(void* data, size_t size)
+    std::vector<dec::inst_info> get_instructions(void* data, const size_t size)
     {
         std::vector<dec::inst_info> decode_data;
 
-        ZyanUSize offset = 0;
+        uint64_t offset = 0;
         dec::inst_info decoded_instruction{ };
 
         while (ZYAN_SUCCESS(
@@ -528,5 +534,24 @@ namespace eagle::codec
         }
 
         return decode_data;
+    }
+
+    dec::inst_info get_instruction(void* data, const size_t size, const uint64_t offset)
+    {
+        dec::inst_info decoded_instruction{ };
+        const ZyanStatus result = ZydisDecoderDecodeFull(&zyids_decoder,
+            static_cast<char*>(data) + offset,
+            size - offset,
+            &decoded_instruction.instruction,
+            decoded_instruction.operands
+        );
+
+        if (!ZYAN_SUCCESS(result))
+        {
+            auto status_code = ZYAN_STATUS_CODE(result);
+            __debugbreak();
+        }
+
+        return decoded_instruction;
     }
 }

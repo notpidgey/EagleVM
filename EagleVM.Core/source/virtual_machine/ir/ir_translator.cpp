@@ -79,15 +79,8 @@ namespace eagle::ir
             // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
             // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
             // codec::m_jmp mnemonic which will be the way we select it here
-            if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
-                mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
-                mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
-                mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
-                mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
-                mnemonic == codec::m_js || mnemonic == codec::m_jz)
-            {
+            if (is_jmp_or_jcc(mnemonic))
                 mnemonic = codec::m_jmp;
-            }
 
             if (instruction_handlers.contains(mnemonic))
             {
@@ -119,7 +112,7 @@ namespace eagle::ir
                 if (dasm_liveness)
                 {
                     auto out_liveness = std::get<1>(liveness[i]);
-                    auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
+                    auto inst_flags_liveness = dasm::analysis::liveness::compute_inst_flags(decoded_inst);
 
                     auto relevant_out = inst_flags_liveness & out_liveness;
                     auto relevant_out_flags = relevant_out.get_flags();
@@ -193,7 +186,9 @@ namespace eagle::ir
         // every jcc/jmp is garuanteed to get processed if its at the end of the block
         // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
         cmd_branch_ptr branch_cmd;
-        if (bb->get_end_reason() == dasm::block_end)
+
+        auto end_reason = bb->get_end_reason();
+        if (end_reason == dasm::block_end)
         {
             // add a branch to make sure we account for this case
             // where there's on instruction to virtualize
@@ -207,13 +202,17 @@ namespace eagle::ir
 
             branch_cmd = std::make_shared<cmd_branch>(target_exit);
         }
-        else
+        else if (end_reason == dasm::block_jump || end_reason == dasm::block_conditional_jump)
         {
             // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
             branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
             VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
 
             current_block->pop_back();
+        }
+        else
+        {
+            
         }
 
 
@@ -333,7 +332,8 @@ namespace eagle::ir
             if (last_body->get_block_state() == vm_block && last_body->size() == 2)
             {
                 // this means the last body is useless
-                VM_ASSERT(preopt->body.size() > 1, "there should never be a case where a generated preopt body should have only 1 body that is broken");
+                VM_ASSERT(preopt->body.size() > 1,
+                    "there should never be a case where a generated preopt body should have only 1 body that is broken");
 
                 const auto before_last = preopt->body.at(preopt->body.size() - 2);
                 before_last->as_x86()->exit_as_branch()->rewrite_branch(last_body, tail);
@@ -549,7 +549,7 @@ namespace eagle::ir
         inst_req request(static_cast<mnemonic>(decoded_inst.instruction.mnemonic));
         const enc::req encode_request = decode_to_encode(decoded_inst);
 
-        if (has_relative_operand(decoded_inst))
+        if (contains_rip_relative_operand(decoded_inst))
         {
             auto [target_address, op_i] = calc_relative_rva(decoded_inst, current_rva);
             for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
