@@ -26,7 +26,7 @@ namespace eagle::ir
     class ir_translator : public std::enable_shared_from_this<ir_translator>
     {
     public:
-        explicit ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness = nullptr);
+        explicit ir_translator(const dasm::segment_dasm_ptr& seg_dasm, dasm::analysis::liveness* liveness = nullptr);
 
         std::vector<preopt_block_ptr> translate();
         std::vector<flat_block_vmid> flatten(

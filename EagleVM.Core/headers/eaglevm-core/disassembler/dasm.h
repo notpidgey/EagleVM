@@ -3,46 +3,23 @@
 #include <queue>
 #include <tuple>
 
+#include "eaglevm-core/disassembler/models/branch_info.h"
 #include "eaglevm-core/disassembler/basic_block.h"
 #include "eaglevm-core/codec/zydis_helper.h"
 
 namespace eagle::dasm
 {
-    struct branch_info_t
-    {
-        // if false, this means that the branch could not be resolved
-        // this means that the branch is stored in a register of some sort
-        bool is_resolved;
-
-        // valid branching control flow which cannot be resolved
-        bool is_ret;
-
-        // target rva of branch
-        uint64_t target_rva;
-    };
-
     class segment_dasm_kernel
     {
     public:
         virtual ~segment_dasm_kernel() = default;
 
     protected:
-        /// @brief decodes an instruction at the current rva, the function assumes that the rva is located at a valid instruction
-        /// @return pair with [decoded instruction, instruction length] at the current rva
-        virtual std::pair<codec::dec::inst_info, uint8_t> decode_current() = 0;
+        /// @brief decodes an instruction at the specified rva.
+        virtual std::pair<codec::dec::inst_info, uint8_t> decode_instruction(uint64_t rva) = 0;
 
-        /// @brief decodes the instruction at the current rva and returns branches
-        /// @return returns a list of rvas the instruction branches to. len(0) if none, len(1) if jmp, len(2) if conditional jump
-        virtual std::vector<branch_info_t> get_branches() = 0;
-
-        /// @brief getter for the current rva
-        /// @return the current rva
-        virtual uint64_t get_current_rva() = 0;
-
-        /// @brief updates the current rva
-        /// @param rva new rva
-        /// @return old rva before replacement
-        virtual uint64_t set_current_rva(uint64_t rva) = 0;
+        /// @brief retrieves branches for the instruction at the specified rva.
+        virtual std::vector<branch_info_t> get_branches(uint64_t rva) = 0;
     };
 
     class base_segment_dasm : public segment_dasm_kernel
@@ -79,8 +56,8 @@ namespace eagle::dasm
         
         std::vector<basic_block_ptr> blocks;
 
-        std::pair<codec::dec::inst_info, uint8_t> decode_current() override;
-        std::vector<branch_info_t> get_branches() override;
+        std::pair<codec::dec::inst_info, uint8_t> decode_instruction(uint64_t rva) override;
+        std::vector<branch_info_t> get_branches(uint64_t rva) override;
     };
 
     using segment_dasm_ptr = std::shared_ptr<segment_dasm>;

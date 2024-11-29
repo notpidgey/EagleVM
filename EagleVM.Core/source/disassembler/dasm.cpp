@@ -2,8 +2,8 @@
 
 namespace eagle::dasm
 {
-    segment_dasm::segment_dasm(const uint64_t rva_base, uint8_t* buffer, const size_t size): rva_base(rva_base), instruction_buffer(buffer),
-                                                                                             instruction_size(size)
+    segment_dasm::segment_dasm(const uint64_t rva_base, uint8_t* buffer, const size_t size):
+        rva_base(rva_base), instruction_buffer(buffer), instruction_size(size)
     {
     }
 
@@ -22,11 +22,9 @@ namespace eagle::dasm
                 const uint32_t layer_rva = explore_queue.front();
                 explore_queue.pop();
 
-                set_current_rva(layer_rva);
-
                 // check if we are in the middle of an already existing block
                 // if so, we split up the block and we just continue
-                for (auto& created_block : collected_blocks)
+                for (const auto& created_block : collected_blocks)
                 {
                     if (layer_rva >= created_block->start_rva && layer_rva < created_block->end_rva_inc)
                     {
@@ -55,13 +53,13 @@ namespace eagle::dasm
                 }
 
                 auto block = std::make_shared<basic_block>();
-                block->start_rva = get_current_rva();
+                block->start_rva = layer_rva;
 
+                uint32_t current_rva = layer_rva;
                 while (true)
                 {
                     // we must do a check to see if our rva is at some already existing block,
                     // if so, we are going to end this block
-                    const auto current_rva = get_current_rva();
                     for (const auto& created_block : collected_blocks)
                     {
                         if (current_rva >= created_block->start_rva && current_rva < created_block->end_rva_inc)
@@ -72,26 +70,36 @@ namespace eagle::dasm
                         }
                     }
 
-                    auto [decode_info, inst_size] = decode_current();
+                    auto [decode_info, inst_size] = decode_instruction(current_rva);
                     block->decoded_insts.push_back(decode_info);
-
-                    set_current_rva(get_current_rva() + inst_size);
 
                     if (decode_info.instruction.meta.branch_type != ZYDIS_BRANCH_TYPE_NONE)
                     {
                         // branching instruction encountered
-                        auto branches = get_branches();
+                        auto branches = get_branches(current_rva);
                         for (auto& [is_resolved, is_ret, target_rva] : branches)
                             if (is_resolved)
                                 explore_queue.push(target_rva);
 
                         break;
                     }
+
+                    current_rva += inst_size;
                 }
 
-                block->end_rva_inc = get_current_rva();
+                block->end_rva_inc = current_rva;
                 collected_blocks.push_back(block);
             }
+        }
+
+        // i will just say, this is an insane way to do it,
+        // but keeping up with these during analysis is a bit annoying
+        // and im lazy, so this will not be getting changed until i care
+        // todo: above rant
+        for (const auto& block : collected_blocks)
+        {
+            const auto end_inst = block->end_rva_inc - block->decoded_insts.back().instruction.length;
+            block->branches = get_branches(end_inst);
         }
 
         return collected_blocks;
@@ -113,23 +121,23 @@ namespace eagle::dasm
         return blocks;
     }
 
-    std::pair<codec::dec::inst_info, uint8_t> segment_dasm::decode_current()
+    std::pair<codec::dec::inst_info, uint8_t> segment_dasm::decode_instruction(const uint64_t rva)
     {
         codec::dec::inst_info inst = codec::get_instruction(
             instruction_buffer,
             instruction_size,
-            get_current_rva() - rva_base
+            rva - rva_base
         );
 
         return { inst, inst.instruction.length };
     }
 
-    std::vector<branch_info_t> segment_dasm::get_branches()
+    std::vector<branch_info_t> segment_dasm::get_branches(uint64_t rva)
     {
         auto [instruction, operands] = codec::get_instruction(
             instruction_buffer,
             instruction_size,
-            get_current_rva() - rva_base
+            rva - rva_base
         );
 
         std::vector<branch_info_t> branches;
@@ -146,7 +154,7 @@ namespace eagle::dasm
 
         if (is_jmp_or_jcc(static_cast<codec::mnemonic>(instruction.mnemonic)))
         {
-            auto [target, op_idx] = codec::calc_relative_rva(instruction, operands, get_current_rva());
+            auto [target, op_idx] = codec::calc_relative_rva(instruction, operands, rva);
             branches.push_back(branch_info_t{
                 op_idx != -1,
                 false,
@@ -160,7 +168,7 @@ namespace eagle::dasm
         branches.push_back(branch_info_t{
             true,
             false,
-            get_current_rva() + instruction.length
+            rva + instruction.length
         });
 
         return branches;

@@ -2,18 +2,19 @@
 #include "eaglevm-core/codec/zydis_defs.h"
 #include "eaglevm-core/compiler/code_container.h"
 
-#include "models/block_end_reason.h"
-#include "models/block_jump_location.h"
+#include "eaglevm-core/disassembler/models/block_end_reason.h"
+#include "eaglevm-core/disassembler/models/block_jump_location.h"
+#include "eaglevm-core/disassembler/models/branch_info.h"
 
 namespace eagle::dasm
 {
-    class basic_block
+    struct basic_block
     {
-    public:
         uint64_t start_rva;
         uint64_t end_rva_inc;
 
         codec::decode_vec decoded_insts;
+        std::vector<branch_info_t> branches;
 
         basic_block();
 

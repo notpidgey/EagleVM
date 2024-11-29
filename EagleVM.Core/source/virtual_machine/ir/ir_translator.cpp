@@ -3,6 +3,7 @@
 #include <intrin.h>
 #include <ranges>
 #include <unordered_set>
+#include <utility>
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
@@ -11,13 +12,13 @@
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/disassembler/analysis/liveness.h"
-#include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/disassembler/dasm.h"
 
 namespace eagle::ir
 {
-    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness)
+    ir_translator::ir_translator(const dasm::segment_dasm_ptr& seg_dasm, dasm::analysis::liveness* liveness)
     {
-        dasm = seg_dasm;
+        dasm = std::move(seg_dasm);
         dasm_liveness = liveness;
     }
 
@@ -645,16 +646,21 @@ namespace eagle::ir
         branch_info info = { };
 
         const auto bb = dasm->get_block(rva);
+        auto branches = bb->branches;
+
         switch (bb->get_end_reason())
         {
             case dasm::block_jump:
             case dasm::block_end:
             {
-                auto [target, type] = dasm->get_jump(bb);
-                if (type == dasm::jump_outside_segment)
-                    info.fallthrough_branch = target;
+                // for both of these conditions, there will only be one branch
+                VM_ASSERT(branches.size() == 1, "for the following condition, only one branch must be present");
+
+                const auto block = dasm->get_block(branches[0].target_rva);
+                if (block == nullptr)
+                    info.fallthrough_branch = branches[0].target_rva;
                 else
-                    info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                    info.fallthrough_branch = bb_map[block]->head;
 
                 info.exit_condition = exit_condition::jmp;
                 info.inverted_condition = false;
@@ -662,22 +668,24 @@ namespace eagle::ir
             }
             case dasm::block_conditional_jump:
             {
+                VM_ASSERT(branches.size() == 2, "for the following condition, only two branches must be present");
+
                 // case 1 - condition succeed
                 {
-                    auto [target, type] = dasm->get_jump(bb);
-                    if (type == dasm::jump_outside_segment)
-                        info.conditional_branch = target;
+                    const auto block = dasm->get_block(branches[0].target_rva);
+                    if (block == nullptr)
+                        info.conditional_branch = branches[0].target_rva;
                     else
-                        info.conditional_branch = bb_map[dasm->get_block(target)]->head;
+                        info.conditional_branch = bb_map[block]->head;
                 }
 
                 // case 2 - fall through
                 {
-                    auto [target, type] = dasm->get_jump(bb, true);
-                    if (type == dasm::jump_outside_segment)
-                        info.fallthrough_branch = target;
+                    const auto block = dasm->get_block(branches[1].target_rva);
+                    if (block == nullptr)
+                        info.fallthrough_branch = branches[1].target_rva;
                     else
-                        info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                        info.fallthrough_branch = bb_map[block]->head;
                 }
 
                 const auto& [instruction, _] = bb->decoded_insts.back();
