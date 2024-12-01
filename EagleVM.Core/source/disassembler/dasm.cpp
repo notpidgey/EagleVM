@@ -173,6 +173,22 @@ namespace eagle::dasm
         return blocks;
     }
 
+    std::string segment_dasm::to_string() const
+    {
+        std::stringstream str;
+        str << "[segment_dasm]";
+        str << "\n    rva_base: " << std::hex << rva_base;
+        str << "\n    instruction_buffer: " << std::hex << instruction_buffer;
+        str << "\n    instruction_size: " << std::hex << instruction_size;
+
+        return str.str();
+    }
+
+    bool segment_dasm::operator==(const segment_dasm& other) const
+    {
+        return rva_base == other.rva_base && instruction_buffer == other.instruction_buffer && rva_base == other.rva_base;
+    }
+
     std::pair<codec::dec::inst_info, uint8_t> segment_dasm::decode_instruction(const uint64_t rva)
     {
         codec::dec::inst_info inst = codec::get_instruction(

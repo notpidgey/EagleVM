@@ -77,6 +77,12 @@ namespace eagle::dasm
         /// @return basic blocks accumulated in the instance of the generation
         std::vector<basic_block_ptr>& get_blocks();
 
+        /// @return string state of the disassembly instance
+        [[nodiscard]] std::string to_string() const;
+
+        /// @return true if both instances are equal, ignoring state of created blocks
+        bool operator==(const segment_dasm&) const;
+
     private:
         uint64_t rva_base;
         uint8_t* instruction_buffer;
