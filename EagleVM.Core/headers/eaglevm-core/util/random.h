@@ -8,6 +8,7 @@ namespace eagle::util
     {
     public:
         std::mt19937 gen{ };
+        uint64_t seed;
 
         ran_device();
         static ran_device& get();

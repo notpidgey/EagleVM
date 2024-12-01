@@ -287,6 +287,7 @@ int main(int argc, char* argv[])
     pe::pe_generator generator(parser);
     generator.load_parser();
 
+    std::printf("\n[+] using random seed %llu", util::get_ran_device().seed);
     std::printf("\n[>] generating virtualized code...\n\n");
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
@@ -295,6 +296,7 @@ int main(int argc, char* argv[])
 
     asmb::section_manager vm_section(true);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
+
 
     codec::setup_decoder();
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end

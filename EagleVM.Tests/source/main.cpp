@@ -276,6 +276,8 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_vm_gpr_order = false;
     machine_settings->shuffle_vm_xmm_order = false;
 
+    spdlog::get("console")->info("using random seed {}", util::get_ran_device().seed);
+
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
