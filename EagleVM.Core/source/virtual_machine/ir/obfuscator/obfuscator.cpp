@@ -52,6 +52,9 @@ namespace eagle::ir
         std::shared_ptr<trie_node_t> root_node = std::make_shared<trie_node_t>(0);
         for (const block_ptr& block : blocks)
         {
+            if (block->get_block_state() != vm_block)
+                continue;
+
             for (int i = 0; i < block->size(); i++)
                 root_node->add_children(block, i);
         }
@@ -147,6 +150,7 @@ namespace eagle::ir
 
             root_node = std::make_shared<trie_node_t>(0);
             for (const block_ptr& block : blocks)
+                if (block->get_block_state() == vm_block)
                 for (int i = 0; i < block->size(); i++)
                     root_node->add_children(block, i);
         }
