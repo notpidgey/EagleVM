@@ -131,9 +131,22 @@ namespace eagle::dasm
         return collected_blocks;
     }
 
-    basic_block_ptr segment_dasm::dump_section(uint64_t rva_begin, uint64_t rva_end)
+    basic_block_ptr segment_dasm::dump_section(uint64_t rva_begin, const uint64_t rva_end)
     {
+        basic_block_ptr block = std::make_shared<basic_block>();
+        while (rva_begin < rva_end)
+        {
+            codec::dec::inst_info inst = codec::get_instruction(
+                instruction_buffer,
+                instruction_size,
+                rva_begin - rva_base
+            );
 
+            block->decoded_insts.push_back(inst);
+            rva_begin += inst.instruction.length;
+        }
+
+        return block;
     }
 
     basic_block_ptr segment_dasm::get_block(const uint32_t rva, bool inclusive)
@@ -150,7 +163,6 @@ namespace eagle::dasm
                 if (rva == block->start_rva)
                     return block;
             }
-
         }
 
         return nullptr;

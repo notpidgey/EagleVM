@@ -25,7 +25,7 @@ namespace eagle::dasm::analysis
                     if (!branch.is_resolved)
                         return std::nullopt;
 
-                    if (auto val = segment->get_block(branch.target_rva))
+                    if (auto val = segment->get_block(branch.target_rva, false))
                         return val;
 
                     return std::nullopt;

@@ -198,7 +198,7 @@ namespace eagle::ir
 
                 auto next_block_rva = bb->start_rva + bb->get_block_size();
 
-                dasm::basic_block_ptr target = dasm->get_block(next_block_rva);
+                dasm::basic_block_ptr target = dasm->get_block(next_block_rva, false);
                 if (target == nullptr)
                     target_exit = next_block_rva;
                 else
@@ -668,7 +668,7 @@ namespace eagle::ir
                 // for both of these conditions, there will only be one branch
                 VM_ASSERT(branches.size() == 1, "for the following condition, only one branch must be present");
 
-                const auto block = dasm->get_block(branches[0].target_rva);
+                const auto block = dasm->get_block(branches[0].target_rva, false);
                 if (block == nullptr)
                     info.fallthrough_branch = branches[0].target_rva;
                 else
@@ -684,7 +684,7 @@ namespace eagle::ir
 
                 // case 1 - condition succeed
                 {
-                    const auto block = dasm->get_block(branches[0].target_rva);
+                    const auto block = dasm->get_block(branches[0].target_rva, false);
                     if (block == nullptr)
                         info.conditional_branch = branches[0].target_rva;
                     else
@@ -693,7 +693,7 @@ namespace eagle::ir
 
                 // case 2 - fall through
                 {
-                    const auto block = dasm->get_block(branches[1].target_rva);
+                    const auto block = dasm->get_block(branches[1].target_rva, false);
                     if (block == nullptr)
                         info.fallthrough_branch = branches[1].target_rva;
                     else

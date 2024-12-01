@@ -401,7 +401,7 @@ int main(int argc, char* argv[])
         // therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
         for (const auto& preopt_block : preopt)
-            if (preopt_block->original_block == dasm->get_block(rva_inst_begin))
+            if (preopt_block->original_block == dasm->get_block(rva_inst_begin, false))
                 entry_block = preopt_block;
 
         VM_ASSERT(entry_block != nullptr, "could not find matching preopt block for entry block");
