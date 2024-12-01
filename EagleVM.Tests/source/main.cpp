@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <future>
 #include <vector>
-#include <eaglevm-core/disassembler/disassembler.h>
+#include <eaglevm-core/disassembler/dasm.h>
 
 #include "nlohmann/json.hpp"
 
@@ -91,8 +91,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
     codec::decode_vec instructions = codec::get_instructions(instruction_data.data(), instruction_data.size());
 
-    dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), 0, instruction_data.size());
-    dasm->generate_blocks();
+    dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(0, instruction_data.data(), instruction_data.size());
+    dasm->explore_blocks(0);
 
     std::shared_ptr<ir::ir_translator> ir_trans = std::make_shared<ir::ir_translator>(dasm);
     ir::preopt_block_vec preopt = ir_trans->translate();
@@ -107,7 +107,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
     for (const std::shared_ptr<ir::preopt_block>& preopt_block : preopt)
-        if (preopt_block->original_block == dasm->get_block(0))
+        if (preopt_block->original_block == dasm->get_block(0, false))
             entry_block = preopt_block;
 
     assert(entry_block != nullptr, "could not find matching preopt block for entry block");
