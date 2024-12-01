@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <filesystem>
 #include <ranges>
 
 #include "eaglevm-core/util/util.h"
@@ -575,7 +576,9 @@ int main(int argc, char* argv[])
         generator.add_custom_pdb(packer_section.virtual_address + packer_pdb_offset, packer_section.ptr_raw_data + packer_pdb_offset, size);
     }
 
-    generator.save_file("EagleVMSandboxProtected.exe");
+    std::filesystem::path path(executable);
+
+    generator.save_file(path.stem().string() + "_protected" + path.extension().string());
     std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");
 
     return 0;
