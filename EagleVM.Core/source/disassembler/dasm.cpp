@@ -131,6 +131,11 @@ namespace eagle::dasm
         return collected_blocks;
     }
 
+    basic_block_ptr segment_dasm::dump_section(uint64_t rva_begin, uint64_t rva_end)
+    {
+
+    }
+
     basic_block_ptr segment_dasm::get_block(const uint32_t rva, bool inclusive)
     {
         for (auto block : blocks)
