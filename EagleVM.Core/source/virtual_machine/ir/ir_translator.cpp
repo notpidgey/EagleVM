@@ -596,6 +596,9 @@ namespace eagle::ir
                             request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                                 mem.size));
 
+                        if (decoded_inst.operands[i].mem.segment == gs)
+                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS;
+
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_IMMEDIATE:
@@ -614,6 +617,12 @@ namespace eagle::ir
             for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
             {
                 const auto op = encode_request.operands[i];
+                //if (decoded_inst.operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                //{
+                //    if (decoded_inst.operands[i].mem.segment != ZYDIS_REGISTER_NONE)
+                //        __debugbreak();
+                //}
+
                 switch (op.type)
                 {
                     case ZYDIS_OPERAND_TYPE_REGISTER:
@@ -626,6 +635,9 @@ namespace eagle::ir
                         auto& mem = op.mem;
                         request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                             mem.size));
+
+                        if (decoded_inst.operands[i].mem.segment == gs)
+                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS; 
 
                         break;
                     }
