@@ -247,7 +247,7 @@ namespace eagle::codec
 
     enc::req decode_to_encode(const dec::inst_info& decode)
     {
-        enc::req encode_request;
+        enc::req encode_request{};
         ZydisEncoderDecodedInstructionToEncoderRequest(
             &decode.instruction, decode.operands,
             decode.instruction.operand_count_visible, &encode_request);

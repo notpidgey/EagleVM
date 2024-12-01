@@ -166,6 +166,7 @@ namespace eagle::codec::encoder
         {
             enc::req req = { };
             req.mnemonic = static_cast<zyids_mnemonic>(mnemonic);
+            req.prefixes = prefixes;
 
             // call encode_op for each operand
             for (const auto& operand_variant : operands)
@@ -181,7 +182,9 @@ namespace eagle::codec::encoder
 
         uint32_t uuid;
         mnemonic mnemonic;
+
         std::vector<std::variant<mem_op, reg_op, imm_op, imm_label_operand>> operands;
+        uint64_t prefixes;
 
     private:
         static void encode_op(enc::req& req, const mem_op& mem, uint64_t rva)

@@ -637,7 +637,7 @@ namespace eagle::ir
                             mem.size));
 
                         if (decoded_inst.operands[i].mem.segment == gs)
-                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS; 
+                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS;
 
                         break;
                     }
