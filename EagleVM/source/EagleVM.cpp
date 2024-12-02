@@ -580,8 +580,9 @@ int main(int argc, char* argv[])
 
     std::filesystem::path path(executable);
 
-    generator.save_file(path.stem().string() + "_protected" + path.extension().string());
-    std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");
+    std::string target_file_name = path.stem().string() + "_protected" + path.extension().string();
+    generator.save_file(target_file_name);
+    std::printf("\n[+] generated output file -> %s\n", target_file_name.c_str());
 
     return 0;
 }
