@@ -35,16 +35,29 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
     "add",
-    "dec",
+    "sub",
+
     "inc",
+    "dec",
+
+    "push",
+    "pop",
+
     "lea",
     "mov",
     "movsx",
-    "sub",
-    "cmp"
+
+    "cmp",
+
+    "xor",
+    "shl",
+    "shr",
 };
 
 using namespace eagle;
+
+std::atomic_uint32_t total_passed = 0;
+std::atomic_uint32_t total_failed = 0;
 
 void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohmann::basic_json<>& test, std::atomic_uint32_t* passed,
     std::atomic_uint32_t* failed, uint32_t task_id)
@@ -320,11 +333,18 @@ int main(int argc, char* argv[])
 
         file_logger->flush();
         spdlog::drop("test");
+
+        total_passed += passed;
+        total_failed += failed;
     }
 
     run_container::destroy_veh();
 
-    spdlog::get("console")->info("concluded all tests");
+    spdlog::get("console")->info("total tests: {}", total_passed + total_failed);
+    spdlog::get("console")->info("total passed: {}", total_passed.load());
+    spdlog::get("console")->info("total failed: {}", total_failed.load());
+    float total_success_rate = static_cast<float>(total_passed) / (total_passed + total_failed) * 100;
+    spdlog::get("console")->info("total success rate: {:.2f}%", total_success_rate);
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)

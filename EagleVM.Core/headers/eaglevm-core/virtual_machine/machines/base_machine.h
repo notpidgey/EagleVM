@@ -47,6 +47,7 @@ namespace eagle::virt
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_dup_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_call_ptr& cmd) = 0;
         virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_ret_ptr& cmd) = 0;
+        virtual void handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_carry_ptr& cmd) = 0;
 
         void add_block_context(const std::vector<ir::block_ptr>& blocks);
         void add_block_context(const ir::block_ptr& block);

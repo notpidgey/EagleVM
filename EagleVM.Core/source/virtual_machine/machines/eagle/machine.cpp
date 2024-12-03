@@ -966,6 +966,25 @@ namespace eagle::virt::eg
         out.label(return_label);
     }
 
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_carry_ptr& cmd)
+    {
+        const auto pop_size = cmd->get_size();
+        const auto carry_size = cmd->get_move_size();
+        const auto pop_reg_size = to_reg_size(pop_size);
+
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        {
+            encode_builder& out = *out_container;
+
+            const auto temp = alloc_reg();
+            const auto temp_size = get_bit_version(temp, pop_reg_size);
+
+            out.make(m_mov, reg_op(temp_size), mem_op(VSP, 0, pop_reg_size))
+               .make(m_sub, reg_op(VSP), imm_op(carry_size))
+               .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_size));
+        }, pop_size, carry_size);
+    }
+
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_ret_ptr& cmd)
     {
         auto& out = *block;

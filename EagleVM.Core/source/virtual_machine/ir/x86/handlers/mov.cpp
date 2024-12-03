@@ -54,7 +54,7 @@ namespace eagle::ir::lifter
             case ZYDIS_OPERAND_TYPE_MEMORY:
             {
                 ir_size target_size = static_cast<ir_size>(first_op.size);
-                block->push_back(std::make_shared<cmd_mem_write>(target_size, target_size));
+                block->push_back(std::make_shared<cmd_mem_write>(target_size, target_size, true));
 
                 break;
             }

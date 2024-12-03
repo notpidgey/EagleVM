@@ -266,16 +266,19 @@ namespace eagle::ir::lifter
             {
                 block->push_back(std::make_shared<cmd_context_store>(reg));
             }
+
+            // clean up regs on stack due to handler leaving params
+            const ir_size target_size = static_cast<ir_size>(first_op.size);
+            block->push_back(std::make_shared<cmd_pop>(target_size));
+            block->push_back(std::make_shared<cmd_pop>(target_size));
         }
         else if (first_op.type == ZYDIS_OPERAND_TYPE_MEMORY)
         {
-            ir_size value_size = static_cast<ir_size>(first_op.size);
-            block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size));
-        }
+            // carry down result
 
-        // clean up regs on stack due to handler leaving params
-        const ir_size target_size = static_cast<ir_size>(first_op.size);
-        block->push_back(std::make_shared<cmd_pop>(target_size));
-        block->push_back(std::make_shared<cmd_pop>(target_size));
+            ir_size value_size = static_cast<ir_size>(first_op.size);
+            block->push_back(std::make_shared<cmd_carry>(value_size, operands[1].size / 8 * 2));
+            block->push_back(std::make_shared<cmd_mem_write>(value_size, value_size, true));
+        }
     }
 }
