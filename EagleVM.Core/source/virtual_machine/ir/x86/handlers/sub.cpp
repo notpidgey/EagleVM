@@ -45,6 +45,7 @@ namespace eagle::ir::handler
         block_builder builder;
         builder
             .add_sub(target_size, false, true)
+
             .add_context_rflags_load()
             .add_push(~affected_flags, ir_size::bit_64)
             .add_and(ir_size::bit_64)
@@ -266,6 +267,9 @@ namespace eagle::ir::lifter
             {
                 block->push_back(std::make_shared<cmd_context_store>(reg));
             }
+
+            if (reg == codec::rsp)
+                return;
 
             // clean up regs on stack due to handler leaving params
             const ir_size target_size = static_cast<ir_size>(first_op.size);

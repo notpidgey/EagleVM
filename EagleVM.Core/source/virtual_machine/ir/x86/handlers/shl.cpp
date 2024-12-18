@@ -182,6 +182,9 @@ namespace eagle::ir::lifter
                 block->push_back(std::make_shared<cmd_context_store>(reg));
             }
 
+            if (reg == codec::rsp)
+                return;
+
             // clean up regs on stack due to handler leaving params
             const ir_size target_size = static_cast<ir_size>(first_op.size);
             block->push_back(std::make_shared<cmd_pop>(target_size));
