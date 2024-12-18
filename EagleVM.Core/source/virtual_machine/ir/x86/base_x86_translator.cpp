@@ -90,7 +90,7 @@ namespace eagle::ir::lifter
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
             return translate_status::unsupported;
 
-        if (op_mem.segment != ZYDIS_REGISTER_NONE)
+        if (op_mem.segment != ZYDIS_REGISTER_SS)
             return translate_status::unsupported;
 
         // [base + index * scale + disp]
