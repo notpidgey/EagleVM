@@ -20,3 +20,4 @@
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_flags_load.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_cf.h"
+#include "eaglevm-core/virtual_machine/ir/commands/cmd_carry.h"

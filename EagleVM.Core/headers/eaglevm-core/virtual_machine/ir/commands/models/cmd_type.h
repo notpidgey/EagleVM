@@ -18,6 +18,7 @@ namespace eagle::ir
 
         vm_push,
         vm_pop,
+        vm_carry,
 
         vm_mem_read,
         vm_mem_write,

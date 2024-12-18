@@ -20,7 +20,7 @@ namespace eagle::ir::lifter
         std::ranges::copy(decode.operands, std::begin(operands));
     }
 
-    bool base_x86_translator::translate_to_il(uint64_t original_rva, x86_cpu_flag flags)
+    bool base_x86_translator::translate_to_il(uint64_t original_rva, const x86_cpu_flag flags)
     {
         for (uint8_t i = 0; i < inst.operand_count_visible; i++)
         {
@@ -80,12 +80,17 @@ namespace eagle::ir::lifter
     translate_status base_x86_translator::encode_operand(codec::dec::op_reg op_reg, uint8_t idx)
     {
         block->push_back(std::make_shared<cmd_context_load>(static_cast<codec::reg>(op_reg.value)));
+        stack_displacement += static_cast<uint16_t>(TOB(operands[idx].size));
+
         return translate_status::success;
     }
 
     translate_status base_x86_translator::encode_operand(codec::dec::op_mem op_mem, const uint8_t idx)
     {
         if (op_mem.type != ZYDIS_MEMOP_TYPE_MEM && op_mem.type != ZYDIS_MEMOP_TYPE_AGEN)
+            return translate_status::unsupported;
+
+        if (op_mem.segment != ZYDIS_REGISTER_SS)
             return translate_status::unsupported;
 
         // [base + index * scale + disp]
@@ -164,7 +169,7 @@ namespace eagle::ir::lifter
             case translate_mem_result::value:
             {
                 // by default, this will be dereferenced and we will get the value at the address,
-                const ir_size target_size = static_cast<ir_size>(inst.operand_width);
+                const ir_size target_size = static_cast<ir_size>(operands[idx].size);
                 block->push_back(std::make_shared<cmd_mem_read>(target_size));
 
                 stack_displacement += static_cast<uint16_t>(target_size);

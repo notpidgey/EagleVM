@@ -15,15 +15,18 @@ namespace eagle::dasm::analysis
         while (changed)
         {
             changed = false;
-            for (auto i = segment->blocks.size(); i--;)
+            for (auto i = segment->get_blocks().size(); i--;)
             {
-                const basic_block_ptr& block = segment->blocks[i];
+                const basic_block_ptr& block = segment->get_blocks()[i];
 
-                auto search_jump = [this](const std::pair<uint64_t, block_jump_location> location) ->
+                auto search_jump = [this](const branch_info_t branch) ->
                     std::optional<basic_block_ptr>
                 {
-                    if (location.second == jump_inside_segment)
-                        return segment->get_block(location.first);
+                    if (!branch.is_resolved)
+                        return std::nullopt;
+
+                    if (auto val = segment->get_block(branch.target_rva, false))
+                        return val;
 
                     return std::nullopt;
                 };
@@ -33,11 +36,11 @@ namespace eagle::dasm::analysis
                 switch (block->get_end_reason())
                 {
                     case block_conditional_jump:
-                        if (auto search = search_jump(segment->get_jump(block, false)))
+                        if (auto search = search_jump(block->branches.front()))
                             new_out |= live[search.value()].first;
                     case block_end:
                     case block_jump:
-                        if (auto search = search_jump(segment->get_jump(block, true)))
+                        if (auto search = search_jump(block->branches.back()))
                             new_out |= live[search.value()].first;
                         break;
                 }
@@ -101,7 +104,7 @@ namespace eagle::dasm::analysis
 
     void liveness::compute_blocks_use_def()
     {
-        for (auto& block : segment->blocks)
+        for (auto& block : segment->get_blocks())
         {
             liveness_info use, def = { };
             for (const auto& decoded_inst : block->decoded_insts)

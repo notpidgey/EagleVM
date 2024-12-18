@@ -7,5 +7,6 @@ namespace eagle::dasm
         block_end,
         block_jump,
         block_conditional_jump,
+        block_ret,
     };
 }

@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <future>
 #include <vector>
-#include <eaglevm-core/disassembler/disassembler.h>
+#include <eaglevm-core/disassembler/dasm.h>
 
 #include "nlohmann/json.hpp"
 
@@ -35,16 +35,29 @@ uint64_t* get_value(CONTEXT& new_context, std::string& reg);
 // imul and mul tests are cooked
 const std::string inclusive_tests[] = {
     "add",
-    "dec",
+    "sub",
+
     "inc",
+    "dec",
+
+    "push",
+    "pop",
+
     "lea",
     "mov",
     "movsx",
-    "sub",
-    "cmp"
+
+    "cmp",
+
+    "xor",
+    "shl",
+    "shr",
 };
 
 using namespace eagle;
+
+std::atomic_uint32_t total_passed = 0;
+std::atomic_uint32_t total_failed = 0;
 
 void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohmann::basic_json<>& test, std::atomic_uint32_t* passed,
     std::atomic_uint32_t* failed, uint32_t task_id)
@@ -91,8 +104,8 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
 
     codec::decode_vec instructions = codec::get_instructions(instruction_data.data(), instruction_data.size());
 
-    dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(std::move(instructions), 0, instruction_data.size());
-    dasm->generate_blocks();
+    dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(0, instruction_data.data(), instruction_data.size());
+    dasm->explore_blocks(0);
 
     std::shared_ptr<ir::ir_translator> ir_trans = std::make_shared<ir::ir_translator>(dasm);
     ir::preopt_block_vec preopt = ir_trans->translate();
@@ -107,7 +120,7 @@ void process_entry(const virt::eg::settings_ptr& machine_settings, const nlohman
     // we want to prevent the vmenter from being removed from the first block, therefore we mark it as an external call
     ir::preopt_block_ptr entry_block = nullptr;
     for (const std::shared_ptr<ir::preopt_block>& preopt_block : preopt)
-        if (preopt_block->original_block == dasm->get_block(0))
+        if (preopt_block->original_block == dasm->get_block(0, false))
             entry_block = preopt_block;
 
     assert(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -276,6 +289,8 @@ int main(int argc, char* argv[])
     machine_settings->shuffle_vm_gpr_order = false;
     machine_settings->shuffle_vm_xmm_order = false;
 
+    spdlog::get("console")->info("using random seed {}", util::get_ran_device().seed);
+
     // loop each file that test_data_path contains
     for (const auto& entry : std::filesystem::directory_iterator(test_data_path))
     {
@@ -318,11 +333,18 @@ int main(int argc, char* argv[])
 
         file_logger->flush();
         spdlog::drop("test");
+
+        total_passed += passed;
+        total_failed += failed;
     }
 
     run_container::destroy_veh();
 
-    spdlog::get("console")->info("concluded all tests");
+    spdlog::get("console")->info("total tests: {}", total_passed + total_failed);
+    spdlog::get("console")->info("total passed: {}", total_passed.load());
+    spdlog::get("console")->info("total failed: {}", total_failed.load());
+    float total_success_rate = static_cast<float>(total_passed) / (total_passed + total_failed) * 100;
+    spdlog::get("console")->info("total success rate: {:.2f}%", total_success_rate);
 }
 
 reg_overwrites build_writes(nlohmann::json& inputs)

@@ -100,6 +100,9 @@ namespace eagle::virt::eg
 
         for (const reg& gpr : gprs)
         {
+            if (gpr == rsp)
+                continue;
+
             auto [displacement, _] = regs->get_stack_displacement(gpr);
 
             scope_register_manager scope = reg_64_container->create_scope();

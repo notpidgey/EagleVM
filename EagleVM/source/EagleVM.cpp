@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <filesystem>
 #include <ranges>
+
+#include "eaglevm-core/util/util.h"
 
 #include "eaglevm-core/compiler/section_manager.h"
 #include "eaglevm-core/pe/packer/pe_packer.h"
@@ -8,7 +11,7 @@
 #include <linuxpe>
 
 #include "eaglevm-core/disassembler/analysis/liveness.h"
-#include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/disassembler/dasm.h"
 #include "eaglevm-core/pe/models/stub.h"
 #include "eaglevm-core/virtual_machine/ir/ir_translator.h"
 #include "eaglevm-core/virtual_machine/ir/obfuscator/obfuscator.h"
@@ -75,14 +78,11 @@ void print_graphviz(const std::vector<ir::block_ptr>& blocks, const ir::block_pt
 
 void print_ir(const std::vector<ir::block_ptr>& blocks, const ir::block_ptr& entry)
 {
-    for (auto& translated_block : blocks)
+    for (const ir::block_ptr& translated_block : blocks)
     {
         std::printf("block 0x%x %s\n", translated_block->block_id, translated_block == entry ? "(entry)" : "");
-        for (auto j = 0; j < translated_block->size(); j++)
-        {
-            const auto inst = translated_block->at(j);
+        for (const auto& inst : *translated_block)
             std::printf("\t%s\n", inst->to_string().c_str());
-        }
     }
 }
 
@@ -188,8 +188,8 @@ int main(int argc, char* argv[])
 
         for (auto& [start, end] : marked_function)
         {
-            vm_iat_calls.emplace_back(pe::stub_import::vm_begin, start);
-            vm_iat_calls.emplace_back(pe::stub_import::vm_end, end);
+            vm_iat_calls.emplace_back(pe::stub_import::vm_begin, parser->rva_to_fo(start));
+            vm_iat_calls.emplace_back(pe::stub_import::vm_end, parser->rva_to_fo(end));
         }
     }
     else
@@ -287,6 +287,7 @@ int main(int argc, char* argv[])
     pe::pe_generator generator(parser);
     generator.load_parser();
 
+    std::printf("\n[+] using random seed %llu", util::get_ran_device().seed);
     std::printf("\n[>] generating virtualized code...\n\n");
 
     std::vector<std::pair<uint32_t, uint32_t>> va_nop;
@@ -295,6 +296,7 @@ int main(int argc, char* argv[])
 
     asmb::section_manager vm_section(true);
     std::vector<std::shared_ptr<virt::base_machine>> machines_used;
+
 
     codec::setup_decoder();
     for (int c = 0; c < vm_iat_calls.size(); c += 2) // i1 = vm_begin, i2 = vm_end
@@ -321,15 +323,14 @@ int main(int argc, char* argv[])
          * but this creates sort of a mess which i dont really like
          */
 
-        codec::decode_vec instructions = codec::get_instructions(pinst_begin, pinst_end - pinst_begin);
-        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(instructions, rva_inst_begin, rva_inst_end);
-        dasm->generate_blocks();
+        dasm::segment_dasm_ptr dasm = std::make_shared<dasm::segment_dasm>(rva_inst_begin, pinst_begin, rva_inst_end - rva_inst_begin);
+        std::vector result = dasm->explore_blocks(rva_inst_begin);
 
         dasm::analysis::liveness seg_live(dasm);
         seg_live.compute_blocks_use_def();
-        seg_live.analyze_cross_liveness(dasm->blocks.back());
+        seg_live.analyze_cross_liveness(result.back());
 
-        for (auto& block : dasm->blocks)
+        for (auto& block : dasm->get_blocks())
         {
             printf("\nblock 0x%llx-0x%llx\n", block->start_rva, block->end_rva_inc);
 
@@ -382,7 +383,7 @@ int main(int argc, char* argv[])
             }
         }
 
-        std::printf("[>] dasm found %llu basic blocks\n", dasm->blocks.size());
+        std::printf("[>] dasm found %llu basic blocks\n", dasm->get_blocks().size());
         std::cout << std::endl;
 
         std::shared_ptr ir_trans = std::make_shared<ir::ir_translator>(dasm, &seg_live);
@@ -402,7 +403,7 @@ int main(int argc, char* argv[])
         // therefore we mark it as an external call
         ir::preopt_block_ptr entry_block = nullptr;
         for (const auto& preopt_block : preopt)
-            if (preopt_block->original_block == dasm->get_block(rva_inst_begin))
+            if (preopt_block->original_block == dasm->get_block(rva_inst_begin, false))
                 entry_block = preopt_block;
 
         VM_ASSERT(entry_block != nullptr, "could not find matching preopt block for entry block");
@@ -577,8 +578,11 @@ int main(int argc, char* argv[])
         generator.add_custom_pdb(packer_section.virtual_address + packer_pdb_offset, packer_section.ptr_raw_data + packer_pdb_offset, size);
     }
 
-    generator.save_file("EagleVMSandboxProtected.exe");
-    std::printf("\n[+] generated output file -> EagleVMSandboxProtected.exe\n");
+    std::filesystem::path path(executable);
+
+    std::string target_file_name = path.stem().string() + "_protected" + path.extension().string();
+    generator.save_file(target_file_name);
+    std::printf("\n[+] generated output file -> %s\n", target_file_name.c_str());
 
     return 0;
 }

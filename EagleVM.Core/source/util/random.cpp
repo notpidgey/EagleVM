@@ -10,10 +10,12 @@ namespace eagle::util
     ran_device::ran_device()
     {
 #ifdef _DEBUG
+        seed = 0xDEADBEEF;
         gen.seed(0xDEADBEEF);
 #else
         std::random_device rd{};
-        gen.seed(rd());
+        seed = rd();
+        gen.seed(seed);
 #endif
     }
 

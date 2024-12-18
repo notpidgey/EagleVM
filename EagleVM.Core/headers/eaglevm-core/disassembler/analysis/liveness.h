@@ -3,7 +3,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/disassembler/dasm.h"
 #include "eaglevm-core/disassembler/analysis/models/info.h"
 
 #include "eaglevm-core/util/assert.h"

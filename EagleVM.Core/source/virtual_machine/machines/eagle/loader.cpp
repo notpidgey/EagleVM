@@ -362,7 +362,7 @@ namespace eagle::virt::eg
 
             const uint16_t start = std::get<0>(source_range);
             const uint16_t end = std::get<1>(source_range);
-            if (std::max(start, min_bit) <= std::min(end, max_bit))
+            if (min_bit < end && start < max_bit)
                 ranges_required.push_back(mapping);
         }
 

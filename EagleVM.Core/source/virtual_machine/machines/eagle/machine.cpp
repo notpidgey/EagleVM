@@ -67,6 +67,9 @@ namespace eagle::virt::eg
         for (size_t i = 0; i < command_count; i++)
         {
             const ir::base_command_ptr command = block->at(i);
+            //if (command->unique_id == 11)
+            //    __debugbreak();
+
             dispatch_handle_cmd(code, command);
         }
 
@@ -92,44 +95,74 @@ namespace eagle::virt::eg
         }
         else
         {
-            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+            if (get_bit_version(load_reg, bit_64) == rsp)
             {
-                encode_builder& out = *out_container;
+                create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
 
-                const auto size = get_reg_size(load_reg);
+                    const auto size = get_reg_size(load_reg);
+                    out
+                        // .make(m_int3)
+                        .make(m_mov, mem_op(VSP, -(size / 8), size), reg_op(get_bit_version(VSP, size)))
+                        .make(m_sub, reg_op(VSP), imm_op(size));
+                }, load_reg);
+            }
+            else
+            {
+                create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+                {
+                    encode_builder& out = *out_container;
 
-                const auto output_reg_64 = alloc_reg();
-                const auto output_reg = get_bit_version(output_reg_64, size);
+                    const auto size = get_reg_size(load_reg);
 
-                const register_loader loader(regs, reg_64_container, reg_128_container);
-                loader.load_register(load_reg, output_reg_64, out);
+                    const auto output_reg_64 = alloc_reg();
+                    const auto output_reg = get_bit_version(output_reg_64, size);
 
-                out
-                    .make(m_sub, reg_op(VSP), imm_op(size))
-                    .make(m_mov, mem_op(VSP, 0, size), reg_op(output_reg));
-            }, load_reg);
+                    const register_loader loader(regs, reg_64_container, reg_128_container);
+                    loader.load_register(load_reg, output_reg_64, out);
+
+                    out
+                        .make(m_sub, reg_op(VSP), imm_op(size))
+                        .make(m_mov, mem_op(VSP, 0, size), reg_op(output_reg));
+                }, load_reg);
+            }
         }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_context_store_ptr& cmd)
     {
         const auto store_reg = cmd->get_reg();
-        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        if (get_bit_version(store_reg, bit_64) == rsp)
         {
-            encode_builder& out = *out_container;
+            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+            {
+                encode_builder& out = *out_container;
+                const auto size = get_reg_size(store_reg);
+                out
+                    // .make(m_int3)
+                    .make(m_mov, reg_op(get_bit_version(VSP, size)), mem_op(VSP, 0, size));
+            }, store_reg);
+        }
+        else
+        {
+            create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+            {
+                encode_builder& out = *out_container;
 
-            const auto size = get_reg_size(store_reg);
+                const auto size = get_reg_size(store_reg);
 
-            const auto output_reg_64 = alloc_reg();
-            const auto output_reg = get_bit_version(output_reg_64, size);
+                const auto output_reg_64 = alloc_reg();
+                const auto output_reg = get_bit_version(output_reg_64, size);
 
-            const register_loader loader(regs, reg_64_container, reg_128_container);
-            out
-                .make(m_mov, reg_op(output_reg), mem_op(VSP, 0, size))
-                .make(m_add, reg_op(VSP), imm_op(size));
+                const register_loader loader(regs, reg_64_container, reg_128_container);
+                out
+                    .make(m_mov, reg_op(output_reg), mem_op(VSP, 0, size))
+                    .make(m_add, reg_op(VSP), imm_op(size));
 
-            loader.store_register(store_reg, output_reg_64, out);
-        }, store_reg);
+                loader.store_register(store_reg, output_reg_64, out);
+            }, store_reg);
+        }
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_branch_ptr& cmd)
@@ -179,7 +212,7 @@ namespace eagle::virt::eg
                                .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_reg));
                         }
                         else
-                        VM_ASSERT("unimplemented exit result");
+                            VM_ASSERT("unimplemented exit result");
                     }, exit_result);
                 }
 
@@ -217,7 +250,7 @@ namespace eagle::virt::eg
                             out.make(m_jmp, imm_label_operand(label, true));
                         }
                         else
-                        VM_ASSERT("unimplemented exit result");
+                            VM_ASSERT("unimplemented exit result");
                     }, result);
                 };
 
@@ -439,7 +472,7 @@ namespace eagle::virt::eg
                 });
             }
             else
-            VM_ASSERT("deprecated command type");
+                VM_ASSERT("deprecated command type");
         }, push_value);
     }
 
@@ -450,17 +483,19 @@ namespace eagle::virt::eg
             encode_builder& out = *out_container;
 
             // prepare to pop flags from stack
-            out.make(m_sub, reg_op(rsp), imm_op(bit_64))
-               .make(m_popfq)
+            out
+                //.make(m_int3)
+                .make(m_sub, reg_op(rsp), imm_op(bit_64))
+                .make(m_popfq)
 
-               // set rsp to be vsp
-               .make(m_xchg, reg_op(VSP), reg_op(rsp))
+                // set rsp to be vsp
+                .make(m_xchg, reg_op(VSP), reg_op(rsp))
 
-               // push flags to virtual stack
-               .make(m_pushfq)
+                // push flags to virtual stack
+                .make(m_pushfq)
 
-               // reset rsp
-               .make(m_xchg, reg_op(VSP), reg_op(rsp));
+                // reset rsp
+                .make(m_xchg, reg_op(VSP), reg_op(rsp));
         });
     }
 
@@ -964,6 +999,25 @@ namespace eagle::virt::eg
 
         // execution after VM handler should end up here
         out.label(return_label);
+    }
+
+    void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_carry_ptr& cmd)
+    {
+        const auto pop_size = cmd->get_size();
+        const auto carry_size = cmd->get_move_size();
+        const auto pop_reg_size = to_reg_size(pop_size);
+
+        create_handler(default_create, block, cmd, [&](const asmb::code_container_ptr& out_container, const std::function<reg()>& alloc_reg)
+        {
+            encode_builder& out = *out_container;
+
+            const auto temp = alloc_reg();
+            const auto temp_size = get_bit_version(temp, pop_reg_size);
+
+            out.make(m_mov, reg_op(temp_size), mem_op(VSP, 0, pop_reg_size))
+               .make(m_sub, reg_op(VSP), imm_op(carry_size))
+               .make(m_mov, mem_op(VSP, 0, bit_64), reg_op(temp_size));
+        }, pop_size, carry_size);
     }
 
     void machine::handle_cmd(const asmb::code_container_ptr& block, const ir::cmd_ret_ptr& cmd)

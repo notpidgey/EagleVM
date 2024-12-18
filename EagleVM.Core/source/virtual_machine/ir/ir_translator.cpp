@@ -3,6 +3,7 @@
 #include <intrin.h>
 #include <ranges>
 #include <unordered_set>
+#include <utility>
 
 #include "eaglevm-core/virtual_machine/ir/block.h"
 #include "eaglevm-core/virtual_machine/ir/commands/cmd_x86_exec.h"
@@ -11,29 +12,29 @@
 
 #include "eaglevm-core/codec/zydis_helper.h"
 #include "eaglevm-core/disassembler/analysis/liveness.h"
-#include "eaglevm-core/disassembler/disassembler.h"
+#include "eaglevm-core/disassembler/dasm.h"
 
 namespace eagle::ir
 {
-    ir_translator::ir_translator(dasm::segment_dasm_ptr seg_dasm, dasm::analysis::liveness* liveness)
+    ir_translator::ir_translator(const dasm::segment_dasm_ptr& seg_dasm, dasm::analysis::liveness* liveness)
     {
-        dasm = seg_dasm;
+        dasm = std::move(seg_dasm);
         dasm_liveness = liveness;
     }
 
     std::vector<preopt_block_ptr> ir_translator::translate()
     {
-        // we want to initialzie the entire map with bb translates
-        for (dasm::basic_block_ptr block : dasm->blocks)
+        // we want to initialize the entire map with bb translates
+        for (const dasm::basic_block_ptr& block : dasm->get_blocks())
         {
-            const preopt_block_ptr vm_il = std::make_shared<preopt_block>();
+            const auto vm_il = std::make_shared<preopt_block>();
             vm_il->init(block);
 
             bb_map[block] = vm_il;
         }
 
         std::vector<preopt_block_ptr> result;
-        for (const dasm::basic_block_ptr& block : dasm->blocks)
+        for (const dasm::basic_block_ptr& block : dasm->get_blocks())
             result.push_back(translate_block_split(block));
 
         return result;
@@ -45,9 +46,9 @@ namespace eagle::ir
         if (bb->decoded_insts.empty())
             return block_info;
 
-        const block_ptr entry = block_info->head;
+        const block_ptr& entry = block_info->head;
         block_ptr current_block = nullptr;
-        const block_ptr exit = block_info->tail;
+        const block_ptr& exit = block_info->tail;
 
         //
         // entry
@@ -67,7 +68,7 @@ namespace eagle::ir
             auto decoded_inst = bb->decoded_insts[i];
             auto& [inst, ops] = decoded_inst;
 
-            constexpr std::array<codec::mnemonic, 1> ignored_mnemonics = { codec::m_nop };
+            constexpr std::array ignored_mnemonics = { codec::m_nop };
             if (std::ranges::find(ignored_mnemonics, static_cast<codec::mnemonic>(inst.mnemonic)) != ignored_mnemonics.end())
                 continue;
 
@@ -79,15 +80,8 @@ namespace eagle::ir
             // prepare the mnemonic incase its a conditional jump so that we can select the correct handler
             // there will be a cleaner way of doing this but the default jcc instruction handler is located under the
             // codec::m_jmp mnemonic which will be the way we select it here
-            if (mnemonic == codec::m_jb || mnemonic == codec::m_jbe || mnemonic == codec::m_jcxz || mnemonic == codec::m_jecxz ||
-                mnemonic == codec::m_jknzd || mnemonic == codec::m_jkzd || mnemonic == codec::m_jl || mnemonic == codec::m_jle ||
-                mnemonic == codec::m_jmp || mnemonic == codec::m_jnb || mnemonic == codec::m_jnbe || mnemonic == codec::m_jnl ||
-                mnemonic == codec::m_jnle || mnemonic == codec::m_jno || mnemonic == codec::m_jnp || mnemonic == codec::m_jns ||
-                mnemonic == codec::m_jnz || mnemonic == codec::m_jo || mnemonic == codec::m_jp || mnemonic == codec::m_jrcxz ||
-                mnemonic == codec::m_js || mnemonic == codec::m_jz)
-            {
+            if (is_jmp_or_jcc(mnemonic))
                 mnemonic = codec::m_jmp;
-            }
 
             if (instruction_handlers.contains(mnemonic))
             {
@@ -119,7 +113,7 @@ namespace eagle::ir
                 if (dasm_liveness)
                 {
                     auto out_liveness = std::get<1>(liveness[i]);
-                    auto inst_flags_liveness = dasm_liveness->compute_inst_flags(decoded_inst);
+                    auto inst_flags_liveness = dasm::analysis::liveness::compute_inst_flags(decoded_inst);
 
                     auto relevant_out = inst_flags_liveness & out_liveness;
                     auto relevant_out_flags = relevant_out.get_flags();
@@ -193,29 +187,47 @@ namespace eagle::ir
         // every jcc/jmp is garuanteed to get processed if its at the end of the block
         // this means we didn't process any kind of jump in the block, but we always want the block to end with a branch
         cmd_branch_ptr branch_cmd;
-        if (bb->get_end_reason() == dasm::block_end)
+
+        switch (bb->get_end_reason())
         {
-            // add a branch to make sure we account for this case
-            // where there's on instruction to virtualize
-            ir_exit_result target_exit;
+            case dasm::block_end:
+            {
+                // add a branch to make sure we account for this case
+                // where there's on instruction to virtualize
+                ir_exit_result target_exit;
 
-            auto [target, type] = dasm->get_jump(bb);
-            if (type == dasm::jump_outside_segment)
-                target_exit = target;
-            else
-                target_exit = bb_map[dasm->get_block(target)]->head;
+                auto next_block_rva = bb->start_rva + bb->get_block_size();
 
-            branch_cmd = std::make_shared<cmd_branch>(target_exit);
+                dasm::basic_block_ptr target = dasm->get_block(next_block_rva, false);
+                if (target == nullptr)
+                    target_exit = next_block_rva;
+                else
+                    target_exit = bb_map[target]->head;
+
+                branch_cmd = std::make_shared<cmd_branch>(target_exit);
+                break;
+            }
+            case dasm::block_jump:
+            case dasm::block_conditional_jump:
+            {
+                // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
+                branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
+                VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
+
+                current_block->pop_back();
+                break;
+            }
+            case dasm::block_ret:
+            {
+                // in this case we are just going to completely ignore the idea of
+                // adding a tail block
+                // im not actually quite sure this is the correct solution
+                block_info->body.push_back(current_block);
+                block_info->tail = nullptr; // delete the tail
+
+                return block_info;
+            }
         }
-        else
-        {
-            // at this point "current_block" should contain a branch to the final block, we want to swap this to the exit block at the very end
-            branch_cmd = std::dynamic_pointer_cast<cmd_branch>(current_block->back());
-            VM_ASSERT(branch_cmd->get_command_type() == command_type::vm_branch, "final block command must be a branch");
-
-            current_block->pop_back();
-        }
-
 
         // we want to jump to the exit block now
         if (current_block->get_block_state() == vm_block)
@@ -305,6 +317,8 @@ namespace eagle::ir
                 for (const auto& seek_preopt : block_vm_ids | std::views::keys)
                 {
                     const auto tail = seek_preopt->tail;
+                    if (!tail)
+                        continue;
 
                     const auto tail_branch = tail->exit_as_branch();
                     VM_ASSERT(tail_branch, "tail branch cannot be null");
@@ -324,16 +338,26 @@ namespace eagle::ir
         for (const auto& preopt : block_vm_ids | std::views::keys)
         {
             const auto tail = preopt->tail;
-            const auto last_body = preopt->body.back();
+            if (!tail)
+                continue;
 
             // check for body size of two, i will figure a better way of oding this better
             // but wwhat this means is that the last instruction generated a branch which got copied to the tail
             // and that hte last body only contains a vm enter and vmexit ( as by design a VM preopt body MINIMALY SHOULD)
             // so we will remove it because this is not supposed to ahppen
+            const auto last_body = preopt->body.back();
             if (last_body->get_block_state() == vm_block && last_body->size() == 2)
             {
+                const auto first = last_body->as_virt()->at(0);
+                const auto second = last_body->as_virt()->at(1);
+
+                if (first->get_command_type() != command_type::vm_enter ||
+                    second->get_command_type() != command_type::vm_exit)
+                    continue;
+
                 // this means the last body is useless
-                VM_ASSERT(preopt->body.size() > 1, "there should never be a case where a generated preopt body should have only 1 body that is broken");
+                VM_ASSERT(preopt->body.size() > 1,
+                    "there should never be a case where a generated preopt body should have only 1 body that is broken");
 
                 const auto before_last = preopt->body.at(preopt->body.size() - 2);
                 before_last->as_x86()->exit_as_branch()->rewrite_branch(last_body, tail);
@@ -549,7 +573,7 @@ namespace eagle::ir
         inst_req request(static_cast<mnemonic>(decoded_inst.instruction.mnemonic));
         const enc::req encode_request = decode_to_encode(decoded_inst);
 
-        if (has_relative_operand(decoded_inst))
+        if (contains_rip_relative_operand(decoded_inst))
         {
             auto [target_address, op_i] = calc_relative_rva(decoded_inst, current_rva);
             for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
@@ -559,27 +583,30 @@ namespace eagle::ir
                 {
                     case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        request.operands.emplace_back(reg_op(static_cast<reg>(op.reg.value)));
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_MEMORY:
                     {
                         auto& mem = op.mem;
                         if (i == op_i)
-                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), target_address,
+                            request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), target_address,
                                 mem.size, true));
                         else
-                            request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                            request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                                 mem.size));
+
+                        if (decoded_inst.operands[i].mem.segment == gs)
+                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS;
 
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_IMMEDIATE:
                     {
                         if (i == op_i)
-                            request.operands.push_back(imm_op(target_address, i == op_i));
+                            request.operands.emplace_back(imm_op(target_address, i == op_i));
                         else
-                            request.operands.push_back(imm_op(op.imm.s));
+                            request.operands.emplace_back(imm_op(op.imm.s));
                         break;
                     }
                 }
@@ -590,24 +617,33 @@ namespace eagle::ir
             for (int i = 0; i < decoded_inst.instruction.operand_count_visible; i++)
             {
                 const auto op = encode_request.operands[i];
+                //if (decoded_inst.operands[i].type == ZYDIS_OPERAND_TYPE_MEMORY)
+                //{
+                //    if (decoded_inst.operands[i].mem.segment != ZYDIS_REGISTER_NONE)
+                //        __debugbreak();
+                //}
+
                 switch (op.type)
                 {
                     case ZYDIS_OPERAND_TYPE_REGISTER:
                     {
-                        request.operands.push_back(reg_op(static_cast<reg>(op.reg.value)));
+                        request.operands.emplace_back(reg_op(static_cast<reg>(op.reg.value)));
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_MEMORY:
                     {
                         auto& mem = op.mem;
-                        request.operands.push_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
+                        request.operands.emplace_back(mem_op(static_cast<reg>(mem.base), static_cast<reg>(mem.index), mem.scale, mem.displacement,
                             mem.size));
+
+                        if (decoded_inst.operands[i].mem.segment == gs)
+                            request.prefixes |= ZYDIS_ATTRIB_HAS_SEGMENT_GS;
 
                         break;
                     }
                     case ZYDIS_OPERAND_TYPE_IMMEDIATE:
                     {
-                        request.operands.push_back(imm_op(op.imm.s));
+                        request.operands.emplace_back(imm_op(op.imm.s));
                         break;
                     }
                 }
@@ -617,21 +653,26 @@ namespace eagle::ir
         current_block->push_back(std::make_shared<cmd_x86_exec>(request));
     }
 
-    branch_info ir_translator::get_branch_info(const uint32_t rva)
+    branch_info ir_translator::get_branch_info(const uint32_t inst_rva)
     {
         branch_info info = { };
 
-        const auto bb = dasm->get_block(rva);
+        const auto bb = dasm->get_block(inst_rva, true);
+        auto branches = bb->branches;
+
         switch (bb->get_end_reason())
         {
             case dasm::block_jump:
             case dasm::block_end:
             {
-                auto [target, type] = dasm->get_jump(bb);
-                if (type == dasm::jump_outside_segment)
-                    info.fallthrough_branch = target;
+                // for both of these conditions, there will only be one branch
+                VM_ASSERT(branches.size() == 1, "for the following condition, only one branch must be present");
+
+                const auto block = dasm->get_block(branches[0].target_rva, false);
+                if (block == nullptr)
+                    info.fallthrough_branch = branches[0].target_rva;
                 else
-                    info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                    info.fallthrough_branch = bb_map[block]->head;
 
                 info.exit_condition = exit_condition::jmp;
                 info.inverted_condition = false;
@@ -639,22 +680,24 @@ namespace eagle::ir
             }
             case dasm::block_conditional_jump:
             {
+                VM_ASSERT(branches.size() == 2, "for the following condition, only two branches must be present");
+
                 // case 1 - condition succeed
                 {
-                    auto [target, type] = dasm->get_jump(bb);
-                    if (type == dasm::jump_outside_segment)
-                        info.conditional_branch = target;
+                    const auto block = dasm->get_block(branches[0].target_rva, false);
+                    if (block == nullptr)
+                        info.conditional_branch = branches[0].target_rva;
                     else
-                        info.conditional_branch = bb_map[dasm->get_block(target)]->head;
+                        info.conditional_branch = bb_map[block]->head;
                 }
 
                 // case 2 - fall through
                 {
-                    auto [target, type] = dasm->get_jump(bb, true);
-                    if (type == dasm::jump_outside_segment)
-                        info.fallthrough_branch = target;
+                    const auto block = dasm->get_block(branches[1].target_rva, false);
+                    if (block == nullptr)
+                        info.fallthrough_branch = branches[1].target_rva;
                     else
-                        info.fallthrough_branch = bb_map[dasm->get_block(target)]->head;
+                        info.fallthrough_branch = bb_map[block]->head;
                 }
 
                 const auto& [instruction, _] = bb->decoded_insts.back();

@@ -58,7 +58,7 @@ namespace eagle::asmb
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, codec::encoder::inst_req>)
                     {
-                        const codec::encoder::inst_req inst = arg;
+                        const codec::encoder::inst_req& inst = arg;
 
                         // at to label dependency list
                         for (auto& dependent : inst.get_dependents())
@@ -76,7 +76,7 @@ namespace eagle::asmb
 
                         base_offset += compiled.size();
 
-                        flat_segments.push_back(inst);
+                        flat_segments.emplace_back(inst);
                     }
                     else if constexpr (std::is_same_v<T, code_label_ptr>)
                     {
@@ -84,12 +84,12 @@ namespace eagle::asmb
                         label->set_address(base_offset);
 
                         // this is stupid but this lets us properly index into output_encodings
-                        output_encodings.push_back(std::vector<uint8_t>());
+                        output_encodings.emplace_back();
 
                         VM_ASSERT(!label_indexes.contains(label), "redefined label found");
                         label_indexes[label] = flat_index;
 
-                        flat_segments.push_back(label);
+                        flat_segments.emplace_back(label);
                     }
                 }, label_code_variant);
             }
@@ -105,7 +105,8 @@ namespace eagle::asmb
             uint32_t label_index = label_indexes[label];
             auto it = dependent_indexes.lower_bound(label_index);
 
-            for (auto dep_it = dependent_indexes.begin(); dep_it != it; ++dep_it) {
+            for (auto dep_it = dependent_indexes.begin(); dep_it != it; ++dep_it)
+            {
                 visit_indexes.push(*dep_it);
             }
         }
@@ -153,13 +154,14 @@ namespace eagle::asmb
                 }
 
                 // this also means that every instruction that was depending on the rva, after has changed
-                for (auto dep_it = rva_dependent_indexes.upper_bound(target_idx); dep_it != rva_dependent_indexes.end(); ++dep_it) {
+                for (auto dep_it = rva_dependent_indexes.upper_bound(target_idx); dep_it != rva_dependent_indexes.end(); ++dep_it)
+                {
                     visit_indexes.push(*dep_it);
                 }
             }
         }
 
-        // this code is schizo
+        // lets not talk about this
         std::vector<uint8_t> flat_vec;
         for (const auto& vec : output_encodings)
             std::ranges::copy(vec, std::back_inserter(flat_vec));
@@ -211,10 +213,45 @@ namespace eagle::asmb
                 second_op.index = temp;
             }
         }
-        else if (request.mnemonic == ZYDIS_MNEMONIC_JMP)
+        else if (is_jmp_or_jcc(static_cast<codec::mnemonic>(request.mnemonic)))
         {
             if (request.operands[0].type == ZYDIS_OPERAND_TYPE_IMMEDIATE)
                 request.branch_width = ZYDIS_BRANCH_WIDTH_32;
+        }
+
+        {
+            // hint branch width for a few instructions
+            // i dont know if there is a better way of doing this
+            // i wish it was generic and i could automatically do this but eh
+
+            // this actually does nothing in zydis, for some reason they dont want to add a feature
+            // where you can hint at the immediate operand width.... ?
+
+            //constexpr codec::mnemonic force_resize_insts[] = {
+            //    codec::m_add, codec::m_sub, codec::m_xor, codec::m_and,
+            //    codec::m_or,
+            //};
+//
+            //if (std::ranges::contains(force_resize_insts, request.mnemonic))
+            //{
+            //    if (request.operands[0].type == ZYDIS_OPERAND_TYPE_REGISTER &&
+            //        request.operands[1].type == ZYDIS_OPERAND_TYPE_IMMEDIATE)
+            //    {
+            //        switch (codec::get_reg_size(request.operands[0].reg.value))
+            //        {
+            //            case codec::bit_64:
+            //            case codec::bit_32:
+            //                request.operand_size_hint = ZYDIS_OPERAND_SIZE_HINT_32;
+            //                break;
+            //            case codec::bit_16:
+            //                request.operand_size_hint =  ZYDIS_OPERAND_SIZE_HINT_16;
+            //                break;
+            //            case codec::bit_8:
+            //                request.operand_size_hint =  ZYDIS_OPERAND_SIZE_HINT_8;
+            //                break;
+            //        }
+            //    }
+            //}
         }
     }
 }
